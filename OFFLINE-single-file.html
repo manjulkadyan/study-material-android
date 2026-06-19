@@ -7,7 +7,7 @@
 *{box-sizing:border-box;}
 /* scroll animation handled in site.js (short, tunable duration) — keep CSS instant so it doesn't double-animate */
 html{scroll-behavior:auto;}
-body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;color:var(--text);background:var(--bg);line-height:1.6;-webkit-text-size-adjust:100%;}
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;color:var(--text);background:var(--bg);line-height:1.6;font-weight:500;-webkit-text-size-adjust:100%;}
 a{color:var(--accent);text-decoration:none;}
 a:hover{text-decoration:underline;}
 /* sidebar */
@@ -1805,6 +1805,7 @@ fun fibIterative(n: Int): Long {
 <hr>
 <h2 id="s2-21-kotlin-fundamentals">2.1 Kotlin Fundamentals</h2>
 <h3 id="s2-val-vs-var">val vs var</h3>
+<blockquote><strong>🎤 Say it out loud (~30s):</strong> &quot;<code>val</code> is a read-only reference — once assigned I can&#x27;t reassign it, like <code>final</code> in Java — while <code>var</code> can be reassigned. The thing people miss is that <code>val</code> is about the <em>reference</em>, not the object: a <code>val list: MutableList</code> still lets me add elements. So <code>val</code> gives you immutability of the binding, not deep immutability of the data. I default to <code>val</code> everywhere and only reach for <code>var</code> when I genuinely need to mutate the reference.&quot;</blockquote>
 <p><strong>Definition</strong></p>
 <p><code>val</code> is a read-only reference — once you assign it, you cannot reassign it, analogous to <code>final</code> in Java. <code>var</code> is a mutable reference you can reassign freely.</p>
 <p><strong>How it works</strong></p>
@@ -1815,6 +1816,10 @@ y = 99              // OK
 
 val list = mutableListOf(1, 2, 3)
 list.add(4)         // Fine — the list is mutable, the reference is not</code></pre>
+<p><strong>Under the hood</strong></p>
+<p>A top-level or member <code>val</code> backed by a field emits a <code>private final</code> field plus a getter; a <code>var</code> emits a non-final field plus a getter and setter. The single-assignment guarantee for <code>val</code> is largely a <em>compile-time</em> check — the compiler rejects reassignment — but for <code>final</code> fields the JVM also provides a real memory-model guarantee: a value safely published through a <code>final</code> field is visible to other threads without extra synchronization, which is why <code>val</code> is &quot;safer&quot; for shared references. A local <code>val</code> doesn&#x27;t get a field at all; it&#x27;s just a slot on the stack frame that the compiler forbids you from re-storing into.</p>
+<pre><code>// `val x = 42` (member)  -&gt;  private final int x; public int getX();
+// `var y = 42` (member)  -&gt;  private int y; public int getY(); public void setY(int);</code></pre>
 <p><strong>Android implications</strong></p>
 <ul>
 <li><code>val</code> in a <code>ViewModel</code> is idiomatic for <code>StateFlow</code>, <code>LiveData</code>, or <code>Channel</code> properties. Consumers can only emit via the backing <code>var _state</code>/<code>MutableStateFlow</code>; the public surface is immutable.</li>
@@ -1838,6 +1843,7 @@ list.add(4)         // Fine — the list is mutable, the reference is not</code>
 </ul>
 <hr>
 <h3 id="s2-nullable-vs-non-null-types">Nullable vs Non-Null Types</h3>
+<blockquote><strong>🎤 Say it out loud (~30s):</strong> &quot;Kotlin puts nullability in the type system: <code>String</code> can never be null, <code>String?</code> can, and that&#x27;s enforced at compile time. What surprises people is that it&#x27;s not just compiler bookkeeping — Kotlin also emits runtime null checks (intrinsics) on public function parameters, so if Java passes <code>null</code> into a non-null Kotlin parameter, it throws right at the boundary rather than corrupting state later. The weak spot is platform types coming from Java, where Kotlin can&#x27;t know the nullability and won&#x27;t force you to check.&quot;</blockquote>
 <p><strong>Definition</strong></p>
 <p>Kotlin bakes nullability directly into the type system. <code>String</code> can never hold <code>null</code>; <code>String?</code> can. That is a compile-time guarantee — the compiler enforces it and backs it with <code>@NonNull</code>/<code>@Nullable</code> annotations in the JVM bytecode.</p>
 <p><strong>How it works</strong></p>
@@ -1847,6 +1853,11 @@ val nickname: String? = null   // must handle null before using
 
 println(name.length)           // OK
 println(nickname.length)       // Compile error: nullable receiver</code></pre>
+<p><strong>Under the hood</strong></p>
+<p>There&#x27;s no runtime representation difference between <code>String</code> and <code>String?</code> — both are just a <code>java.lang.String</code> reference on the JVM; nullability is erased like generics. What the compiler adds is twofold. First, it annotates bytecode with <code>@NotNull</code>/<code>@Nullable</code> (org.jetbrains.annotations) so other Kotlin/Java tooling can see the contract. Second, on the entry of any public function it emits a call to <code>Intrinsics.checkNotNullParameter(arg, &quot;name&quot;)</code> for each non-null parameter; that throws a <code>NullPointerException</code> immediately if a caller (typically Java, which can ignore the annotations) passes <code>null</code>. So the &quot;guarantee&quot; is enforced by the compiler for Kotlin callers and by inserted runtime guards at the Java interop boundary.</p>
+<pre><code>// fun greet(name: String)  -&gt;
+//   Intrinsics.checkNotNullParameter(name, &quot;name&quot;);
+//   ... body ...</code></pre>
 <p><strong>Android implications</strong></p>
 <p>Most Java SDK callbacks return nullable platform types (e.g., <code>Bundle?</code>, <code>Intent?</code>). Kotlin exposes these as platform types (<code>String!</code>) — see section 2.4 for details.</p>
 <p><strong>Failure cases</strong></p>
@@ -1856,6 +1867,7 @@ println(nickname.length)       // Compile error: nullable receiver</code></pre>
 </ul>
 <hr>
 <h3 id="s2-safe-call-">Safe Call ?.</h3>
+<blockquote><strong>🎤 Say it out loud (~30s):</strong> &quot;<code>?.</code> calls the member only if the receiver is non-null; otherwise the whole expression short-circuits to <code>null</code> instead of throwing. It compiles to a simple null-check branch, and the key consequence is that the result type is always nullable, so it propagates up your chain. The thing I watch for is overusing it — a long <code>a?.b?.c?.d</code> chain silently swallows the failure, and when something&#x27;s null you can&#x27;t tell which link broke, so where null is a real bug I&#x27;d rather fail fast with <code>requireNotNull</code>.&quot;</blockquote>
 <p><strong>Definition</strong></p>
 <p><code>?.</code> evaluates the left-hand expression and, if it is non-null, calls the right-hand member. If it is null, the whole expression short-circuits to <code>null</code> without throwing.</p>
 <p><strong>How it works</strong></p>
@@ -1864,6 +1876,13 @@ println(nickname.length)       // Compile error: nullable receiver</code></pre>
 
 // Chaining — short-circuits at the first null
 val city: String? = user?.address?.city</code></pre>
+<p><strong>Under the hood</strong></p>
+<p>The compiler lowers <code>x?.foo()</code> into a temporary local plus a conditional: it evaluates <code>x</code> once into a synthetic slot, does an <code>IFNULL</code> branch, and either invokes <code>foo()</code> or pushes <code>null</code>. Evaluating into a temporary matters because the receiver expression is only evaluated a single time even though the byte-level form looks like an <code>if/else</code>. For a chain <code>a?.b?.c</code>, each link adds its own null-check-and-jump, all targeting a common &quot;result is null&quot; label, so the first null jumps straight past the rest of the chain. The static type of the whole expression is the member&#x27;s type made nullable (<code>Int</code> becomes <code>Int?</code>), even when used on a <code>?.</code> whose receiver the compiler could otherwise prove non-null.</p>
+<pre><code>// nickname?.length  -&gt;
+//   ALOAD nickname; DUP; IFNULL Lnull
+//   INVOKEVIRTUAL length(); ... ; GOTO Lend
+// Lnull: POP; ACONST_NULL
+// Lend:</code></pre>
 <p><strong>Android implications</strong></p>
 <p>Safe calls appear everywhere in lifecycle code where objects may have been destroyed:</p>
 <pre><code>binding?.root?.visibility = View.GONE  // if Fragment&#x27;s view was already destroyed</code></pre>
@@ -1873,6 +1892,7 @@ val city: String? = user?.address?.city</code></pre>
 </ul>
 <hr>
 <h3 id="s2-elvis-operator-">Elvis Operator ?:</h3>
+<blockquote><strong>🎤 Say it out loud (~30s):</strong> &quot;The Elvis operator gives you a fallback: <code>a ?: b</code> returns <code>a</code> if it&#x27;s non-null, otherwise it evaluates <code>b</code>. The nice part is the right-hand side can be any expression including <code>throw</code> or <code>return</code>, so I use it for guard clauses — <code>val id = args?.getInt(\&quot;id\&quot;) ?: return</code>. Because the right side is only evaluated when the left is null, it&#x27;s a clean way to either supply a default or bail out. The anti-pattern is using it to paper over a null that actually signals a bug and should propagate.&quot;</blockquote>
 <p><strong>Definition</strong></p>
 <p><code>?:</code> returns the left-hand value if it is non-null, and if it is null, evaluates and returns the right-hand expression instead.</p>
 <p><strong>How it works</strong></p>
@@ -1880,6 +1900,8 @@ val city: String? = user?.address?.city</code></pre>
 
 // Right side can be a throw or return
 val id = arguments?.getInt(&quot;id&quot;) ?: error(&quot;Missing required argument: id&quot;)</code></pre>
+<p><strong>Under the hood</strong></p>
+<p>Elvis compiles to the same shape as a safe call: evaluate the left side into a temporary, <code>DUP</code>, branch on <code>IFNULL</code>; if non-null keep it on the stack, otherwise <code>POP</code> it and evaluate the right side. The right-hand expression is <em>only</em> evaluated on the null path, so it&#x27;s genuinely lazy — that&#x27;s what lets <code>?: return</code> and <code>?: throw</code> work as control flow. Those work because <code>return</code>, <code>throw</code>, and <code>error(...)</code> have type <code>Nothing</code>, which is a subtype of every type, so the compiler can type the whole <code>a ?: throw ...</code> expression as the non-null type of <code>a</code>. That&#x27;s also why Elvis can <em>smart-cast away</em> nullability: after <code>val x = a ?: return</code>, <code>x</code> is known non-null.</p>
 <p><strong>Android implications</strong></p>
 <p>Classic ViewModel pattern:</p>
 <pre><code>val currentUser: User
@@ -1891,11 +1913,14 @@ val id = arguments?.getInt(&quot;id&quot;) ?: error(&quot;Missing required argum
 </ul>
 <hr>
 <h3 id="s2-not-null-assertion-">Not-Null Assertion !!</h3>
+<blockquote><strong>🎤 Say it out loud (~30s):</strong> &quot;<code>!!</code> asserts a nullable value is actually non-null, throwing immediately if it&#x27;s not. I treat it as a code smell — it&#x27;s me overriding the type system. The real-world gotcha is the place it tempts you most: a nullable <code>var</code> property where smart-casting fails, because another thread could null it between the check and the use. The fix is to copy it to a local <code>val</code> and check that instead. Our codebase actually bans new <code>!!</code>, which I think is the right call.&quot;</blockquote>
 <p><strong>Definition</strong></p>
 <p><code>!!</code> converts a nullable type to its non-null equivalent, or throws <code>KotlinNullPointerException</code> at runtime if the value is null. It is essentially telling the compiler &quot;I know better than the type system.&quot;</p>
 <p><strong>How it works</strong></p>
 <p>Bytecode inserts an <code>if (x == null) throw NullPointerException()</code> intrinsic. The JVM stack trace may have poor context without good variable names.</p>
 <pre><code>val len = nickname!!.length  // throws KotlinNullPointerException if nickname == null</code></pre>
+<p><strong>Under the hood</strong></p>
+<p><code>x!!</code> lowers to a call to <code>Intrinsics.checkNotNull(x)</code> (historically <code>Intrinsics.checkExpressionValueIsNotNull</code> / <code>throwNpe</code> in older compilers), which throws if the value is null and otherwise returns it for the subsequent member access. The thrown type is a <code>NullPointerException</code> (since Kotlin 1.4 a plain <code>java.lang.NullPointerException</code>, not the older <code>KotlinNullPointerException</code>). Crucially the check fires at the <code>!!</code> site, so the stack trace points at where you asserted, not where the null originated — which is why <code>!!</code> deep in a call chain is hard to debug. When the compiler can already prove non-nullability, <code>!!</code> adds no real guard and just resolves to the value.</p>
 <p><strong>When to use</strong></p>
 <p>Almost never in production code. Acceptable in:</p>
 <ul>
@@ -1910,6 +1935,7 @@ val id = arguments?.getInt(&quot;id&quot;) ?: error(&quot;Missing required argum
 </ul>
 <hr>
 <h3 id="s2-smart-casts">Smart Casts</h3>
+<blockquote><strong>🎤 Say it out loud (~30s):</strong> &quot;A smart cast is the compiler automatically narrowing a type after I&#x27;ve checked it with <code>is</code> or a null check, so I don&#x27;t write an explicit cast. It works because the compiler does control-flow analysis and knows the type can&#x27;t have changed between the check and the use. The classic gotcha is that it only works on <em>stable</em> values — <code>val</code>s or local <code>var</code>s — not on mutable <code>var</code> properties, especially <code>open</code> ones or ones with custom getters, because the value could differ between the check and the use; there the fix is to copy into a local <code>val</code>.&quot;</blockquote>
 <p><strong>Definition</strong></p>
 <p>After a type or null check, the Kotlin compiler automatically casts the value to the narrower type within the scope where that check holds — you do not need to write an explicit cast.</p>
 <p><strong>How it works</strong></p>
@@ -1946,10 +1972,13 @@ fun printLength(s: String?) {
     val v = value  // capture to local val
     return if (v != null) v.length else 0
 }</code></pre>
+<p><strong>Under the hood</strong></p>
+<p>A smart cast is purely a compiler-side narrowing — after an <code>is</code>/null check the compiler tracks the refined type in its dataflow graph and emits a <code>CHECKCAST</code> only at points where the JVM bytecode actually requires the narrower static type (member calls, assignments). There&#x27;s no runtime wrapper or boxing; for the common null-check case it often emits nothing extra at all. The &quot;stable value&quot; rule exists because the compiler must <em>prove</em> no write happened between the check and the use. For a local <code>val</code> or a local <code>var</code> not captured by a lambda it can prove this; for a mutable member property, an <code>open</code> property, a property with a custom getter, or one from another module, it cannot guarantee a second read returns the same value (a custom getter or another thread could change it), so it refuses the smart cast and tells you to use an explicit cast or a local <code>val</code> copy.</p>
 <p><strong>Android implications</strong></p>
 <p>Used heavily when processing <code>sealed class</code> branches or when handling <code>when</code> expressions over a type hierarchy (UI state machines, navigation events).</p>
 <hr>
 <h3 id="s2-data-classes">Data Classes</h3>
+<blockquote><strong>🎤 Say it out loud (~30s):</strong> &quot;A <code>data class</code> makes the compiler generate <code>equals</code>, <code>hashCode</code>, <code>toString</code>, <code>copy</code>, and <code>componentN</code> from the primary-constructor properties, so it&#x27;s the idiomatic value holder — perfect for UI state. The subtle gotcha is that only properties declared <em>in the primary constructor</em> count toward equals/hashCode/toString; anything in the class body is invisible to them. And <code>copy()</code> is a shallow copy, so nested mutable objects are shared. I also keep data-class properties <code>val</code>, because a mutable property whose <code>hashCode</code> changes will silently corrupt a <code>HashSet</code> or <code>HashMap</code>.&quot;</blockquote>
 <p><strong>Definition</strong></p>
 <p>A <code>data class</code> is a class whose compiler automatically generates <code>equals()</code>, <code>hashCode()</code>, <code>toString()</code>, <code>copy()</code>, and <code>componentN()</code> functions for you, based on the properties declared in the primary constructor. The idea is that you are declaring a value-holder, and the compiler handles the boilerplate.</p>
 <p><strong>How it works</strong></p>
@@ -1972,6 +2001,14 @@ val (id, name, email) = u1</code></pre>
 <li><code>copy()</code> performs a <strong>shallow copy</strong>. Nested mutable objects are shared between original and copy.</li>
 <li><code>componentN()</code> enables destructuring in <code>for</code> loops and assignments.</li>
 </ul>
+<p><strong>Under the hood</strong></p>
+<p>The compiler synthesizes real methods on the class. <code>equals</code> does a per-field comparison (<code>Intrinsics.areEqual</code> for reference types, primitive <code>==</code> for primitives); <code>hashCode</code> folds the fields with the familiar <code>result = 31 * result + field.hashCode()</code> pattern; <code>toString</code> builds the <code>ClassName(prop=value, ...)</code> string. <code>copy</code> is generated as a method whose parameters default to the current field values (<code>fun copy(id: Int = this.id, ...)</code>), which is why named-argument copies work — it just calls the constructor with the substituted args, hence the shallow copy. Each <code>componentN()</code> is an <code>operator fun</code> returning the Nth constructor property in declaration order, and destructuring <code>val (a, b) = x</code> lowers to positional <code>x.component1()</code>, <code>x.component2()</code> calls — it&#x27;s positional, not by-name. Body-declared properties get none of this treatment because the generator only walks the primary-constructor parameter list.</p>
+<pre><code>// data class User(val id: Int, val name: String) generates:
+//   public boolean equals(Object);   // compares id, name
+//   public int hashCode();           // 31*id + name.hashCode()
+//   public String toString();        // &quot;User(id=..., name=...)&quot;
+//   public final User copy(int id, String name);
+//   public final int component1(); public final String component2();</code></pre>
 <p><strong>Android implications</strong></p>
 <ul>
 <li>Ideal for UI state holders: <code>data class SearchState(val query: String, val results: List&lt;Result&gt;, val isLoading: Boolean)</code>.</li>
@@ -1999,6 +2036,7 @@ val (id, name, email) = u1</code></pre>
 </tbody></table>
 <hr>
 <h3 id="s2-sealed-classes-and-sealed-interfaces">Sealed Classes and Sealed Interfaces</h3>
+<blockquote><strong>🎤 Say it out loud (~30s):</strong> &quot;A sealed class or interface restricts its subclasses to a known set in the same module and package, which gives the compiler complete knowledge of the hierarchy — that&#x27;s what makes <code>when</code> exhaustive with no <code>else</code>. I lean on this for ViewModel UI state and one-shot navigation events. The deeper point I&#x27;d make is that exhaustiveness is a safety feature: when I add a new variant, every <code>when</code> without an <code>else</code> breaks the build and forces me to handle it — so I deliberately avoid adding <code>else</code> branches, because an <code>else</code> throws that safety away.&quot;</blockquote>
 <p><strong>Definition</strong></p>
 <p>A <code>sealed class</code> or <code>sealed interface</code> restricts the class hierarchy so that all direct subclasses must be defined in the same package and compilation unit (Kotlin 1.5+; previously the same file). That constraint gives the compiler complete knowledge of every subclass, which is what enables exhaustive <code>when</code> expressions — you get a compile error if you forget a branch.</p>
 <p><strong>How it works</strong></p>
@@ -2018,6 +2056,8 @@ fun render(state: UiState) = when (state) {
 <pre><code>sealed interface Result&lt;out T&gt;
 data class Ok&lt;T&gt;(val value: T) : Result&lt;T&gt;
 data class Failure(val error: Throwable) : Result&lt;Nothing&gt;</code></pre>
+<p><strong>Under the hood</strong></p>
+<p>A sealed class compiles to an <code>abstract</code> class with a constructor that&#x27;s effectively non-public, so no subclass outside the sealed scope can extend it; a sealed interface compiles to a regular interface but the compiler enforces the permitted-subclass restriction. On modern toolchains the set of permitted subclasses is recorded in metadata (and, on JVM 17+ targets, can map to the JVM&#x27;s own <code>PermittedSubclasses</code> attribute), which is how the compiler — and exhaustiveness checking — knows the complete list. Exhaustiveness itself is a <em>compile-time</em> analysis: when a <code>when</code> is used as an expression (or marked exhaustive), the compiler verifies every permitted subtype is covered and errors otherwise; at runtime the <code>when</code> is just a sequence of <code>INSTANCEOF</code> checks with no magic. There&#x27;s no reflective enumeration of subclasses at runtime — that knowledge lives only in the compiler and metadata.</p>
 <p><strong>Android implications</strong></p>
 <ul>
 <li><strong>ViewModel UI state</strong>: The single most common use case. One <code>StateFlow&lt;UiState&gt;</code> drives the entire screen, and the <code>when</code> in Compose or a Fragment is exhaustive.</li>
@@ -2037,6 +2077,7 @@ data class Failure(val error: Throwable) : Result&lt;Nothing&gt;</code></pre>
 </ul>
 <hr>
 <h3 id="s2-enum-vs-sealed-class">Enum vs Sealed Class</h3>
+<blockquote><strong>🎤 Say it out loud (~30s):</strong> &quot;Both model a closed set of alternatives, but the rule of thumb is: use an enum when the variants are uniform and carry no per-instance data, and a sealed class when different variants carry different payloads. An enum constant is a single shared instance with a stable <code>ordinal</code> and <code>name</code>, great for iteration and serialization; a sealed subclass can be a data class with its own fields and even its own subtree. So <code>SortOrder.ASC/DESC</code> is an enum, but <code>Success(data)</code> vs <code>Error(throwable)</code> vs <code>Loading</code> is a sealed class.&quot;</blockquote>
 <p><strong>Definition</strong></p>
 <p>Both model a fixed set of alternatives, but they differ significantly in capability. The short version: use an enum when all your variants have the same shape and carry no extra data; use a sealed class when different variants carry different payloads.</p>
 <table border="1" cellpadding="6" cellspacing="0">
@@ -2074,10 +2115,13 @@ sealed class SearchState {
     data class Results(val items: List&lt;SearchItem&gt;) : SearchState()
     data class Error(val message: String) : SearchState()
 }</code></pre>
+<p><strong>Under the hood</strong></p>
+<p>An <code>enum class</code> compiles to a subclass of <code>java.lang.Enum</code>. Each constant becomes a <code>public static final</code> field initialized in the static initializer (<code>&lt;clinit&gt;</code>), plus a synthetic <code>$VALUES</code> array backing <code>values()</code>; <code>ordinal</code> and <code>name</code> come straight from the <code>Enum</code> base class. Because all constants are created once at class load, every reference to <code>SortOrder.ASC</code> is the same instance — ideal for <code>==</code> comparison and <code>EnumSet</code>/<code>EnumMap</code>, which exploit the dense <code>ordinal</code>. A sealed hierarchy, by contrast, is just ordinary classes: <code>objects</code> are singletons but each <code>data class</code> variant is a normal class you <code>new</code> up per use, so each carries its own fields and allocates per instance. That&#x27;s the core trade-off the table captures — enums give you cheap interning and built-in reflection (<code>values()</code>, <code>valueOf</code>) but uniform shape, while sealed classes give you heterogeneous payloads at the cost of per-instance allocation and no built-in enumeration.</p>
 <p><strong>Android implications</strong></p>
 <p>Using a sealed class for ViewModel UI state is standard practice. Using an enum for navigation direction or a fixed set of tab indices is correct. Misapplying enums to state with payloads forces awkward <code>Pair</code> or global state.</p>
 <hr>
 <h3 id="s2-object-declarations-and-companion-objects">Object Declarations and Companion Objects</h3>
+<blockquote><strong>🎤 Say it out loud (~30s):</strong> &quot;<code>object</code> is Kotlin&#x27;s built-in singleton — one class, one lazily-created instance, thread-safe by virtue of JVM class initialization. A <code>companion object</code> is just an <code>object</code> nested in a class to give you static-like members and factory methods, like a Fragment&#x27;s <code>newInstance</code>. The interview probe is usually leaks and testing: a singleton&#x27;s state is global, so holding an Activity <code>Context</code> in an <code>object</code> leaks it — use <code>applicationContext</code> — and because singletons are hard to swap in tests, I prefer DI over <code>object</code> when there&#x27;s real state.&quot;</blockquote>
 <p><strong>Definition</strong></p>
 <p><code>object</code> declares a class and its single instance in one expression — it is Kotlin&#x27;s built-in singleton pattern. A <code>companion object</code> is an <code>object</code> nested inside a class, which gives you &quot;static-like&quot; members scoped to that class.</p>
 <p><strong>How it works</strong></p>
@@ -2116,6 +2160,8 @@ MyFragment.newInstance(42)</code></pre>
 <tr><td>Companion object</td><td><code>companion object { ... }</code></td><td>Static-like members, factory methods</td></tr>
 <tr><td>Object expression</td><td><code>object : Interface { ... }</code></td><td>Anonymous class instance</td></tr>
 </tbody></table>
+<p><strong>Under the hood</strong></p>
+<p>An <code>object</code> declaration compiles to a final class with a <code>public static final INSTANCE</code> field assigned in the static initializer. Thread safety comes for free from the JVM&#x27;s class-initialization guarantee: the classloader holds a lock and runs <code>&lt;clinit&gt;</code> exactly once, so the &quot;double-checked locking&quot; is really the JVM&#x27;s initialization-on-first-use, not handwritten synchronization. A <code>companion object</code> compiles to a <em>nested</em> class (named <code>Companion</code> by default) with its own singleton instance held in a static field on the outer class; &quot;static-like&quot; members are actually instance methods on that <code>Companion</code> object, which is why you sometimes need <code>@JvmStatic</code> or <code>@JvmField</code> to expose true statics to Java. <code>const val</code> is the exception — it&#x27;s inlined as a real compile-time constant (<code>static final</code> with a <code>ConstantValue</code>), not routed through the companion instance. An object <em>expression</em> (<code>object : Foo {}</code>) compiles to an anonymous class, instantiated where it appears rather than interned as a singleton.</p>
 <p><strong>Android implications</strong></p>
 <ul>
 <li><code>companion object</code> for Fragment/Activity factory methods (<code>newInstance</code>) is the recommended pattern to keep argument keys private.</li>
@@ -2130,6 +2176,7 @@ MyFragment.newInstance(42)</code></pre>
 </ul>
 <hr>
 <h3 id="s2-extension-functions">Extension Functions</h3>
+<blockquote><strong>🎤 Say it out loud (~30s):</strong> &quot;Extension functions let me add functions to a type I don&#x27;t own, without inheritance. The mental model that keeps me out of trouble is that they compile to static methods taking the receiver as the first parameter — so they&#x27;re resolved <em>statically</em> by the declared type, not dynamically by the runtime type, and they can&#x27;t access private members or be overridden. The two gotchas: a member with the same signature always wins over an extension, and because they&#x27;re static they don&#x27;t play nicely with mocking frameworks in tests.&quot;</blockquote>
 <p><strong>Definition</strong></p>
 <p>Extension functions let you add new functions to a class without modifying it or using inheritance. The type you are extending is called the <strong>receiver</strong>, and inside the function body you refer to it as <code>this</code>.</p>
 <p><strong>How it works</strong></p>
@@ -2142,6 +2189,8 @@ MyFragment.newInstance(42)</code></pre>
 
 // Compiles to:
 // static boolean isPalindrome(String $this) { ... }</code></pre>
+<p><strong>Under the hood</strong></p>
+<p>An extension function compiles to a plain <code>static</code> method whose first parameter is the receiver (conventionally named <code>$this$&lt;name&gt;</code> / <code>$receiver</code>); the call site <code>&quot;racecar&quot;.isPalindrome()</code> lowers to <code>FileKt.isPalindrome(&quot;racecar&quot;)</code> — an <code>INVOKESTATIC</code>, not a virtual dispatch. That single fact explains every behavioral quirk: there&#x27;s no entry in any vtable, so no dynamic dispatch and no overriding; the resolved function is chosen at compile time from the <em>static</em> type of the expression, which is why an extension on <code>Animal</code> runs even when the value is actually a <code>Dog</code>. It also can&#x27;t touch private/protected members because it&#x27;s compiled outside the class. When a member function and an extension have the same signature, the compiler binds the call to the member (<code>INVOKEVIRTUAL</code>) — the member always wins. Receiver nullability (<code>fun String?.foo()</code>) just means the first static parameter is nullable, so the method itself must null-check <code>this</code>.</p>
 <p><strong>Android implications</strong></p>
 <p>Extensions are everywhere in Android Kotlin idioms:</p>
 <pre><code>fun View.show() { visibility = View.VISIBLE }
@@ -2163,6 +2212,7 @@ fun Fragment.requireArgument(key: String): String =
 </ul>
 <hr>
 <h3 id="s2-scope-functions">Scope Functions</h3>
+<blockquote><strong>🎤 Say it out loud (~30s):</strong> &quot;The five scope functions all run a block in the context of an object, and I pick between them on two axes: how the object is referenced — <code>this</code> for <code>run</code>/<code>apply</code>/<code>with</code>, <code>it</code> for <code>let</code>/<code>also</code> — and what comes back — the object itself for <code>apply</code>/<code>also</code>, the lambda result for <code>let</code>/<code>run</code>/<code>with</code>. So <code>apply</code> is for configuring and returning an object, <code>let</code> for null-safe transforms, <code>also</code> for side effects like logging in a chain. They&#x27;re all <code>inline</code>, so there&#x27;s no lambda allocation overhead. The thing I keep in check is nesting them — more than two deep and readability falls off a cliff.&quot;</blockquote>
 <p>Scope functions — <code>let</code>, <code>run</code>, <code>apply</code>, <code>also</code>, <code>with</code> — execute a block of code in the context of an object. They all look similar, but they differ on two axes. First, how the context object is referenced inside the block: as <code>this</code> (an implicit receiver) or as <code>it</code> (a lambda argument). Second, what the function returns: the context object itself, or the result of the lambda.</p>
 <table border="1" cellpadding="6" cellspacing="0">
 <thead><tr>
@@ -2222,6 +2272,8 @@ val result = with(user) {
 
 Side effects only (logging, debug)?
   → also (keeps object in chain)</code></pre>
+<p><strong>Under the hood</strong></p>
+<p>All five are declared <code>inline</code>, so the compiler splices the lambda body directly into the call site — there&#x27;s no <code>Function</code> object allocated and no extra stack frame, which is why they&#x27;re effectively zero-cost and can even contain non-local <code>return</code>s. The &quot;<code>this</code> vs <code>it</code>&quot; distinction is just the lambda&#x27;s declared shape: <code>apply</code>/<code>run</code>/<code>with</code> take a <em>receiver</em> lambda (<code>T.() -&gt; R</code>), so the object becomes the implicit receiver <code>this</code> inside the block; <code>let</code>/<code>also</code> take a <em>parameter</em> lambda (<code>(T) -&gt; R</code>), so the object arrives as the single argument <code>it</code>. The &quot;returns object vs result&quot; distinction is equally mechanical — <code>apply</code>/<code>also</code> end with <code>return this</code>/<code>return the receiver</code>, while <code>let</code>/<code>run</code>/<code>with</code> return whatever the block evaluates to. Because <code>apply</code>/<code>run</code>/<code>with</code> shadow <code>this</code>, referencing the enclosing instance inside them requires a qualified <code>this@OuterClass</code>. After inlining, a <code>with(binding) { ... }</code> block is indistinguishable from writing <code>binding.x = ...; binding.y = ...</code> by hand.</p>
 <p><strong>Android implications</strong></p>
 <pre><code>// apply for building Bundles/Intents
 val bundle = Bundle().apply {
@@ -2253,6 +2305,7 @@ with(binding) {
 </ul>
 <hr>
 <h3 id="s2-higher-order-functions">Higher-Order Functions</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;A higher-order function is one that takes a function as a parameter or returns one — Kotlin treats functions as first-class values, so I can pass them around like any other object. This is the backbone of a lot of idiomatic Kotlin: collection operators, scope functions, click listeners, and basically every Compose layout taking a trailing content lambda. The nuance I&#x27;d flag is that unless the function is <code>inline</code>, each lambda argument becomes a real heap-allocated <code>Function</code> object, and if that lambda captures a <code>Context</code> or <code>View</code> it can leak — so for hot paths or long-lived lambdas you need to think about allocation and captured references.&quot;</blockquote>
 <p><strong>Definition</strong></p>
 <p>A higher-order function is a function that either takes another function as a parameter, or returns a function as its result. In Kotlin, functions are first-class values, so you can pass them around like any other type.</p>
 <p><strong>How it works</strong></p>
@@ -2270,6 +2323,8 @@ doWithLogging { repository.syncData() }</code></pre>
 }
 
 val evens = filter(listOf(1,2,3,4)) { it % 2 == 0 }</code></pre>
+<p><strong>Under the hood</strong></p>
+<p>A function type like <code>(Int) -&gt; Boolean</code> is sugar for the JVM interface <code>kotlin.jvm.functions.Function1&lt;Integer, Boolean&gt;</code> (there are <code>Function0</code> through <code>Function22</code>, plus <code>FunctionN</code> for larger arities). When you pass a lambda to a non-inline higher-order function, the compiler emits a class implementing the matching <code>FunctionN</code> interface and a synthetic <code>invoke</code> method holding the body; calling the lambda is a virtual <code>invoke</code> dispatch. A lambda that captures no state is emitted as a singleton <code>INSTANCE</code> (allocated once), while a capturing lambda allocates a new object per evaluation with the captured values stored as fields. A method reference like <code>::myFunction</code> compiles to a similar synthetic class whose <code>invoke</code> forwards to the target, capturing the receiver (<code>this</code>) when the reference is bound.</p>
 <p><strong>Android implications</strong></p>
 <ul>
 <li>Click listeners: <code>fun Button.setThrottledClick(action: () -&gt; Unit)</code>.</li>
@@ -2283,6 +2338,7 @@ val evens = filter(listOf(1,2,3,4)) { it % 2 == 0 }</code></pre>
 </ul>
 <hr>
 <h3 id="s2-lambdas">Lambdas</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;A lambda is an anonymous function you can pass as a value, and in Kotlin it&#x27;s a real object of a function type unless the enclosing function is <code>inline</code>. The detail interviewers like to probe is capture: a non-capturing lambda is a reused singleton, but a capturing one allocates per use — and unlike Java, Kotlin can capture mutable <code>var</code>s because the compiler boxes them in a <code>Ref</code> wrapper on the heap. That&#x27;s exactly why capturing an <code>Activity</code> or <code>View</code> in a long-lived lambda leaks, and why capturing a mutable variable that&#x27;s mutated across threads is a data race.&quot;</blockquote>
 <p><strong>Definition</strong></p>
 <p>A lambda is an anonymous function that can be passed as a value. In Kotlin, lambdas are objects of function types like <code>(Int) -&gt; Boolean</code>, so every lambda is a real object on the heap unless the containing function is <code>inline</code>.</p>
 <p><strong>How it works</strong></p>
@@ -2300,6 +2356,13 @@ listOf(1, 2, 3).mapIndexed { _, value -&gt; value * 2 }</code></pre>
 val increment = { count++ }
 increment()
 println(count)  // 1</code></pre>
+<p><strong>Under the hood</strong></p>
+<p>A non-inlined lambda compiles to a class implementing the appropriate <code>FunctionN</code> interface, with the body in <code>invoke</code>. Captured <code>val</code>s are passed into the synthetic class&#x27;s constructor and stored as final fields. Captured <code>var</code>s can&#x27;t be stored by value because the lambda must read <em>and write</em> the same variable the outer scope sees, so the compiler rewrites the variable into a <code>kotlin.jvm.internal.Ref.IntRef</code> (or <code>ObjectRef</code>, etc.) — a tiny mutable box on the heap — and both the outer code and the lambda share that one <code>Ref.element</code> field:</p>
+<pre><code>// var count = 0; val increment = { count++ }  decompiles roughly to:
+final Ref.IntRef count = new Ref.IntRef();
+count.element = 0;
+Function0 increment = () -&gt; { count.element++; return Unit.INSTANCE; };</code></pre>
+<p>A lambda capturing nothing is emitted as a static singleton and reused across calls; a capturing lambda is a fresh allocation each time the surrounding code runs.</p>
 <p><strong>Android implications</strong></p>
 <p>Lambdas are the backbone of Compose:</p>
 <pre><code>Button(onClick = { viewModel.onConfirm() }) {
@@ -2313,6 +2376,7 @@ println(count)  // 1</code></pre>
 </ul>
 <hr>
 <h3 id="s2-inline-functions">Inline Functions</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;An <code>inline</code> function tells the compiler to copy the function body — and the bodies of its lambda arguments — directly into the call site. The win is that the lambda doesn&#x27;t become a heap-allocated <code>Function</code> object and there&#x27;s no virtual <code>invoke</code> call, which matters for hot, higher-order code. It&#x27;s also what unlocks non-local returns and <code>reified</code> generics. The cost is code-size bloat and that it leaks implementation details into callers, so you inline small wrapper functions with lambda params, not big ones — and you reach for <code>noinline</code> when a lambda must be stored, and <code>crossinline</code> when it&#x27;s invoked from another execution context.&quot;</blockquote>
 <p><strong>Definition</strong></p>
 <p>An <code>inline</code> function has its bytecode copied directly to each call site at compile time. The lambda parameters are inlined too — no lambda object is created, no virtual dispatch happens.</p>
 <p><strong>How it works</strong></p>
@@ -2342,10 +2406,18 @@ println(count)  // 1</code></pre>
 <li>Functions called from public APIs (inline leaks implementation details; changes to the function require recompilation of all callers).</li>
 <li>Functions with many lambda parameters that are stored or invoked later.</li>
 </ul>
+<p><strong>Under the hood</strong></p>
+<p>Without <code>inline</code>, the lambda compiles to an anonymous class implementing <code>FunctionN</code>, allocated per call (or reused as a singleton if it captures nothing), and each call is a virtual <code>invoke</code>. With <code>inline</code>, the compiler splices the function body into the caller <em>and</em> substitutes each <code>block()</code> call with the lambda&#x27;s body, so the decompiled Java shows the statements expanded with no extra class and no <code>invoke</code>:</p>
+<pre><code>// measureTime { doWork() }  becomes, at the call site:
+long start = System.currentTimeMillis();
+doWork();                              // lambda body spliced in directly
+long elapsed = System.currentTimeMillis() - start;</code></pre>
+<p><code>noinline</code> forces a specific lambda to stay a real <code>FunctionN</code> object so it can be stored or passed onward. A non-local <code>return</code> from an inlined lambda compiles to an actual <code>return</code> out of the caller&#x27;s frame (because the body is physically there); <code>crossinline</code> forbids that — it keeps the lambda inlined but disallows non-local returns, which is required when the body ends up nested inside another generated class (like a <code>Runnable</code>) where returning from the outer function is impossible.</p>
 <p><strong>Android implications</strong></p>
 <p>All standard Kotlin scope functions (<code>let</code>, <code>apply</code>, etc.) and most collection operations (<code>map</code>, <code>filter</code>) are <code>inline</code>. Compose&#x27;s <code>@Composable</code> functions are handled by the Compose compiler plugin (not <code>inline</code> in the standard sense, but similarly rewritten).</p>
 <hr>
 <h3 id="s2-reified-generics">Reified Generics</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;On the JVM, generic type parameters are erased at runtime, so normally you can&#x27;t write <code>T::class</code> or <code>is T</code> inside a generic function. <code>reified</code> works around that, but only inside <code>inline</code> functions — because inlining substitutes the real type argument into the body at each call site before erasure even applies, so the emitted bytecode literally contains <code>String::class</code> rather than a generic <code>T</code>. That&#x27;s what powers nice APIs like <code>startActivity&lt;MainActivity&gt;()</code> or <code>viewModel&lt;T&gt;()</code> without passing a <code>Class&lt;T&gt;</code>. The catch is it&#x27;s tied to inlining, so it carries the same recompilation-of-callers caveat.&quot;</blockquote>
 <p><strong>Definition</strong></p>
 <p>Normally, type parameters are erased at runtime — that is what type erasure means on the JVM. The <code>reified</code> modifier, which is only available in <code>inline</code> functions, works around this by preserving the actual type at each call site, so you can use <code>T</code> as a real type inside the function body — in <code>is</code> checks, <code>::class</code> references, and reflection.</p>
 <p><strong>How it works</strong></p>
@@ -2368,6 +2440,11 @@ val strings = listOf(1, &quot;two&quot;, 3.0).filterByType&lt;String&gt;()  // [
 
 // Usage
 context.startActivity&lt;MainActivity&gt;()</code></pre>
+<p><strong>Under the hood</strong></p>
+<p>There is no runtime type token being passed around — <code>reified</code> is purely a compile-time substitution enabled by inlining. At the call site the inliner copies the body in and replaces every textual use of <code>T</code> with the concrete type argument supplied for that call, so <code>T::class.java</code> becomes a hard-coded class literal:</p>
+<pre><code>// context.startActivity&lt;MainActivity&gt;()  expands to:
+context.startActivity(new Intent(context, MainActivity.class));</code></pre>
+<p>This is also why <code>reified</code> is impossible on a non-inline function: with a single shared compiled body there is nowhere to bake the type token, and the JVM has already erased <code>T</code> to <code>Object</code>. An <code>is T</code> check similarly compiles to a concrete <code>instanceof ConcreteType</code>, and <code>filterIsInstance&lt;T&gt;()</code> resolves the element check against the substituted type.</p>
 <p><strong>Android implications</strong></p>
 <ul>
 <li><code>startActivity&lt;T&gt;()</code> extension without passing <code>Class&lt;T&gt;</code> explicitly.</li>
@@ -2381,6 +2458,7 @@ context.startActivity&lt;MainActivity&gt;()</code></pre>
 </ul>
 <hr>
 <h3 id="s2-value-classes">Value Classes</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;A <code>value class</code> wraps a single property and, in the common case, the compiler erases the wrapper entirely so it&#x27;s represented at runtime as the underlying type — so I get compile-time type safety like distinguishing a <code>UserId</code> from a <code>DoctorId</code> with zero allocation overhead. The nuance interviewers want is <em>when boxing reappears</em>: the wrapper has to materialize as a real object when it&#x27;s used as a nullable, as a generic type argument, or stored in a collection, or when it&#x27;s referenced through an interface it implements. So it&#x27;s free in the hot path of direct calls, but not magic everywhere — and that&#x27;s why the methods get mangled names under <code>@JvmInline</code>.&quot;</blockquote>
 <p><strong>Definition</strong></p>
 <p>A <code>value class</code> (formerly called an <code>inline class</code>) wraps a single property of another type. At runtime, the JVM represents it as the underlying type directly — no boxing, no wrapper object allocation. You get type safety at compile time and zero overhead at runtime.</p>
 <p><strong>How it works</strong></p>
@@ -2405,10 +2483,17 @@ sendInvite(UserId(42), Email(&quot;alice@example.com&quot;))
 <li>Cannot extend other classes (but can implement interfaces).</li>
 <li>Boxing occurs when used as a generic type parameter or nullable.</li>
 </ul>
+<p><strong>Under the hood</strong></p>
+<p>In the unboxed case the compiler replaces the value class with its underlying type at use sites: a parameter of type <code>UserId</code> is compiled as a plain <code>int</code>, and <code>UserId(42)</code> carries no allocation. To avoid JVM signature clashes (two functions taking <code>UserId</code> and <code>DoctorId</code> would both look like <code>(int)</code> to the JVM), the compiler <em>mangles</em> the function names with a hash suffix — that&#x27;s what <code>@JvmInline</code> enables and why a value-class-typed function isn&#x27;t cleanly callable from Java:</p>
+<pre><code>fun sendInvite(userId: UserId, email: Email)
+// compiles to something like:
+public static void sendInvite-&lt;hash&gt;(int userId, String email)</code></pre>
+<p>A real wrapper object is generated and <em>boxed</em> only when the value class must be treated as a reference type: when it is nullable (<code>UserId?</code>), used as a generic argument (<code>List&lt;UserId&gt;</code>), or accessed through an implemented interface — because in those positions the JVM needs an <code>Object</code>, not a primitive.</p>
 <p><strong>Android implications</strong></p>
 <p>Excellent for identifier types, quantities with units (<code>Pixels</code>, <code>Dp</code>, <code>Milliseconds</code>), and domain primitives that prevent primitive obsession.</p>
 <hr>
 <h3 id="s2-delegated-properties">Delegated Properties</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;A delegated property hands its <code>get</code>/<code>set</code> logic to a separate delegate object via the <code>by</code> keyword — the compiler routes reads through the delegate&#x27;s <code>getValue</code> and writes through <code>setValue</code>. Kotlin ships handy ones like <code>lazy</code>, <code>Delegates.observable</code>, and <code>vetoable</code>, and on Android <code>by viewModels()</code> and <code>by viewBinding()</code> are delegated properties. The implementation detail worth knowing is that the compiler generates a hidden backing field holding the delegate instance and rewrites every access to call the operator functions, passing a <code>KProperty</code> reflecting the property — so the delegate can know the property&#x27;s name without you wiring it up.&quot;</blockquote>
 <p><strong>Definition</strong></p>
 <p>A delegated property offloads its <code>get</code> and <code>set</code> logic to a separate delegate object. The <code>by</code> keyword connects the property to its delegate — you write <code>var name: String by someDelegate</code> and the compiler routes all reads and writes through that delegate&#x27;s <code>getValue</code> and <code>setValue</code> operator functions.</p>
 <p><strong>How it works</strong></p>
@@ -2442,6 +2527,13 @@ sendInvite(UserId(42), Email(&quot;alice@example.com&quot;))
 }
 
 var config: String by LoggingDelegate(&quot;default&quot;)</code></pre>
+<p><strong>Under the hood</strong></p>
+<p>For each delegated property the compiler synthesizes a private final field holding the delegate instance (e.g. <code>name$delegate</code>) and replaces the property&#x27;s getter/setter with calls to the delegate&#x27;s <code>getValue</code>/<code>setValue</code> operators. It also emits a <code>KProperty</code> metadata object describing the property, which is passed as the second argument — that&#x27;s how the delegate gets <code>property.name</code> for free:</p>
+<pre><code>// var name: String by observable(...)  generates roughly:
+private final ReadWriteProperty name$delegate = Delegates.observable(...);
+public String getName()        { return name$delegate.getValue(this, $$delegatedProperties[0]); }
+public void   setName(String v){ name$delegate.setValue(this, $$delegatedProperties[0], v); }</code></pre>
+<p><code>val</code> properties use the <code>ReadOnlyProperty</code>/<code>getValue</code>-only contract; <code>var</code> uses <code>ReadWriteProperty</code>. The optional <code>provideDelegate</code> operator, if present, runs once at construction to let the delegate be created with knowledge of the owning instance and property.</p>
 <p><strong>Android implications</strong></p>
 <ul>
 <li><code>viewModels()</code>, <code>activityViewModels()</code> are delegated properties from Jetpack.</li>
@@ -2450,6 +2542,7 @@ var config: String by LoggingDelegate(&quot;default&quot;)</code></pre>
 </ul>
 <hr>
 <h3 id="s2-lazy-initialization">Lazy Initialization</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;<code>by lazy</code> defers computing a <code>val</code> until its first access, then caches the result so the initializer never runs again. By default it&#x27;s <code>SYNCHRONIZED</code>, meaning it does double-checked locking so it&#x27;s safe to initialize from multiple threads — and you can downgrade to <code>PUBLICATION</code> or <code>NONE</code> if you know the access pattern. The thing I&#x27;m careful about is that <code>NONE</code> skips all locking, so using it on a property touched from multiple threads is a data race; and lazy is <code>val</code>-only, so if I genuinely need deferred-but-settable I reach for <code>lateinit</code> or <code>Delegates.notNull()</code> instead.&quot;</blockquote>
 <p><strong>Definition</strong></p>
 <p><code>lazy</code> defers computing a property&#x27;s value until the first time it is accessed. After that first access the result is cached, so every subsequent read just returns the stored value — the initializer block never runs again.</p>
 <p><strong>How it works</strong></p>
@@ -2467,6 +2560,19 @@ var config: String by LoggingDelegate(&quot;default&quot;)</code></pre>
 <tr><td><code>PUBLICATION</code></td><td>Multiple threads may initialize, first one wins</td></tr>
 <tr><td><code>NONE</code></td><td>No locking — use only when single-threaded access is guaranteed</td></tr>
 </tbody></table>
+<p><strong>Under the hood</strong></p>
+<p><code>by lazy { }</code> generates a synthetic <code>xxx$delegate</code> field holding a <code>Lazy&lt;T&gt;</code> instance, and the property getter delegates to <code>Lazy.getValue</code> (which returns <code>Lazy.value</code>). The default <code>SYNCHRONIZED</code> mode is implemented by <code>SynchronizedLazyImpl</code>, which stores the initializer lambda and a <code>_value</code> field initialized to a sentinel <code>UNINITIALIZED_VALUE</code>; the first read uses double-checked locking — a volatile read, then <code>synchronized(lock)</code>, re-check, run the initializer, publish the result, and drop the lambda reference so it can be GC&#x27;d:</p>
+<pre><code>public T getValue() {
+    if (_value != UNINITIALIZED_VALUE) return (T) _value;   // fast path, volatile read
+    synchronized (lock) {
+        if (_value == UNINITIALIZED_VALUE) {
+            _value = initializer.invoke();
+            initializer = null;
+        }
+        return (T) _value;
+    }
+}</code></pre>
+<p><code>PUBLICATION</code> uses <code>SafePublicationLazyImpl</code> with an atomic compare-and-set (the initializer may run on several threads but only the first published value wins), and <code>NONE</code> uses <code>UnsafeLazyImpl</code> with no synchronization at all — a plain field check, which is a data race if shared across threads.</p>
 <p><strong>Android implications</strong></p>
 <pre><code>class MyFragment : Fragment() {
     private val viewModel: MyViewModel by viewModels()  // lazy under the hood
@@ -2479,6 +2585,7 @@ var config: String by LoggingDelegate(&quot;default&quot;)</code></pre>
 </ul>
 <hr>
 <h3 id="s2-lateinit-vs-lazy">lateinit vs lazy</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;Both defer initialization but they&#x27;re for different actors. <code>lateinit var</code> is a non-null <code>var</code> that some external thing — Dagger, the test runner, the framework — sets after construction; it has no thread safety and throws <code>UninitializedPropertyAccessException</code> if read too early, and it can&#x27;t be a primitive. <code>by lazy</code> is a <code>val</code> you compute yourself once from other state, thread-safe by default, never null. My rule of thumb: <code>lateinit</code> when an external actor sets the value, <code>lazy</code> when I compute it myself, and neither when the value is genuinely nullable or changes over time.&quot;</blockquote>
 <p>Both <code>lateinit var</code> and <code>by lazy</code> defer initialization, but they serve different purposes and the choice between them is usually clear-cut:</p>
 <table border="1" cellpadding="6" cellspacing="0">
 <thead><tr>
@@ -2514,9 +2621,16 @@ var config: String by LoggingDelegate(&quot;default&quot;)</code></pre>
 }</code></pre>
 <p><strong>Choosing</strong></p>
 <p>The rule of thumb is: use <code>lateinit</code> when an external actor — Dagger, the test runner, the Android framework — sets the value after construction and you cannot set it yourself in the constructor. Use <code>lazy</code> when the value is derived from other state and should be computed at most once. Use neither when the value can genuinely be null or changes over time.</p>
+<p><strong>Under the hood</strong></p>
+<p><code>lateinit</code> is not a delegate — it compiles to an ordinary backing field that the compiler simply <em>allows</em> to stay null after construction (skipping the usual non-null initialization requirement). Every read is wrapped with a generated null check that throws <code>UninitializedPropertyAccessException(&quot;lateinit property X has not been initialized&quot;)</code> if the field is still null, which is why it can&#x27;t hold a primitive (a primitive field can&#x27;t be null, so there&#x27;d be no &quot;uninitialized&quot; sentinel). The <code>::property.isInitialized</code> syntax compiles to a direct read of that backing field compared against null:</p>
+<pre><code>// access to `binding` becomes:
+if (this.binding == null) throw new UninitializedPropertyAccessException(&quot;lateinit property binding has not been initialized&quot;);
+return this.binding;</code></pre>
+<p><code>by lazy</code>, in contrast, generates a separate <code>Lazy&lt;T&gt;</code> delegate field with its own caching and (by default) double-checked locking. So <code>lateinit</code> is a single mutable field plus null guards (zero extra objects, no thread safety), while <code>lazy</code> adds a delegate object and synchronization but guarantees exactly-once computation.</p>
 <hr>
 <h3 id="s2-kotlin-collections">Kotlin Collections</h3>
 <h4 id="s2-read-only-list-vs-mutablelist">read-only List vs MutableList</h4>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;Kotlin splits collections into a read-only interface, <code>List&lt;T&gt;</code>, and a mutating one, <code>MutableList&lt;T&gt;</code>, that extends it with <code>add</code>/<code>remove</code>. The key thing is that this is a <em>compile-time</em> distinction only — at runtime both are usually a <code>java.util.ArrayList</code>, and you can cast a <code>List&lt;T&gt;</code> back to <code>MutableList&lt;T&gt;</code> and mutate it. So <code>List&lt;T&gt;</code> is a read-only <em>view</em>, not a deep immutability guarantee; for real immutability you need a defensive copy, <code>Collections.unmodifiableList</code>, or a persistent collection. In practice I expose <code>List&lt;T&gt;</code> from a ViewModel and hold the <code>MutableList&lt;T&gt;</code> privately.&quot;</blockquote>
 <p><strong>Definition</strong></p>
 <p>Kotlin&#x27;s collection interfaces are split into two layers. <code>List&lt;T&gt;</code> is read-only — it exposes no mutating methods. <code>MutableList&lt;T&gt;</code> extends it with <code>add</code>, <code>remove</code>, and the rest of the mutating API. Both compile to <code>java.util.List</code> on the JVM, so the distinction is purely at the Kotlin type-system level.</p>
 <pre><code>val readOnly: List&lt;Int&gt; = listOf(1, 2, 3)
@@ -2528,12 +2642,15 @@ mutable.add(4)    // OK</code></pre>
 <pre><code>// Dangerous — compiles and runs
 val list: List&lt;Int&gt; = mutableListOf(1, 2, 3)
 (list as MutableList&lt;Int&gt;).add(4)  // Works at runtime!</code></pre>
+<p><strong>Under the hood</strong></p>
+<p><code>kotlin.collections.List</code> and <code>kotlin.collections.MutableList</code> are Kotlin-only interfaces that, through the compiler&#x27;s &quot;mapped types&quot; mechanism, are both projected onto <code>java.util.List</code> in bytecode — there is no separate runtime class for the read-only version. <code>listOf(...)</code> typically returns a <code>java.util.Arrays.ArrayList</code> (or <code>EmptyList</code>/<code>SingletonList</code> for the 0/1-element cases), and <code>mutableListOf(...)</code> returns a <code>java.util.ArrayList</code>; both are presented to Kotlin code as the appropriate interface. Because the read-only-ness lives only in the Kotlin type system, an <code>as MutableList</code> cast is just a normal unchecked cast that succeeds at runtime whenever the backing object actually implements the mutating methods — hence the mutation &quot;leaking through.&quot; Calling a mutator on a genuinely unmodifiable backing (like <code>Collections.unmodifiableList</code>) throws <code>UnsupportedOperationException</code> instead.</p>
 <p><strong>Android implications</strong></p>
 <ul>
 <li>Expose <code>List&lt;T&gt;</code> from <code>ViewModel</code>/repository (read-only surface), hold <code>MutableList&lt;T&gt;</code> internally.</li>
 <li><code>StateFlow&lt;List&lt;Item&gt;&gt;</code> — never expose <code>MutableList</code> in public API.</li>
 </ul>
 <h4 id="s2-sequences">Sequences</h4>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;A <code>Sequence</code> is the lazy counterpart to a collection: instead of each operator producing a full intermediate list, every element is pulled through the whole pipeline one at a time, and nothing happens until a terminal operation like <code>toList()</code> or <code>first()</code>. That&#x27;s a big win for large inputs with a short result — <code>filter.map.take(5)</code> over a million elements only touches as many elements as it needs and allocates no intermediate lists. But for small collections the per-element iterator overhead isn&#x27;t worth it, sequences are stateful so they&#x27;re not thread-safe, and you have to remember the terminal op or nothing runs.&quot;</blockquote>
 <p><strong>Definition</strong></p>
 <p>A <code>Sequence&lt;T&gt;</code> is a lazily evaluated collection. Instead of creating a full intermediate list after each operation, each element flows through the entire pipeline before the next element starts. The practical effect is that you avoid allocating those intermediate lists entirely.</p>
 <p><strong>How it works</strong></p>
@@ -2562,6 +2679,8 @@ val result = (1..1000000).asSequence()
 <li>Operations that need random access (sequences are inherently sequential).</li>
 <li>Android&#x27;s main thread where even eager collections over small lists are fine.</li>
 </ul>
+<p><strong>Under the hood</strong></p>
+<p>Each intermediate sequence operator (<code>filter</code>, <code>map</code>, <code>take</code>) returns a new lightweight <code>Sequence</code> object that wraps the previous one and overrides <code>iterator()</code> — so the chain is a stack of decorating iterators, not data. No <code>Function</code>/predicate runs until a terminal operation calls <code>iterator()</code> and pulls elements: each <code>next()</code> on the outermost iterator drives one element down through every stage (<code>TransformingSequence</code>, <code>FilteringSequence</code>, <code>TakeSequence</code>, etc.), and short-circuiting operators like <code>take</code> simply stop requesting more once satisfied. The eager collection operators, by contrast, are <code>inline</code> functions that each allocate and fully populate a new <code>ArrayList</code> before returning — which is why the collection pipeline materializes one list per stage while the sequence pipeline materializes nothing until the terminal call. Because those iterators hold mutable position/state, a sequence is single-use-ish and not thread-safe.</p>
 <p><strong>Failure cases</strong></p>
 <ul>
 <li>Sequences are not thread-safe (they hold state).</li>
@@ -2569,6 +2688,7 @@ val result = (1..1000000).asSequence()
 <li>Mutating the source collection while iterating a sequence.</li>
 </ul>
 <h4 id="s2-flows">Flows</h4>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;A <code>Flow</code> is conceptually a <code>Sequence</code> for the async world — a cold stream of values that integrates with coroutines and can <code>suspend</code> between emissions, so it doesn&#x27;t run until something collects it. The line I draw is: <code>Sequence</code> is synchronous and pull-based on one thread, while <code>Flow</code> is asynchronous and built on suspend functions, so it can do things like <code>delay</code> or hit the network between emits. And then <code>StateFlow</code>/<code>SharedFlow</code> are the hot variants — they&#x27;re always active and either hold a current value or multicast to multiple collectors, unlike a cold <code>flow { }</code> that restarts per collector.&quot;</blockquote>
 <p><code>Flow&lt;T&gt;</code> is covered in depth in the Coroutines section. Conceptually, a <code>Flow</code> is a cold, asynchronous sequence of values — think of it as a <code>Sequence</code> that integrates with coroutines and supports <code>suspend</code> emitters.</p>
 <pre><code>val flow: Flow&lt;Int&gt; = flow {
     emit(1)
@@ -2576,6 +2696,8 @@ val result = (1..1000000).asSequence()
     emit(2)
 }</code></pre>
 <p>The key distinction from <code>Sequence</code> is: <code>Sequence</code> is synchronous, <code>Flow</code> is asynchronous and supports <code>suspend</code> emitters. <code>StateFlow</code> and <code>SharedFlow</code> are hot flows that additionally carry state or multicast to subscribers.</p>
+<p><strong>Under the hood</strong></p>
+<p>A cold <code>flow { }</code> builder allocates a <code>SafeCollector</code>-wrapped object whose block isn&#x27;t executed until <code>collect</code> is called; emission and collection are plain <code>suspend</code> functions, so the whole pipeline compiles through Kotlin&#x27;s coroutine state-machine transform (each <code>suspend</code> point becomes a continuation, letting <code>delay</code>/IO suspend without blocking a thread). Because it&#x27;s cold, every <code>collect</code> re-runs the builder block from scratch — there&#x27;s no shared state across collectors. <code>StateFlow</code> and <code>SharedFlow</code> are <em>hot</em>: they&#x27;re backed by a long-lived implementation (<code>StateFlowImpl</code>/<code>SharedFlowImpl</code>) holding an atomic current value or a replay/buffer array plus a registry of active collector slots, emitting regardless of whether anyone is collecting and fanning the same emissions out to all subscribers — which is why they don&#x27;t restart per collector the way a cold <code>flow { }</code> does.</p>
 <hr>
 <h3 id="s2-interview-angles--21">Interview Angles — 2.1</h3>
 <p><strong>Q: Difference between List and MutableList?</strong></p>
@@ -2598,6 +2720,7 @@ val result = (1..1000000).asSequence()
 <hr>
 <h2 id="s2-22-kotlin-generics">2.2 Kotlin Generics</h2>
 <h3 id="s2-type-parameters-and-constraints">Type Parameters and Constraints</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;Type parameters let me write one piece of code that&#x27;s reusable across many types while staying fully type-safe — the compiler checks every substitution. Constraints, or bounds, narrow what&#x27;s allowed: an upper bound like <code>T : Comparable&lt;T&gt;</code> tells the compiler <code>T</code> is at least a <code>Comparable</code>, so I can call <code>compareTo</code> on it. If I need more than one bound I use a <code>where</code> clause. The nuance interviewers like is that none of this survives to runtime — on the JVM a type parameter is just its bound, defaulting to <code>Any?</code>/<code>Object</code>, with casts inserted by the compiler.&quot;</blockquote>
 <p><strong>Definition</strong></p>
 <p>Type parameters let you write code that works with multiple types while preserving type safety. Constraints narrow which types are allowed as arguments — an upper bound constraint like <code>T : Comparable&lt;T&gt;</code> lets you call <code>compareTo</code> on <code>T</code> because the compiler knows it is at least a <code>Comparable</code>.</p>
 <pre><code>// Unconstrained — T can be anything
@@ -2610,6 +2733,14 @@ fun &lt;T : Comparable&lt;T&gt;&gt; max(a: T, b: T): T = if (a &gt; b) a else b
 fun &lt;T&gt; copy(src: T, dest: T) where T : Cloneable, T : Serializable { ... }</code></pre>
 <p><strong>How it works on the JVM</strong></p>
 <p>Type parameters exist only at compile time. The bytecode uses <code>Object</code> (or the upper bound) everywhere. The compiler inserts casts as needed.</p>
+<p><strong>Under the hood</strong></p>
+<p>The JVM has no notion of generics at runtime — they are a compile-time-only feature, so every type parameter is <em>erased</em> to its bound. An unconstrained <code>&lt;T&gt;</code> erases to <code>Object</code> (Kotlin&#x27;s <code>Any?</code>); a bounded <code>&lt;T : Comparable&lt;T&gt;&gt;</code> erases to <code>Comparable</code>. The compiler keeps the full generic information only in metadata used for type checking, then emits casts at the use sites where erased values flow back into typed positions.</p>
+<pre><code>fun &lt;T&gt; identity(value: T): T          // source
+  -&gt;  Object identity(Object value)    // erased JVM signature
+
+fun &lt;T : Comparable&lt;T&gt;&gt; max(a, b): T   // source
+  -&gt;  Comparable max(Comparable a, Comparable b)  // erased to the bound</code></pre>
+<p>Because the parameter is gone at runtime, you cannot ask &quot;what is <code>T</code>?&quot; inside an ordinary generic function — that&#x27;s the limitation <code>reified</code> later works around.</p>
 <p><strong>Android implications</strong></p>
 <p>Repository and data-layer generics:</p>
 <pre><code>sealed class Result&lt;out T&gt; {
@@ -2618,6 +2749,7 @@ fun &lt;T&gt; copy(src: T, dest: T) where T : Cloneable, T : Serializable { ... 
 }</code></pre>
 <hr>
 <h3 id="s2-variance-out-and-in">Variance: out and in</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;Variance answers when a <code>Container&lt;Sub&gt;</code> can stand in for a <code>Container&lt;Super&gt;</code>. I mark a type parameter <code>out</code> when the class only <em>produces</em> <code>T</code> — returns it, never accepts it — which makes it covariant and safe to substitute a more specific type. I mark it <code>in</code> when the class only <em>consumes</em> <code>T</code>, which makes it contravariant and substitutable in the opposite direction. That&#x27;s PECS — producer-extends, consumer-super. The key Kotlin point is declaration-site variance: I declare <code>out</code>/<code>in</code> once on the class, instead of repeating Java&#x27;s wildcards at every use site, though Kotlin also supports use-site variance when I can&#x27;t touch the class.&quot;</blockquote>
 <p><strong>Definition</strong></p>
 <p>Variance describes how subtyping relationships between generic types relate to subtyping of their type arguments. The core question is: if <code>Dog</code> is a subtype of <code>Animal</code>, what is the relationship between <code>Container&lt;Dog&gt;</code> and <code>Container&lt;Animal&gt;</code>?</p>
 <p><strong>Invariance (default)</strong></p>
@@ -2649,8 +2781,16 @@ val dogConsumer: Consumer&lt;Dog&gt; = animalConsumer   // Safe — can consume 
 <pre><code>fun copy(from: List&lt;out Animal&gt;, to: MutableList&lt;in Animal&gt;) {
     for (item in from) to.add(item)
 }</code></pre>
+<p><strong>Under the hood</strong></p>
+<p>Variance is a compile-time contract; at the bytecode level Kotlin&#x27;s <code>out</code>/<code>in</code> map directly onto Java wildcards. A declaration-site <code>out T</code> is realized in generated signatures as <code>? extends T</code> wherever the parameter would appear, and <code>in T</code> as <code>? super T</code>. Use-site variance (<code>List&lt;out Animal&gt;</code>) compiles to the same wildcard at that single position.</p>
+<pre><code>Producer&lt;out T&gt;          -&gt;  Producer&lt;? extends T&gt;   (covariant / &quot;extends&quot;)
+Consumer&lt;in T&gt;           -&gt;  Consumer&lt;? super T&gt;     (contravariant / &quot;super&quot;)
+fun f(x: List&lt;out Animal&gt;)  -&gt;  void f(List&lt;? extends Animal&gt; x)
+fun f(y: MutableList&lt;in Animal&gt;) -&gt; void f(List&lt;? super Animal&gt; y)</code></pre>
+<p>The compiler enforces the rules statically — an <code>out</code> parameter may not appear in an <code>in</code> (consuming) position and vice versa — but after erasure the wildcards carry no runtime data; they only inform Java interop and the casts the compiler emits.</p>
 <hr>
 <h3 id="s2-star-projection">Star Projection</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;<code>List&lt;*&gt;</code> means &#x27;a list of <em>some</em> type I don&#x27;t know or care about&#x27; — it&#x27;s Kotlin&#x27;s analogue of Java&#x27;s <code>List&lt;?&gt;</code>. I use it when I need to accept any generic container regardless of its argument. The nuance is what it projects to: for a covariant <code>out</code> type it behaves like <code>out Any?</code>, so I can read elements as <code>Any?</code> but can&#x27;t write, since the compiler can&#x27;t prove what concrete type would be safe to put in. And because of erasure, the star doesn&#x27;t recover the real argument at runtime — it just safely caps what I&#x27;m allowed to do.&quot;</blockquote>
 <p><strong>Definition</strong></p>
 <p><code>List&lt;*&gt;</code> means &quot;a <code>List</code> of some type I do not know or do not care about.&quot; It is analogous to Java&#x27;s <code>List&lt;?&gt;</code>. You use it when you need to accept any generic container regardless of its type argument.</p>
 <p><strong>How it works</strong></p>
@@ -2670,14 +2810,27 @@ val dogConsumer: Consumer&lt;Dog&gt; = animalConsumer   // Safe — can consume 
 <ul>
 <li>You cannot write to a <code>MutableList&lt;*&gt;</code> (except <code>null</code>). Attempting to <code>add</code> a value is a compile error.</li>
 </ul>
+<p><strong>Under the hood</strong></p>
+<p>A star projection is the compiler&#x27;s way of saying &quot;the safest possible variance for an unknown argument.&quot; For a type parameter declared <code>out T</code> (upper bound <code>B</code>), <code>Foo&lt;*&gt;</code> projects to <code>Foo&lt;out B&gt;</code>, so reads yield the bound (<code>Any?</code> when the bound is <code>Any?</code>) and writes are forbidden. For an <code>in T</code> parameter, <code>Foo&lt;*&gt;</code> projects to <code>Foo&lt;in Nothing&gt;</code> — you can&#x27;t pass anything meaningful in. At the JVM level the star is just Java&#x27;s unbounded wildcard <code>?</code>, and since generics are erased, <code>List&lt;*&gt;</code> and <code>List&lt;String&gt;</code> are the very same <code>List</code> class at runtime — the star simply tells the <em>compiler</em> to restrict you, not the runtime.</p>
+<pre><code>List&lt;*&gt;        -&gt;  List&lt;out Any?&gt;     // read as Any?, no writes
+MutableList&lt;*&gt; -&gt;  effectively writes blocked (in Nothing for the consuming half)
+// JVM erased form: just List with wildcard &quot;?&quot;</code></pre>
 <hr>
 <h3 id="s2-type-erasure">Type Erasure</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;Type erasure is the foundational rule of JVM generics: the type arguments exist only at compile time and are gone in the bytecode, so <code>List&lt;String&gt;</code> and <code>List&lt;Int&gt;</code> are both just <code>List</code> at runtime. The compiler uses the arguments for checking and inserts casts, but the parameters never appear in the class file. The practical consequence interviewers probe is that I can&#x27;t do <code>x is List&lt;String&gt;</code> — the runtime can&#x27;t tell one parameterization from another — so I reach for reified type parameters, an explicit <code>Class&lt;T&gt;</code>/<code>KClass&lt;T&gt;</code>, or <code>ParameterizedType</code> reflection.&quot;</blockquote>
 <p><strong>Definition</strong></p>
 <p>Generic type information is erased at runtime — that is the fundamental rule of the JVM generics implementation. At the bytecode level, <code>List&lt;String&gt;</code> and <code>List&lt;Int&gt;</code> are both just <code>List</code>. The compiler uses the type arguments for type checking and inserts casts where needed, but the type parameters do not appear in the compiled class file at all.</p>
 <p><strong>Implications</strong></p>
 <pre><code>fun &lt;T&gt; check(list: List&lt;T&gt;) {
     if (list is List&lt;String&gt;) { }  // Compile error: cannot check for erased type
 }</code></pre>
+<p><strong>Under the hood</strong></p>
+<p>After compilation a parameterized type collapses to its raw class plus the parameter&#x27;s bound. <code>List&lt;String&gt;</code>, <code>List&lt;Int&gt;</code>, and <code>List&lt;*&gt;</code> are indistinguishable <code>java.util.List</code> instances at runtime — the <code>&lt;...&gt;</code> lives only in the class-file&#x27;s generic <em>signature</em> metadata, used by the compiler and reflection, never by the bytecode that executes. A plain generic <code>T</code> can&#x27;t be runtime-checked because there is no <code>Class</code> object representing it: <code>is T</code> would have to compare against a type that was erased to <code>Object</code>/<code>Any</code> (or its bound), so it can&#x27;t distinguish <code>T</code> from anything else — which is exactly why the compiler rejects <code>is List&lt;String&gt;</code>.</p>
+<pre><code>List&lt;String&gt;  ─┐
+List&lt;Int&gt;     ─┼─►  (single raw type) java.util.List   // after erasure
+List&lt;*&gt;       ─┘
+// is List&lt;String&gt;  ✗ — no runtime type to test against
+// is List&lt;*&gt;        ✓ — only the raw class can be checked</code></pre>
 <p><strong>Workarounds</strong></p>
 <ul>
 <li>Reified type parameters (inline functions, see section 2.1).</li>
@@ -2686,6 +2839,7 @@ val dogConsumer: Consumer&lt;Dog&gt; = animalConsumer   // Safe — can consume 
 </ul>
 <hr>
 <h3 id="s2-reified-type-parameters">Reified Type Parameters</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;<code>reified</code> is the escape hatch from type erasure, and it only works on <code>inline</code> functions. Because the function body is inlined into every call site, the compiler can substitute the <em>concrete</em> type argument right there before erasure applies — so inside the function <code>T::class</code>, <code>T::class.java</code>, and <code>is T</code> all work as if <code>T</code> were a real type. Without it, any API needing runtime type info has to take an explicit <code>Class&lt;T&gt;</code>; with it I just write <code>parseResponse&lt;User&gt;(json)</code>. And it&#x27;s free at runtime — the substitution is entirely a compile-time inlining trick.&quot;</blockquote>
 <p>Already covered in depth in section 2.1. Restatement in generics context:</p>
 <p><code>reified</code> is only available in <code>inline</code> functions. It instructs the compiler to substitute the actual type at each call site, bypassing type erasure for that specific invocation.</p>
 <pre><code>inline fun &lt;reified T&gt; parseResponse(json: String): T {
@@ -2694,6 +2848,12 @@ val dogConsumer: Consumer&lt;Dog&gt; = animalConsumer   // Safe — can consume 
 
 val user: User = parseResponse(jsonString)</code></pre>
 <p>Without <code>reified</code>, you would have to write <code>parseResponse(jsonString, User::class.java)</code>.</p>
+<p><strong>Under the hood</strong></p>
+<p><code>reified</code> only exists on <code>inline</code> functions because the mechanism <em>is</em> inlining. There is no separate compiled method that carries a runtime type token; instead, at each call site the compiler copies the function body in and replaces every occurrence of <code>T</code> with the actual type argument supplied there. So a <code>T::class.java</code> inside the function becomes a literal <code>User.class</code> reference at the call site, and <code>is T</code> becomes a concrete <code>instanceof User</code> check — both compiling to ordinary bytecode that never needed generic runtime info.</p>
+<pre><code>val u: User = parseResponse(json)
+// inlined &amp; substituted at the call site:
+val u: User = Gson().fromJson(json, User::class.java)   // T -&gt; User, baked in at compile time</code></pre>
+<p>This is why a non-reified generic <code>T</code> still can&#x27;t be checked: only inlining lets the concrete type be known before erasure, and only <code>inline</code> functions can be inlined. The cost is paid entirely at compile time — zero extra runtime overhead, at the price of duplicating the body per call site.</p>
 <hr>
 <h3 id="s2-interview-angles--22">Interview Angles — 2.2</h3>
 <p><strong>Q: Explain <code>List&lt;out T&gt;</code>.</strong></p>
@@ -2712,10 +2872,14 @@ val dog: Dog = dogs[1]                   // ClassCastException at runtime</code>
 <hr>
 <h2 id="s2-23-java-fundamentals">2.3 Java Fundamentals</h2>
 <h3 id="s2-oop-basics">OOP Basics</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;Java is class-based and statically typed, organized around encapsulation, inheritance, polymorphism, and abstraction. The nuance interviewers care about is polymorphism via dynamic dispatch — a parent-type reference can hold any subtype, and instance method calls are resolved at runtime against the object&#x27;s actual class through the vtable, not the declared type. Static methods and fields, by contrast, are bound at compile time, which is why you can&#x27;t &#x27;override&#x27; a static method — you only hide it.&quot;</blockquote>
 <p><strong>Definition</strong></p>
 <p>Java is a class-based, statically typed, object-oriented language built around four pillars. First, encapsulation: internal state is hidden behind methods, with access controlled by <code>private</code>, <code>protected</code>, <code>public</code>, and package-private modifiers. Second, inheritance: a class can extend exactly one parent class with <code>extends</code>. Third, polymorphism: a parent-type reference can hold any subtype, and method calls are dispatched based on the actual runtime type — dynamic dispatch. Fourth, abstraction: interfaces and abstract classes define contracts without providing complete implementations.</p>
+<p><strong>Under the hood</strong></p>
+<p>Dynamic dispatch is implemented in bytecode by <code>INVOKEVIRTUAL</code> (and <code>INVOKEINTERFACE</code> for interface types), which resolves the target method against the receiver&#x27;s actual class at runtime via a per-class method table. Private, static, and constructor calls use <code>INVOKESPECIAL</code>/<code>INVOKESTATIC</code> and are statically bound — no runtime lookup — which is why a <code>static</code> method is <em>hidden</em> rather than overridden. On Android, the bytecode is translated to DEX and ahead-of-time/just-in-time compiled by ART, which can devirtualize and inline monomorphic call sites it observes, but the language-level dispatch semantics are identical.</p>
 <hr>
 <h3 id="s2-inheritance">Inheritance</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;Java is single inheritance — one <code>extends</code>, with <code>Object</code> as the implicit root. Constructors aren&#x27;t inherited, and a subclass constructor must chain to a parent constructor, either explicitly with <code>super(...)</code> or implicitly to the no-arg one. The thing I&#x27;d flag is the fragile base class problem: subclasses bind to the parent&#x27;s implementation details, so a self-call inside the parent that the subclass has overridden can produce surprising behavior — which is the core argument for composition over inheritance.&quot;</blockquote>
 <p><strong>Definition</strong></p>
 <p>A Java class can <code>extend</code> one other class and thereby inherit all of that class&#x27;s non-private fields and methods.</p>
 <pre><code>class Animal {
@@ -2729,6 +2893,8 @@ class Dog extends Animal {
 }</code></pre>
 <p><strong>Key rules</strong></p>
 <p>Java has single-class inheritance — one <code>extends</code> only. All classes implicitly extend <code>Object</code>. <code>super</code> accesses parent class members. Constructors are not inherited, but the parent constructor must be called — either explicitly via <code>super(...)</code> or implicitly if the parent has a no-arg constructor.</p>
+<p><strong>Under the hood</strong></p>
+<p>Every constructor compiles to an <code>&lt;init&gt;</code> method, and the first thing <code>&lt;init&gt;</code> does is invoke the superclass <code>&lt;init&gt;</code> via <code>INVOKESPECIAL</code> — this is the bytecode-level reason the parent constructor always runs first. Instance field initializers and instance-initializer blocks are folded into <code>&lt;init&gt;</code> after the <code>super(...)</code> call, in source order. Because the superclass constructor runs before the subclass&#x27;s field initializers, an overridden method called from a parent constructor sees the subclass&#x27;s fields still at their default (zero/null) values — a classic initialization-order trap. There is no implicit chaining for non-constructor methods; only <code>&lt;init&gt;</code> is special.</p>
 <p><strong>Failure cases</strong></p>
 <ul>
 <li><strong>Fragile base class problem</strong>: Changing a method in a base class can break subclasses that override it, especially if the override relies on implementation details.</li>
@@ -2737,6 +2903,7 @@ class Dog extends Animal {
 </ul>
 <hr>
 <h3 id="s2-interfaces">Interfaces</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;An interface is a type contract, and a class can implement many of them — that&#x27;s how Java gets multiple inheritance of type without the diamond problem on state. Since Java 8 they can carry <code>default</code> and <code>static</code> methods, and Java 9 added <code>private</code> helpers, but they still hold no instance state. The subtlety is the diamond on behavior: if two interfaces supply conflicting <code>default</code> methods, the implementing class is forced to override and disambiguate, often calling <code>Interface.super.method()</code>.&quot;</blockquote>
 <p><strong>Definition</strong></p>
 <p>An interface defines a contract — a set of methods a class promises to implement. A class can implement as many interfaces as needed, which is how Java achieves multiple inheritance of type.</p>
 <pre><code>interface Drawable {
@@ -2749,9 +2916,12 @@ class Dog extends Animal {
 }</code></pre>
 <p><strong>Java 8+ additions</strong></p>
 <p>Java 8 added three things to interfaces. <code>default</code> methods provide a default implementation so existing classes do not need to change. <code>static</code> methods add utility functions scoped to the interface. Java 9 added <code>private</code> methods as helpers for default implementations, keeping the public surface clean.</p>
+<p><strong>Under the hood</strong></p>
+<p>Interface method calls dispatch via <code>INVOKEINTERFACE</code>, which is slightly more expensive than <code>INVOKEVIRTUAL</code> because the target&#x27;s method table layout isn&#x27;t fixed by a single class hierarchy. Interface fields are implicitly <code>public static final</code> constants and live in the interface&#x27;s <code>&lt;clinit&gt;</code>. <code>default</code> methods are real methods on the interface (not copied into implementors); the JVM resolves them at link time and applies precedence rules — a class implementation wins over a <code>default</code>, and a more specific subinterface&#x27;s <code>default</code> wins over a superinterface&#x27;s, with genuine conflicts being a compile error that forces an explicit override. Lambdas implementing a functional interface are wired up at runtime through <code>INVOKEDYNAMIC</code> and <code>LambdaMetafactory</code> rather than generating an anonymous class per lambda.</p>
 <p><strong>vs abstract class</strong> (see next section)</p>
 <hr>
 <h3 id="s2-abstract-classes">Abstract Classes</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;An abstract class can&#x27;t be instantiated; it mixes abstract methods that subclasses must implement with concrete methods and instance state they inherit. The reason to choose it over an interface is shared state and a constructor — it&#x27;s the natural home for the template-method pattern, where the base class controls the algorithm skeleton and subclasses fill in the steps. If all I need is a capability contract with no state, I&#x27;d use an interface instead because it doesn&#x27;t burn the single <code>extends</code> slot.&quot;</blockquote>
 <p><strong>Definition</strong></p>
 <p>An abstract class is a class that cannot be instantiated directly. It can declare <code>abstract</code> methods — methods with no body — that every subclass must implement, and it can also have fully concrete methods that subclasses inherit as-is.</p>
 <pre><code>abstract class Shape {
@@ -2763,6 +2933,8 @@ class Dog extends Animal {
         return color + &quot; shape with area &quot; + area();
     }
 }</code></pre>
+<p><strong>Under the hood</strong></p>
+<p>An abstract class carries the <code>ACC_ABSTRACT</code> flag on the class, and each bodyless method carries <code>ACC_ABSTRACT</code> on the method — the verifier rejects any attempt to <code>NEW</code> an abstract type. It still has a real <code>&lt;init&gt;</code> constructor that subclass <code>&lt;init&gt;</code> chains to via <code>INVOKESPECIAL</code>, and it can declare instance fields, which is exactly what interfaces cannot do. Concrete methods are ordinary virtual methods dispatched by <code>INVOKEVIRTUAL</code>; the template-method pattern works because a concrete base method can call an abstract one and dynamic dispatch routes it to the subclass override.</p>
 <p><strong>Interface vs Abstract Class</strong></p>
 <table border="1" cellpadding="6" cellspacing="0">
 <thead><tr>
@@ -2780,6 +2952,7 @@ class Dog extends Animal {
 <p>The guideline is: prefer interfaces for defining capabilities like <code>Serializable</code> or <code>Drawable</code>. Use abstract classes when you have shared implementation or shared state that subclasses genuinely should inherit.</p>
 <hr>
 <h3 id="s2-composition-over-inheritance">Composition over Inheritance</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;Rather than extend a class to reuse it, I hold an instance and delegate. This dodges the fragile base class problem because I&#x27;m coupled only to the delegate&#x27;s public contract, it works even when the target is <code>final</code>, and it lets me swap the delegate at runtime or inject a mock in tests. Inheritance is an is-a relationship and a compile-time, permanent binding; composition is a has-a relationship that&#x27;s far more flexible — Kotlin even has first-class <code>by</code> delegation for exactly this.&quot;</blockquote>
 <p><strong>Definition</strong></p>
 <p>Instead of extending a class to reuse its behavior, you hold an instance of it as a field and delegate to it. This avoids the fragile base class problem — you are not coupled to the parent&#x27;s implementation details — and it allows you to swap behavior at runtime by substituting a different delegate.</p>
 <pre><code>// Inheritance (fragile)
@@ -2801,6 +2974,8 @@ class LoggingList&lt;T&gt; implements List&lt;T&gt; {
     }
     // ... other methods delegate to delegate
 }</code></pre>
+<p><strong>Under the hood</strong></p>
+<p>The fragile-inheritance failure is concrete in bytecode: a subclass override that calls <code>super.add()</code> is an <code>INVOKESPECIAL</code> to the parent, but if the parent&#x27;s <em>other</em> public method (e.g. <code>addAll</code>) internally self-dispatches to <code>add</code> via <code>INVOKEVIRTUAL</code>, that virtual call lands back on the subclass override — causing double-counting or recursion the subclass author never intended. Composition replaces those <code>super</code>/self calls with <code>INVOKEINTERFACE</code>/<code>INVOKEVIRTUAL</code> against a field reference, so you only ever depend on the delegate&#x27;s published contract. Kotlin&#x27;s <code>by</code> delegation generates exactly the forwarding methods shown above at compile time, so there&#x27;s no reflection or runtime cost.</p>
 <p><strong>Android implications</strong></p>
 <ul>
 <li><code>RecyclerView.Adapter</code> composition — hold a list rather than extending one.</li>
@@ -2811,6 +2986,7 @@ class LoggingList&lt;T&gt; implements List&lt;T&gt; {
 <p>There are four reasons to prefer composition. First, it does not couple you to the parent&#x27;s implementation details — changes to the delegate do not break your class. Second, it works even when the parent class is <code>final</code>. Third, it enables dynamic replacement of behavior at runtime by substituting a different delegate. Fourth, it is far more amenable to dependency injection and testing — you inject a mock instead of the real thing.</p>
 <hr>
 <h3 id="s2-final">final</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;<code>final</code> means assign-once for variables, no-override for methods, and no-subclass for classes. Beyond the obvious, there&#x27;s a memory-model guarantee I&#x27;d call out: if an object&#x27;s <code>final</code> fields are fully set in the constructor and the <code>this</code> reference doesn&#x27;t escape during construction, any thread that sees the object afterward is guaranteed to see those <code>final</code> fields correctly initialized — with no synchronization. That freeze guarantee is why immutable objects built only from <code>final</code> fields can be shared safely.&quot;</blockquote>
 <p><strong>Definition</strong></p>
 <p><code>final</code> has three distinct uses in Java. A <code>final</code> class cannot be subclassed — <code>String</code> and <code>Integer</code> are <code>final</code>. A <code>final</code> method cannot be overridden in a subclass. A <code>final</code> variable or field can be assigned exactly once, and the compiler enforces this.</p>
 <pre><code>final class ImmutablePoint {
@@ -2824,10 +3000,13 @@ class LoggingList&lt;T&gt; implements List&lt;T&gt; {
 }</code></pre>
 <p><strong>Performance</strong></p>
 <p>The JVM can optimize <code>final</code> methods and fields more aggressively — it can inline them and skip virtual dispatch. There is also a thread-safety benefit: <code>final</code> fields in a properly constructed object are guaranteed to be visible to all threads without any synchronization, per the Java Memory Model.</p>
+<p><strong>Under the hood</strong></p>
+<p><code>final</code> classes carry <code>ACC_FINAL</code>; the JIT/AOT compiler can treat their methods as non-virtual and inline them. The JMM <strong>final-field freeze</strong> is the deep part: the end of a constructor that writes <code>final</code> fields acts as a freeze action, and the compiler is forbidden from reordering those writes past the constructor&#x27;s exit or sinking them below the point where <code>this</code> is published. So a correctly constructed immutable object needs no <code>volatile</code> or lock for readers to see its <code>final</code> fields — <em>provided</em> the constructor doesn&#x27;t leak <code>this</code> (e.g. registering a listener mid-construction), which breaks the guarantee. <code>final</code> local variables produce no special bytecode; the restriction is purely a compile-time check.</p>
 <p><strong>Kotlin equivalent</strong></p>
 <p>In Kotlin, classes are <code>final</code> by default. You use <code>open</code> to allow subclassing. This is the inverse of Java&#x27;s default and it is a deliberate language design choice — if you want to be subclassed, you have to explicitly opt in.</p>
 <hr>
 <h3 id="s2-static">static</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;<code>static</code> members belong to the class, not an instance — one shared copy, callable without constructing anything. Two nuances I&#x27;d raise: initialization is lazy and thread-safe because the JVM runs the class initializer once under a lock the first time the class is used, and <code>static</code> methods are statically bound, so they&#x27;re hidden, not overridden. On Android the practical hazard is holding a <code>Context</code>, <code>Activity</code>, or <code>View</code> in a static field — that outlives the screen and leaks the whole view hierarchy.&quot;</blockquote>
 <p><strong>Definition</strong></p>
 <p><code>static</code> members belong to the class, not to any particular instance. A <code>static</code> field is shared across all instances — one copy for the whole class — and a <code>static</code> method can be called without creating an instance at all.</p>
 <pre><code>class Counter {
@@ -2837,12 +3016,15 @@ class LoggingList&lt;T&gt; implements List&lt;T&gt; {
     public Counter() { this.id = ++count; }
     public static int getCount() { return count; }
 }</code></pre>
+<p><strong>Under the hood</strong></p>
+<p>Static field initializers and <code>static { }</code> blocks are compiled into the synthetic <code>&lt;clinit&gt;</code> class-initializer method; instance initializers go into <code>&lt;init&gt;</code>. The JVM runs <code>&lt;clinit&gt;</code> exactly once, lazily, on first active use of the class (first instance creation, static field/method access, or subclass init), and it holds an initialization lock so this is inherently thread-safe — which is the basis of the lazy-holder singleton idiom. Static methods compile to <code>INVOKESTATIC</code> and are resolved at compile time against the declared type, so they cannot participate in dynamic dispatch — a subclass <code>static</code> of the same signature merely <em>hides</em> the parent&#x27;s. <code>static final</code> compile-time constants are inlined into callers&#x27; bytecode, so changing one requires recompiling dependents.</p>
 <p><strong>Android implications</strong></p>
 <p>Static constants like <code>static final String TAG = &quot;MyClass&quot;</code> are fine and idiomatic. Static utility methods are fine. The one rule to internalize is: never hold a <code>Context</code>, <code>Activity</code>, or <code>View</code> in a static field — that is the most common Android memory leak. A static <code>Activity</code> reference keeps the entire Activity and its entire View hierarchy alive past <code>onDestroy()</code>, which prevents GC and leaks memory proportional to the screen&#x27;s complexity.</p>
 <p><strong>Kotlin equivalent</strong></p>
 <p>Use <code>companion object</code> for class-level members and top-level functions or properties for file-level statics.</p>
 <hr>
 <h3 id="s2-equals-and-hashcode">equals() and hashCode()</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;<code>equals()</code> defines value equality and <code>hashCode()</code> gives an int bucket for hash-based collections, and they&#x27;re contractually linked: equal objects must return equal hash codes — the converse isn&#x27;t required, collisions are fine. <code>equals</code> must also be reflexive, symmetric, transitive, and consistent. The classic bug is overriding <code>equals</code> but not <code>hashCode</code>: logically equal objects land in different buckets, so a <code>HashMap</code> lookup silently misses. I&#x27;d also use mutable fields cautiously, since mutating a key after insertion corrupts the map.&quot;</blockquote>
 <p><strong>Definition</strong></p>
 <p><code>equals()</code> defines semantic equality — whether two objects represent the same value. <code>hashCode()</code> returns an integer hash used by hash-based data structures to find the right bucket. The two methods are deeply coupled: you must always override both or neither.</p>
 <p><strong>Contract (from <code>Object</code> Javadoc)</strong></p>
@@ -2874,6 +3056,8 @@ Map&lt;User, String&gt; map = new HashMap&lt;&gt;();
 map.put(u1, &quot;value&quot;);
 map.get(u2);  // null — looked in wrong bucket!</code></pre>
 <p>Kotlin <code>data class</code> auto-generates a correct, consistent <code>equals</code>/<code>hashCode</code> pair from primary constructor properties — that is one of the main reasons to prefer it over a plain class for value objects.</p>
+<p><strong>Under the hood</strong></p>
+<p><code>Object.hashCode()</code> defaults to an identity hash — historically derived from the object&#x27;s address but in practice a per-object value the JVM lazily computes and stashes in the object header (its mark word), independent of field contents. <code>HashMap</code> doesn&#x27;t use the raw <code>hashCode</code>; it spreads the bits (<code>h ^ (h &gt;&gt;&gt; 16)</code>) to mix high bits into the low-order bucket index, then masks by <code>capacity - 1</code>. Within a bucket it walks a linked list comparing with <code>equals</code>, and once a bucket exceeds a threshold (8 entries, with table size ≥ 64) it converts that bucket to a red-black tree to bound worst-case lookup at O(log n). This is exactly why a broken <code>hashCode</code> is silent: a wrong bucket index means <code>equals</code> is never even consulted.</p>
 <p><strong>Failure cases</strong></p>
 <ul>
 <li>Using <code>instanceof</code> vs <code>getClass()</code>: <code>instanceof</code> allows subtype equality (often violates symmetry), <code>getClass()</code> enforces exact type match.</li>
@@ -2881,16 +3065,20 @@ map.get(u2);  // null — looked in wrong bucket!</code></pre>
 </ul>
 <hr>
 <h3 id="s2-tostring">toString()</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;<code>toString()</code> is the human-readable form; the default from <code>Object</code> is just <code>ClassName@hex</code>, which is useless in logs, so I override it on model types. The hex part is the identity hash code in hex, not the memory address. The one hard rule is to never put PII or secrets in <code>toString()</code>, because it leaks straight into logcat and crash reports — and Kotlin data classes generate <code>toString()</code> for free, which makes accidental PII exposure easy if you&#x27;re not careful.&quot;</blockquote>
 <p><strong>Definition</strong></p>
 <p><code>toString()</code> returns a human-readable representation of the object. Without overriding it, the default from <code>Object</code> gives you <code>ClassName@hexHashCode</code> — which is useless in logs.</p>
 <pre><code>@Override
 public String toString() {
     return &quot;User{id=&quot; + id + &quot;, name=&#x27;&quot; + name + &quot;&#x27;}&quot;;
 }</code></pre>
+<p><strong>Under the hood</strong></p>
+<p><code>Object.toString()</code> returns <code>getClass().getName() + &quot;@&quot; + Integer.toHexString(hashCode())</code> — so the hex suffix is the identity hash code, not a pointer. String concatenation with <code>+</code> doesn&#x27;t naively allocate many strings: modern <code>javac</code> compiles <code>+</code> chains to <code>INVOKEDYNAMIC</code> against <code>StringConcatFactory</code> (older bytecode used a <code>StringBuilder</code> chain), so a hand-rolled <code>StringBuilder</code> is rarely needed except in loops. On Android/ART the concat strategy is similar, and the implicit <code>toString()</code> calls in string templates can quietly invoke a custom override that exposes fields — relevant to the PII warning.</p>
 <p><strong>Android implications</strong></p>
 <p>Always override <code>toString()</code> on model classes so logs are readable. Kotlin data classes auto-generate it from primary constructor properties. The one rule that overrides everything else: do not include sensitive or PII data in <code>toString()</code>, because it will end up in crash logs and logcat.</p>
 <hr>
 <h3 id="s2-immutability">Immutability</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;An immutable object can&#x27;t change after construction — any &#x27;mutation&#x27; returns a new instance. In Java I make the class <code>final</code>, fields <code>private final</code>, expose no setters, and defensively copy mutable inputs on the way in and mutable fields on the way out. The payoff is they&#x27;re inherently thread-safe with zero synchronization and safe as map keys because the hash never changes. The subtle part is that <code>final</code> only freezes the reference — if a field points to a mutable collection, you must copy it or the object is only shallowly immutable.&quot;</blockquote>
 <p><strong>Definition</strong></p>
 <p>An immutable object&#x27;s state cannot change after construction. Any operation that looks like a mutation actually returns a new object — the original stays unchanged.</p>
 <p><strong>How to achieve in Java</strong></p>
@@ -2908,6 +3096,8 @@ public String toString() {
 }</code></pre>
 <p><strong>Benefits</strong></p>
 <p>There are four benefits to immutability. It is inherently thread-safe because no thread can mutate the state, so no synchronization is needed. It is safe as a <code>HashMap</code> key because the hash code can never change. It is easier to reason about — no action-at-a-distance mutations. And the JVM can cache and share instances, which is why <code>String</code> is immutable and <code>String.intern()</code> works.</p>
+<p><strong>Under the hood</strong></p>
+<p>The thread-safety claim rests on the JMM final-field freeze guarantee: because all fields are <code>final</code> and set in the constructor without leaking <code>this</code>, the JMM guarantees a correct initialized view to any thread that later obtains the reference — no <code>volatile</code> or lock required. Note <code>final</code> only makes the <em>reference</em> immutable, not the referent, which is why the defensive copy is mandatory for collection fields. <code>Collections.unmodifiableList</code> returns a view that throws <code>UnsupportedOperationException</code> on mutators but does not copy — so it protects against the caller, while the inbound <code>new ArrayList&lt;&gt;(items)</code> protects against later mutation of the original. <code>String</code>&#x27;s immutability lets the JVM intern literals into a shared pool and lets the JIT cache the lazily-computed hash in the <code>String</code> object.</p>
 <p><strong>Android implications</strong></p>
 <ul>
 <li>Room entities benefit from immutability; mutable entities cause hidden mutation bugs.</li>
@@ -2915,6 +3105,7 @@ public String toString() {
 </ul>
 <hr>
 <h3 id="s2-checked-vs-unchecked-exceptions">Checked vs Unchecked Exceptions</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;Everything descends from <code>Throwable</code>. <code>Error</code> is JVM-fatal and not meant to be caught. Under <code>Exception</code>, checked exceptions — everything except <code>RuntimeException</code> and its subclasses — must be declared with <code>throws</code> or caught, enforced by the compiler; unchecked ones have no such obligation. The nuance is that checked-or-not is purely a compile-time contract — at runtime the JVM treats them identically. In practice checked exceptions pollute APIs and don&#x27;t compose with lambdas, so modern Java and Kotlin lean unchecked or toward <code>Result</code>-style types.&quot;</blockquote>
 <p><strong>Definition</strong></p>
 <p>Java has two exception hierarchies rooted at <code>Throwable</code>. <code>Error</code> covers JVM-level issues like <code>OutOfMemoryError</code> and <code>StackOverflowError</code> — these are not meant to be caught. <code>Exception</code> splits further into two categories. Checked exceptions — <code>Exception</code> and its subclasses, excluding <code>RuntimeException</code> — must be either declared in the method signature with <code>throws</code> or caught at the call site. Examples are <code>IOException</code> and <code>SQLException</code>. Unchecked exceptions — <code>RuntimeException</code> and its subclasses — have no compile-time obligation to catch or declare. Examples are <code>NullPointerException</code>, <code>IllegalArgumentException</code>, and <code>IndexOutOfBoundsException</code>.</p>
 <pre><code>// Checked — must catch or declare
@@ -2926,12 +3117,15 @@ public void readFile(String path) throws IOException {
 public void divide(int a, int b) {
     if (b == 0) throw new ArithmeticException(&quot;Division by zero&quot;);
 }</code></pre>
+<p><strong>Under the hood</strong></p>
+<p>The checked/unchecked distinction exists only in <code>javac</code>; the JVM has no concept of it and never verifies <code>throws</code> clauses at runtime. The <code>throws</code> clause is recorded as method metadata (and bytecode for try/catch is the <code>Exceptions</code> attribute plus per-method exception tables that map instruction ranges to handler offsets and a catch type). At runtime, <code>ATHROW</code> unwinds the stack frame by frame, consulting each frame&#x27;s exception table for a handler whose type matches; if none is found the frame is popped and unwinding continues. This is why a class compiled to bypass the checked check (or Kotlin code) can throw a &quot;checked&quot; exception that Java callers never declared — the verifier doesn&#x27;t care.</p>
 <p><strong>The checked-exception controversy</strong></p>
 <p>Checked exceptions enforce error handling at compile time, which sounds good, but the practical problems are significant. They pollute APIs with <code>throws</code> declarations that propagate all the way up the call stack. Developers often swallow them or wrap them in <code>RuntimeException</code> just to escape the obligation. And they do not compose well with higher-order functions — a lambda cannot easily throw a checked exception. Modern Java and Kotlin overwhelmingly prefer unchecked exceptions or <code>Result</code>/<code>Either</code> types for error handling.</p>
 <p><strong>Kotlin does not have checked exceptions</strong></p>
 <p>Kotlin treats all exceptions as unchecked. See section 2.4 for how this affects interop with Java that declares checked exceptions.</p>
 <hr>
 <h3 id="s2-generics-and-type-erasure-java">Generics and Type Erasure (Java)</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;Java generics are compile-time only — the compiler type-checks and inserts casts, then erases type parameters to their bounds, so <code>List&lt;String&gt;</code> and <code>List&lt;Integer&gt;</code> are both just <code>List</code> at runtime. That&#x27;s why you can&#x27;t do <code>new T()</code>, <code>instanceof List&lt;String&gt;</code>, or have generic arrays. Variance is use-site via wildcards — PECS: producer-extends, consumer-super. And erasure forces the compiler to synthesize bridge methods so overriding across a generic boundary still dispatches correctly.&quot;</blockquote>
 <p>The fundamental mechanism is the same as Kotlin — same JVM. The key difference is that Java uses wildcards for use-site variance rather than <code>out</code>/<code>in</code>.</p>
 <p><strong>Wildcards</strong> (Java&#x27;s use-site variance)</p>
 <p><code>List&lt;? extends Animal&gt;</code> is an upper bounded wildcard — covariant, read-only — and it is equivalent to Kotlin&#x27;s <code>List&lt;out Animal&gt;</code>. <code>List&lt;? super Dog&gt;</code> is a lower bounded wildcard — contravariant, write-only — and it is equivalent to Kotlin&#x27;s <code>List&lt;in Dog&gt;</code>. <code>List&lt;?&gt;</code> is an unbounded wildcard equivalent to Kotlin&#x27;s <code>List&lt;*&gt;</code>.</p>
@@ -2940,8 +3134,11 @@ public void divide(int a, int b) {
 &lt;T&gt; void process(List&lt;? extends T&gt; source) { T item = source.get(0); }
 // Writing to: use super
 &lt;T&gt; void populate(List&lt;? super T&gt; target, T value) { target.add(value); }</code></pre>
+<p><strong>Under the hood</strong></p>
+<p>Erasure replaces each type parameter with its leftmost bound — <code>T</code> becomes <code>Object</code>, <code>&lt;T extends Number&gt;</code> becomes <code>Number</code> — and the compiler inserts <code>CHECKCAST</code> instructions at use sites so the runtime stays type-safe. The catch is overriding: when <code>class StringBox implements Comparable&lt;String&gt;</code> overrides <code>compareTo(String)</code>, erasure of the interface yields <code>compareTo(Object)</code>, so <code>javac</code> generates a synthetic <strong>bridge method</strong> <code>compareTo(Object)</code> (flags <code>ACC_BRIDGE | ACC_SYNTHETIC</code>) that casts and forwards to the real <code>compareTo(String)</code> — this is what lets polymorphic dispatch through the raw interface type land on your typed override. Because the parameters are gone, the runtime carries no reified type info; Kotlin&#x27;s <code>reified</code> works only by <code>inline</code>-substituting the concrete type at each call site before bytecode is emitted.</p>
 <hr>
 <h3 id="s2-java-collections">Java Collections</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;The hierarchy hangs off <code>Iterable</code> → <code>Collection</code>, splitting into <code>List</code>, <code>Set</code>, and <code>Queue</code>/<code>Deque</code>, with <code>Map</code> deliberately outside <code>Collection</code>. The choices I reason about are access pattern and ordering: <code>ArrayList</code> for O(1) random access, <code>LinkedList</code>/<code>ArrayDeque</code> for ends, <code>HashMap</code>/<code>HashSet</code> for O(1) lookup, the <code>Tree*</code> variants for sorted O(log n), and <code>ConcurrentHashMap</code> when threads share. On Android I&#x27;d add that <code>SparseArray</code> avoids autoboxing versus <code>HashMap&lt;Integer, V&gt;</code> in hot paths.&quot;</blockquote>
 <p><strong>Core interface hierarchy</strong></p>
 <pre><code>Iterable
   └── Collection
@@ -2975,18 +3172,24 @@ Map (not Collection)
 <tr><td>Key-value, sorted by key</td><td><code>TreeMap</code></td></tr>
 <tr><td>Thread-safe map</td><td><code>ConcurrentHashMap</code></td></tr>
 </tbody></table>
+<p><strong>Under the hood</strong></p>
+<p><code>ArrayList</code> is a backing <code>Object[]</code> that grows ~1.5× on overflow via <code>Arrays.copyOf</code> (amortized O(1) append). <code>HashSet</code> is literally a <code>HashMap</code> with the elements as keys and a shared dummy value. <code>HashMap</code> buckets are linked-list nodes that treeify to red-black trees past 8 entries (table ≥ 64) and untreeify below 6. The fail-fast iterators track a <code>modCount</code>; structurally mutating the collection mid-iteration (outside the iterator&#x27;s own <code>remove</code>) throws <code>ConcurrentModificationException</code> — detection, not a guarantee. <code>ConcurrentHashMap</code> shards locking per-bin (CAS for empty bins, <code>synchronized</code> on the bin head otherwise) so reads are lock-free and writes contend only within a bucket. Android&#x27;s <code>SparseArray</code> stores parallel <code>int[]</code> keys and <code>Object[]</code> values with binary search, avoiding the <code>Integer</code> autoboxing and node allocation a <code>HashMap&lt;Integer, V&gt;</code> incurs.</p>
 <p><strong>Android implications</strong></p>
 <p>Android provides <code>SparseArray&lt;V&gt;</code>, <code>SparseBooleanArray</code>, and <code>LongSparseArray</code> as memory-efficient alternatives to <code>HashMap&lt;Integer, V&gt;</code> when keys are integers — the key benefit is no autoboxing, which matters in memory-sensitive paths.</p>
 <hr>
 <h3 id="s2-java-memory-model-basics">Java Memory Model Basics</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;The JMM defines what writes by one thread are visible to reads by another, and in what order. Without synchronization there are no visibility or ordering guarantees — each thread can cache shared variables in registers, and both the compiler and CPU can reorder instructions. The unifying concept is happens-before: if A happens-before B, all of A&#x27;s effects are visible to B. <code>volatile</code> writes, monitor release/acquire, <code>Thread.start</code>, and <code>Thread.join</code> are the edges that establish it; absent such an edge, a data race is undefined behavior.&quot;</blockquote>
 <p><strong>Definition</strong></p>
 <p>The Java Memory Model — usually called the JMM — defines the rules governing how threads read and write to memory, establishing visibility and ordering guarantees.</p>
 <p><strong>Key concepts</strong></p>
 <p>There are four things to understand. Working memory: each thread has a local copy — a cache — of shared variables, and it does not necessarily read from main memory on every access. Main memory: the shared store all threads ultimately read from and write to. Visibility: without synchronization, changes made by one thread may never become visible to another. Reordering: the JVM and CPU can reorder instructions for performance, as long as the program appears to execute in order from a single thread&#x27;s perspective.</p>
 <p><strong>Happens-before relationship</strong></p>
 <p>The JMM formalizes visibility through the happens-before relation — if action A happens-before action B, then every effect of A is guaranteed to be visible to B. The key rules are: a thread&#x27;s own actions are happens-before within that thread in program order; a <code>synchronized</code> block releasing a monitor happens-before the next acquisition of the same monitor; a <code>volatile</code> write happens-before all subsequent <code>volatile</code> reads of the same variable; <code>Thread.start()</code> happens-before the new thread&#x27;s first action; and <code>Thread.join()</code> happens-before the code that follows it.</p>
+<p><strong>Under the hood</strong></p>
+<p>Happens-before is realized in machine code by <strong>memory barriers</strong> (fences) the compiler emits at the right places: a <code>volatile</code> store maps to a StoreStore + StoreLoad fence, a <code>volatile</code> load to a LoadLoad + LoadEnsure fence, and monitor exit/enter to release/acquire fences — these stop the compiler and CPU from reordering across them and force cache coherence. The model is defined over <em>actions</em> (reads, writes, locks, unlocks) and &quot;synchronizes-with&quot; edges; happens-before is the transitive closure of program order plus those edges. The crucial subtlety: a program with a data race (conflicting accesses not ordered by happens-before) has effectively undefined behavior — the JMM only promises sequential consistency for <strong>correctly synchronized</strong>, data-race-free programs. On ARM (most Android devices) the hardware memory model is weakly ordered, so these fences are real CPU instructions, not no-ops as they nearly are on x86.</p>
 <hr>
 <h3 id="s2-volatile">volatile</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;<code>volatile</code> guarantees visibility and ordering but not atomicity. A write to a volatile field goes straight to main memory and is immediately visible to other threads, and the JMM forbids reordering around it — so it establishes a happens-before edge — but a compound action like <code>count++</code> is still read-modify-write and can lose updates. For atomicity I&#x27;d use an <code>Atomic</code> class or a lock; I reach for <code>volatile</code> for a simple flag like a <code>running</code>/<code>cancelled</code> boolean, or to safely publish an immutable object&#x27;s reference.&quot;</blockquote>
 <p><strong>Definition</strong></p>
 <p>A <code>volatile</code> field guarantees visibility and prevents reordering across the access. Every write to a <code>volatile</code> variable is immediately written through to main memory, and every read reads from main memory rather than a thread-local cached copy.</p>
 <pre><code>private volatile boolean running = true;
@@ -3017,8 +3220,11 @@ public static Singleton getInstance() {
     return instance;
 }</code></pre>
 <p>The Kotlin equivalent is the <code>@Volatile</code> annotation on a property.</p>
+<p><strong>Under the hood</strong></p>
+<p>A <code>volatile</code> field is flagged <code>ACC_VOLATILE</code>; field access compiles to ordinary <code>GETFIELD</code>/<code>PUTFIELD</code>, but the JIT/AOT compiler wraps them in memory fences (StoreStore+StoreLoad around a write, LoadLoad+LoadEnsure around a read) so neither compiler nor CPU may reorder or cache across them. The double-checked-locking bug it fixes is concrete: <code>instance = new Singleton()</code> is really <em>allocate, run <code>&lt;init&gt;</code>, publish reference</em> — without <code>volatile</code> the JVM may reorder the publish before <code>&lt;init&gt;</code> finishes, letting another thread&#x27;s first-check read a non-null but half-constructed object. The <code>volatile</code> write&#x27;s release semantics forbid that reordering and establish happens-before from construction to the reader. Note <code>volatile</code> provides no read-modify-write atomicity because <code>i++</code> is still separate <code>GETFIELD</code>/<code>IADD</code>/<code>PUTFIELD</code> opcodes with no lock between them.</p>
 <hr>
 <h3 id="s2-synchronized">synchronized</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;<code>synchronized</code> gives both mutual exclusion and visibility by acquiring an object&#x27;s monitor — only one thread holds it at a time, and releasing it happens-before the next acquisition on the same monitor, so changes publish. Monitors are reentrant, so a thread already holding the lock can re-enter without deadlocking itself. I&#x27;d warn against locking on <code>this</code> or on boxed <code>Integer</code>s (cached -128..127 share a monitor), and against holding a lock across I/O — and note it costs more than <code>volatile</code> under contention because threads block.&quot;</blockquote>
 <p><strong>Definition</strong></p>
 <p><code>synchronized</code> provides two guarantees: mutual exclusion — only one thread can execute the block at a time — and visibility — all changes made inside the block are visible to the next thread that enters a synchronized block on the same monitor.</p>
 <pre><code>private final Object lock = new Object();
@@ -3046,11 +3252,14 @@ public synchronized int get() {  // Locks on &#x27;this&#x27;
 <tr><td>Blocking</td><td>No</td><td>Yes (can block other threads)</td></tr>
 <tr><td>Performance</td><td>Faster</td><td>Slower (contention possible)</td></tr>
 </tbody></table>
+<p><strong>Under the hood</strong></p>
+<p>A <code>synchronized (obj) { }</code> block compiles to a <code>MONITORENTER</code> opcode on entry and <code>MONITOREXIT</code> on exit, with <code>javac</code> emitting an extra <code>MONITOREXIT</code> in a synthetic exception handler so the monitor is released even if the block throws. A <code>synchronized</code> <em>method</em> carries no opcodes — it sets the <code>ACC_SYNCHRONIZED</code> flag and the JVM locks the receiver (<code>this</code>, or the <code>Class</code> object for a static method) on entry. The monitor lives in the object header&#x27;s mark word and is <strong>reentrant</strong>: it keeps a hold count, so a thread already owning it can re-enter and only fully releases at count zero. The JVM optimizes uncontended locks via biased/thin (CAS-based) locking, inflating to a heavyweight OS monitor only under real contention. The boxed-<code>Integer</code> hazard is concrete: <code>Integer.valueOf(100)</code> returns a cached shared instance, so two &quot;independent&quot; locks are the same monitor.</p>
 <p><strong>Failure cases</strong></p>
 <p>There are four common failure cases. Synchronizing on <code>this</code> can cause unintended contention if external code also synchronizes on the same object — prefer a private <code>final</code> lock object instead. Holding locks across I/O or long-running operations starves other threads. Deadlock: Thread A holds Lock 1 and waits for Lock 2 while Thread B holds Lock 2 and waits for Lock 1 — they block each other forever. Synchronizing on a boxed <code>Integer</code> is unsafe because <code>Integer.valueOf()</code> caches values between -128 and 127, so multiple threads may accidentally share the same monitor.</p>
 <p>The Kotlin equivalents are the <code>@Synchronized</code> annotation or the <code>synchronized(lock) { }</code> extension function.</p>
 <hr>
 <h3 id="s2-wait--notify--notifyall">wait() / notify() / notifyAll()</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;These are <code>Object</code> methods for condition signalling, and they only work while you hold that object&#x27;s monitor — otherwise you get <code>IllegalMonitorStateException</code>. <code>wait()</code> atomically releases the monitor and parks the thread until a <code>notify</code>/<code>notifyAll</code>, then reacquires before returning. The two things I always say: call <code>wait()</code> inside a <code>while</code> loop checking the condition, never an <code>if</code>, because spurious wakeups are explicitly permitted and another thread may have changed state; and in modern code I&#x27;d prefer <code>java.util.concurrent</code> primitives like <code>BlockingQueue</code> or <code>Condition</code>.&quot;</blockquote>
 <p><strong>Definition</strong></p>
 <p>These <code>Object</code> methods implement the classic condition variable pattern for inter-thread communication, and they must be called from within a <code>synchronized</code> block on the same object. <code>wait()</code> releases the lock and suspends the current thread until another thread calls <code>notify()</code> or <code>notifyAll()</code> on the same object. <code>notify()</code> wakes one waiting thread — non-deterministically which one. <code>notifyAll()</code> wakes all waiting threads, and they then compete to reacquire the lock.</p>
 <pre><code>// Producer-consumer pattern
@@ -3069,6 +3278,8 @@ public synchronized Task consume() throws InterruptedException {
 }</code></pre>
 <p><strong>Critical rules</strong></p>
 <p>There are three rules to internalize. First, always check the condition in a <code>while</code> loop, not an <code>if</code> — the JVM spec explicitly allows spurious wakeups, so the condition might not actually be true when a thread wakes up. Second, always call <code>wait</code>/<code>notify</code>/<code>notifyAll</code> within a <code>synchronized</code> block on the same object, or you get <code>IllegalMonitorStateException</code>. Third, in modern code, prefer <code>java.util.concurrent</code> primitives like <code>CountDownLatch</code>, <code>Semaphore</code>, <code>BlockingQueue</code>, and <code>Condition</code> over raw <code>wait</code>/<code>notify</code> — they are safer and more readable.</p>
+<p><strong>Under the hood</strong></p>
+<p>Each Java object&#x27;s monitor owns a <em>wait set</em> and an <em>entry set</em>. <code>wait()</code> requires the calling thread to own the monitor; it atomically releases the monitor (fully, dropping the entire reentrant hold count), adds the thread to the wait set, and parks it. <code>notify()</code> moves one arbitrary thread from the wait set to the entry set; <code>notifyAll()</code> moves all of them — but none can proceed until the notifier exits its <code>synchronized</code> block and releases the monitor, after which the awakened threads contend via <code>MONITORENTER</code> to reacquire it (restoring the prior hold count) before <code>wait()</code> returns. The JVM is explicitly permitted to return from <code>wait()</code> without any <code>notify</code> (a spurious wakeup), which is the bytecode-level reason the condition must be rechecked in a <code>while</code>. Calling these without owning the monitor throws <code>IllegalMonitorStateException</code>.</p>
 <p><strong>Android implications</strong></p>
 <p>You will rarely use <code>wait</code>/<code>notify</code> directly in Android code because coroutines and RxJava provide better abstractions. However, understanding them is important for understanding how <code>CountDownLatch</code> and blocking calls work, which do appear in test code.</p>
 <hr>
@@ -3090,6 +3301,7 @@ public synchronized Task consume() throws InterruptedException {
 <hr>
 <h2 id="s2-24-kotlin-java-interop">2.4 Kotlin-Java Interop</h2>
 <h3 id="s2-platform-types">Platform Types</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;Platform types come from Java code that carries no nullability information — Kotlin shows them as <code>String!</code>. The catch is that the compiler doesn&#x27;t force a null check, so I can freely assign one to a non-null type and it compiles fine — but if Java actually returned null, I get an NPE that surfaces deep inside Kotlin code, far from the Java boundary. The fix is to annotate the Java side with <code>@Nullable</code>/<code>@NonNull</code>, or to immediately pin the value to an explicitly nullable Kotlin type right at the call site.&quot;</blockquote>
 <p><strong>Definition</strong></p>
 <p>When Kotlin calls Java code that has no nullability annotations, the compiler cannot determine whether the value is nullable or non-null. These values get platform types, written as <code>Type!</code> in error messages — for example, <code>String!</code>. Platform types are essentially an escape hatch that bypasses Kotlin&#x27;s null safety system, and the responsibility for null checking shifts entirely to you.</p>
 <p><strong>How it works</strong></p>
@@ -3104,10 +3316,16 @@ user.name                   // Compiles — but crashes at runtime if null!</cod
 <pre><code>val name: String = repo.getUser().name  // Compiles, but can throw NPE at runtime</code></pre>
 <p><strong>Why this matters</strong></p>
 <p>Platform types are a compatibility escape hatch, not a safety feature. You are responsible for null checking. When a null does come through, the resulting crash looks like a <code>KotlinNullPointerException</code> with a message like &quot;getUser() must not be null,&quot; which tells you where the null crossed the boundary but not where it originated.</p>
+<p><strong>Under the hood</strong></p>
+<p>A platform type is not a real type in the type system — it is a flexible type the compiler tracks internally as the range <code>(Type..Type?)</code>, meaning &quot;could be <code>Type</code> or <code>Type?</code>.&quot; Because of this flexibility, the compiler emits <strong>no</strong> parameter or assignment null-check intrinsic when the value is <em>used</em> as a platform type, but the moment you pin it to a non-null Kotlin type, the compiler inserts an <code>Intrinsics.checkNotNullExpressionValue(...)</code> (or a parameter check) that throws if the value is null. That is why the NPE fires at the assignment/use site, not where Java produced the null:</p>
+<pre><code>val name: String = repo.getUser().name
+  ↓ compiler inserts
+  Intrinsics.checkNotNullExpressionValue(getUser(), &quot;getUser()&quot;)  // throws here</code></pre>
 <p><strong>Best practices</strong></p>
 <p>The fix is to add <code>@Nullable</code> and <code>@NonNull</code> annotations to your Java code so Kotlin sees definite types. When calling un-annotated Java APIs in Kotlin, always treat return values as potentially null — use <code>?.</code> or an explicit null check. Never assign a platform type directly to a non-null <code>val</code> without verifying first.</p>
 <hr>
 <h3 id="s2-nullability-annotations">Nullability Annotations</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;Nullability annotations on the Java side — <code>@Nullable</code> and <code>@NonNull</code> — give Kotlin enough information to assign a <em>definite</em> nullable or non-null type at the call site instead of a platform type. Kotlin understands a whole family of these from JetBrains, AndroidX, and JSR-305. The thing to flag is that annotations are trusted, not verified: if Java lies and a method annotated <code>@NonNull</code> returns null, Kotlin treats it as non-null and crashes with no warning.&quot;</blockquote>
 <p><strong>Definition</strong></p>
 <p>Adding <code>@Nullable</code> or <code>@NonNull</code> annotations to Java code gives Kotlin the information it needs to assign a definite nullable or non-null type at the call site, rather than a platform type.</p>
 <p><strong>Supported annotation packages</strong> — Kotlin recognizes all of these:</p>
@@ -3131,10 +3349,13 @@ public class UserRepository {
 <pre><code>val repo = UserRepository()
 val user: User? = repo.getUser()     // Now correctly typed as User?
 val url: String = repo.getServerUrl() // Correctly typed as String</code></pre>
+<p><strong>Under the hood</strong></p>
+<p>When the compiler reads a <code>@NonNull</code>/<code>@NotNull</code> Java return, it drops the platform flexibility and treats the type as a plain non-null Kotlin type — so it generates exactly the same <code>Intrinsics</code> non-null checks it would for native Kotlin non-null types. A <code>@Nullable</code> return becomes a true <code>Type?</code>, forcing the safe-call/null-check discipline at compile time. The compiler does <strong>not</strong> re-validate the annotation against runtime behavior: the annotation is taken on faith, which is why a <code>@NonNull</code> method that actually returns null produces an NPE at first dereference with no compiler diagnostic.</p>
 <p><strong>Android implications</strong></p>
 <p>Most AndroidX APIs are well-annotated, so you rarely encounter platform types from them. Third-party Java libraries are often not annotated — treat their return values defensively as nullable until proven otherwise.</p>
 <hr>
 <h3 id="s2-sam-conversion">SAM Conversion</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;SAM conversion lets me pass a Kotlin lambda where a Java single-abstract-method interface is expected — like <code>View.OnClickListener</code> — without writing an anonymous object. It only works for Java interfaces automatically; Kotlin interfaces need me to opt in with <code>fun interface</code>, because Kotlin already has function types and the compiler doesn&#x27;t want ambiguity. The nuance is that it only kicks in with exactly one abstract method — add a second and the lambda stops compiling.&quot;</blockquote>
 <p><strong>Definition</strong></p>
 <p>Single Abstract Method (SAM) conversion lets a Kotlin lambda be automatically converted into a Java interface that has exactly one abstract method. This is what lets you write a lambda where the Java API expects, say, a <code>View.OnClickListener</code>, without any boilerplate object expression.</p>
 <p><strong>How it works</strong></p>
@@ -3159,10 +3380,18 @@ button.setOnClickListener { v -&gt; handleClick(v) }</code></pre>
 }
 
 val isPositive = Predicate&lt;Int&gt; { it &gt; 0 }  // SAM conversion</code></pre>
+<p><strong>Under the hood</strong></p>
+<p>The compiler wraps the lambda in a synthetic class that implements the target interface and forwards its single method to the lambda body. By default each SAM-converted lambda becomes an anonymous class instance generated at the call site; with <code>invokedynamic</code>-based SAM generation (the modern default on supported targets) the wrapper is created lazily via a bootstrap method rather than emitting a named <code>$1</code> class. For a Kotlin <code>fun interface</code>, the compiler synthesizes the same kind of adapter that bridges the lambda&#x27;s <code>FunctionN.invoke</code> to the interface&#x27;s abstract method:</p>
+<pre><code>button.setOnClickListener { v -&gt; handleClick(v) }
+  ↓ compiler emits roughly
+  setOnClickListener(new OnClickListener() {
+      public void onClick(View v) { handleClick(v); }
+  })</code></pre>
 <p><strong>Failure cases</strong></p>
 <p>SAM conversion only works when the Java interface has exactly one abstract method — add a second and the lambda no longer compiles. Kotlin interfaces do not support SAM conversion by default, which is why <code>fun interface</code> exists. If the Java SAM interface has generic type parameters, the Kotlin lambda may need explicit type annotations.</p>
 <hr>
 <h3 id="s2-jvmstatic">@JvmStatic</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;<code>@JvmStatic</code> on a companion object member tells the compiler to emit a <em>real</em> static method in the bytecode, alongside the normal instance method on the <code>Companion</code> object. Without it, Java has to go through <code>MyClass.Companion.create()</code>; with it, Java just writes <code>MyClass.create()</code>. It&#x27;s the right thing to put on factory methods and constants that Java code calls — in Android, things like <code>Fragment.newInstance()</code>.&quot;</blockquote>
 <p><strong>Definition</strong></p>
 <p><code>@JvmStatic</code> on a <code>companion object</code> method or property tells the Kotlin compiler to generate a real <code>static</code> method or field in the Java bytecode, in addition to the instance method on the companion object. Without it, Java callers have to go through <code>MyClass.Companion.create()</code>, which is awkward. With it, they just write <code>MyClass.create()</code>.</p>
 <p><strong>Without <code>@JvmStatic</code></strong></p>
@@ -3180,10 +3409,20 @@ val isPositive = Predicate&lt;Int&gt; { it &gt; 0 }  // SAM conversion</code></p
     }
 }</code></pre>
 <p>From Java: <code>MyClass.create()</code> — clean, looks like a static method.</p>
+<p><strong>Under the hood</strong></p>
+<p>A companion object is, in bytecode, a nested <code>Companion</code> class with a single static instance field on the outer class (<code>public static final MyClass$Companion Companion</code>). A normal companion method lives as an <em>instance</em> method on <code>MyClass$Companion</code>, which is why Java must write <code>MyClass.Companion.create()</code>. <code>@JvmStatic</code> makes the compiler additionally emit a genuine <code>static</code> method on the <em>outer</em> <code>MyClass</code> that simply delegates to the companion instance — both exist, so existing Kotlin callers are unaffected:</p>
+<pre><code>public final class MyClass {
+    public static final Companion Companion = ...;
+    public static MyClass create() { return Companion.create(); }  // emitted by @JvmStatic
+    public static final class Companion {
+        public final MyClass create() { return new MyClass(); }    // always present
+    }
+}</code></pre>
 <p><strong>When to use</strong></p>
 <p>Use <code>@JvmStatic</code> on any public API that will be called from Java. In Android specifically, <code>Fragment.newInstance()</code> and <code>Activity.newIntent()</code> factory methods in companion objects should have it, because they are commonly called from Java Activities.</p>
 <hr>
 <h3 id="s2-jvmoverloads">@JvmOverloads</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;Kotlin has default parameter values but Java doesn&#x27;t understand them, so from Java you&#x27;d have to pass every argument. <code>@JvmOverloads</code> makes the compiler synthesize a set of telescoping overloads — one per trailing default — so Java callers get the same convenience. The classic Android trap is a custom <code>View</code>: without <code>@JvmOverloads</code> the framework can&#x27;t find the <code>(Context, AttributeSet)</code> constructor and your view won&#x27;t inflate from XML.&quot;</blockquote>
 <p><strong>Definition</strong></p>
 <p>Kotlin supports default parameter values, but Java does not understand them. <code>@JvmOverloads</code> tells the compiler to generate a set of Java overloaded methods — one for each combination of trailing default parameters — so Java callers get the same convenience without knowing about defaults.</p>
 <pre><code>@JvmOverloads
@@ -3191,11 +3430,17 @@ fun connect(host: String, port: Int = 443, timeout: Int = 5000) { ... }</code></
 <p>Generated Java methods:</p>
 <pre><code>void connect(String host, int port, int timeout)  // Full
 void connect(String host, int port)               // timeout defaults to 5000
-void connect(String host)                         // port defaults to 443, timeout to 5000</code></pre>
+void connect(String host)                          // port defaults to 443, timeout to 5000</code></pre>
+<p><strong>Under the hood</strong></p>
+<p>Without <code>@JvmOverloads</code>, a Kotlin function with defaults compiles to a <em>single</em> method plus a synthetic <code>connect$default(...)</code> helper that takes a bitmask flagging which arguments were omitted — that mechanism is invisible to Java. <code>@JvmOverloads</code> instead synthesizes one real overload per trailing default, each of which forwards to the full method supplying the default expressions. The overloads are generated only by <em>dropping trailing</em> parameters from right to left, so a default in the middle of the list does not produce an overload that skips just that one:</p>
+<pre><code>void connect(String h)            -&gt; connect(h, 443, 5000)
+void connect(String h, int p)     -&gt; connect(h, p, 5000)
+void connect(String h, int p, int t)  // full implementation</code></pre>
 <p><strong>Android use case</strong></p>
 <p>The canonical example is a custom <code>View</code> constructor. Without <code>@JvmOverloads</code>, the Android framework — which calls View constructors from Java — would fail to find the <code>(Context, AttributeSet)</code> constructor and your view would not inflate from XML. This is one of the most common Android gotchas when writing custom views in Kotlin.</p>
 <hr>
 <h3 id="s2-jvmfield">@JvmField</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;By default a Kotlin property is a private backing field plus a <code>getXxx()</code> (and <code>setXxx()</code> for a <code>var</code>). <code>@JvmField</code> tells the compiler to expose the backing field directly as a public field and suppress the getter/setter entirely, so Java accesses it as <code>config.maxRetries</code> instead of <code>config.getMaxRetries()</code>. It&#x27;s mainly for constants and frameworks like JUnit <code>@Rule</code> that want a real field — but it can&#x27;t be used with custom accessors or delegation since there&#x27;s no field to expose.&quot;</blockquote>
 <p><strong>Definition</strong></p>
 <p>By default, a Kotlin property compiles to a private backing field plus a <code>getXxx()</code> getter — and a <code>setXxx()</code> setter if it is a <code>var</code>. <code>@JvmField</code> exposes the field directly in Java bytecode with no getter or setter wrapper, so Java callers access it as a plain field.</p>
 <pre><code>class Config {
@@ -3203,12 +3448,18 @@ void connect(String host)                         // port defaults to 443, timeo
     val maxRetries: Int = 3    // Exposed as a public field in Java
 }</code></pre>
 <p>Java access: <code>config.maxRetries</code> (direct field access, not <code>config.getMaxRetries()</code>).</p>
+<p><strong>Under the hood</strong></p>
+<p>Normally the backing field is emitted as <code>private</code> and visibility is mediated by generated accessors. <code>@JvmField</code> changes the field&#x27;s emitted visibility to match the property (e.g. <code>public final int maxRetries</code>) and instructs the compiler to <strong>not</strong> generate the <code>getXxx</code>/<code>setXxx</code> accessor methods at all. Because there are no accessors, anything that <em>requires</em> an accessor — custom <code>get()</code>/<code>set()</code>, <code>lateinit</code> with checks, property delegation (<code>by</code>), <code>open</code>/abstract properties — is incompatible and rejected at compile time. On a companion-object constant, <code>@JvmField</code> likewise promotes the value to a static field on the outer class so Java reads <code>MyClass.DEFAULT_TIMEOUT</code> directly:</p>
+<pre><code>@JvmField val maxRetries: Int = 3
+  ↓
+public final int maxRetries = 3;   // no getMaxRetries() emitted</code></pre>
 <p><strong>Use cases</strong></p>
 <p>There are three common use cases. Constants in companion objects — <code>@JvmField val DEFAULT_TIMEOUT = 5000</code> — so Java sees <code>MyClass.DEFAULT_TIMEOUT</code> as a direct field access. Avoiding the overhead of getter calls in performance-sensitive Java code, though this is a minor win in practice. And some Java frameworks that expect direct field access, like JUnit&#x27;s <code>@Rule</code> or certain serialization libraries, require it.</p>
 <p><strong>Gotchas</strong></p>
 <p><code>@JvmField</code> bypasses property delegation, custom getters, and visibility modifiers — the field is exposed as-is. It cannot be used on abstract properties or properties that have custom getters or setters.</p>
 <hr>
 <h3 id="s2-calling-suspend-functions-from-java">Calling Suspend Functions from Java</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;A <code>suspend</code> function has no Java equivalent — the compiler rewrites it via a CPS transform, appending a hidden <code>Continuation</code> parameter and changing the return type to <code>Object</code> because it may return the <code>COROUTINE_SUSPENDED</code> marker instead of the result. So from Java you&#x27;d literally have to build and pass a <code>Continuation</code>, which is miserable. The right move is to never expose <code>suspend</code> to Java; instead surface a <code>LiveData</code>, an RxJava <code>Single</code>, or a <code>ListenableFuture</code> from the ViewModel.&quot;</blockquote>
 <p><strong>Definition</strong></p>
 <p><code>suspend</code> functions are a Kotlin coroutine concept with no direct Java equivalent. The Kotlin compiler transforms them by adding a <code>Continuation&lt;T&gt;</code> parameter — that is what the coroutine machinery uses to resume execution. From Java you can call them, but it requires explicit continuation handling, which is not ergonomic.</p>
 <p><strong>What the compiler generates</strong></p>
@@ -3231,6 +3482,16 @@ ListenableFuture&lt;User&gt; future = FutureKt.future(
     scope, EmptyCoroutineContext.INSTANCE, CoroutineStart.DEFAULT,
     (scope2, cont) -&gt; viewModel.fetchUser(userId, cont)
 );</code></pre>
+<p><strong>Under the hood</strong></p>
+<p>The compiler applies a <strong>Continuation-Passing Style (CPS) transform</strong>: <code>suspend fun fetchUser(id: Int): User</code> becomes <code>Object fetchUser(int id, Continuation&lt;? super User&gt; $completion)</code>. The return type is erased to <code>Object</code> because the function may either return the actual <code>User</code> <em>or</em> the sentinel <code>COROUTINE_SUSPENDED</code> (from <code>IntrinsicsKt.getCOROUTINE_SUSPENDED()</code>) when it suspends. The body is compiled into a <strong>state machine</strong>: each suspension point becomes a labeled state, local variables that must survive suspension are spilled into fields of a generated <code>ContinuationImpl</code> subclass, and resumption re-enters the method via <code>invokeSuspend</code>, switching on the saved <code>label</code> to jump to the next state:</p>
+<pre><code>suspend fun fetchUser(id): User
+  ↓ CPS + state machine
+Object fetchUser(int id, Continuation $completion) {
+    switch ($continuation.label) {
+        case 0: ... ; $continuation.label = 1; return withContext(...);  // may return COROUTINE_SUSPENDED
+        case 1: return $continuation.result;                              // resumed value
+    }
+}</code></pre>
 <p><strong>Best practice</strong></p>
 <p>The right approach is to expose a <code>LiveData&lt;T&gt;</code> or an <code>RxJava Single&lt;T&gt;</code> from the ViewModel for Java callers, rather than exposing <code>suspend</code> functions directly. Never surface <code>suspend</code> functions in public APIs that Java code will consume.</p>
 <pre><code>// ViewModel with Java-friendly surface
@@ -3239,16 +3500,24 @@ fun loadUserLiveData(id: Int): LiveData&lt;User&gt; = liveData {
 }</code></pre>
 <hr>
 <h3 id="s2-java-checked-exceptions-in-kotlin">Java Checked Exceptions in Kotlin</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;Kotlin has no checked exceptions — everything is unchecked — so when I call a Java method that declares <code>throws IOException</code>, Kotlin doesn&#x27;t force a try-catch; the exception can still propagate at runtime, it&#x27;s just not enforced at compile time. The flip side matters for interop: if a Kotlin function can throw something Java needs to catch, I annotate it with <code>@Throws</code> so the compiler emits a <code>throws</code> clause into the bytecode — otherwise Java callers have no idea and get an unchecked surprise.&quot;</blockquote>
 <p><strong>Definition</strong></p>
 <p>Kotlin does not have checked exceptions — all exceptions are unchecked. When Kotlin code calls a Java method that declares checked exceptions with <code>throws IOException</code>, Kotlin does not require a <code>try-catch</code> at the call site. The exception can still propagate at runtime, it just will not be flagged at compile time.</p>
 <pre><code>val bytes = Files.readAllBytes(Paths.get(&quot;file.txt&quot;))  // No try-catch required in Kotlin
 // But IOException can still propagate at runtime!</code></pre>
 <p><strong>Exposing Kotlin to Java with <code>@Throws</code></strong></p>
 <p>If a Kotlin function propagates a checked exception and will be called from Java, annotate it with <code>@Throws</code> to generate a <code>throws</code> clause in the bytecode. Without it, the Java caller has no idea the exception can be thrown — it becomes an unchecked surprise at runtime.</p>
+<p><strong>Under the hood</strong></p>
+<p>The JVM&#x27;s checked-exception rule is enforced by <code>javac</code>, not by the bytecode itself — the <code>throws</code> clause is stored as method metadata (the <code>Exceptions</code> attribute in the class file). The Kotlin compiler simply never emits that attribute, so the called Kotlin method <em>can</em> throw anything but advertises nothing, and <code>javac</code> raises no &quot;must be caught&quot; error against it. <code>@Throws(IOException::class)</code> instructs the compiler to write the <code>Exceptions</code> attribute listing those types, which is exactly what <code>javac</code> reads to enforce catch-or-declare on the Java side:</p>
+<pre><code>@Throws(IOException::class)
+fun read() { ... }
+  ↓ emits method with attribute
+  void read() throws java.io.IOException   // javac now enforces handling</code></pre>
 <p><strong>Failure cases</strong></p>
 <p>Forgetting <code>@Throws</code> on Kotlin functions called from Java is the main pitfall — Java callers will not be warned and may not have any error handling in place. Catching blanket <code>Exception</code> in Kotlin just to absorb checked exceptions coming from Java is also a common mistake that masks real bugs.</p>
 <hr>
 <h3 id="s2-kotlin-properties--getterssetters">Kotlin Properties → Getters/Setters</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;A Kotlin property compiles to a private backing field plus JavaBean-style accessors: <code>getName()</code>/<code>setName()</code> for a <code>var</code>, just the getter for a <code>val</code>. The special case interviewers like is Booleans — a property named <code>isActive</code> keeps the <code>is</code> prefix, so Java sees <code>isActive()</code> and <code>setActive()</code>. A computed property with a custom <code>get()</code> and no stored value has no backing field, and inside an accessor the <code>field</code> keyword is how you touch the backing field without recursing into yourself.&quot;</blockquote>
 <p><strong>Definition</strong></p>
 <p>Kotlin properties compile to a private backing field plus <code>getXxx()</code> and <code>setXxx()</code> accessor methods in Java bytecode. This aligns with JavaBean conventions, so Java code can consume Kotlin properties transparently.</p>
 <pre><code>class Person {
@@ -3278,6 +3547,13 @@ val fullName: String
         require(value &gt;= 0)
         field = value   // &#x27;field&#x27; is the backing field
     }</code></pre>
+<p><strong>Under the hood</strong></p>
+<p>For a <code>var name: String</code>, the compiler emits a <code>private String name</code> field plus <code>public String getName()</code> and <code>public void setName(String)</code> methods; a <code>val</code> omits the setter. The accessor <em>name</em> is derived mechanically — <code>get</code>/<code>set</code> + capitalized property name — <strong>except</strong> for a <code>Boolean</code> property whose name already starts with <code>is</code>, where the getter reuses the name verbatim (<code>isActive()</code>) and the setter replaces <code>is</code> with <code>set</code> (<code>setActive(...)</code>). A backing field is generated only when the property is actually referenced via the <code>field</code> keyword or has an initializer; a purely computed property (<code>val fullName get() = ...</code>) emits <strong>no</strong> field — just <code>getFullName()</code>. Inside an accessor, <code>field</code> compiles to a direct read/write of that private field, which is why it avoids the infinite recursion you&#x27;d get by calling the property&#x27;s own getter/setter:</p>
+<pre><code>var name: String = &quot;Alice&quot;
+  ↓
+private String name = &quot;Alice&quot;;
+public String getName() { return name; }
+public void setName(String v) { name = v; }</code></pre>
 <hr>
 <h3 id="s2-interview-angles--24">Interview Angles — 2.4</h3>
 <p><strong>Q: What are platform types?</strong></p>
