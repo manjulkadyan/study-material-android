@@ -1,0 +1,1635 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>1. Data Structures &amp; Big O</title>
+<link rel="stylesheet" href="../style.css"></head>
+<body class="has-toc" data-prev="../index.html" data-next="kotlin-java-fundamentals.html">
+<nav class="sidebar"><a class="brand" href="../index.html">📱 Android Study Guide — Home</a><details class="topic active" open><summary><span class="caret">▶</span><a href="data-structures-big-o.html">1. Data Structures &amp; Big O</a></summary><ul class="subtopics"><li><a class="spy" href="#11-data-structures--collections--12-big-o-notation">1.1 Data Structures &amp; Collections · 1.2 Big O Notation</a></li><li><a class="spy" href="#table-of-contents">Table of Contents</a></li><li><a class="spy" href="#1-arrays">1. Arrays</a></li><li><a class="spy" href="#2-arraylist--mutablelist">2. ArrayList / MutableList</a></li><li><a class="spy" href="#3-linkedlist">3. LinkedList</a></li><li><a class="spy" href="#4-stack">4. Stack</a></li><li><a class="spy" href="#5-queue">5. Queue</a></li><li><a class="spy" href="#6-deque">6. Deque</a></li><li><a class="spy" href="#7-hashmap--mutablemap">7. HashMap / MutableMap</a></li><li><a class="spy" href="#8-hashset--mutableset">8. HashSet / MutableSet</a></li><li><a class="spy" href="#9-linkedhashmap">9. LinkedHashMap</a></li><li><a class="spy" href="#10-treemap--sortedmap">10. TreeMap / SortedMap</a></li><li><a class="spy" href="#11-priorityqueue--heap">11. PriorityQueue / Heap</a></li><li><a class="spy" href="#12-trie">12. Trie</a></li><li><a class="spy" href="#13-graphs">13. Graphs</a></li><li><a class="spy" href="#14-android-specific-collections">14. Android-Specific Collections</a></li><li><a class="spy" href="#15-big-o-notation">15. Big O Notation</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="kotlin-java-fundamentals.html">2. Kotlin &amp; Java Fundamentals</a></summary><ul class="subtopics"><li><a class="" href="kotlin-java-fundamentals.html#table-of-contents">Table of Contents</a></li><li><a class="" href="kotlin-java-fundamentals.html#21-kotlin-fundamentals">2.1 Kotlin Fundamentals</a></li><li><a class="" href="kotlin-java-fundamentals.html#22-kotlin-generics">2.2 Kotlin Generics</a></li><li><a class="" href="kotlin-java-fundamentals.html#23-java-fundamentals">2.3 Java Fundamentals</a></li><li><a class="" href="kotlin-java-fundamentals.html#24-kotlin-java-interop">2.4 Kotlin-Java Interop</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="concurrency-android-threading.html">3. Concurrency &amp; Android Threading</a></summary><ul class="subtopics"><li><a class="" href="concurrency-android-threading.html#table-of-contents">Table of Contents</a></li><li><a class="" href="concurrency-android-threading.html#31-java-thread-basics">3.1 Java Thread Basics</a></li><li><a class="" href="concurrency-android-threading.html#32-locks-and-synchronization">3.2 Locks and Synchronization</a></li><li><a class="" href="concurrency-android-threading.html#33-volatile-and-atomic-classes">3.3 Volatile and Atomic Classes</a></li><li><a class="" href="concurrency-android-threading.html#34-waitnotify-and-producer-consumer">3.4 Wait/Notify and Producer-Consumer</a></li><li><a class="" href="concurrency-android-threading.html#35-executors-and-task-execution">3.5 Executors and Task Execution</a></li><li><a class="" href="concurrency-android-threading.html#36-android-application-threads">3.6 Android Application Threads</a></li><li><a class="" href="concurrency-android-threading.html#37-handler--looper--messagequeue">3.7 Handler / Looper / MessageQueue</a></li><li><a class="" href="concurrency-android-threading.html#38-kotlin-coroutines-on-android">3.8 Kotlin Coroutines on Android</a></li><li><a class="" href="concurrency-android-threading.html#39-flow-stateflow-sharedflow-channel">3.9 Flow, StateFlow, SharedFlow, Channel</a></li><li><a class="" href="concurrency-android-threading.html#310-background-work">3.10 Background Work</a></li><li><a class="" href="concurrency-android-threading.html#quick-reference-interview-cheat-sheet">Quick-Reference: Interview Cheat Sheet</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="thread-communication.html">4. Thread Communication</a></summary><ul class="subtopics"><li><a class="" href="thread-communication.html#table-of-contents">Table of Contents</a></li><li><a class="" href="thread-communication.html#41-pipes">4.1 Pipes</a></li><li><a class="" href="thread-communication.html#42-shared-memory">4.2 Shared Memory</a></li><li><a class="" href="thread-communication.html#43-signaling">4.3 Signaling</a></li><li><a class="" href="thread-communication.html#44-blockingqueue">4.4 BlockingQueue</a></li><li><a class="" href="thread-communication.html#45-message-passing--android-handlerloopermessagequeue">4.5 Message Passing — Android Handler/Looper/MessageQueue</a></li><li><a class="" href="thread-communication.html#cross-cutting-shared-memory-vs-message-passing">Cross-cutting: Shared Memory vs Message Passing</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="ipc-binder-aidl-messenger.html">5. IPC: Binder, AIDL, Messenger</a></summary><ul class="subtopics"><li><a class="" href="ipc-binder-aidl-messenger.html#table-of-contents">Table of Contents</a></li><li><a class="" href="ipc-binder-aidl-messenger.html#51-android-process-model">5.1 Android Process Model</a></li><li><a class="" href="ipc-binder-aidl-messenger.html#52-binder">5.2 Binder</a></li><li><a class="" href="ipc-binder-aidl-messenger.html#53-aidl">5.3 AIDL</a></li><li><a class="" href="ipc-binder-aidl-messenger.html#54-messenger">5.4 Messenger</a></li><li><a class="" href="ipc-binder-aidl-messenger.html#parcelable-vs-serializable">Parcelable vs Serializable</a></li><li><a class="" href="ipc-binder-aidl-messenger.html#aidl-vs-messenger-decision-guide">AIDL vs Messenger Decision Guide</a></li><li><a class="" href="ipc-binder-aidl-messenger.html#interview-quick-reference">Interview Quick-Reference</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="android-memory-management.html">6. Android Memory Management</a></summary><ul class="subtopics"><li><a class="" href="android-memory-management.html#table-of-contents">Table of Contents</a></li><li><a class="" href="android-memory-management.html#61-jvmart-memory-basics">6.1 JVM/ART Memory Basics</a></li><li><a class="" href="android-memory-management.html#62-android-memory-leaks">6.2 Android Memory Leaks</a></li><li><a class="" href="android-memory-management.html#63-context-leaks">6.3 Context Leaks</a></li><li><a class="" href="android-memory-management.html#64-bitmap-and-image-memory">6.4 Bitmap and Image Memory</a></li><li><a class="" href="android-memory-management.html#65-leak-detection-and-profiling">6.5 Leak Detection and Profiling</a></li><li><a class="" href="android-memory-management.html#interview-quick-reference">Interview Quick-Reference</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="architecture-patterns.html">7. Architecture Patterns</a></summary><ul class="subtopics"><li><a class="" href="architecture-patterns.html#table-of-contents">Table of Contents</a></li><li><a class="" href="architecture-patterns.html#71-mvc-mvp-mvvm-mvi">7.1 MVC, MVP, MVVM, MVI</a></li><li><a class="" href="architecture-patterns.html#72-clean-architecture">7.2 Clean Architecture</a></li><li><a class="" href="architecture-patterns.html#73-repository-pattern">7.3 Repository Pattern</a></li><li><a class="" href="architecture-patterns.html#74-dependency-injection">7.4 Dependency Injection</a></li><li><a class="" href="architecture-patterns.html#75-modularization">7.5 Modularization</a></li><li><a class="" href="architecture-patterns.html#quick-reference-cheat-sheet">Quick-Reference Cheat Sheet</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="view-rendering.html">8. View Rendering</a></summary><ul class="subtopics"><li><a class="" href="view-rendering.html#table-of-contents">Table of Contents</a></li><li><a class="" href="view-rendering.html#81-traditional-view-system-rendering">8.1 Traditional View System Rendering</a></li><li><a class="" href="view-rendering.html#82-choreographer-vsync-and-frame-rendering">8.2 Choreographer, VSync, and Frame Rendering</a></li><li><a class="" href="view-rendering.html#83-recyclerview-performance">8.3 RecyclerView Performance</a></li><li><a class="" href="view-rendering.html#84-jetpack-compose-rendering">8.4 Jetpack Compose Rendering</a></li><li><a class="" href="view-rendering.html#85-performance-tools">8.5 Performance Tools</a></li><li><a class="" href="view-rendering.html#interview-cheat-sheet">Interview Cheat Sheet</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="lifecycle-platform-components.html">9. Lifecycle &amp; Platform Components</a></summary><ul class="subtopics"><li><a class="" href="lifecycle-platform-components.html#table-of-contents">Table of Contents</a></li><li><a class="" href="lifecycle-platform-components.html#91-activity">9.1 Activity</a></li><li><a class="" href="lifecycle-platform-components.html#92-fragment">9.2 Fragment</a></li><li><a class="" href="lifecycle-platform-components.html#93-services">9.3 Services</a></li><li><a class="" href="lifecycle-platform-components.html#94-broadcastreceiver">9.4 BroadcastReceiver</a></li><li><a class="" href="lifecycle-platform-components.html#95-contentprovider">9.5 ContentProvider</a></li><li><a class="" href="lifecycle-platform-components.html#96-intents-and-pendingintents">9.6 Intents and PendingIntents</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="android-data-layer.html">10. Android Data Layer</a></summary><ul class="subtopics"><li><a class="" href="android-data-layer.html#table-of-contents">Table of Contents</a></li><li><a class="" href="android-data-layer.html#101-networking">10.1 Networking</a></li><li><a class="" href="android-data-layer.html#102-persistence">10.2 Persistence</a></li><li><a class="" href="android-data-layer.html#103-offline-first-design">10.3 Offline-First Design</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="testing.html">11. Testing</a></summary><ul class="subtopics"><li><a class="" href="testing.html#table-of-contents">Table of Contents</a></li><li><a class="" href="testing.html#111-unit-testing">11.1 Unit Testing</a></li><li><a class="" href="testing.html#112-ui-testing">11.2 UI Testing</a></li><li><a class="" href="testing.html#113-integration-and-end-to-end-testing">11.3 Integration and End-to-End Testing</a></li><li><a class="" href="testing.html#quick-reference-interview-cheat-sheet">Quick-Reference Interview Cheat Sheet</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="build-gradle-release.html">12. Build, Gradle &amp; Release</a></summary><ul class="subtopics"><li><a class="" href="build-gradle-release.html#table-of-contents">Table of Contents</a></li><li><a class="" href="build-gradle-release.html#121-gradle-basics">12.1 Gradle Basics</a></li><li><a class="" href="build-gradle-release.html#122-build-performance">12.2 Build Performance</a></li><li><a class="" href="build-gradle-release.html#123-release">12.3 Release</a></li><li><a class="" href="build-gradle-release.html#summary-table-quick-reference">Summary Table: Quick Reference</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="security-privacy.html">13. Security &amp; Privacy</a></summary><ul class="subtopics"><li><a class="" href="security-privacy.html#table-of-contents">Table of Contents</a></li><li><a class="" href="security-privacy.html#131-android-security-basics">13.1 Android Security Basics</a></li><li><a class="" href="security-privacy.html#132-data-security">13.2 Data Security</a></li><li><a class="" href="security-privacy.html#interview-qa-master-list">Interview Q&amp;A Master List</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="performance-beyond-rendering.html">14. Performance Beyond Rendering</a></summary><ul class="subtopics"><li><a class="" href="performance-beyond-rendering.html#table-of-contents">Table of Contents</a></li><li><a class="" href="performance-beyond-rendering.html#141-startup-performance">14.1 Startup Performance</a></li><li><a class="" href="performance-beyond-rendering.html#142-battery-and-resource-usage">14.2 Battery and Resource Usage</a></li><li><a class="" href="performance-beyond-rendering.html#143-anr-and-crash-debugging">14.3 ANR and Crash Debugging</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="senior-staff-system-design.html">15. Senior/Staff System Design</a></summary><ul class="subtopics"><li><a class="" href="senior-staff-system-design.html#table-of-contents">Table of Contents</a></li><li><a class="" href="senior-staff-system-design.html#151-android-app-architecture-design">15.1 Android App Architecture Design</a></li><li><a class="" href="senior-staff-system-design.html#152-trade-off-thinking">15.2 Trade-Off Thinking</a></li><li><a class="" href="senior-staff-system-design.html#153-legacy-code-and-migration">15.3 Legacy Code and Migration</a></li><li><a class="" href="senior-staff-system-design.html#154-engineering-leadership">15.4 Engineering Leadership</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="interview-q-a-cheatsheet.html">16. Interview Q&amp;A &amp; Cheatsheet</a></summary><ul class="subtopics"><li><a class="" href="interview-q-a-cheatsheet.html#table-of-contents">Table of Contents</a></li><li><a class="" href="interview-q-a-cheatsheet.html#section-16--model-answers-by-category">Section 16 — Model Answers by Category</a></li><li><a class="" href="interview-q-a-cheatsheet.html#section-17--must-revise-checklist">Section 17 — Must-Revise Checklist</a></li><li><a class="" href="interview-q-a-cheatsheet.html#section-18--senior-answer-framework-with-worked-examples">Section 18 — Senior Answer Framework with Worked Examples</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="references.html">References</a></summary><ul class="subtopics"><li><a class="" href="references.html#table-of-contents">Table of Contents</a></li><li><a class="" href="references.html#section-1--data-structures--big-o">Section 1 — Data Structures &amp; Big O</a></li><li><a class="" href="references.html#section-2--kotlin--java-fundamentals">Section 2 — Kotlin &amp; Java Fundamentals</a></li><li><a class="" href="references.html#section-3--concurrency--threading">Section 3 — Concurrency &amp; Threading</a></li><li><a class="" href="references.html#section-4--thread-communication">Section 4 — Thread Communication</a></li><li><a class="" href="references.html#section-5--ipc-binder-aidl-messenger">Section 5 — IPC: Binder, AIDL, Messenger</a></li><li><a class="" href="references.html#section-6--memory-management">Section 6 — Memory Management</a></li><li><a class="" href="references.html#section-7--architecture-patterns">Section 7 — Architecture Patterns</a></li><li><a class="" href="references.html#section-8--view-rendering">Section 8 — View Rendering</a></li><li><a class="" href="references.html#section-9--lifecycle--platform-components">Section 9 — Lifecycle &amp; Platform Components</a></li><li><a class="" href="references.html#section-10--data-layer">Section 10 — Data Layer</a></li><li><a class="" href="references.html#section-11--testing">Section 11 — Testing</a></li><li><a class="" href="references.html#section-12--build-gradle--release">Section 12 — Build, Gradle &amp; Release</a></li><li><a class="" href="references.html#section-13--security--privacy">Section 13 — Security &amp; Privacy</a></li><li><a class="" href="references.html#section-14--performance-beyond-rendering">Section 14 — Performance (Beyond Rendering)</a></li><li><a class="" href="references.html#section-15--system-design">Section 15 — System Design</a></li><li><a class="" href="references.html#section-16--interview-qa-cheatsheet">Section 16 — Interview Q&amp;A Cheatsheet</a></li><li><a class="" href="references.html#section-17--must-revise-checklist">Section 17 — Must-Revise Checklist</a></li><li><a class="" href="references.html#section-18--seniorstaff-answer-framework">Section 18 — Senior/Staff Answer Framework</a></li><li><a class="" href="references.html#books">Books</a></li></ul></details></nav>
+<aside class="toc-right"><div class="toc-h">On this page</div><ul class="toc-tree"><li class="toc-grp"><a class="toc-2" href="#11-data-structures--collections--12-big-o-notation"><span class="tcaret tcaret-none"></span>1.1 Data Structures &amp; Collections · 1.2 Big O Notation</a></li><li class="toc-grp"><a class="toc-2" href="#table-of-contents"><span class="tcaret tcaret-none"></span>Table of Contents</a></li><li class="toc-grp"><a class="toc-2" href="#1-arrays"><span class="tcaret">▶</span>1. Arrays</a><ul class="toc-subs"><li><a class="toc-3" href="#definition">Definition</a></li><li><a class="toc-3" href="#internal-implementation">Internal Implementation</a></li><li><a class="toc-3" href="#big-o-summary">Big O Summary</a></li><li><a class="toc-3" href="#memory-characteristics">Memory Characteristics</a></li><li><a class="toc-3" href="#kotlin-specifics">Kotlin Specifics</a></li><li><a class="toc-3" href="#when-to-use">When to Use</a></li><li><a class="toc-3" href="#when-to-avoid">When to Avoid</a></li><li><a class="toc-3" href="#interview-angles">Interview Angles</a></li></ul></li><li class="toc-grp"><a class="toc-2" href="#2-arraylist--mutablelist"><span class="tcaret">▶</span>2. ArrayList / MutableList</a><ul class="toc-subs"><li><a class="toc-3" href="#definition-1">Definition</a></li><li><a class="toc-3" href="#internal-implementation-1">Internal Implementation</a></li><li><a class="toc-3" href="#big-o-summary-1">Big O Summary</a></li><li><a class="toc-3" href="#kotlin-usage">Kotlin Usage</a></li><li><a class="toc-3" href="#size-vs-capacity">Size vs Capacity</a></li><li><a class="toc-3" href="#when-to-use-1">When to Use</a></li><li><a class="toc-3" href="#when-to-avoid-1">When to Avoid</a></li><li><a class="toc-3" href="#interview-angles-1">Interview Angles</a></li></ul></li><li class="toc-grp"><a class="toc-2" href="#3-linkedlist"><span class="tcaret">▶</span>3. LinkedList</a><ul class="toc-subs"><li><a class="toc-3" href="#definition-2">Definition</a></li><li><a class="toc-3" href="#internal-implementation-2">Internal Implementation</a></li><li><a class="toc-3" href="#big-o-summary-2">Big O Summary</a></li><li><a class="toc-3" href="#kotlin-usage-1">Kotlin Usage</a></li><li><a class="toc-3" href="#memory-characteristics-1">Memory Characteristics</a></li><li><a class="toc-3" href="#when-to-use-2">When to Use</a></li><li><a class="toc-3" href="#when-to-avoid-2">When to Avoid</a></li><li><a class="toc-3" href="#interview-angles-2">Interview Angles</a></li></ul></li><li class="toc-grp"><a class="toc-2" href="#4-stack"><span class="tcaret">▶</span>4. Stack</a><ul class="toc-subs"><li><a class="toc-3" href="#definition-3">Definition</a></li><li><a class="toc-3" href="#internal-implementation-3">Internal Implementation</a></li><li><a class="toc-3" href="#big-o-summary-3">Big O Summary</a></li><li><a class="toc-3" href="#kotlin-usage-2">Kotlin Usage</a></li><li><a class="toc-3" href="#common-algorithmic-uses">Common Algorithmic Uses</a></li><li><a class="toc-3" href="#classic-problems">Classic Problems</a></li><li><a class="toc-3" href="#interview-angles-3">Interview Angles</a></li></ul></li><li class="toc-grp"><a class="toc-2" href="#5-queue"><span class="tcaret">▶</span>5. Queue</a><ul class="toc-subs"><li><a class="toc-3" href="#definition-4">Definition</a></li><li><a class="toc-3" href="#internal-implementation-4">Internal Implementation</a></li><li><a class="toc-3" href="#big-o-summary-4">Big O Summary</a></li><li><a class="toc-3" href="#kotlin-usage-3">Kotlin Usage</a></li><li><a class="toc-3" href="#common-uses">Common Uses</a></li><li><a class="toc-3" href="#bfs-example">BFS Example</a></li><li><a class="toc-3" href="#interview-angles-4">Interview Angles</a></li></ul></li><li class="toc-grp"><a class="toc-2" href="#6-deque"><span class="tcaret">▶</span>6. Deque</a><ul class="toc-subs"><li><a class="toc-3" href="#definition-5">Definition</a></li><li><a class="toc-3" href="#internal-implementation-5">Internal Implementation</a></li><li><a class="toc-3" href="#big-o-summary-5">Big O Summary</a></li><li><a class="toc-3" href="#kotlin-usage-4">Kotlin Usage</a></li><li><a class="toc-3" href="#common-uses-1">Common Uses</a></li><li><a class="toc-3" href="#interview-angles-5">Interview Angles</a></li></ul></li><li class="toc-grp"><a class="toc-2" href="#7-hashmap--mutablemap"><span class="tcaret">▶</span>7. HashMap / MutableMap</a><ul class="toc-subs"><li><a class="toc-3" href="#definition-6">Definition</a></li><li><a class="toc-3" href="#internal-implementation-java-hashmap-which-kotlins-mutablemap-uses">Internal Implementation (Java HashMap, which Kotlin&#x27;s MutableMap uses)</a></li><li><a class="toc-3" href="#big-o-summary-6">Big O Summary</a></li><li><a class="toc-3" href="#kotlin-usage-5">Kotlin Usage</a></li><li><a class="toc-3" href="#mutable-key-problem">Mutable Key Problem</a></li><li><a class="toc-3" href="#interview-angles-6">Interview Angles</a></li></ul></li><li class="toc-grp"><a class="toc-2" href="#8-hashset--mutableset"><span class="tcaret">▶</span>8. HashSet / MutableSet</a><ul class="toc-subs"><li><a class="toc-3" href="#definition-7">Definition</a></li><li><a class="toc-3" href="#internal-implementation-6">Internal Implementation</a></li><li><a class="toc-3" href="#big-o-summary-7">Big O Summary</a></li><li><a class="toc-3" href="#kotlin-usage-6">Kotlin Usage</a></li><li><a class="toc-3" href="#custom-objects-require-equalshashcode">Custom Objects Require `equals`/`hashCode`</a></li><li><a class="toc-3" href="#interview-angles-7">Interview Angles</a></li></ul></li><li class="toc-grp"><a class="toc-2" href="#9-linkedhashmap"><span class="tcaret">▶</span>9. LinkedHashMap</a><ul class="toc-subs"><li><a class="toc-3" href="#definition-8">Definition</a></li><li><a class="toc-3" href="#internal-implementation-7">Internal Implementation</a></li><li><a class="toc-3" href="#big-o-summary-8">Big O Summary</a></li><li><a class="toc-3" href="#kotlin-usage-7">Kotlin Usage</a></li><li><a class="toc-3" href="#lru-cache-using-linkedhashmap">LRU Cache Using LinkedHashMap</a></li><li><a class="toc-3" href="#interview-angles-8">Interview Angles</a></li></ul></li><li class="toc-grp"><a class="toc-2" href="#10-treemap--sortedmap"><span class="tcaret">▶</span>10. TreeMap / SortedMap</a><ul class="toc-subs"><li><a class="toc-3" href="#definition-9">Definition</a></li><li><a class="toc-3" href="#internal-implementation-red-black-tree">Internal Implementation: Red-Black Tree</a></li><li><a class="toc-3" href="#big-o-summary-9">Big O Summary</a></li><li><a class="toc-3" href="#kotlin-usage-8">Kotlin Usage</a></li><li><a class="toc-3" href="#when-to-use-3">When to Use</a></li><li><a class="toc-3" href="#when-to-avoid-3">When to Avoid</a></li><li><a class="toc-3" href="#interview-angles-9">Interview Angles</a></li></ul></li><li class="toc-grp"><a class="toc-2" href="#11-priorityqueue--heap"><span class="tcaret">▶</span>11. PriorityQueue / Heap</a><ul class="toc-subs"><li><a class="toc-3" href="#definition-10">Definition</a></li><li><a class="toc-3" href="#internal-implementation-binary-heap">Internal Implementation: Binary Heap</a></li><li><a class="toc-3" href="#big-o-summary-10">Big O Summary</a></li><li><a class="toc-3" href="#kotlin-usage-9">Kotlin Usage</a></li><li><a class="toc-3" href="#heap-vs-binary-search-tree">Heap vs Binary Search Tree</a></li><li><a class="toc-3" href="#interview-angles-10">Interview Angles</a></li></ul></li><li class="toc-grp"><a class="toc-2" href="#12-trie"><span class="tcaret">▶</span>12. Trie</a><ul class="toc-subs"><li><a class="toc-3" href="#definition-11">Definition</a></li><li><a class="toc-3" href="#internal-implementation-8">Internal Implementation</a></li><li><a class="toc-3" href="#big-o-summary-11">Big O Summary</a></li><li><a class="toc-3" href="#kotlin-implementation">Kotlin Implementation</a></li><li><a class="toc-3" href="#common-uses-2">Common Uses</a></li><li><a class="toc-3" href="#interview-angles-11">Interview Angles</a></li></ul></li><li class="toc-grp"><a class="toc-2" href="#13-graphs"><span class="tcaret">▶</span>13. Graphs</a><ul class="toc-subs"><li><a class="toc-3" href="#definition-12">Definition</a></li><li><a class="toc-3" href="#graph-representations">Graph Representations</a></li><li><a class="toc-3" href="#bfs-and-dfs">BFS and DFS</a></li><li><a class="toc-3" href="#cycle-detection">Cycle Detection</a></li><li><a class="toc-3" href="#topological-sort">Topological Sort</a></li><li><a class="toc-3" href="#shortest-path">Shortest Path</a></li><li><a class="toc-3" href="#interview-angles-12">Interview Angles</a></li></ul></li><li class="toc-grp"><a class="toc-2" href="#14-android-specific-collections"><span class="tcaret">▶</span>14. Android-Specific Collections</a><ul class="toc-subs"><li><a class="toc-3" href="#141-sparsearray">14.1 SparseArray</a></li><li><a class="toc-3" href="#142-longsparsearray">14.2 LongSparseArray</a></li><li><a class="toc-3" href="#143-arraymap">14.3 ArrayMap</a></li><li><a class="toc-3" href="#144-lrucache">14.4 LruCache</a></li><li><a class="toc-3" href="#interview-angles-13">Interview Angles</a></li></ul></li><li class="toc-grp"><a class="toc-2" href="#15-big-o-notation"><span class="tcaret">▶</span>15. Big O Notation</a><ul class="toc-subs"><li><a class="toc-3" href="#what-it-is">What It Is</a></li><li><a class="toc-3" href="#151-time-complexity">15.1 Time Complexity</a></li><li><a class="toc-3" href="#152-space-complexity">15.2 Space Complexity</a></li><li><a class="toc-3" href="#153-best-average-and-worst-case">15.3 Best, Average, and Worst Case</a></li><li><a class="toc-3" href="#154-amortized-complexity">15.4 Amortized Complexity</a></li><li><a class="toc-3" href="#155-recursive-complexity">15.5 Recursive Complexity</a></li><li><a class="toc-3" href="#156-hidden-constants">15.6 Hidden Constants</a></li><li><a class="toc-3" href="#157-why-on-can-beat-olog-n-in-practice">15.7 Why O(n) Can Beat O(log n) in Practice</a></li><li><a class="toc-3" href="#158-common-complexities-table">15.8 Common Complexities Table</a></li><li><a class="toc-3" href="#159-must-know-examples">15.9 Must-Know Examples</a></li><li><a class="toc-3" href="#string-concatenation-anti-pattern">String Concatenation Anti-Pattern</a></li><li><a class="toc-3" href="#interview-angles-14">Interview Angles</a></li></ul></li></ul></aside>
+<div class="backdrop"></div>
+<div class="content">
+<div class="mtop"><button onclick="toggleNav()" aria-label="Menu">☰</button><a class="home" href="../index.html">🏠</a><span class="t">1. Data Structures &amp; Big O</span></div>
+<a class="arrow left" href="../index.html" title="Previous (Home)">‹</a>
+<a class="arrow right" href="kotlin-java-fundamentals.html" title="Next (2. Kotlin &amp; Java Fundamentals)">›</a>
+<div class="wrap">
+<h1 id="1-data-structures--big-o">1. Data Structures &amp; Big O</h1>
+<h2 id="11-data-structures--collections--12-big-o-notation">1.1 Data Structures &amp; Collections · 1.2 Big O Notation</h2>
+<blockquote><strong>How to use this document</strong>: For each data structure, absorb the definition and internals first, then memorize the Big O table, then work through every interview angle until you can answer without looking. Every answer should follow this structure: define simply → how it works internally → Android-specific implications → trade-offs → failure cases → how to debug/test.<br><br><strong>A note on the &quot;Interview Angles&quot; sections</strong>: these are written the way you&#x27;d actually <em>say</em> the answer out loud — open with a one-line definition or stance, then walk through it with clear signposting (&quot;there are three reasons…&quot;, &quot;the trade-off is…&quot;). Read them aloud. If a sentence is hard to speak smoothly, it&#x27;s hard to say in an interview.</blockquote>
+<hr>
+<h2 id="table-of-contents">Table of Contents</h2>
+<ol>
+<li><a href="#1-arrays">Arrays</a></li>
+<li><a href="#2-arraylist--mutablelist">ArrayList / MutableList</a></li>
+<li><a href="#3-linkedlist">LinkedList</a></li>
+<li><a href="#4-stack">Stack</a></li>
+<li><a href="#5-queue">Queue</a></li>
+<li><a href="#6-deque">Deque</a></li>
+<li><a href="#7-hashmap--mutablemap">HashMap / MutableMap</a></li>
+<li><a href="#8-hashset--mutableset">HashSet / MutableSet</a></li>
+<li><a href="#9-linkedhashmap">LinkedHashMap</a></li>
+<li><a href="#10-treemap--sortedmap">TreeMap / SortedMap</a></li>
+<li><a href="#11-priorityqueue--heap">PriorityQueue / Heap</a></li>
+<li><a href="#12-trie">Trie</a></li>
+<li><a href="#13-graphs">Graphs</a></li>
+<li><a href="#14-android-specific-collections">Android-Specific Collections</a></li>
+<li><a href="#15-big-o-notation">Big O Notation</a></li>
+</ol>
+<hr>
+<h2 id="1-arrays">1. Arrays</h2>
+<h3 id="definition">Definition</h3>
+<p>An array is a <strong>fixed-size, contiguous block of memory</strong> that stores elements of the same type. Each element is addressable directly by its index via pointer arithmetic.</p>
+<h3 id="internal-implementation">Internal Implementation</h3>
+<p>Memory is allocated as a single contiguous slab. Given a base address <code>base</code> and element size <code>s</code>, element at index <code>i</code> lives at <code>base + i * s</code>. This is why access is O(1): one multiplication, one memory read.</p>
+<pre><code>Index:    0    1    2    3    4
+Memory: [42] [17] [99] [ 3] [55]
+         ^
+         base address (e.g., 0x1000)
+         Element[2] = *(0x1000 + 2 * 4) = 0x1008</code></pre>
+<h3 id="big-o-summary">Big O Summary</h3>
+<table border="1" cellpadding="6" cellspacing="0">
+<thead><tr>
+<th>Operation</th>
+<th>Time Complexity</th>
+<th>Notes</th>
+</tr></thead><tbody>
+<tr><td>Access by index</td><td>O(1)</td><td>Direct pointer arithmetic</td></tr>
+<tr><td>Search (unsorted)</td><td>O(n)</td><td>Must scan every element</td></tr>
+<tr><td>Search (sorted)</td><td>O(log n)</td><td>Binary search</td></tr>
+<tr><td>Insert at end</td><td>O(1)</td><td>If space exists (fixed-size array)</td></tr>
+<tr><td>Insert at middle</td><td>O(n)</td><td>Must shift all elements to the right</td></tr>
+<tr><td>Delete at middle</td><td>O(n)</td><td>Must shift all elements to the left</td></tr>
+<tr><td>Delete at end</td><td>O(1)</td><td>Just decrement logical size</td></tr>
+</tbody></table>
+<p><strong>Space complexity</strong>: O(n) — exactly n elements, no overhead per element.</p>
+<h3 id="memory-characteristics">Memory Characteristics</h3>
+<ul>
+<li><strong>Primitive arrays</strong> (<code>IntArray</code>, <code>LongArray</code>, <code>BooleanArray</code>): stored as raw JVM primitives — no object header, no boxing. An <code>IntArray(1000)</code> uses exactly 4,000 bytes.</li>
+<li><strong>Object arrays</strong> (<code>Array&lt;Int&gt;</code>, <code>Array&lt;String&gt;</code>): stores <em>references</em> (pointers) to heap objects. Each <code>Int</code> is boxed into a <code>java.lang.Integer</code> object (~16 bytes on most JVMs) plus the reference itself. An <code>Array&lt;Int&gt;(1000)</code> could use 20,000+ bytes.</li>
+<li><strong>Cache locality</strong>: because elements are contiguous, the CPU prefetcher loads neighboring elements into L1/L2 cache automatically. Iterating an array is extremely fast — often the actual bottleneck is memory bandwidth, not instruction count.</li>
+</ul>
+<h3 id="kotlin-specifics">Kotlin Specifics</h3>
+<pre><code>// Primitive array — no boxing, compact memory
+val scores: IntArray = IntArray(5) { it * 10 }   // [0, 10, 20, 30, 40]
+
+// Object array — boxed, larger footprint
+val names: Array&lt;String&gt; = Array(3) { &quot;item$it&quot; }
+
+// 2D array (array of arrays — NOT a contiguous 2D block)
+val matrix: Array&lt;IntArray&gt; = Array(3) { IntArray(3) }
+matrix[1][2] = 42
+
+// Iteration — idiomatic Kotlin
+for (score in scores) { /* ... */ }
+scores.forEachIndexed { index, value -&gt; /* ... */ }
+
+// Binary search on sorted array
+val sortedArr = intArrayOf(1, 3, 5, 7, 9)
+val idx = sortedArr.binarySearch(5)   // returns 2</code></pre>
+<h3 id="when-to-use">When to Use</h3>
+<ul>
+<li>You know the size upfront (fixed collection).</li>
+<li>Performance-critical numeric computation (avoid boxing).</li>
+<li>You need O(1) random access and cache-friendly iteration.</li>
+<li>Backing data structure for other collections (ArrayList uses <code>Object[]</code> internally).</li>
+</ul>
+<h3 id="when-to-avoid">When to Avoid</h3>
+<ul>
+<li>Frequent insertions/deletions in the middle.</li>
+<li>Unknown or highly variable size.</li>
+<li>When you need key-value access (use a map instead).</li>
+</ul>
+<hr>
+<h3 id="interview-angles">Interview Angles</h3>
+<p><strong>Why is array access fast?</strong></p>
+<p>&quot;Array access is O(1) because the elements live in one contiguous block of memory. So to find any element, the CPU just does a bit of arithmetic — base address plus index times element size — and jumps straight there. There&#x27;s no traversal and no pointer chasing. And in practice it&#x27;s even better than O(1) suggests, because the CPU prefetches neighboring elements into cache, so walking an array sequentially is extremely fast.&quot;</p>
+<p><strong>Why is inserting into an array expensive?</strong></p>
+<p>&quot;Inserting in the middle is O(n) because the array has no notion of &#x27;making space&#x27; — to open a slot, every element after the insertion point has to physically shift one position to the right. So if I insert at index 0 of an n-element array, all n elements move. Deletion is the mirror image: everything to the right shifts left to close the gap. That&#x27;s why arrays are great for reads but poor when you&#x27;re inserting and removing in the middle a lot.&quot;</p>
+<p><strong>Why are primitive arrays better for memory?</strong></p>
+<p>&quot;It comes down to boxing. On the JVM, anything that isn&#x27;t a primitive is a heap object with a 12-to-16-byte header plus padding. So an <code>Array&lt;Int&gt;</code> doesn&#x27;t store raw ints — it stores references to boxed <code>Integer</code> objects, which is roughly 24 bytes per element once you count the object and the reference. An <code>IntArray</code> stores the raw 4-byte ints with zero overhead. At 100,000 elements that&#x27;s about 2.3 MB versus 0.4 MB — and on top of the size difference, all those tiny boxed objects create GC pressure. On Android that matters a lot, because GC pauses translate directly into dropped frames, so for numeric data I always reach for the primitive array.&quot;</p>
+<hr>
+<h2 id="2-arraylist--mutablelist">2. ArrayList / MutableList</h2>
+<h3 id="definition-1">Definition</h3>
+<p>An ArrayList is basically a dynamic array — it behaves like an array but grows itself automatically when it runs out of room. In Kotlin, <code>MutableList</code> is typically backed by Java&#x27;s <code>ArrayList</code>, which in turn is backed by an <code>Object[]</code>.</p>
+<h3 id="internal-implementation-1">Internal Implementation</h3>
+<pre><code>capacity = 8
+size     = 5
+backing array: [A][B][C][D][E][ ][ ][ ]
+                0  1  2  3  4  5  6  7</code></pre>
+<p>When you <code>add(F)</code> and size == capacity, a new array is allocated (typically <code>newCapacity = oldCapacity * 1.5</code> in Java&#x27;s ArrayList — actually <code>(oldCapacity * 3) / 2 + 1</code>) and all elements are copied via <code>System.arraycopy</code>. The old array is abandoned for GC.</p>
+<p><strong>Growth sequence (Java ArrayList)</strong>: 10 → 16 → 25 → 38 → 58 → 88 → ...</p>
+<p>The <strong>amortized cost</strong> of append is O(1) because the expensive resize happens rarely enough that, averaged across all appends, each append costs a constant amount. Formal proof: with geometric growth factor k, after n appends the total copy work is at most <code>n * k/(k-1)</code> = O(n), so per-element amortized cost is O(1).</p>
+<h3 id="big-o-summary-1">Big O Summary</h3>
+<table border="1" cellpadding="6" cellspacing="0">
+<thead><tr>
+<th>Operation</th>
+<th>Time Complexity (Amortized)</th>
+<th>Notes</th>
+</tr></thead><tbody>
+<tr><td>Access by index</td><td>O(1)</td><td>Direct array access</td></tr>
+<tr><td>Search (unsorted)</td><td>O(n)</td><td>Linear scan</td></tr>
+<tr><td>Append (add at end)</td><td>O(1) amortized</td><td>Occasional O(n) resize</td></tr>
+<tr><td>Insert at middle</td><td>O(n)</td><td>Shift + possible resize</td></tr>
+<tr><td>Delete at middle</td><td>O(n)</td><td>Shift elements left</td></tr>
+<tr><td>Delete at end</td><td>O(1)</td><td>Just decrement size</td></tr>
+<tr><td><code>contains()</code></td><td>O(n)</td><td>Linear scan</td></tr>
+</tbody></table>
+<p><strong>Space</strong>: O(n) for elements, but capacity ≥ size so some wasted space.</p>
+<h3 id="kotlin-usage">Kotlin Usage</h3>
+<pre><code>// Create
+val list = mutableListOf(&quot;Alice&quot;, &quot;Bob&quot;, &quot;Charlie&quot;)
+val listWithCapacity = ArrayList&lt;String&gt;(100)  // pre-size if count is known
+
+// Access
+val first = list[0]      // O(1)
+val last  = list.last()  // O(1)
+
+// Append
+list.add(&quot;Dave&quot;)         // amortized O(1)
+
+// Insert at specific position — O(n) shift!
+list.add(1, &quot;Zara&quot;)      // shifts Bob, Charlie, Dave right
+
+// Remove by index — O(n) shift!
+list.removeAt(2)
+
+// Remove by value — O(n) scan + O(n) shift
+list.remove(&quot;Bob&quot;)
+
+// Capacity control
+(list as ArrayList).ensureCapacity(500)   // avoid repeated resizes
+(list as ArrayList).trimToSize()           // release excess capacity
+
+// Read-only view (no copy)
+val readOnly: List&lt;String&gt; = list</code></pre>
+<h3 id="size-vs-capacity">Size vs Capacity</h3>
+<ul>
+<li><strong><code>size</code></strong>: number of elements currently stored.</li>
+<li><strong><code>capacity</code></strong>: size of the backing array (always ≥ size).</li>
+<li>If you know you&#x27;ll add 10,000 elements, construct with <code>ArrayList&lt;T&gt;(10_000)</code> to skip all intermediate resizes.</li>
+</ul>
+<h3 id="when-to-use-1">When to Use</h3>
+<ul>
+<li>Default choice for most ordered, variable-size collections.</li>
+<li>Frequent random access or append.</li>
+<li>Infrequent insertions/deletions in the middle.</li>
+</ul>
+<h3 id="when-to-avoid-1">When to Avoid</h3>
+<ul>
+<li>Frequent middle insertions/deletions (consider Deque or a linked structure).</li>
+<li>When memory is very tight and you know the size won&#x27;t change (use a fixed array).</li>
+</ul>
+<hr>
+<h3 id="interview-angles-1">Interview Angles</h3>
+<p><strong>What happens when ArrayList grows?</strong></p>
+<p>&quot;When you call <code>add()</code> and the list is already full — so size equals capacity — the ArrayList does a five-step dance. First it computes a new capacity, which is <code>(oldCapacity * 3) / 2 + 1</code>, so roughly one and a half times bigger. Then it allocates a brand-new <code>Object[]</code> of that size. Then it calls <code>System.arraycopy</code> to copy every existing element over, which is the O(n) part. Then it swaps its internal reference to point at the new array, and finally it adds the new element. The old array becomes unreachable and gets garbage-collected. And this is exactly why, if you know roughly how many elements you&#x27;ll have, you pass that size into the constructor — you skip all those intermediate copies. That matters a lot in Android scroll adapters or when you&#x27;re building a big list at startup.&quot;</p>
+<p><strong>Why is ArrayList usually better than LinkedList in real apps?</strong></p>
+<p>&quot;For almost any real app I&#x27;d pick ArrayList over LinkedList, and there are four reasons. First, cache locality — ArrayList&#x27;s elements sit contiguously in memory so the CPU prefetches them, whereas LinkedList nodes are scattered across the heap and every hop is potentially a cache miss. In practice that makes iterating a LinkedList 5 to 10 times slower for the same number of elements. Second, memory overhead — every LinkedList node carries two extra pointers, prev and next, plus an object header, which is about 32 extra bytes per element on a 64-bit JVM, while ArrayList adds zero per-element overhead. Third, random access is O(1) on ArrayList but O(n) on LinkedList. And fourth, the one thing LinkedList is supposed to be good at — middle inserts — barely comes up in practice, because that&#x27;s only fast when you already hold a reference to the node. In real code you search first and then modify, so the search itself is O(n) regardless.&quot;</p>
+<p><strong>Difference between size and capacity.</strong></p>
+<p>&quot;Size is the logical count — how many elements are actually in the list. Capacity is the physical size of the backing array, and it&#x27;s always at least as big as size. They drift apart because ArrayList never shrinks itself automatically. So if I add a thousand elements and then remove 990, my size is 10 but the capacity is still north of a thousand — that memory is just sitting there. If the content is stable and I want it back, I call <code>trimToSize()</code> to reclaim it.&quot;</p>
+<hr>
+<h2 id="3-linkedlist">3. LinkedList</h2>
+<h3 id="definition-2">Definition</h3>
+<p>A LinkedList is a node-based sequence — instead of one contiguous block, every element lives in its own node that holds a value plus a reference to the next node, and in a doubly linked list, a reference back to the previous one too. Java&#x27;s <code>LinkedList</code>, which Kotlin inherits, is doubly linked and also implements <code>Deque</code>.</p>
+<h3 id="internal-implementation-2">Internal Implementation</h3>
+<pre><code>Head --&gt; [prev=null|42|next] &lt;--&gt; [prev|17|next] &lt;--&gt; [prev|99|next=null] &lt;-- Tail</code></pre>
+<p>Each node:</p>
+<pre><code>class Node&lt;T&gt;(
+    var value: T,
+    var prev: Node&lt;T&gt;? = null,
+    var next: Node&lt;T&gt;? = null
+)</code></pre>
+<p>Insert/delete with a node reference: update two pointers = O(1). But finding the node at index <code>i</code> requires traversal from head (or tail if <code>i &gt; size/2</code>) = O(n).</p>
+<h3 id="big-o-summary-2">Big O Summary</h3>
+<table border="1" cellpadding="6" cellspacing="0">
+<thead><tr>
+<th>Operation</th>
+<th>Time</th>
+<th>Notes</th>
+</tr></thead><tbody>
+<tr><td>Access by index</td><td>O(n)</td><td>Traverse from head or tail</td></tr>
+<tr><td>Search by value</td><td>O(n)</td><td>Linear scan</td></tr>
+<tr><td>Insert at head/tail</td><td>O(1)</td><td>Update head/tail pointer + adjacent node</td></tr>
+<tr><td>Insert at middle</td><td>O(n)</td><td>O(n) to find position, O(1) to link</td></tr>
+<tr><td>Delete at head/tail</td><td>O(1)</td><td>Update pointer</td></tr>
+<tr><td>Delete at middle</td><td>O(n)</td><td>O(n) to find node, O(1) to unlink</td></tr>
+<tr><td>Insert given node ref</td><td>O(1)</td><td>When iterating and inserting at <code>ListIterator</code></td></tr>
+</tbody></table>
+<p><strong>Space</strong>: O(n) elements + O(n) pointer overhead. Each node ≈ 32–48 bytes on 64-bit JVM vs ~4–8 bytes for an array element reference.</p>
+<h3 id="kotlin-usage-1">Kotlin Usage</h3>
+<pre><code>val ll = LinkedList&lt;String&gt;()
+ll.addFirst(&quot;A&quot;)   // O(1)
+ll.addLast(&quot;B&quot;)    // O(1)
+ll.add(1, &quot;Mid&quot;)   // O(n) — traverses to find position
+
+// Efficient iteration with mid-insertion via ListIterator
+val iter = ll.listIterator()
+while (iter.hasNext()) {
+    val v = iter.next()
+    if (v == &quot;B&quot;) iter.add(&quot;B2&quot;)  // O(1) — insert after current
+}
+
+// As a stack/deque
+ll.push(&quot;X&quot;)   // addFirst
+ll.pop()        // removeFirst</code></pre>
+<h3 id="memory-characteristics-1">Memory Characteristics</h3>
+<ul>
+<li>No wasted capacity (no pre-allocated slots).</li>
+<li>But per-node overhead is large: object header (12 bytes) + prev pointer (8 bytes) + next pointer (8 bytes) + value reference (8 bytes) = 36 bytes minimum, padded to 48 bytes. Compare to ArrayList&#x27;s 8 bytes per reference slot.</li>
+<li>Nodes are scattered across heap → high GC pressure, poor CPU cache utilization.</li>
+</ul>
+<h3 id="when-to-use-2">When to Use</h3>
+<ul>
+<li>You need O(1) insert/delete at both ends (use <code>ArrayDeque</code> instead — it&#x27;s faster).</li>
+<li>You&#x27;re already holding a <code>ListIterator</code> and need to insert/remove during traversal.</li>
+<li>Rarely: implementing a true LRU where you relink nodes.</li>
+</ul>
+<h3 id="when-to-avoid-2">When to Avoid</h3>
+<ul>
+<li>Almost always in Android apps. The combination of cache-unfriendly access patterns, high memory overhead, and O(n) random access makes it the wrong choice in nearly every scenario.</li>
+</ul>
+<hr>
+<h3 id="interview-angles-2">Interview Angles</h3>
+<p><strong>Why is LinkedList rarely the best choice in Android apps?</strong></p>
+<p>&quot;In practice I almost never reach for LinkedList on Android, and there are three reasons. First, memory — every node is a separate heap object with two extra pointers, so a list of 10,000 items is 10,000 little objects the garbage collector has to track. On Android that GC pressure shows up as dropped frames. Second, cache locality — array elements sit next to each other in memory so the CPU prefetches them, but linked-list nodes are scattered, so every hop is a potential cache miss. And third, random access is O(n) instead of O(1). So for almost any real use case, ArrayList or ArrayDeque wins.&quot;</p>
+<p><strong>Compare ArrayList vs LinkedList.</strong></p>
+<table border="1" cellpadding="6" cellspacing="0">
+<thead><tr>
+<th>Dimension</th>
+<th>ArrayList</th>
+<th>LinkedList</th>
+</tr></thead><tbody>
+<tr><td>Backing structure</td><td>Dynamic array</td><td>Doubly-linked nodes</td></tr>
+<tr><td>Random access</td><td>O(1)</td><td>O(n)</td></tr>
+<tr><td>Append</td><td>O(1) amortized</td><td>O(1)</td></tr>
+<tr><td>Prepend</td><td>O(n)</td><td>O(1)</td></tr>
+<tr><td>Middle insert</td><td>O(n)</td><td>O(n) find + O(1) link</td></tr>
+<tr><td>Memory per element</td><td>~8 bytes (reference)</td><td>~48 bytes (node object)</td></tr>
+<tr><td>Cache locality</td><td>Excellent</td><td>Poor</td></tr>
+<tr><td>Implements Deque?</td><td>No</td><td>Yes</td></tr>
+<tr><td>Practical winner</td><td>Almost always</td><td>Rarely</td></tr>
+</tbody></table>
+<hr>
+<h2 id="4-stack">4. Stack</h2>
+<h3 id="definition-3">Definition</h3>
+<p>A stack is a Last-In, First-Out structure — whatever you pushed in last is the first thing you pop back out. The classic mental model is a stack of plates: you add to the top and you take from the top.</p>
+<h3 id="internal-implementation-3">Internal Implementation</h3>
+<p>Can be backed by either an array (<code>ArrayDeque</code> is the modern choice) or a linked list. Java&#x27;s legacy <code>Stack</code> class extends <code>Vector</code> (synchronized array) — avoid it. Prefer <code>ArrayDeque</code> as a stack in Kotlin.</p>
+<pre><code>push(A) push(B) push(C) → stack: [A, B, C]   (C is top)
+pop()   → returns C,   stack: [A, B]
+peek()  → returns B,   stack: [A, B]  (no removal)</code></pre>
+<h3 id="big-o-summary-3">Big O Summary</h3>
+<table border="1" cellpadding="6" cellspacing="0">
+<thead><tr>
+<th>Operation</th>
+<th>Time</th>
+<th>Notes</th>
+</tr></thead><tbody>
+<tr><td>push</td><td>O(1)</td><td>Add to top</td></tr>
+<tr><td>pop</td><td>O(1)</td><td>Remove from top</td></tr>
+<tr><td>peek</td><td>O(1)</td><td>Read top without removing</td></tr>
+<tr><td>search</td><td>O(n)</td><td>Linear scan from top</td></tr>
+<tr><td>isEmpty</td><td>O(1)</td><td>Check size == 0</td></tr>
+</tbody></table>
+<p><strong>Space</strong>: O(n).</p>
+<h3 id="kotlin-usage-2">Kotlin Usage</h3>
+<pre><code>// Modern: use ArrayDeque
+val stack = ArrayDeque&lt;String&gt;()
+stack.addLast(&quot;A&quot;)     // push
+stack.addLast(&quot;B&quot;)
+stack.addLast(&quot;C&quot;)
+
+val top = stack.last()           // peek — O(1)
+val popped = stack.removeLast()  // pop  — O(1)
+
+// Avoid legacy java.util.Stack — synchronized overhead, wrong inheritance
+// val legacyStack = java.util.Stack&lt;String&gt;()  // Don&#x27;t use</code></pre>
+<h3 id="common-algorithmic-uses">Common Algorithmic Uses</h3>
+<ul>
+<li><strong>Undo stack</strong>: Each action pushes a reversible operation; undo pops and reverses it.</li>
+<li><strong>Android back stack</strong>: Each Activity/Fragment transition pushes a back state.</li>
+<li><strong>Parentheses/bracket validation</strong>.</li>
+<li><strong>DFS (iterative)</strong>: Push neighbors, pop to visit.</li>
+<li><strong>Expression evaluation</strong> (Shunting-yard algorithm).</li>
+<li><strong>Monotonic stack</strong> for next-greater-element, histogram, skyline problems.</li>
+</ul>
+<h3 id="classic-problems">Classic Problems</h3>
+<p><strong>Valid Parentheses</strong></p>
+<pre><code>fun isValid(s: String): Boolean {
+    val stack = ArrayDeque&lt;Char&gt;()
+    val pairs = mapOf(&#x27;)&#x27; to &#x27;(&#x27;, &#x27;]&#x27; to &#x27;[&#x27;, &#x27;}&#x27; to &#x27;{&#x27;)
+    for (ch in s) {
+        when {
+            ch in &quot;([{&quot; -&gt; stack.addLast(ch)
+            ch in &quot;)]}&quot; -&gt; {
+                if (stack.isEmpty() || stack.last() != pairs[ch]) return false
+                stack.removeLast()
+            }
+        }
+    }
+    return stack.isEmpty()
+}</code></pre>
+<p><strong>Min Stack</strong> (O(1) getMin)</p>
+<pre><code>class MinStack {
+    private val stack = ArrayDeque&lt;Int&gt;()
+    private val minStack = ArrayDeque&lt;Int&gt;()
+
+    fun push(val_: Int) {
+        stack.addLast(val_)
+        // Push new min (or same min if val_ is larger)
+        minStack.addLast(minOf(val_, minStack.lastOrNull() ?: val_))
+    }
+
+    fun pop() {
+        stack.removeLast()
+        minStack.removeLast()
+    }
+
+    fun top(): Int = stack.last()
+    fun getMin(): Int = minStack.last()  // O(1) always
+}</code></pre>
+<hr>
+<h3 id="interview-angles-3">Interview Angles</h3>
+<p><strong>How does Android back stack resemble a stack?</strong></p>
+<p>&quot;The Activity back stack is literally a LIFO stack that the Android framework manages for you — it lives in the <code>TaskRecord</code>. When you call <code>startActivity()</code>, the new Activity gets pushed onto the task stack. When the user hits Back or you call <code>finish()</code>, the top Activity is popped and the one underneath resumes. The <code>FragmentManager</code> back stack works the exact same way — <code>addToBackStack()</code> pushes a <code>BackStackRecord</code>, and pressing Back pops it and reverses the transaction. So it maps cleanly onto a stack: you push when you navigate forward and pop when you go back. And the <code>NavController</code> in Jetpack Navigation wraps this same idea behind a typed navigation graph, but underneath it&#x27;s still a stack of destinations.&quot;</p>
+<p><strong>Implement valid parentheses.</strong> (See code above.)</p>
+<p><strong>Implement min-stack.</strong> (See code above.)</p>
+<p>&quot;The key insight for min-stack is to keep a second, parallel stack that tracks the running minimum. Every time I push a value, I also push the smaller of that value and the current minimum onto the min stack. When I pop, I pop from both. So <code>getMin()</code> is just reading the top of the min stack — always O(1). I&#x27;m doubling the space, but every operation stays O(1).&quot;</p>
+<hr>
+<h2 id="5-queue">5. Queue</h2>
+<h3 id="definition-4">Definition</h3>
+<p>A queue is a First-In, First-Out structure — the first element you put in is the first one to come out. The everyday analogy is a line at a ticket counter: you join at the back and you&#x27;re served from the front.</p>
+<h3 id="internal-implementation-4">Internal Implementation</h3>
+<p>Best backed by <code>ArrayDeque</code> (circular buffer implementation) for O(1) at both ends. A singly-linked list also gives O(1) enqueue/dequeue but with higher constant factors and GC overhead.</p>
+<pre><code>enqueue: A → B → C → D   (D entered last)
+dequeue: A ← (A leaves first)</code></pre>
+<h3 id="big-o-summary-4">Big O Summary</h3>
+<table border="1" cellpadding="6" cellspacing="0">
+<thead><tr>
+<th>Operation</th>
+<th>Time</th>
+<th>Notes</th>
+</tr></thead><tbody>
+<tr><td>offer / enqueue</td><td>O(1)</td><td>Add to tail</td></tr>
+<tr><td>poll / dequeue</td><td>O(1)</td><td>Remove from head</td></tr>
+<tr><td>peek</td><td>O(1)</td><td>Read head without removing</td></tr>
+<tr><td>search</td><td>O(n)</td><td>Not a primary use case</td></tr>
+<tr><td>isEmpty</td><td>O(1)</td><td></td></tr>
+</tbody></table>
+<p><strong>Space</strong>: O(n).</p>
+<h3 id="kotlin-usage-3">Kotlin Usage</h3>
+<pre><code>// ArrayDeque as a Queue (preferred)
+val queue = ArrayDeque&lt;String&gt;()
+queue.addLast(&quot;Task1&quot;)   // enqueue
+queue.addLast(&quot;Task2&quot;)
+queue.addLast(&quot;Task3&quot;)
+
+val next = queue.first()         // peek — O(1)
+val processed = queue.removeFirst()  // dequeue — O(1)
+
+// java.util.LinkedList also implements Queue
+val linkedQueue: Queue&lt;String&gt; = LinkedList()
+linkedQueue.offer(&quot;Task1&quot;)   // enqueue (returns false if capacity-bounded)
+linkedQueue.poll()            // dequeue (returns null if empty)
+linkedQueue.peek()            // peek (returns null if empty)</code></pre>
+<h3 id="common-uses">Common Uses</h3>
+<ul>
+<li><strong>BFS traversal</strong>: Enqueue root, dequeue-and-process each node, enqueue its children.</li>
+<li><strong>Task scheduling</strong>: Dispatcher processes tasks in arrival order.</li>
+<li><strong>Producer-consumer</strong>: One thread produces, another consumes; queue decouples them.</li>
+<li><strong>Android MessageQueue</strong>: Looper drains <code>Message</code> objects in order.</li>
+</ul>
+<h3 id="bfs-example">BFS Example</h3>
+<pre><code>fun bfs(graph: Map&lt;Int, List&lt;Int&gt;&gt;, start: Int): List&lt;Int&gt; {
+    val visited = mutableSetOf(start)
+    val queue = ArrayDeque&lt;Int&gt;()
+    val order = mutableListOf&lt;Int&gt;()
+    queue.addLast(start)
+    while (queue.isNotEmpty()) {
+        val node = queue.removeFirst()
+        order.add(node)
+        for (neighbor in graph[node].orEmpty()) {
+            if (visited.add(neighbor)) {   // add() returns true if newly inserted
+                queue.addLast(neighbor)
+            }
+        }
+    }
+    return order
+}</code></pre>
+<hr>
+<h3 id="interview-angles-4">Interview Angles</h3>
+<p><strong>Difference between queue and stack.</strong></p>
+<table border="1" cellpadding="6" cellspacing="0">
+<thead><tr>
+<th>Dimension</th>
+<th>Queue (FIFO)</th>
+<th>Stack (LIFO)</th>
+</tr></thead><tbody>
+<tr><td>Order discipline</td><td>First in, first out</td><td>Last in, first out</td></tr>
+<tr><td>Use case</td><td>BFS, scheduling, messaging</td><td>DFS, undo, back navigation</td></tr>
+<tr><td>Add/remove</td><td>Different ends (tail/head)</td><td>Same end (top)</td></tr>
+<tr><td>Android example</td><td>MessageQueue, task queues</td><td>Back stack, undo stack</td></tr>
+</tbody></table>
+<p><strong>How does Android MessageQueue work conceptually?</strong></p>
+<p>&quot;The interesting thing is that <code>MessageQueue</code> isn&#x27;t actually a pure FIFO — it&#x27;s really a priority queue ordered by time, because every <code>Message</code> carries a <code>when</code> timestamp. The <code>Looper</code> thread sits in a loop calling <code>MessageQueue.next()</code>, which blocks until the earliest-scheduled message&#x27;s time arrives, then dequeues it and dispatches it to its target <code>Handler</code>. So when you call <code>Handler.post(Runnable)</code>, it wraps that Runnable in a <code>Message</code> stamped with the current time for immediate dispatch, and <code>postDelayed()</code> stamps it with a future time. Conceptually it&#x27;s a time-ordered queue: any thread can produce into it, but only the Looper thread consumes, and the thread-safety comes from a lock inside <code>MessageQueue.enqueueMessage()</code>.&quot;</p>
+<p><strong>Producer-consumer implementation.</strong></p>
+<pre><code>// Using coroutines Channel — idiomatic Android approach
+val channel = Channel&lt;WorkItem&gt;(capacity = 64)
+
+// Producer coroutine
+launch {
+    repeat(100) { i -&gt;
+        channel.send(WorkItem(i))
+        delay(10)
+    }
+    channel.close()
+}
+
+// Consumer coroutine
+launch {
+    for (item in channel) {   // automatically stops when closed
+        processItem(item)
+    }
+}
+
+// Classic Java blocking queue approach (legacy)
+val blockingQueue = LinkedBlockingQueue&lt;WorkItem&gt;(100)
+// Producer: blockingQueue.put(item)   // blocks if full
+// Consumer: blockingQueue.take()       // blocks if empty</code></pre>
+<hr>
+<h2 id="6-deque">6. Deque</h2>
+<h3 id="definition-5">Definition</h3>
+<p>A deque — short for double-ended queue, and pronounced &quot;deck&quot; — lets you insert and remove from both the front and the back in O(1). It&#x27;s the generalization of both a stack and a queue, so you can use one type for either job.</p>
+<h3 id="internal-implementation-5">Internal Implementation</h3>
+<p><code>ArrayDeque</code> uses a <strong>circular buffer</strong> (ring buffer) backed by a resizable array. Two pointers, <code>head</code> and <code>tail</code>, wrap around the array. When they meet, capacity doubles.</p>
+<pre><code>Circular buffer (capacity 8):
+[_, _, C, D, E, F, _, _]
+          ^head          ^tail
+addFirst(&quot;B&quot;):  head moves left → [_, B, C, D, E, F, _, _]
+addLast(&quot;G&quot;):   tail moves right → [_, B, C, D, E, F, G, _]
+removeFirst():  head moves right → returns B</code></pre>
+<h3 id="big-o-summary-5">Big O Summary</h3>
+<table border="1" cellpadding="6" cellspacing="0">
+<thead><tr>
+<th>Operation</th>
+<th>Time</th>
+<th>Notes</th>
+</tr></thead><tbody>
+<tr><td>addFirst / addLast</td><td>O(1) amort.</td><td>Occasional O(n) resize</td></tr>
+<tr><td>removeFirst/removeLast</td><td>O(1)</td><td></td></tr>
+<tr><td>peekFirst / peekLast</td><td>O(1)</td><td></td></tr>
+<tr><td>Access by index</td><td>O(n)*</td><td>Not a primary use case</td></tr>
+<tr><td>Search</td><td>O(n)</td><td></td></tr>
+</tbody></table>
+<p>*<code>ArrayDeque</code> in Kotlin does support index access, but it&#x27;s O(n) for searching by value.</p>
+<h3 id="kotlin-usage-4">Kotlin Usage</h3>
+<pre><code>val deque = ArrayDeque&lt;Int&gt;()
+deque.addFirst(1)   // [1]
+deque.addLast(2)    // [1, 2]
+deque.addFirst(0)   // [0, 1, 2]
+deque.addLast(3)    // [0, 1, 2, 3]
+
+deque.removeFirst()   // returns 0, deque: [1, 2, 3]
+deque.removeLast()    // returns 3, deque: [1, 2]
+deque.first()         // peek front: 1
+deque.last()          // peek back:  2</code></pre>
+<h3 id="common-uses-1">Common Uses</h3>
+<ul>
+<li><strong>Sliding window problems</strong>: Maintain a monotonic deque of indices.</li>
+<li><strong>Using as Stack</strong>: use <code>addLast</code>/<code>removeLast</code>.</li>
+<li><strong>Using as Queue</strong>: use <code>addLast</code>/<code>removeFirst</code>.</li>
+<li><strong>Palindrome check</strong>: Compare front and back simultaneously.</li>
+</ul>
+<hr>
+<h3 id="interview-angles-5">Interview Angles</h3>
+<p><strong>Implement sliding window maximum.</strong></p>
+<p>Problem: Given <code>nums</code> and window size <code>k</code>, return the maximum in each window.</p>
+<pre><code>fun maxSlidingWindow(nums: IntArray, k: Int): IntArray {
+    // Deque stores indices; front is always index of max for current window
+    val deque = ArrayDeque&lt;Int&gt;()
+    val result = IntArray(nums.size - k + 1)
+
+    for (i in nums.indices) {
+        // Remove indices that are out of the current window
+        while (deque.isNotEmpty() &amp;&amp; deque.first() &lt; i - k + 1) {
+            deque.removeFirst()
+        }
+        // Remove indices whose values are less than nums[i]
+        // (they can never be the max while nums[i] is in the window)
+        while (deque.isNotEmpty() &amp;&amp; nums[deque.last()] &lt; nums[i]) {
+            deque.removeLast()
+        }
+        deque.addLast(i)
+        // Start recording results once first window is complete
+        if (i &gt;= k - 1) {
+            result[i - k + 1] = nums[deque.first()]
+        }
+    }
+    return result
+}
+// Time: O(n) — each element is added and removed at most once
+// Space: O(k) — deque holds at most k indices</code></pre>
+<p><strong>Why prefer ArrayDeque over legacy Stack?</strong></p>
+<p>&quot;There are basically two problems with the old <code>java.util.Stack</code>. The first is that it extends <code>Vector</code>, which is just a synchronized <code>ArrayList</code>, so every single <code>push</code>, <code>pop</code>, and <code>peek</code> grabs a mutex lock — and that&#x27;s pure overhead in single-threaded code, which is virtually all UI and algorithmic work. The second is that because it&#x27;s a <code>Vector</code>, it exposes the whole <code>List</code> API, so nothing stops you from accidentally calling <code>get(i)</code> or <code>add(i, x)</code> and quietly breaking the LIFO contract. <code>ArrayDeque</code> has none of that synchronization overhead, it only exposes the operations you actually want, and it&#x27;s backed by a cache-friendly circular buffer. So the rule I follow is simple: never use <code>java.util.Stack</code> in new code.&quot;</p>
+<hr>
+<h2 id="7-hashmap--mutablemap">7. HashMap / MutableMap</h2>
+<h3 id="definition-6">Definition</h3>
+<p>A HashMap is a key-value store that gives you O(1) average-case lookup, insertion, and deletion. The trick is that it runs each key through a hash function to figure out exactly where the value lives, so it can jump straight to it instead of searching.</p>
+<h3 id="internal-implementation-java-hashmap-which-kotlins-mutablemap-uses">Internal Implementation (Java HashMap, which Kotlin&#x27;s MutableMap uses)</h3>
+<p><strong>Buckets</strong>: An internal array of &quot;buckets&quot; (initially 16). The bucket index for a key is computed as <code>hash(key) &amp; (capacity - 1)</code>.</p>
+<p><strong>Hash function</strong>: <code>hashCode()</code> is called on the key, then a secondary &quot;perturbation&quot; hash is applied to spread bits more evenly: <code>h ^= (h &gt;&gt;&gt; 16)</code> (Java 8+).</p>
+<p><strong>Collision handling — chaining</strong>: Multiple keys can map to the same bucket. In Java 8, each bucket starts as a linked list of <code>Entry</code> nodes. When a bucket&#x27;s chain length exceeds <strong>8</strong> and the table has ≥ 64 slots, the chain is converted to a <strong>Red-Black tree</strong> (treeifying) — worst-case O(log n) per bucket.</p>
+<p><strong>Load factor</strong>: Default is <strong>0.75</strong>. When <code>size &gt; capacity * loadFactor</code>, the table is resized (doubled) and all entries are <strong>rehashed</strong> — O(n) cost amortized.</p>
+<pre><code>capacity=16, loadFactor=0.75 → resize when size &gt; 12
+
+Bucket 0: [key=&quot;Alice&quot;, val=1] → [key=&quot;Bob&quot;, val=2]   (collision)
+Bucket 1: [key=&quot;Charlie&quot;, val=3]
+Bucket 2: empty
+...</code></pre>
+<p><strong><code>equals()</code> and <code>hashCode()</code> contract</strong>:</p>
+<ul>
+<li>If <code>a.equals(b)</code> then <code>a.hashCode() == b.hashCode()</code> (required by spec).</li>
+<li>If <code>a.hashCode() == b.hashCode()</code>, <code>a.equals(b)</code> may or may not be true (hash collision is allowed).</li>
+<li>Violating this contract causes keys to &quot;disappear&quot; — you <code>put(&quot;key&quot;, v)</code> and then <code>get(&quot;key&quot;)</code> returns null because the map looks in a different bucket.</li>
+</ul>
+<h3 id="big-o-summary-6">Big O Summary</h3>
+<table border="1" cellpadding="6" cellspacing="0">
+<thead><tr>
+<th>Operation</th>
+<th>Average</th>
+<th>Worst Case</th>
+<th>Notes</th>
+</tr></thead><tbody>
+<tr><td>get</td><td>O(1)</td><td>O(n)/O(log n)</td><td>Worst case: all keys hash to same bucket</td></tr>
+<tr><td>put</td><td>O(1)</td><td>O(n)</td><td>Includes possible resize</td></tr>
+<tr><td>remove</td><td>O(1)</td><td>O(n)</td><td></td></tr>
+<tr><td>containsKey</td><td>O(1)</td><td>O(n)</td><td></td></tr>
+<tr><td>containsValue</td><td>O(n)</td><td>O(n)</td><td>Must scan all entries</td></tr>
+<tr><td>iteration</td><td>O(n)</td><td>O(n)</td><td>Unordered</td></tr>
+<tr><td>resize/rehash</td><td>O(n)</td><td>O(n)</td><td>Amortized away</td></tr>
+</tbody></table>
+<p><strong>Space</strong>: O(n) entries + O(capacity) array overhead. With default load factor, wasted slots ≤ 25%.</p>
+<h3 id="kotlin-usage-5">Kotlin Usage</h3>
+<pre><code>// Creation
+val map = mutableMapOf&lt;String, Int&gt;()
+val prePopulated = mutableMapOf(&quot;a&quot; to 1, &quot;b&quot; to 2)
+val preCapacity = HashMap&lt;String, Int&gt;(100, 0.75f)  // capacity, loadFactor
+
+// Basic operations
+map[&quot;key&quot;] = 42              // put
+val v = map[&quot;key&quot;]           // get — returns Int? (nullable)
+val vOrDefault = map.getOrDefault(&quot;missing&quot;, 0)
+val vOrPut = map.getOrPut(&quot;newKey&quot;) { computeExpensiveValue() }
+
+map.remove(&quot;key&quot;)
+&quot;key&quot; in map                 // containsKey — O(1)
+
+// Iteration (no guaranteed order)
+for ((k, v) in map) { println(&quot;$k=$v&quot;) }
+map.entries.forEach { (k, v) -&gt; /* ... */ }
+
+// Frequency count pattern
+val freq = mutableMapOf&lt;Char, Int&gt;()
+for (ch in &quot;hello world&quot;) {
+    freq[ch] = freq.getOrDefault(ch, 0) + 1
+}
+
+// Grouping
+val grouped: Map&lt;String, List&lt;String&gt;&gt; =
+    listOf(&quot;apple&quot;, &quot;avocado&quot;, &quot;banana&quot;, &quot;blueberry&quot;)
+        .groupBy { it.first().toString() }
+// {&quot;a&quot;: [&quot;apple&quot;,&quot;avocado&quot;], &quot;b&quot;: [&quot;banana&quot;,&quot;blueberry&quot;]}</code></pre>
+<h3 id="mutable-key-problem">Mutable Key Problem</h3>
+<pre><code>data class MutableKey(var id: Int)
+
+val map = mutableMapOf&lt;MutableKey, String&gt;()
+val key = MutableKey(1)
+map[key] = &quot;value&quot;
+println(map[key])   // &quot;value&quot; ✓
+
+key.id = 99          // Mutate the key!
+println(map[key])   // null ✗ — hash changed, wrong bucket
+// The entry is lost — still in the map, just unreachable</code></pre>
+<p><strong>Rule</strong>: Never use mutable objects as HashMap keys.</p>
+<hr>
+<h3 id="interview-angles-6">Interview Angles</h3>
+<p><strong>How does HashMap work internally?</strong></p>
+<p>&quot;Under the hood a <code>HashMap</code> is an array of buckets. When I <code>put(key, value)</code>, there are five steps. First, it calls <code>key.hashCode()</code> and runs it through a secondary spread function to mix the bits. Second, it turns that into a bucket index with <code>hash &amp; (capacity - 1)</code>. Third, if that bucket is empty, it just drops a new entry node in. Fourth, if the bucket already has something — that&#x27;s a collision — it walks the chain or tree comparing keys with <code>equals()</code>; if it finds a match it updates the value, otherwise it appends a new node. And fifth, if adding that entry pushes size past <code>capacity * loadFactor</code>, it rehashes — allocates an array twice as big and redistributes everything. A <code>get</code> is just the read-side of that: hash the key, find the bucket, walk the chain or tree until <code>equals()</code> matches or you hit the end.&quot;</p>
+<p><strong>What happens if two keys have the same hash?</strong></p>
+<p>&quot;That&#x27;s a collision, and it just means both entries land in the same bucket. The map keeps them as a linked list — or a Red-Black tree if that chain gets long. On lookup, it has to compare each entry&#x27;s key with <code>equals()</code> to find the right one. With a good hash function every bucket holds exactly one entry, so you stay at O(1). But in the degenerate case where every key hashes to the same bucket, lookup degrades to an O(n) list scan — or O(log n) once the bucket treeifies, which Java 8 added. And that degenerate case isn&#x27;t just theoretical: an attacker can craft inputs that deliberately force it, which is a hash DoS attack, and the treeification is what mitigates it.&quot;</p>
+<p><strong>Why must equal objects have equal hash codes?</strong></p>
+<p>&quot;It comes down to how lookup works in two stages — <code>HashMap</code> uses <code>hashCode()</code> to find the bucket, then <code>equals()</code> to find the exact entry within it. So imagine two objects that are equal but somehow have different hash codes. They&#x27;d land in different buckets. When I call <code>get()</code>, it hashes the key, goes to bucket A, doesn&#x27;t find it there, and returns null — even though an equal key is sitting over in bucket B. The contract exists to guarantee correctness: equal objects produce the same hash, so they go to the same bucket, the same chain, and the <code>equals()</code> check actually gets a chance to succeed.&quot;</p>
+<p><strong>What happens if a key is mutated after insertion?</strong></p>
+<p>&quot;If the key&#x27;s <code>hashCode()</code> depends on the field you mutate, then mutating it changes the hash. But the entry is still physically sitting in the bucket for the old hash. So now when I call <code>get()</code>, it computes the new hash, goes to a different bucket, and returns null. The entry is still in the map but it&#x27;s permanently unreachable — a ghost entry — until you rebuild the map. That&#x27;s exactly why you always use immutable objects, or at least objects with a stable hash code, as map keys.&quot;</p>
+<p><strong>Difference between HashMap, LinkedHashMap, and TreeMap.</strong></p>
+<table border="1" cellpadding="6" cellspacing="0">
+<thead><tr>
+<th>Feature</th>
+<th>HashMap</th>
+<th>LinkedHashMap</th>
+<th>TreeMap</th>
+</tr></thead><tbody>
+<tr><td>Ordering</td><td>None</td><td>Insertion or access</td><td>Sorted by key</td></tr>
+<tr><td>Internal structure</td><td>Hash table</td><td>Hash table + linked list</td><td>Red-Black tree</td></tr>
+<tr><td>get/put/remove</td><td>O(1) avg</td><td>O(1) avg</td><td>O(log n)</td></tr>
+<tr><td>Iteration order</td><td>Arbitrary</td><td>Predictable</td><td>Ascending key</td></tr>
+<tr><td><code>null</code> keys</td><td>1 allowed</td><td>1 allowed</td><td>Not allowed*</td></tr>
+<tr><td>Memory overhead</td><td>Low</td><td>Moderate</td><td>Moderate</td></tr>
+<tr><td>Use case</td><td>General</td><td>LRU cache, ordered</td><td>Range queries</td></tr>
+</tbody></table>
+<p>*<code>TreeMap</code> with a custom comparator that handles null can work, but the natural ordering comparator throws <code>NullPointerException</code>.</p>
+<hr>
+<h2 id="8-hashset--mutableset">8. HashSet / MutableSet</h2>
+<h3 id="definition-7">Definition</h3>
+<p>A HashSet is a collection of unique elements with O(1) average lookup, add, and remove. The neat part is that it&#x27;s really just a <code>HashMap</code> underneath — the set elements are the keys, and every value points at a single shared dummy object.</p>
+<h3 id="internal-implementation-6">Internal Implementation</h3>
+<pre><code>// Conceptually:
+class HashSet&lt;E&gt; {
+    private val map = HashMap&lt;E, Any&gt;()
+    private val PRESENT = Any()  // singleton dummy value
+
+    fun add(e: E): Boolean = map.put(e, PRESENT) == null
+    fun contains(e: E): Boolean = map.containsKey(e)
+    fun remove(e: E): Boolean = map.remove(e) == PRESENT
+}</code></pre>
+<p>Everything about <code>HashMap</code> applies: hash collisions, <code>equals()</code>/<code>hashCode()</code> requirements, load factor, resizing.</p>
+<h3 id="big-o-summary-7">Big O Summary</h3>
+<table border="1" cellpadding="6" cellspacing="0">
+<thead><tr>
+<th>Operation</th>
+<th>Average</th>
+<th>Worst</th>
+</tr></thead><tbody>
+<tr><td>add</td><td>O(1)</td><td>O(n)</td></tr>
+<tr><td>contains</td><td>O(1)</td><td>O(n)</td></tr>
+<tr><td>remove</td><td>O(1)</td><td>O(n)</td></tr>
+<tr><td>iteration</td><td>O(n)</td><td>O(n)</td></tr>
+</tbody></table>
+<p><strong>Space</strong>: O(n) — slightly more than a list because of the backing HashMap array.</p>
+<h3 id="kotlin-usage-6">Kotlin Usage</h3>
+<pre><code>val set = mutableSetOf&lt;String&gt;()
+set.add(&quot;Alice&quot;)
+set.add(&quot;Bob&quot;)
+set.add(&quot;Alice&quot;)     // no-op; duplicate
+println(set.size)    // 2
+
+&quot;Alice&quot; in set       // O(1) contains check
+set.remove(&quot;Bob&quot;)
+
+// Set operations
+val a = setOf(1, 2, 3, 4)
+val b = setOf(3, 4, 5, 6)
+val union        = a + b              // {1,2,3,4,5,6}
+val intersection = a intersect b      // {3,4}
+val difference   = a subtract b       // {1,2}
+
+// Deduplication
+val withDupes = listOf(1, 2, 2, 3, 3, 3)
+val deduped   = withDupes.toHashSet() // {1,2,3}
+
+// Fast membership test — common pattern
+val validIds = setOf(101, 202, 303)
+if (userId in validIds) { /* O(1) vs O(n) for List.contains */ }</code></pre>
+<h3 id="custom-objects-require-equalshashcode">Custom Objects Require <code>equals</code>/<code>hashCode</code></h3>
+<pre><code>data class User(val id: Int, val name: String)
+// data class auto-generates equals/hashCode from all fields — good
+
+val users = mutableSetOf&lt;User&gt;()
+users.add(User(1, &quot;Alice&quot;))
+users.add(User(1, &quot;Alice&quot;))  // duplicate — not added
+println(users.size)          // 1 ✓
+
+// Without data class — using default identity equals/hashCode
+class UserBad(val id: Int, val name: String)
+val badSet = mutableSetOf&lt;UserBad&gt;()
+badSet.add(UserBad(1, &quot;Alice&quot;))
+badSet.add(UserBad(1, &quot;Alice&quot;))  // different object instances!
+println(badSet.size)             // 2 ✗ — both added!</code></pre>
+<hr>
+<h3 id="interview-angles-7">Interview Angles</h3>
+<p><strong>How does HashSet ensure uniqueness?</strong></p>
+<p>&quot;It doesn&#x27;t really do the work itself — it just delegates to <code>HashMap.put(element, PRESENT)</code>. And <code>HashMap.put</code> already checks whether a key exists by hashing it, finding the bucket, and walking the chain with <code>equals()</code>. If an equal key is already there, it updates the value, which is a no-op from the set&#x27;s point of view, and returns the old value. So <code>HashSet.add()</code> just looks at that return: if the map returned null the element was new and it returns <code>true</code>, otherwise it returns <code>false</code>. In other words, the uniqueness guarantee is really just HashMap&#x27;s key uniqueness in disguise.&quot;</p>
+<p><strong>Difference between list and set.</strong></p>
+<table border="1" cellpadding="6" cellspacing="0">
+<thead><tr>
+<th>Dimension</th>
+<th>List</th>
+<th>Set</th>
+</tr></thead><tbody>
+<tr><td>Ordering</td><td>Maintains insertion order</td><td>HashSet: unordered; LinkedHashSet: insertion order; TreeSet: sorted</td></tr>
+<tr><td>Duplicates</td><td>Allowed</td><td>Not allowed</td></tr>
+<tr><td><code>contains()</code></td><td>O(n) for ArrayList</td><td>O(1) average for HashSet</td></tr>
+<tr><td>Index access</td><td>O(1) for ArrayList</td><td>Not supported (no get(i))</td></tr>
+<tr><td>Use case</td><td>Ordered sequences</td><td>Membership testing, dedup</td></tr>
+</tbody></table>
+<p><strong>Why can duplicate custom objects appear if equals/hashCode are wrong?</strong></p>
+<p>&quot;This happens when a class doesn&#x27;t override <code>equals()</code> and <code>hashCode()</code>, so it falls back on <code>Object</code>&#x27;s versions, which compare by reference identity — basically the memory address. So if I create two <code>User(1, &quot;Alice&quot;)</code> instances, they&#x27;re different objects, <code>equals()</code> returns false, and their hash codes differ because they&#x27;re identity hashes. The HashSet has no idea they&#x27;re logically the same, so it happily stores both. The fix is to give the type proper value semantics: in Kotlin you make it a <code>data class</code>, which auto-generates correct <code>equals</code> and <code>hashCode</code> from the properties, or you override both by hand — and the one rule you can&#x27;t break is that equal objects must produce equal hash codes.&quot;</p>
+<hr>
+<h2 id="9-linkedhashmap">9. LinkedHashMap</h2>
+<h3 id="definition-8">Definition</h3>
+<p>A LinkedHashMap is a <code>HashMap</code> with one extra trick — it threads a doubly-linked list through all its entries so they have a predictable order, either insertion order or access order. That means when you iterate, you always get that maintained order back instead of HashMap&#x27;s arbitrary order.</p>
+<h3 id="internal-implementation-7">Internal Implementation</h3>
+<p>Each entry node in <code>LinkedHashMap</code> extends <code>HashMap.Entry</code> with two additional pointers: <code>before</code> and <code>after</code>. These form a doubly-linked list independent of the bucket chains.</p>
+<pre><code>HashMap buckets: [bucket0] → Entry(&quot;C&quot;) → Entry(&quot;A&quot;) (same hash bucket)
+                 [bucket1] → Entry(&quot;B&quot;)
+
+LinkedList order (insertion): &quot;A&quot; ↔ &quot;B&quot; ↔ &quot;C&quot;   (A was added first)</code></pre>
+<p><strong>Access order</strong> (enabled by constructor flag): When you <code>get()</code> or <code>put()</code> an existing key, that entry is moved to the tail of the linked list. This is the basis for LRU caching.</p>
+<h3 id="big-o-summary-8">Big O Summary</h3>
+<p>Same as <code>HashMap</code> for all operations. Iteration is O(n) and <strong>ordered</strong> (unlike HashMap&#x27;s arbitrary order).</p>
+<p><strong>Space overhead vs HashMap</strong>: 2 extra pointers per entry (~16 bytes per entry). Practically negligible.</p>
+<h3 id="kotlin-usage-7">Kotlin Usage</h3>
+<pre><code>// Insertion order (default)
+val lhm = linkedMapOf(&quot;c&quot; to 3, &quot;a&quot; to 1, &quot;b&quot; to 2)
+lhm.entries.forEach { println(it) }
+// c=3, a=1, b=2  (insertion order preserved)
+
+// Access order — Java API required
+val accessOrder = LinkedHashMap&lt;String, Int&gt;(16, 0.75f, true)
+accessOrder[&quot;a&quot;] = 1
+accessOrder[&quot;b&quot;] = 2
+accessOrder[&quot;c&quot;] = 3
+accessOrder[&quot;a&quot;]  // access &quot;a&quot; — moves it to tail
+accessOrder.entries.forEach { println(it.key) }
+// b, c, a  (a moved to end because it was most recently accessed)</code></pre>
+<h3 id="lru-cache-using-linkedhashmap">LRU Cache Using LinkedHashMap</h3>
+<pre><code>class LruCache&lt;K, V&gt;(private val maxSize: Int) {
+    // accessOrder=true: least recently used is at the head
+    private val map = object : LinkedHashMap&lt;K, V&gt;(16, 0.75f, true) {
+        override fun removeEldestEntry(eldest: Map.Entry&lt;K, V&gt;): Boolean {
+            return size &gt; maxSize  // evict when over capacity
+        }
+    }
+
+    fun get(key: K): V? = map[key]
+    fun put(key: K, value: V) { map[key] = value }
+    fun size() = map.size
+}
+
+// Note: Android&#x27;s androidx.collection.LruCache is a battle-tested version
+// of this pattern — prefer it in production.</code></pre>
+<hr>
+<h3 id="interview-angles-8">Interview Angles</h3>
+<p><strong>How would you implement an LRU cache?</strong></p>
+<p>&quot;There are really two ways I&#x27;d answer this. The simple one is to lean on <code>LinkedHashMap</code>: construct it with <code>accessOrder=true</code> and override <code>removeEldestEntry</code> to return <code>true</code> whenever size exceeds the max capacity. Then every <code>get</code> and <code>put</code> automatically moves the touched entry to the tail, so the head is always the least recently used, and eviction is just removing the head of the linked list — O(1). You end up with O(1) get and put and O(n) space, and the code above shows it.</p>
+<p>The deeper answer, the one that shows you really understand it, is to build it from scratch with a HashMap plus a doubly linked list. You keep a <code>HashMap&lt;K, Node&lt;K,V&gt;&gt;</code> for O(1) key-to-node lookup, and the doubly linked list gives you O(1) move-to-front and evict-from-the-back. That&#x27;s literally what <code>LinkedHashMap</code> is doing internally — implementing it by hand just proves you know that.&quot;</p>
+<pre><code>class LruCacheFromScratch&lt;K, V&gt;(private val capacity: Int) {
+    data class Node&lt;K, V&gt;(val key: K, var value: V) {
+        var prev: Node&lt;K, V&gt;? = null
+        var next: Node&lt;K, V&gt;? = null
+    }
+
+    private val map = HashMap&lt;K, Node&lt;K, V&gt;&gt;()
+    private val head = Node&lt;K, V&gt;(null as K, null as V)  // dummy
+    private val tail = Node&lt;K, V&gt;(null as K, null as V)  // dummy
+    init { head.next = tail; tail.prev = head }
+
+    fun get(key: K): V? {
+        val node = map[key] ?: return null
+        moveToFront(node)
+        return node.value
+    }
+
+    fun put(key: K, value: V) {
+        val existing = map[key]
+        if (existing != null) { existing.value = value; moveToFront(existing); return }
+        val node = Node(key, value)
+        map[key] = node
+        insertAfterHead(node)
+        if (map.size &gt; capacity) evictLru()
+    }
+
+    private fun moveToFront(node: Node&lt;K, V&gt;) { removeNode(node); insertAfterHead(node) }
+    private fun removeNode(node: Node&lt;K, V&gt;) { node.prev!!.next = node.next; node.next!!.prev = node.prev }
+    private fun insertAfterHead(node: Node&lt;K, V&gt;) {
+        node.next = head.next; node.prev = head
+        head.next!!.prev = node; head.next = node
+    }
+    private fun evictLru() {
+        val lru = tail.prev!!
+        removeNode(lru)
+        map.remove(lru.key)
+    }
+}</code></pre>
+<p><strong>Why is LinkedHashMap useful for caching?</strong></p>
+<p>&quot;The reason is that <code>accessOrder=true</code> maintains one really useful invariant for free: the least recently accessed entry is always sitting at the head of the internal linked list, with zero manual bookkeeping on my part. Every <code>get</code> and <code>put</code> stays O(1) even including the reorder, because that&#x27;s just relinking a couple of pointers. And answering &#x27;what should I evict?&#x27; is O(1) too — you just read the head. That combination is what makes it the fastest and simplest correct LRU you can get straight out of the JDK.&quot;</p>
+<hr>
+<h2 id="10-treemap--sortedmap">10. TreeMap / SortedMap</h2>
+<h3 id="definition-9">Definition</h3>
+<p>A TreeMap is a key-value map that keeps its keys sorted at all times — either by their natural ordering through <code>Comparable</code>, or by a custom <code>Comparator</code> you hand it. The trade-off is that every operation is O(log n) rather than O(1), because it&#x27;s backed by a Red-Black tree, which is a self-balancing binary search tree.</p>
+<h3 id="internal-implementation-red-black-tree">Internal Implementation: Red-Black Tree</h3>
+<p>A BST where every node is colored Red or Black with invariants that guarantee the tree height stays O(log n):</p>
+<ol>
+<li>Root is Black.</li>
+<li>No two adjacent Red nodes (Red node&#x27;s parent must be Black).</li>
+<li>Every path from root to null has the same number of Black nodes.</li>
+</ol>
+<p>Insertions and deletions may require &quot;rotations&quot; and &quot;recolorings&quot; to restore invariants, but these are O(1) and at most O(log n) in count — keeping all operations O(log n).</p>
+<h3 id="big-o-summary-9">Big O Summary</h3>
+<table border="1" cellpadding="6" cellspacing="0">
+<thead><tr>
+<th>Operation</th>
+<th>Time</th>
+<th>Notes</th>
+</tr></thead><tbody>
+<tr><td>get / put / remove</td><td>O(log n)</td><td>BST traversal</td></tr>
+<tr><td>containsKey</td><td>O(log n)</td><td></td></tr>
+<tr><td>firstKey/lastKey</td><td>O(log n)</td><td>Leftmost/rightmost node</td></tr>
+<tr><td>floorKey/ceilingKey</td><td>O(log n)</td><td>Nearest key ≤ or ≥ target</td></tr>
+<tr><td>headMap/tailMap</td><td>O(log n)</td><td>Submap views (lazy, not copied)</td></tr>
+<tr><td>iteration</td><td>O(n)</td><td>In-order traversal</td></tr>
+<tr><td>subMap(from, to)</td><td>O(log n + k)</td><td>k = number of elements in range</td></tr>
+</tbody></table>
+<p><strong>Space</strong>: O(n) — each node stores color, parent pointer, left/right pointers, key, value.</p>
+<h3 id="kotlin-usage-8">Kotlin Usage</h3>
+<pre><code>val treeMap = sortedMapOf(&quot;banana&quot; to 2, &quot;apple&quot; to 1, &quot;cherry&quot; to 3)
+// Iteration is always alphabetically sorted
+for ((k, v) in treeMap) println(&quot;$k=$v&quot;)
+// apple=1, banana=2, cherry=3
+
+treeMap.firstKey()   // &quot;apple&quot;
+treeMap.lastKey()    // &quot;cherry&quot;
+
+// Range queries — powerful TreeMap feature
+val navMap = treeMap as java.util.TreeMap
+navMap.headMap(&quot;banana&quot;)          // keys strictly &lt; &quot;banana&quot;: {&quot;apple&quot;}
+navMap.tailMap(&quot;banana&quot;)          // keys &gt;= &quot;banana&quot;: {&quot;banana&quot;,&quot;cherry&quot;}
+navMap.subMap(&quot;apple&quot;, &quot;cherry&quot;)  // apple &lt;= key &lt; cherry: {&quot;apple&quot;,&quot;banana&quot;}
+navMap.floorKey(&quot;apricot&quot;)        // greatest key &lt;= &quot;apricot&quot;: &quot;apple&quot;
+navMap.ceilingKey(&quot;apricot&quot;)      // least key &gt;= &quot;apricot&quot;: &quot;banana&quot;
+
+// Custom comparator (reverse order)
+val reversed = TreeMap&lt;String, Int&gt;(compareByDescending { it })
+reversed[&quot;b&quot;] = 2; reversed[&quot;a&quot;] = 1; reversed[&quot;c&quot;] = 3
+println(reversed.keys.toList())   // [c, b, a]</code></pre>
+<h3 id="when-to-use-3">When to Use</h3>
+<ul>
+<li>Need keys in sorted order.</li>
+<li>Range queries: &quot;all keys between X and Y&quot;.</li>
+<li>Need <code>firstKey()</code>, <code>lastKey()</code>, <code>floorKey()</code>, <code>ceilingKey()</code>.</li>
+<li>Implementing interval trees or scheduling systems.</li>
+</ul>
+<h3 id="when-to-avoid-3">When to Avoid</h3>
+<ul>
+<li>When you just need O(1) lookup — use HashMap.</li>
+<li>When insertion order matters but not sort order — use LinkedHashMap.</li>
+</ul>
+<hr>
+<h3 id="interview-angles-9">Interview Angles</h3>
+<p><strong>HashMap vs TreeMap.</strong></p>
+<table border="1" cellpadding="6" cellspacing="0">
+<thead><tr>
+<th>Dimension</th>
+<th>HashMap</th>
+<th>TreeMap</th>
+</tr></thead><tbody>
+<tr><td>get/put</td><td>O(1) average</td><td>O(log n)</td></tr>
+<tr><td>Ordering</td><td>None</td><td>Sorted by key</td></tr>
+<tr><td>null keys</td><td>1 allowed</td><td>Not allowed</td></tr>
+<tr><td>Range queries</td><td>Not supported</td><td>floorKey, subMap</td></tr>
+<tr><td>Internal</td><td>Hash table</td><td>Red-Black BST</td></tr>
+<tr><td>Use case</td><td>Fast lookup</td><td>Sorted access</td></tr>
+</tbody></table>
+<p>So the rule I go by is: start with HashMap by default, and only reach for TreeMap when you genuinely need sorted iteration or range queries.</p>
+<p><strong>When do you need sorted keys?</strong></p>
+<ul>
+<li>Building a leaderboard where you iterate from highest to lowest score.</li>
+<li>Scheduling: &quot;find all events that start before time T&quot; using <code>headMap(T)</code>.</li>
+<li>Autocomplete with a sorted prefix scan.</li>
+<li>Maintaining a sliding window where you need the min/max efficiently.</li>
+<li>Implementing a time-series data store keyed by timestamp.</li>
+</ul>
+<p><strong>Cost of ordered map vs hash map.</strong></p>
+<p>&quot;The headline cost is that every operation picks up an extra factor of log n. At a million entries, that&#x27;s roughly 20 times more operations per get or put compared to an ideal O(1) hash map. Now in practice it&#x27;s not quite that dramatic — once you fold in constant factors and cache behavior, TreeMap tends to run about 3 to 10 times slower than HashMap for bulk work. So the way I think about it is: that&#x27;s a real cost, and I only accept it when I genuinely need sorted iteration or range queries.&quot;</p>
+<hr>
+<h2 id="11-priorityqueue--heap">11. PriorityQueue / Heap</h2>
+<h3 id="definition-10">Definition</h3>
+<p>A PriorityQueue is a heap — a min-heap or a max-heap — and its whole job is to give you O(1) access to the smallest or largest element at any moment. It&#x27;s implemented as a binary heap stored compactly in an array.</p>
+<h3 id="internal-implementation-binary-heap">Internal Implementation: Binary Heap</h3>
+<p>A complete binary tree stored as an array:</p>
+<ul>
+<li>Root at index 0.</li>
+<li>Node at index <code>i</code> has children at <code>2i+1</code> (left) and <code>2i+2</code> (right).</li>
+<li>Node at index <code>i</code> has parent at <code>(i-1)/2</code>.</li>
+</ul>
+<p><strong>Min-heap invariant</strong>: every parent ≤ both children. Root is always the minimum.</p>
+<pre><code>Heap array: [1, 3, 5, 7, 9, 8, 6]
+Tree:
+        1
+       / \
+      3   5
+     / \ / \
+    7  9 8  6</code></pre>
+<p><strong>Insert</strong> (sift-up): Add at end → swap with parent while parent &gt; child. O(log n). <strong>Poll</strong> (sift-down): Replace root with last element → swap with smaller child while violating invariant. O(log n). <strong>Heapify</strong> (build heap from array): O(n) — not O(n log n); bottom-up construction.</p>
+<h3 id="big-o-summary-10">Big O Summary</h3>
+<table border="1" cellpadding="6" cellspacing="0">
+<thead><tr>
+<th>Operation</th>
+<th>Time</th>
+<th>Notes</th>
+</tr></thead><tbody>
+<tr><td>peek (min/max)</td><td>O(1)</td><td>Root of heap</td></tr>
+<tr><td>poll (remove min/max)</td><td>O(log n)</td><td>Sift-down after removal</td></tr>
+<tr><td>offer (insert)</td><td>O(log n)</td><td>Sift-up</td></tr>
+<tr><td>heapify</td><td>O(n)</td><td>Build from array</td></tr>
+<tr><td>contains</td><td>O(n)</td><td>No index structure</td></tr>
+<tr><td>remove(element)</td><td>O(n)</td><td>Find + O(log n) sift</td></tr>
+</tbody></table>
+<p><strong>Space</strong>: O(n) — compact array, no pointer overhead.</p>
+<h3 id="kotlin-usage-9">Kotlin Usage</h3>
+<pre><code>// Min-heap (default)
+val minHeap = PriorityQueue&lt;Int&gt;()
+minHeap.offer(5); minHeap.offer(1); minHeap.offer(3)
+println(minHeap.peek())  // 1 — O(1)
+println(minHeap.poll())  // 1 — O(log n), heap is now {3, 5}
+
+// Max-heap via reversed comparator
+val maxHeap = PriorityQueue&lt;Int&gt;(compareByDescending { it })
+maxHeap.offer(5); maxHeap.offer(1); maxHeap.offer(3)
+println(maxHeap.poll())  // 5
+
+// Custom objects — comparator on a field
+data class Task(val name: String, val priority: Int)
+val taskQueue = PriorityQueue&lt;Task&gt;(compareBy { it.priority })
+taskQueue.offer(Task(&quot;low&quot;, 10)); taskQueue.offer(Task(&quot;high&quot;, 1))
+println(taskQueue.poll().name)  // &quot;high&quot; (priority=1 is smallest)
+
+// Top K frequent elements
+fun topKFrequent(nums: IntArray, k: Int): IntArray {
+    val freq = mutableMapOf&lt;Int, Int&gt;()
+    for (n in nums) freq[n] = freq.getOrDefault(n, 0) + 1
+
+    // Min-heap of size k: keeps the k largest frequencies
+    val heap = PriorityQueue&lt;Map.Entry&lt;Int, Int&gt;&gt;(compareBy { it.value })
+    for (entry in freq.entries) {
+        heap.offer(entry)
+        if (heap.size &gt; k) heap.poll()  // evict smallest frequency
+    }
+    return heap.map { it.key }.toIntArray()
+}</code></pre>
+<h3 id="heap-vs-binary-search-tree">Heap vs Binary Search Tree</h3>
+<table border="1" cellpadding="6" cellspacing="0">
+<thead><tr>
+<th>Dimension</th>
+<th>Heap (PriorityQueue)</th>
+<th>BST (TreeMap)</th>
+</tr></thead><tbody>
+<tr><td>Min/max access</td><td>O(1)</td><td>O(log n)</td></tr>
+<tr><td>Arbitrary search</td><td>O(n)</td><td>O(log n)</td></tr>
+<tr><td>Insert</td><td>O(log n)</td><td>O(log n)</td></tr>
+<tr><td>Delete min/max</td><td>O(log n)</td><td>O(log n)</td></tr>
+<tr><td>Sorted iteration</td><td>No (O(n log n) sort)</td><td>O(n) in-order</td></tr>
+<tr><td>Memory</td><td>Compact array</td><td>Node-per-entry</td></tr>
+<tr><td>Use case</td><td>Priority, top-k</td><td>Sorted map/set</td></tr>
+</tbody></table>
+<hr>
+<h3 id="interview-angles-10">Interview Angles</h3>
+<p><strong>Find top K frequent elements.</strong> See <code>topKFrequent()</code> above. Time: O(n log k). Space: O(n + k).</p>
+<p>&quot;The key insight here is why it&#x27;s a min-heap of size k and not a max-heap of everything. You want to keep the k most frequent, which means at each step you want to throw away the least frequent thing you&#x27;ve seen so far — and the smallest element is exactly what a min-heap hands you in O(1). If you instead built a max-heap of all n elements, you&#x27;d burn O(n) heap space and O(n log n) time, which is strictly worse.&quot;</p>
+<p><strong>Merge K sorted lists.</strong></p>
+<pre><code>fun mergeKSortedLists(lists: Array&lt;IntArray&gt;): IntArray {
+    // Min-heap stores (value, listIndex, elementIndex)
+    val heap = PriorityQueue&lt;Triple&lt;Int, Int, Int&gt;&gt;(compareBy { it.first })
+    val result = mutableListOf&lt;Int&gt;()
+
+    // Seed heap with first element from each list
+    for ((i, list) in lists.withIndex()) {
+        if (list.isNotEmpty()) heap.offer(Triple(list[0], i, 0))
+    }
+
+    while (heap.isNotEmpty()) {
+        val (value, listIdx, elemIdx) = heap.poll()
+        result.add(value)
+        val nextIdx = elemIdx + 1
+        if (nextIdx &lt; lists[listIdx].size) {
+            heap.offer(Triple(lists[listIdx][nextIdx], listIdx, nextIdx))
+        }
+    }
+    return result.toIntArray()
+}
+// Time: O(N log K) where N = total elements, K = number of lists
+// Space: O(K) for the heap</code></pre>
+<p><strong>Difference between heap and binary search tree.</strong> See table above. &quot;The distinction I&#x27;d lead with is this: a heap gives you O(1) access to the min or max but O(n) to find anything else, whereas a BST gives you O(log n) for basically everything but costs you more complexity. So the rule of thumb is, use a heap when all you care about is the extremes — scheduling, top-k, Dijkstra&#x27;s — and use a BST when you need general sorted access and range queries.&quot;</p>
+<hr>
+<h2 id="12-trie">12. Trie</h2>
+<h3 id="definition-11">Definition</h3>
+<p>A trie is a prefix tree — a tree where each node stands for a single character, so the path from the root down to any node spells out a prefix. Each node holds its children in an array or a map indexed by character, which is what makes prefix lookups so fast.</p>
+<h3 id="internal-implementation-8">Internal Implementation</h3>
+<pre><code>Words: [&quot;app&quot;, &quot;apple&quot;, &quot;apply&quot;, &quot;apt&quot;]
+
+root
+ └── &#x27;a&#x27;
+      └── &#x27;p&#x27;
+           ├── &#x27;p&#x27; [isEnd=true]  ← &quot;app&quot;
+           │    ├── &#x27;l&#x27;
+           │    │    ├── &#x27;e&#x27; [isEnd=true]  ← &quot;apple&quot;
+           │    │    └── &#x27;y&#x27; [isEnd=true]  ← &quot;apply&quot;
+           └── &#x27;t&#x27; [isEnd=true]  ← &quot;apt&quot;</code></pre>
+<p>Each node stores:</p>
+<ul>
+<li>Array (or map) of child pointers — one per possible character.</li>
+<li><code>isEndOfWord</code> boolean flag.</li>
+</ul>
+<p>For lowercase ASCII: <code>children = arrayOfNulls&lt;TrieNode&gt;(26)</code> — O(1) child lookup by <code>char - &#x27;a&#x27;</code>.</p>
+<h3 id="big-o-summary-11">Big O Summary</h3>
+<table border="1" cellpadding="6" cellspacing="0">
+<thead><tr>
+<th>Operation</th>
+<th>Time</th>
+<th>Notes</th>
+</tr></thead><tbody>
+<tr><td>insert(word)</td><td>O(L)</td><td>L = word length</td></tr>
+<tr><td>search(word)</td><td>O(L)</td><td>Exact match</td></tr>
+<tr><td>startsWith(prefix)</td><td>O(L)</td><td>Prefix search</td></tr>
+<tr><td>delete(word)</td><td>O(L)</td><td>Mark isEnd=false, optionally prune</td></tr>
+<tr><td>Build trie</td><td>O(N * L)</td><td>N words, average length L</td></tr>
+</tbody></table>
+<p><strong>Space</strong>: O(N <em> L </em> alphabet_size). High memory if the alphabet is large (e.g., Unicode). For 26 lowercase letters, each node is an array of 26 pointers.</p>
+<h3 id="kotlin-implementation">Kotlin Implementation</h3>
+<pre><code>class Trie {
+    private class TrieNode {
+        val children = arrayOfNulls&lt;TrieNode&gt;(26)
+        var isEnd = false
+    }
+
+    private val root = TrieNode()
+
+    fun insert(word: String) {
+        var node = root
+        for (ch in word) {
+            val idx = ch - &#x27;a&#x27;
+            if (node.children[idx] == null) {
+                node.children[idx] = TrieNode()
+            }
+            node = node.children[idx]!!
+        }
+        node.isEnd = true
+    }
+
+    fun search(word: String): Boolean {
+        val node = traverse(word) ?: return false
+        return node.isEnd
+    }
+
+    fun startsWith(prefix: String): Boolean = traverse(prefix) != null
+
+    private fun traverse(prefix: String): TrieNode? {
+        var node = root
+        for (ch in prefix) {
+            node = node.children[ch - &#x27;a&#x27;] ?: return null
+        }
+        return node
+    }
+
+    fun getWordsWithPrefix(prefix: String): List&lt;String&gt; {
+        val node = traverse(prefix) ?: return emptyList()
+        val results = mutableListOf&lt;String&gt;()
+        dfs(node, StringBuilder(prefix), results)
+        return results
+    }
+
+    private fun dfs(node: TrieNode, sb: StringBuilder, results: MutableList&lt;String&gt;) {
+        if (node.isEnd) results.add(sb.toString())
+        for (i in 0..25) {
+            node.children[i]?.let {
+                sb.append(&#x27;a&#x27; + i)
+                dfs(it, sb, results)
+                sb.deleteCharAt(sb.length - 1)
+            }
+        }
+    }
+}</code></pre>
+<h3 id="common-uses-2">Common Uses</h3>
+<ul>
+<li><strong>Autocomplete</strong>: Find all words with a given prefix.</li>
+<li><strong>Spell checker</strong>: Dictionary lookup and prefix matching.</li>
+<li><strong>IP routing tables</strong>: Longest prefix match.</li>
+<li><strong>Word search in a 2D board</strong>.</li>
+<li><strong>Phone number prefix lookup</strong>.</li>
+</ul>
+<hr>
+<h3 id="interview-angles-11">Interview Angles</h3>
+<p><strong>Design search suggestions.</strong></p>
+<pre><code>class SearchSuggestions(words: List&lt;String&gt;) {
+    private val trie = Trie()
+    init { words.forEach { trie.insert(it.lowercase()) }  }
+
+    // Returns up to 3 suggestions for each prefix of the typed string
+    fun suggestionsAsUserTypes(searchWord: String): List&lt;List&lt;String&gt;&gt; {
+        val result = mutableListOf&lt;List&lt;String&gt;&gt;()
+        for (i in searchWord.indices) {
+            val prefix = searchWord.substring(0, i + 1).lowercase()
+            val suggestions = trie.getWordsWithPrefix(prefix)
+                .sorted()
+                .take(3)
+            result.add(suggestions)
+        }
+        return result
+    }
+}</code></pre>
+<p>Time: O(N<em>L) to build trie, O(L </em> (search_complexity + k)) per call where k is number of matching words. &quot;One thing I&#x27;d flag is that for a real production autocomplete, you&#x27;d also store counts or rankings on each node, so you can return the most popular suggestions directly instead of scanning the whole subtree every time.&quot;</p>
+<p><strong>Prefix matching.</strong> &quot;<code>startsWith(prefix)</code> only ever touches L nodes, where L is the length of the prefix, so it&#x27;s O(L) — and crucially, that&#x27;s independent of how many words are in the trie. That&#x27;s the whole advantage over the alternatives: a sorted list gives you O(log N + k) with binary search, and a HashSet can do an exact match in O(L) but simply can&#x27;t do prefixes at all.&quot;</p>
+<p><strong>Autocomplete implementation.</strong> &quot;See <code>getWordsWithPrefix()</code> above. The idea is two phases: first you walk down to the prefix node in O(L), and then you DFS the subtree underneath it collecting every complete word. For ranking, you store word counts on the nodes. And for a really large dictionary, you&#x27;d switch to a Compressed Trie — a Patricia Trie — which merges single-child chains into one node to cut down the node count and the memory.&quot;</p>
+<hr>
+<h2 id="13-graphs">13. Graphs</h2>
+<h3 id="definition-12">Definition</h3>
+<p>A graph is just a set of vertices — nodes — connected by edges. The edges can be directed, meaning one-way, or undirected, meaning two-way, and they can be weighted or unweighted, and those choices are what let a graph model almost any kind of relationship.</p>
+<h3 id="graph-representations">Graph Representations</h3>
+<p><strong>Adjacency List</strong> (preferred for sparse graphs):</p>
+<pre><code>// Map of vertex → list of neighbors
+val graph = mapOf(
+    0 to listOf(1, 2),
+    1 to listOf(2, 3),
+    2 to listOf(3),
+    3 to listOf&lt;Int&gt;()
+)
+// Space: O(V + E)
+// Check edge(u,v): O(degree(u))
+// Get neighbors: O(1)</code></pre>
+<p><strong>Adjacency Matrix</strong> (preferred for dense graphs or when O(1) edge checking is needed):</p>
+<pre><code>val n = 4
+val matrix = Array(n) { BooleanArray(n) }
+matrix[0][1] = true  // edge from 0 to 1
+// Space: O(V²)
+// Check edge(u,v): O(1)
+// Get neighbors: O(V)</code></pre>
+<p><strong>When to use which</strong>:</p>
+<ul>
+<li>Adjacency list: Most algorithmic problems, sparse graphs, BFS/DFS.</li>
+<li>Adjacency matrix: Dense graphs, Floyd-Warshall, when O(1) edge lookup is critical.</li>
+</ul>
+<h3 id="bfs-and-dfs">BFS and DFS</h3>
+<pre><code>// BFS — explores layer by layer; finds shortest path in unweighted graph
+fun bfs(graph: Map&lt;Int, List&lt;Int&gt;&gt;, start: Int): List&lt;Int&gt; {
+    val visited = mutableSetOf(start)
+    val queue = ArrayDeque&lt;Int&gt;()
+    val order = mutableListOf&lt;Int&gt;()
+    queue.addLast(start)
+    while (queue.isNotEmpty()) {
+        val v = queue.removeFirst()
+        order.add(v)
+        for (neighbor in graph[v].orEmpty()) {
+            if (visited.add(neighbor)) queue.addLast(neighbor)
+        }
+    }
+    return order
+}
+
+// DFS — iterative (stack-based)
+fun dfsIterative(graph: Map&lt;Int, List&lt;Int&gt;&gt;, start: Int): List&lt;Int&gt; {
+    val visited = mutableSetOf&lt;Int&gt;()
+    val stack = ArrayDeque&lt;Int&gt;()
+    val order = mutableListOf&lt;Int&gt;()
+    stack.addLast(start)
+    while (stack.isNotEmpty()) {
+        val v = stack.removeLast()
+        if (visited.add(v)) {
+            order.add(v)
+            for (neighbor in graph[v].orEmpty()) {
+                if (neighbor !in visited) stack.addLast(neighbor)
+            }
+        }
+    }
+    return order
+}
+
+// DFS — recursive
+fun dfsRecursive(graph: Map&lt;Int, List&lt;Int&gt;&gt;, v: Int, visited: MutableSet&lt;Int&gt;, order: MutableList&lt;Int&gt;) {
+    if (!visited.add(v)) return
+    order.add(v)
+    for (neighbor in graph[v].orEmpty()) dfsRecursive(graph, neighbor, visited, order)
+}</code></pre>
+<h3 id="cycle-detection">Cycle Detection</h3>
+<pre><code>// Directed graph cycle detection using DFS with 3-color marking
+// WHITE=0 (unvisited), GRAY=1 (in current path), BLACK=2 (fully processed)
+fun hasCycle(graph: Map&lt;Int, List&lt;Int&gt;&gt;): Boolean {
+    val color = mutableMapOf&lt;Int, Int&gt;()
+
+    fun dfs(v: Int): Boolean {
+        color[v] = 1  // GRAY
+        for (neighbor in graph[v].orEmpty()) {
+            if (color[neighbor] == 1) return true  // back edge → cycle
+            if (color[neighbor] == null &amp;&amp; dfs(neighbor)) return true
+        }
+        color[v] = 2  // BLACK
+        return false
+    }
+
+    return graph.keys.any { color[it] == null &amp;&amp; dfs(it) }
+}
+
+// Undirected graph cycle detection using Union-Find
+class UnionFind(n: Int) {
+    private val parent = IntArray(n) { it }
+    private val rank   = IntArray(n) { 0 }
+
+    fun find(x: Int): Int {
+        if (parent[x] != x) parent[x] = find(parent[x])  // path compression
+        return parent[x]
+    }
+
+    fun union(x: Int, y: Int): Boolean {
+        val px = find(x); val py = find(y)
+        if (px == py) return false  // already connected — adding this edge creates a cycle
+        if (rank[px] &lt; rank[py]) parent[px] = py
+        else if (rank[px] &gt; rank[py]) parent[py] = px
+        else { parent[py] = px; rank[px]++ }
+        return true
+    }
+}</code></pre>
+<h3 id="topological-sort">Topological Sort</h3>
+<pre><code>// Kahn&#x27;s algorithm (BFS-based) — also detects cycles
+fun topologicalSort(numNodes: Int, edges: List&lt;Pair&lt;Int, Int&gt;&gt;): List&lt;Int&gt;? {
+    val inDegree = IntArray(numNodes)
+    val adj = Array(numNodes) { mutableListOf&lt;Int&gt;() }
+    for ((u, v) in edges) { adj[u].add(v); inDegree[v]++ }
+
+    val queue = ArrayDeque&lt;Int&gt;()
+    for (i in 0 until numNodes) if (inDegree[i] == 0) queue.addLast(i)
+
+    val order = mutableListOf&lt;Int&gt;()
+    while (queue.isNotEmpty()) {
+        val v = queue.removeFirst()
+        order.add(v)
+        for (neighbor in adj[v]) {
+            if (--inDegree[neighbor] == 0) queue.addLast(neighbor)
+        }
+    }
+    return if (order.size == numNodes) order else null  // null = cycle detected
+}</code></pre>
+<h3 id="shortest-path">Shortest Path</h3>
+<table border="1" cellpadding="6" cellspacing="0">
+<thead><tr>
+<th>Algorithm</th>
+<th>Graph type</th>
+<th>Time</th>
+<th>Use case</th>
+</tr></thead><tbody>
+<tr><td>BFS</td><td>Unweighted</td><td>O(V + E)</td><td>Fewest hops</td></tr>
+<tr><td>Dijkstra</td><td>Non-negative weights</td><td>O((V+E) log V)</td><td>Shortest path from source</td></tr>
+<tr><td>Bellman-Ford</td><td>Negative weights</td><td>O(V * E)</td><td>Detects negative cycles</td></tr>
+<tr><td>Floyd-Warshall</td><td>All-pairs</td><td>O(V³)</td><td>All-pairs shortest path</td></tr>
+</tbody></table>
+<hr>
+<h3 id="interview-angles-12">Interview Angles</h3>
+<p><strong>Model app navigation as a graph.</strong></p>
+<p>&quot;An app&#x27;s navigation is naturally a directed graph: the vertices are screens — Activities or Compose destinations — and the edges are navigation actions like button taps or deep links. In Jetpack Navigation the <code>navigation.xml</code> resource is literally an adjacency list. And the <code>NavController</code> is doing a path traversal from your current destination to the target. Once you see it that way, a lot of problems become standard graph problems: finding unreachable screens is just looking for vertices with no incoming edges other than the start destination, detecting a navigation loop like A to B to C back to A is cycle detection on a directed graph, and the back stack itself is the current DFS path from the root down to the screen you&#x27;re on.&quot;</p>
+<p><strong>Dependency resolution between modules.</strong></p>
+<p>&quot;Gradle module dependencies form a directed acyclic graph, a DAG. If module A depends on B, that&#x27;s an edge from A to B. Gradle figures out the build order with a topological sort — build everything&#x27;s dependencies before the thing that depends on them. And if you accidentally create a circular dependency, where A depends on B and B depends on A, that&#x27;s a cycle, and Gradle detects it and fails the build. Dagger is the same story for dependency injection: each @Provides method is an edge from the type it provides to the things it depends on, Dagger topologically sorts that graph at compile time to generate the factories in the right order, and along the way it catches missing bindings — disconnected nodes — and cycles.&quot;</p>
+<p><strong>Detect cycle in dependency graph.</strong></p>
+<p>&quot;For a directed graph I&#x27;d use DFS with 3-color marking, like the code above. The idea is that GRAY means &#x27;this node is currently on my recursion stack.&#x27; So if my DFS ever reaches a node that&#x27;s already GRAY, I&#x27;ve followed a back edge and found a cycle. That&#x27;s exactly the approach Gradle and Dagger use internally. For an undirected graph it&#x27;s different — there I&#x27;d reach for Union-Find, which is O(α(n)) per operation, where α is the inverse Ackermann function and is effectively constant for any realistic input.&quot;</p>
+<p><strong>BFS vs DFS.</strong></p>
+<table border="1" cellpadding="6" cellspacing="0">
+<thead><tr>
+<th>Dimension</th>
+<th>BFS</th>
+<th>DFS</th>
+</tr></thead><tbody>
+<tr><td>Data structure</td><td>Queue</td><td>Stack (implicit or explicit)</td></tr>
+<tr><td>Space</td><td>O(V) for queue</td><td>O(V) for recursion stack</td></tr>
+<tr><td>Finds shortest path</td><td>Yes (unweighted graphs)</td><td>No</td></tr>
+<tr><td>Complete</td><td>Yes (explores all)</td><td>Yes</td></tr>
+<tr><td>Good for</td><td>Shortest path, level order</td><td>Cycle detection, topo sort, connected components</td></tr>
+<tr><td>Android analogy</td><td>&quot;Nearest first&quot; feature search</td><td>&quot;Go deep&quot; navigation trees</td></tr>
+</tbody></table>
+<p>So the way I keep them straight is: reach for BFS when you care about distance or levels, and reach for DFS when you care about structure — cycles, paths, connectivity.</p>
+<hr>
+<h2 id="14-android-specific-collections">14. Android-Specific Collections</h2>
+<h3 id="141-sparsearray">14.1 SparseArray</h3>
+<h4 id="definition-13">Definition</h4>
+<p>SparseArray is Android&#x27;s answer to <code>HashMap&lt;Int, V&gt;</code>. Instead of a hash table, it keeps two parallel arrays — one of integer keys, one of values — and does lookups by binary search. The big win is that the keys stay as raw ints, so there&#x27;s no boxing.</p>
+<h4 id="internal-implementation-9">Internal Implementation</h4>
+<pre><code>keys:   [0, 3, 7, 12, 45]      (sorted int[])
+values: [A, B, C,  D,  E]      (Object[])</code></pre>
+<ul>
+<li><code>get(key)</code>: binary search in <code>keys</code> array → O(log n). If found, return <code>values[idx]</code>.</li>
+<li><code>put(key, value)</code>: binary search to find insert position → shift arrays → O(n).</li>
+<li>Lazy deletion: <code>delete()</code> marks the slot as DELETED (a sentinel) without shifting; garbage-collected on next <code>put</code> or <code>gc()</code> call.</li>
+</ul>
+<h4 id="big-o-summary-12">Big O Summary</h4>
+<table border="1" cellpadding="6" cellspacing="0">
+<thead><tr>
+<th>Operation</th>
+<th>Time</th>
+<th>Notes</th>
+</tr></thead><tbody>
+<tr><td>get</td><td>O(log n)</td><td>Binary search on sorted keys</td></tr>
+<tr><td>put</td><td>O(n)</td><td>Insert + shift</td></tr>
+<tr><td>delete</td><td>O(log n)</td><td>Lazy delete (no shift)</td></tr>
+<tr><td>iteration</td><td>O(n)</td><td>Sequential array scan</td></tr>
+</tbody></table>
+<h4 id="when-to-use-4">When to Use</h4>
+<ul>
+<li>Mapping integer IDs (view IDs, resource IDs, position indices) to objects.</li>
+<li>Small-to-medium collections (n &lt; ~1000) where avoiding HashMap boxing overhead matters.</li>
+<li>Memory-sensitive code: avoids boxing <code>int</code> → <code>Integer</code>.</li>
+</ul>
+<h4 id="kotlin-usage-10">Kotlin Usage</h4>
+<pre><code>val sparse = SparseArray&lt;String&gt;()
+sparse.put(R.id.button_ok, &quot;OK&quot;)
+sparse.put(R.id.button_cancel, &quot;Cancel&quot;)
+
+val label = sparse.get(R.id.button_ok)         // O(log n)
+val labelOrDefault = sparse.get(R.id.button_ok, &quot;Unknown&quot;)  // with default
+sparse.remove(R.id.button_cancel)
+
+for (i in 0 until sparse.size()) {
+    val key = sparse.keyAt(i)
+    val val_ = sparse.valueAt(i)
+}</code></pre>
+<h3 id="142-longsparsearray">14.2 LongSparseArray</h3>
+<p>This is just <code>SparseArray</code> but for <code>Long</code> keys instead of <code>int</code> keys, so it avoids boxing <code>Long</code> into <code>java.lang.Long</code>. You&#x27;d use it whenever your keys are timestamps or 64-bit IDs.</p>
+<h3 id="143-arraymap">14.3 ArrayMap</h3>
+<h4 id="definition-14">Definition</h4>
+<p>ArrayMap is a memory-efficient stand-in for <code>HashMap&lt;K, V&gt;</code>. It also uses two parallel arrays — one holding the key hashes, one holding the key-value pairs — and it&#x27;s specifically designed for small maps, under roughly 1000 entries, which is the common case on Android.</p>
+<h4 id="internal-implementation-10">Internal Implementation</h4>
+<pre><code>hashes: [hash(C), hash(A), hash(B)]  (sorted int[])
+array:  [keyC, valC, keyA, valA, keyB, valB]  (Object[], interleaved)</code></pre>
+<ul>
+<li>Lookup: binary search on <code>hashes</code> → O(log n). Then linear probe if hash collision.</li>
+<li>Avoids the 28-byte <code>HashMap.Entry</code> object per entry — only uses the arrays.</li>
+<li>At small sizes, better cache behavior (contiguous arrays) despite O(log n) vs O(1).</li>
+</ul>
+<h4 id="when-to-use-5">When to Use</h4>
+<ul>
+<li>Small maps (&lt; 100–1000 entries) where memory matters more than raw throughput.</li>
+<li>Android View system, Bundle extras, configuration maps.</li>
+<li>When you know the map is small and allocated frequently (e.g., per-frame data).</li>
+</ul>
+<h4 id="when-not-to-use">When NOT to Use</h4>
+<ul>
+<li>Large maps (HashMap wins on throughput at scale due to O(1) vs O(log n)).</li>
+<li>Hot paths with millions of lookups per second.</li>
+</ul>
+<pre><code>val arrayMap = ArrayMap&lt;String, Int&gt;()
+arrayMap[&quot;score&quot;] = 42
+arrayMap[&quot;level&quot;] = 5
+val score = arrayMap[&quot;score&quot;]  // O(log n)</code></pre>
+<h3 id="144-lrucache">14.4 LruCache</h3>
+<h4 id="definition-15">Definition</h4>
+<p><code>androidx.collection.LruCache&lt;K, V&gt;</code> is a thread-safe, size-bounded cache that, when it fills up, evicts the Least Recently Used entry to make room. Under the hood it&#x27;s just a <code>LinkedHashMap</code> with <code>accessOrder=true</code>, which is what makes the eviction order fall out for free.</p>
+<h4 id="big-o-summary-13">Big O Summary</h4>
+<p>All operations O(1): get, put, eviction.</p>
+<h4 id="usage-pattern">Usage Pattern</h4>
+<pre><code>// Typical usage: bitmap cache
+val maxMemory = Runtime.getRuntime().maxMemory() / 1024  // KB
+val cacheSize = (maxMemory / 8).toInt()  // Use 1/8 of available memory
+
+val bitmapCache = object : LruCache&lt;String, Bitmap&gt;(cacheSize) {
+    // Tell LruCache the size of each item (in KB)
+    override fun sizeOf(key: String, value: Bitmap): Int {
+        return value.byteCount / 1024
+    }
+
+    // Called when an entry is evicted — release resources
+    override fun entryRemoved(evicted: Boolean, key: String, oldValue: Bitmap, newValue: Bitmap?) {
+        if (evicted) oldValue.recycle()  // optional, Glide manages this itself
+    }
+}
+
+// Usage
+bitmapCache.put(&quot;url_hash&quot;, bitmap)
+val cached = bitmapCache.get(&quot;url_hash&quot;)  // null if evicted</code></pre>
+<p><strong>Thread safety</strong>: <code>LruCache</code> is synchronized. All <code>get()</code> and <code>put()</code> calls acquire an intrinsic lock. Safe from multiple threads but adds overhead in single-threaded contexts.</p>
+<hr>
+<h3 id="interview-angles-13">Interview Angles</h3>
+<p><strong>Why might Android-specific collections reduce memory overhead?</strong></p>
+<p>&quot;There are three mechanisms at play. The first is avoiding boxing — <code>SparseArray</code> and <code>LongSparseArray</code> keep their keys in primitive <code>int[]</code> or <code>long[]</code>, whereas a <code>HashMap&lt;Int, V&gt;</code> has to box every <code>Int</code> into a <code>java.lang.Integer</code>, which is about 16 bytes plus an 8-byte reference, so 24 bytes versus SparseArray&#x27;s 4. Across 10,000 integer keys that&#x27;s roughly 240KB against 40KB. The second is avoiding Entry objects — a HashMap allocates a <code>HashMap.Entry</code> object per pair, around 28 to 48 bytes, while ArrayMap stores everything in two flat arrays with no per-entry objects at all, so you get lower GC pressure and better cache locality. And the third is a smaller starting footprint — HashMap defaults to a 16-bucket array and wastes slots under the load factor, whereas ArrayMap starts at 4 entries and grows linearly. And the reason all this matters: on memory-constrained Android devices juggling lots of apps, those savings make it less likely the OOM killer comes for your process.&quot;</p>
+<p><strong>When would you use LruCache?</strong></p>
+<p>&quot;I&#x27;d reach for <code>LruCache</code> for any in-memory cache where three things are true:</p>
+<ul>
+<li>The items are expensive to compute or fetch — think bitmap decoding, network responses, database queries.</li>
+<li>You can&#x27;t or don&#x27;t want to cache everything, because unbounded growth eventually means an OOM.</li>
+<li>And the access pattern is temporal, meaning something you used recently is likely to be needed again soon.</li>
+</ul>
+<p>The classic Android example is bitmap loading in a <code>RecyclerView</code> or <code>ListView</code>. Without a cache, every single <code>onBindViewHolder</code> would re-decode the bitmap from disk. With an <code>LruCache</code>, the hot bitmaps stay in memory and the eviction keeps the total cache under whatever limit you set. It&#x27;s not exotic, either — Glide and Picasso both use <code>LruCache</code> internally.&quot;</p>
+<p><strong>Why not always replace HashMap with ArrayMap?</strong></p>
+<p>&quot;Because the memory win comes at a speed cost — ArrayMap looks up by binary search, which is O(log n), versus HashMap&#x27;s O(1) average. So once you&#x27;ve got a large collection or you&#x27;re hammering it with high-throughput lookups, HashMap is simply faster. Google&#x27;s own docs say ArrayMap is meant for under about 1000 entries, where the memory footprint matters more than raw throughput. If you&#x27;ve got 10,000-plus entries, or you&#x27;re doing thousands of lookups a second in something like a parser or a scheduler hot loop, HashMap wins by 5 to 10 times on speed. So I think of ArrayMap as a targeted optimization for the common Android case — small maps in activities, adapters, and bundles — not a blanket replacement.&quot;</p>
+<hr>
+<h2 id="15-big-o-notation">15. Big O Notation</h2>
+<h3 id="what-it-is">What It Is</h3>
+<p>Big O notation is how we describe the upper bound on an algorithm&#x27;s growth rate as the input size n gets large. The point is to capture how time or space scales, while deliberately ignoring constant factors and lower-order terms so we can compare algorithms apples to apples.</p>
+<p>Formally: <code>T(n) = O(f(n))</code> means <code>∃ constants c, n₀</code> such that <code>T(n) ≤ c·f(n)</code> for all <code>n ≥ n₀</code>.</p>
+<h3 id="151-time-complexity">15.1 Time Complexity</h3>
+<p>The number of operations (not seconds) the algorithm performs as a function of input size n.</p>
+<p>Why we drop constants: Hardware, compiler optimizations, and JIT make constant factors unreliable. We care about asymptotic scaling. <code>100n</code> is O(n), not O(100n), because the 100x gap is stable regardless of n.</p>
+<h3 id="152-space-complexity">15.2 Space Complexity</h3>
+<p>Extra memory the algorithm uses beyond the input itself (auxiliary space). Examples:</p>
+<ul>
+<li>In-place sort: O(1) auxiliary space.</li>
+<li>Merge sort: O(n) — needs a temporary array.</li>
+<li>Recursive DFS: O(V) stack frames.</li>
+<li>BFS: O(V) queue.</li>
+</ul>
+<h3 id="153-best-average-and-worst-case">15.3 Best, Average, and Worst Case</h3>
+<table border="1" cellpadding="6" cellspacing="0">
+<thead><tr>
+<th>Case</th>
+<th>Notation</th>
+<th>Meaning</th>
+</tr></thead><tbody>
+<tr><td>Best</td><td>Ω(n)</td><td>Minimum operations on the most favorable input</td></tr>
+<tr><td>Average</td><td>Θ(n)</td><td>Expected operations on a random input</td></tr>
+<tr><td>Worst</td><td>O(n)</td><td>Maximum operations on the most adversarial input</td></tr>
+</tbody></table>
+<p><strong>Example — QuickSort</strong>:</p>
+<ul>
+<li>Best case: Θ(n log n) — pivot always splits evenly.</li>
+<li>Average case: Θ(n log n) — random pivot statistically balanced.</li>
+<li>Worst case: O(n²) — sorted input with naive pivot selection (always picks smallest/largest).</li>
+</ul>
+<p><strong>Why worst case matters</strong>: In production, you cannot assume best-case inputs. An API endpoint that processes user data must handle adversarial inputs. For security-sensitive code, worst case = the attack surface.</p>
+<h3 id="154-amortized-complexity">15.4 Amortized Complexity</h3>
+<p>Amortized analysis averages the cost of expensive operations over a sequence of operations:</p>
+<p><strong>ArrayList.add() example</strong>: Most appends cost O(1) (just write to next slot). Occasionally, when capacity is full, a resize costs O(n) (copy all elements). But the resize doubles capacity, so the next resize won&#x27;t happen for another n appends. Total cost for n appends: O(n) copy work + O(n) write work = O(2n) = O(n). Amortized per append: O(1).</p>
+<p><strong>Accounting method intuition</strong>: Each O(1) append &quot;deposits&quot; a credit. When the costly resize happens, the accumulated credits pay for it. No individual operation feels expensive in the amortized view.</p>
+<p>Other amortized examples:</p>
+<ul>
+<li><code>HashMap.put()</code>: amortized O(1) despite occasional O(n) rehash.</li>
+<li>Splay tree operations: amortized O(log n) per operation.</li>
+<li><code>StringBuilder.append()</code>: amortized O(1).</li>
+</ul>
+<h3 id="155-recursive-complexity">15.5 Recursive Complexity</h3>
+<p>Use the <strong>Master Theorem</strong> for recurrences of the form <code>T(n) = a·T(n/b) + f(n)</code>:</p>
+<table border="1" cellpadding="6" cellspacing="0">
+<thead><tr>
+<th>Condition</th>
+<th>Result</th>
+<th>Example</th>
+</tr></thead><tbody>
+<tr><td>f(n) = O(n^(logb a - ε))</td><td>T(n) = Θ(n^logb a)</td><td>Binary tree traversal</td></tr>
+<tr><td>f(n) = Θ(n^logb a)</td><td>T(n) = Θ(n^logb a · log n)</td><td>Merge sort</td></tr>
+<tr><td>f(n) = Ω(n^(logb a + ε))</td><td>T(n) = Θ(f(n))</td><td>Binary search</td></tr>
+</tbody></table>
+<p><strong>Common examples</strong>:</p>
+<pre><code>Binary search:     T(n) = T(n/2) + O(1)   → O(log n)
+Merge sort:        T(n) = 2T(n/2) + O(n)  → O(n log n)
+Binary tree walk:  T(n) = 2T(n/2) + O(1)  → O(n)
+Naive power(x,n):  T(n) = T(n-1) + O(1)   → O(n)
+Fast power(x,n):   T(n) = T(n/2) + O(1)   → O(log n)
+Fibonacci naive:   T(n) = T(n-1) + T(n-2) → O(2^n) [exponential!]
+Fibonacci memoized:                        → O(n)</code></pre>
+<p><strong>Recursion stack space</strong>: Each recursive call uses O(1) stack frame space. A recursion of depth d uses O(d) stack space. For DFS on a tree of depth d, stack space is O(d). For a balanced tree, d = O(log n). For a skewed tree, d = O(n) — potential <code>StackOverflowError</code>. Iterative DFS avoids this by using an explicit heap-allocated stack.</p>
+<h3 id="156-hidden-constants">15.6 Hidden Constants</h3>
+<p>Big O hides constant multipliers. O(n) with a constant of 1000 can be slower than O(n log n) with a constant of 1 for all practical input sizes.</p>
+<p><strong>Real-world example</strong>: Java&#x27;s <code>Arrays.sort()</code> uses TimSort (O(n log n)) for Object arrays but uses a dual-pivot QuickSort (O(n log n) average but O(n log n) in practice with better constants) for primitives. The choice is driven by benchmarked constants, not just the asymptotic class.</p>
+<p>In Android: calling <code>startActivity()</code> is O(1) but has a 50ms+ constant due to process creation, IPC, inflation, measure/layout/draw. Never let algorithmic reasoning alone justify complex navigation strategies.</p>
+<h3 id="157-why-on-can-beat-olog-n-in-practice">15.7 Why O(n) Can Beat O(log n) in Practice</h3>
+<p><strong>Cache locality wins</strong>:</p>
+<ul>
+<li>Modern CPUs load memory in 64-byte cache lines. When accessing an array, neighboring elements load together.</li>
+<li>A <strong>linear scan</strong> of a small sorted array (O(n)) may be faster than <strong>binary search</strong> (O(log n)) because the linear scan accesses memory sequentially — all cache hits — while binary search accesses <code>indices n/2, n/4, n/8...</code> — scattered memory addresses, each potentially a cache miss.</li>
+</ul>
+<p><strong>Crossover point</strong>: For n ≤ 64 (one cache line), linear scan is almost always faster. For n ≤ 128, often faster. For n ≥ 1000, binary search wins.</p>
+<p><strong>Android example</strong>: <code>ArrayMap</code> uses binary search (O(log n)) instead of hash lookup (O(1)), yet is faster than <code>HashMap</code> for small maps because the contiguous array fits in cache, while <code>HashMap</code>&#x27;s scattered <code>Entry</code> objects cause cache misses.</p>
+<p><strong>Practical implication</strong>: Always benchmark before assuming asymptotic complexity determines real-world speed. Profile with realistic data sizes.</p>
+<h3 id="158-common-complexities-table">15.8 Common Complexities Table</h3>
+<table border="1" cellpadding="6" cellspacing="0">
+<thead><tr>
+<th>Complexity</th>
+<th>Name</th>
+<th>What it looks like</th>
+<th>Example</th>
+</tr></thead><tbody>
+<tr><td>O(1)</td><td>Constant</td><td>Fixed number of operations regardless of n</td><td>Array index access, HashMap get</td></tr>
+<tr><td>O(log n)</td><td>Logarithmic</td><td>Halve the problem each step</td><td>Binary search, BST/heap ops</td></tr>
+<tr><td>O(√n)</td><td>Square root</td><td>Iterate √n steps</td><td>Trial division for primes</td></tr>
+<tr><td>O(n)</td><td>Linear</td><td>Visit each element once</td><td>Linear search, array traversal</td></tr>
+<tr><td>O(n log n)</td><td>Linearithmic</td><td>Sort each element once with log-n work each</td><td>Merge sort, heap sort, TimSort</td></tr>
+<tr><td>O(n²)</td><td>Quadratic</td><td>Every pair of elements</td><td>Bubble sort, nested loops</td></tr>
+<tr><td>O(n³)</td><td>Cubic</td><td>Every triple of elements</td><td>Floyd-Warshall, naive matrix multiply</td></tr>
+<tr><td>O(2ⁿ)</td><td>Exponential</td><td>Decisions double the work</td><td>Power set, Fibonacci naive recursion</td></tr>
+<tr><td>O(n!)</td><td>Factorial</td><td>Every permutation</td><td>Brute-force TSP, permutation generation</td></tr>
+</tbody></table>
+<p><strong>Growth comparison at n = 20</strong>:</p>
+<table border="1" cellpadding="6" cellspacing="0">
+<thead><tr>
+<th>n</th>
+<th>log n</th>
+<th>n</th>
+<th>n log n</th>
+<th>n²</th>
+<th>2ⁿ</th>
+<th>n!</th>
+</tr></thead><tbody>
+<tr><td>20</td><td>~4.3</td><td>20</td><td>~86</td><td>400</td><td>1,048,576</td><td>2.4 × 10¹⁸</td></tr>
+</tbody></table>
+<h3 id="159-must-know-examples">15.9 Must-Know Examples</h3>
+<table border="1" cellpadding="6" cellspacing="0">
+<thead><tr>
+<th>Example</th>
+<th>Complexity</th>
+<th>Why</th>
+</tr></thead><tbody>
+<tr><td><code>array[i]</code></td><td>O(1)</td><td>Pointer arithmetic</td></tr>
+<tr><td><code>list.contains(x)</code> (ArrayList)</td><td>O(n)</td><td>Linear scan</td></tr>
+<tr><td>Binary search (sorted array)</td><td>O(log n)</td><td>Halves search space each step</td></tr>
+<tr><td><code>hashMap.get(key)</code></td><td>O(1) avg</td><td>Hash → bucket → equals check</td></tr>
+<tr><td><code>treeMap.get(key)</code></td><td>O(log n)</td><td>Red-Black BST traversal</td></tr>
+<tr><td><code>Collections.sort()</code> / <code>sortedBy()</code></td><td>O(n log n)</td><td>TimSort</td></tr>
+<tr><td>Nested loop over same array</td><td>O(n²)</td><td>n * n iterations</td></tr>
+<tr><td>BFS or DFS</td><td>O(V + E)</td><td>Visit each vertex and edge once</td></tr>
+<tr><td>Building a heap from array</td><td>O(n)</td><td>Bottom-up heapify</td></tr>
+<tr><td>Binary tree height (balanced)</td><td>O(log n)</td><td>Each level halves remaining nodes</td></tr>
+<tr><td>String concatenation in loop</td><td>O(n²)</td><td>Each <code>+</code> copies entire string; use StringBuilder</td></tr>
+<tr><td><code>StringBuilder.append()</code> in loop</td><td>O(n) total</td><td>Amortized O(1) per append</td></tr>
+</tbody></table>
+<h3 id="string-concatenation-anti-pattern">String Concatenation Anti-Pattern</h3>
+<pre><code>// BAD — O(n²) due to string immutability + copy on each concat
+var result = &quot;&quot;
+for (i in 0 until n) result += &quot;x&quot;  // creates n new strings
+
+// GOOD — O(n) amortized
+val sb = StringBuilder()
+for (i in 0 until n) sb.append(&quot;x&quot;)
+val result = sb.toString()
+
+// Idiomatic Kotlin
+val result = (0 until n).joinToString(&quot;&quot;) { &quot;x&quot; }</code></pre>
+<hr>
+<h3 id="interview-angles-14">Interview Angles</h3>
+<p><strong>Analyze a piece of code.</strong></p>
+<p>&quot;When I&#x27;m analyzing code live, I walk through it with a consistent checklist. First, I find the outermost loop, because its bound is the baseline for everything else. Second, for nested loops I multiply their bounds — two loops that each run to n is O(n²). Third, I hunt for hidden inner loops, the sneaky ones like <code>contains()</code>, <code>indexOf()</code>, or string concatenation, because those quietly add a factor of n. Fourth, if there&#x27;s recursion, I write out the recurrence and apply the Master Theorem or substitution. And fifth, I just recall the complexity of any data structure operations involved — a hash map get is O(1), a TreeMap get is O(log n) — and fold those in.&quot;</p>
+<pre><code>// Example — what is the complexity?
+fun findDuplicates(list: List&lt;Int&gt;): List&lt;Int&gt; {
+    val seen = mutableSetOf&lt;Int&gt;()   // HashSet
+    val dupes = mutableListOf&lt;Int&gt;()
+    for (x in list) {                // O(n)
+        if (x in seen) {             // O(1) — HashSet contains
+            dupes.add(x)             // O(1) amortized
+        } else {
+            seen.add(x)              // O(1) amortized
+        }
+    }
+    return dupes
+}
+// Total: O(n) time, O(n) space
+// A naive O(n²) solution would check list.contains() inside the loop</code></pre>
+<p><strong>Improve brute force to better complexity.</strong></p>
+<p>&quot;The classic example here is Two Sum:&quot;</p>
+<pre><code>// Brute force O(n²) — every pair
+fun twoSumBrute(nums: IntArray, target: Int): IntArray {
+    for (i in nums.indices)
+        for (j in i+1 until nums.size)
+            if (nums[i] + nums[j] == target) return intArrayOf(i, j)
+    return intArrayOf()
+}
+
+// Optimized O(n) — HashMap for complement lookup
+fun twoSumOptimal(nums: IntArray, target: Int): IntArray {
+    val seen = HashMap&lt;Int, Int&gt;()  // value → index
+    for ((i, num) in nums.withIndex()) {
+        val complement = target - num
+        if (complement in seen) return intArrayOf(seen[complement]!!, i)
+        seen[num] = i
+    }
+    return intArrayOf()
+}
+// Trade-off: O(n) extra space to gain O(n²) → O(n) time</code></pre>
+<p>&quot;And there are a handful of patterns I keep in my back pocket for cutting complexity:</p>
+<ul>
+<li>To go from O(n²) to O(n log n), sort first and then use a two-pointer sweep or binary search.</li>
+<li>To go from O(n²) all the way down to O(n), replace the inner loop with a HashMap or HashSet so the lookup becomes O(1).</li>
+<li>To go from O(n) to O(log n), reach for binary search or recursive divide-and-conquer.</li>
+<li>And to tame an exponential O(2ⁿ) down to O(n²), add memoization — that&#x27;s top-down dynamic programming.&quot;</li>
+</ul>
+<p><strong>Explain time vs space trade-off.</strong></p>
+<p>&quot;The time-space trade-off is basically that you can usually buy speed with memory, or buy memory savings with slower operations — you rarely get both for free. So the question is always which one you&#x27;re short on.&quot;</p>
+<table border="1" cellpadding="6" cellspacing="0">
+<thead><tr>
+<th>Scenario</th>
+<th>Time Trade-off</th>
+<th>Space Trade-off</th>
+</tr></thead><tbody>
+<tr><td>Precompute + cache results</td><td>O(1) lookups</td><td>O(n) cache</td></tr>
+<tr><td>Sort then binary search</td><td>O(n log n + log n)</td><td>O(1) extra</td></tr>
+<tr><td>HashMap for dedup/counting</td><td>O(n) time</td><td>O(n) space</td></tr>
+<tr><td>In-place sort vs merge sort</td><td>Same O(n log n)</td><td>O(1) vs O(n)</td></tr>
+<tr><td>Memoized recursion</td><td>O(n) time</td><td>O(n) memo table</td></tr>
+<tr><td>Iterative DFS vs recursive DFS</td><td>Same O(V+E)</td><td>O(V) heap stack vs O(V) call stack (no overflow risk)</td></tr>
+</tbody></table>
+<p>&quot;And to ground it in Android: on a device with 3GB of RAM, spending a 10MB cache to shave 100ms of computation off every frame is absolutely a trade worth making. The catch is that you have to bound that cache — if you don&#x27;t, it just grows until it OOMs the app.&quot;</p>
+<p><strong>Explain why a hash map can improve lookup.</strong></p>
+<p>&quot;Without a hash map, asking &#x27;is this value in the collection?&#x27; means scanning every element — that&#x27;s O(n). A hash map gets you to O(1) average, and there are two reasons why. First, the key&#x27;s <code>hashCode()</code> deterministically maps it straight to a bucket index, so you jump right to the neighborhood instead of searching. And second, once you&#x27;re in that bucket there are usually only one or two entries to compare with <code>equals()</code>. The classic example is counting word frequencies: the naive approach checks whether each word is already in a list, which is O(n²), but with a hash map you just do <code>freq[word]++</code>, which is O(1) per word and O(n) total. At 100,000 words that&#x27;s the difference between something like 10¹⁰ operations and 10⁵.&quot;</p>
+<p><strong>Explain recursion stack space.</strong></p>
+<p>&quot;Every function call pushes a stack frame onto the JVM call stack, and on Android that stack is only about 256KB to 512KB. Each frame holds the local variables, the parameters, and the return address — typically 40 to 100 bytes. So the danger with recursion is that if it goes deep enough, you exhaust that stack and get a <code>StackOverflowError</code>.&quot;</p>
+<pre><code>// Fibonacci recursive — O(n) stack depth → StackOverflowError for large n
+fun fib(n: Int): Long = if (n &lt;= 1) n.toLong() else fib(n-1) + fib(n-2)
+// Stack depth = n frames. For n = 10,000 → StackOverflowError.
+
+// Iterative — O(1) stack space
+fun fibIterative(n: Int): Long {
+    if (n &lt;= 1) return n.toLong()
+    var a = 0L; var b = 1L
+    repeat(n - 1) { val tmp = a + b; a = b; b = tmp }
+    return b
+}</code></pre>
+<p>&quot;So on Android, any time I&#x27;m doing DFS over the navigation graph or a large data tree, I think about the maximum depth up front. A file-system DFS, for instance, can blow the stack if the directory nesting is deep. The fix is to convert it to an iterative DFS with an explicit <code>ArrayDeque</code> — that moves the stack onto the heap and eliminates the stack-depth risk entirely.&quot;</p>
+<hr>
+<p><em>End of Section 1: Data Structures &amp; Collections + Big O Notation</em></p>
+<div class="pager">
+<a class="prev" href="../index.html"><span class="lbl">‹ Previous</span>Home</a>
+<a class="next" href="kotlin-java-fundamentals.html"><span class="lbl">Next ›</span>2. Kotlin &amp; Java Fundamentals</a>
+</div>
+</div></div>
+<script src="../site.js"></script>
+</body></html>

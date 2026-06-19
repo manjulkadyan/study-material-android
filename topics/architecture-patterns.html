@@ -1,0 +1,1143 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>7. Architecture Patterns</title>
+<link rel="stylesheet" href="../style.css"></head>
+<body class="has-toc" data-prev="android-memory-management.html" data-next="view-rendering.html">
+<nav class="sidebar"><a class="brand" href="../index.html">📱 Android Study Guide — Home</a><details class="topic"><summary><span class="caret">▶</span><a href="data-structures-big-o.html">1. Data Structures &amp; Big O</a></summary><ul class="subtopics"><li><a class="" href="data-structures-big-o.html#11-data-structures--collections--12-big-o-notation">1.1 Data Structures &amp; Collections · 1.2 Big O Notation</a></li><li><a class="" href="data-structures-big-o.html#table-of-contents">Table of Contents</a></li><li><a class="" href="data-structures-big-o.html#1-arrays">1. Arrays</a></li><li><a class="" href="data-structures-big-o.html#2-arraylist--mutablelist">2. ArrayList / MutableList</a></li><li><a class="" href="data-structures-big-o.html#3-linkedlist">3. LinkedList</a></li><li><a class="" href="data-structures-big-o.html#4-stack">4. Stack</a></li><li><a class="" href="data-structures-big-o.html#5-queue">5. Queue</a></li><li><a class="" href="data-structures-big-o.html#6-deque">6. Deque</a></li><li><a class="" href="data-structures-big-o.html#7-hashmap--mutablemap">7. HashMap / MutableMap</a></li><li><a class="" href="data-structures-big-o.html#8-hashset--mutableset">8. HashSet / MutableSet</a></li><li><a class="" href="data-structures-big-o.html#9-linkedhashmap">9. LinkedHashMap</a></li><li><a class="" href="data-structures-big-o.html#10-treemap--sortedmap">10. TreeMap / SortedMap</a></li><li><a class="" href="data-structures-big-o.html#11-priorityqueue--heap">11. PriorityQueue / Heap</a></li><li><a class="" href="data-structures-big-o.html#12-trie">12. Trie</a></li><li><a class="" href="data-structures-big-o.html#13-graphs">13. Graphs</a></li><li><a class="" href="data-structures-big-o.html#14-android-specific-collections">14. Android-Specific Collections</a></li><li><a class="" href="data-structures-big-o.html#15-big-o-notation">15. Big O Notation</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="kotlin-java-fundamentals.html">2. Kotlin &amp; Java Fundamentals</a></summary><ul class="subtopics"><li><a class="" href="kotlin-java-fundamentals.html#table-of-contents">Table of Contents</a></li><li><a class="" href="kotlin-java-fundamentals.html#21-kotlin-fundamentals">2.1 Kotlin Fundamentals</a></li><li><a class="" href="kotlin-java-fundamentals.html#22-kotlin-generics">2.2 Kotlin Generics</a></li><li><a class="" href="kotlin-java-fundamentals.html#23-java-fundamentals">2.3 Java Fundamentals</a></li><li><a class="" href="kotlin-java-fundamentals.html#24-kotlin-java-interop">2.4 Kotlin-Java Interop</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="concurrency-android-threading.html">3. Concurrency &amp; Android Threading</a></summary><ul class="subtopics"><li><a class="" href="concurrency-android-threading.html#table-of-contents">Table of Contents</a></li><li><a class="" href="concurrency-android-threading.html#31-java-thread-basics">3.1 Java Thread Basics</a></li><li><a class="" href="concurrency-android-threading.html#32-locks-and-synchronization">3.2 Locks and Synchronization</a></li><li><a class="" href="concurrency-android-threading.html#33-volatile-and-atomic-classes">3.3 Volatile and Atomic Classes</a></li><li><a class="" href="concurrency-android-threading.html#34-waitnotify-and-producer-consumer">3.4 Wait/Notify and Producer-Consumer</a></li><li><a class="" href="concurrency-android-threading.html#35-executors-and-task-execution">3.5 Executors and Task Execution</a></li><li><a class="" href="concurrency-android-threading.html#36-android-application-threads">3.6 Android Application Threads</a></li><li><a class="" href="concurrency-android-threading.html#37-handler--looper--messagequeue">3.7 Handler / Looper / MessageQueue</a></li><li><a class="" href="concurrency-android-threading.html#38-kotlin-coroutines-on-android">3.8 Kotlin Coroutines on Android</a></li><li><a class="" href="concurrency-android-threading.html#39-flow-stateflow-sharedflow-channel">3.9 Flow, StateFlow, SharedFlow, Channel</a></li><li><a class="" href="concurrency-android-threading.html#310-background-work">3.10 Background Work</a></li><li><a class="" href="concurrency-android-threading.html#quick-reference-interview-cheat-sheet">Quick-Reference: Interview Cheat Sheet</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="thread-communication.html">4. Thread Communication</a></summary><ul class="subtopics"><li><a class="" href="thread-communication.html#table-of-contents">Table of Contents</a></li><li><a class="" href="thread-communication.html#41-pipes">4.1 Pipes</a></li><li><a class="" href="thread-communication.html#42-shared-memory">4.2 Shared Memory</a></li><li><a class="" href="thread-communication.html#43-signaling">4.3 Signaling</a></li><li><a class="" href="thread-communication.html#44-blockingqueue">4.4 BlockingQueue</a></li><li><a class="" href="thread-communication.html#45-message-passing--android-handlerloopermessagequeue">4.5 Message Passing — Android Handler/Looper/MessageQueue</a></li><li><a class="" href="thread-communication.html#cross-cutting-shared-memory-vs-message-passing">Cross-cutting: Shared Memory vs Message Passing</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="ipc-binder-aidl-messenger.html">5. IPC: Binder, AIDL, Messenger</a></summary><ul class="subtopics"><li><a class="" href="ipc-binder-aidl-messenger.html#table-of-contents">Table of Contents</a></li><li><a class="" href="ipc-binder-aidl-messenger.html#51-android-process-model">5.1 Android Process Model</a></li><li><a class="" href="ipc-binder-aidl-messenger.html#52-binder">5.2 Binder</a></li><li><a class="" href="ipc-binder-aidl-messenger.html#53-aidl">5.3 AIDL</a></li><li><a class="" href="ipc-binder-aidl-messenger.html#54-messenger">5.4 Messenger</a></li><li><a class="" href="ipc-binder-aidl-messenger.html#parcelable-vs-serializable">Parcelable vs Serializable</a></li><li><a class="" href="ipc-binder-aidl-messenger.html#aidl-vs-messenger-decision-guide">AIDL vs Messenger Decision Guide</a></li><li><a class="" href="ipc-binder-aidl-messenger.html#interview-quick-reference">Interview Quick-Reference</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="android-memory-management.html">6. Android Memory Management</a></summary><ul class="subtopics"><li><a class="" href="android-memory-management.html#table-of-contents">Table of Contents</a></li><li><a class="" href="android-memory-management.html#61-jvmart-memory-basics">6.1 JVM/ART Memory Basics</a></li><li><a class="" href="android-memory-management.html#62-android-memory-leaks">6.2 Android Memory Leaks</a></li><li><a class="" href="android-memory-management.html#63-context-leaks">6.3 Context Leaks</a></li><li><a class="" href="android-memory-management.html#64-bitmap-and-image-memory">6.4 Bitmap and Image Memory</a></li><li><a class="" href="android-memory-management.html#65-leak-detection-and-profiling">6.5 Leak Detection and Profiling</a></li><li><a class="" href="android-memory-management.html#interview-quick-reference">Interview Quick-Reference</a></li></ul></details><details class="topic active" open><summary><span class="caret">▶</span><a href="architecture-patterns.html">7. Architecture Patterns</a></summary><ul class="subtopics"><li><a class="spy" href="#table-of-contents">Table of Contents</a></li><li><a class="spy" href="#71-mvc-mvp-mvvm-mvi">7.1 MVC, MVP, MVVM, MVI</a></li><li><a class="spy" href="#72-clean-architecture">7.2 Clean Architecture</a></li><li><a class="spy" href="#73-repository-pattern">7.3 Repository Pattern</a></li><li><a class="spy" href="#74-dependency-injection">7.4 Dependency Injection</a></li><li><a class="spy" href="#75-modularization">7.5 Modularization</a></li><li><a class="spy" href="#quick-reference-cheat-sheet">Quick-Reference Cheat Sheet</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="view-rendering.html">8. View Rendering</a></summary><ul class="subtopics"><li><a class="" href="view-rendering.html#table-of-contents">Table of Contents</a></li><li><a class="" href="view-rendering.html#81-traditional-view-system-rendering">8.1 Traditional View System Rendering</a></li><li><a class="" href="view-rendering.html#82-choreographer-vsync-and-frame-rendering">8.2 Choreographer, VSync, and Frame Rendering</a></li><li><a class="" href="view-rendering.html#83-recyclerview-performance">8.3 RecyclerView Performance</a></li><li><a class="" href="view-rendering.html#84-jetpack-compose-rendering">8.4 Jetpack Compose Rendering</a></li><li><a class="" href="view-rendering.html#85-performance-tools">8.5 Performance Tools</a></li><li><a class="" href="view-rendering.html#interview-cheat-sheet">Interview Cheat Sheet</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="lifecycle-platform-components.html">9. Lifecycle &amp; Platform Components</a></summary><ul class="subtopics"><li><a class="" href="lifecycle-platform-components.html#table-of-contents">Table of Contents</a></li><li><a class="" href="lifecycle-platform-components.html#91-activity">9.1 Activity</a></li><li><a class="" href="lifecycle-platform-components.html#92-fragment">9.2 Fragment</a></li><li><a class="" href="lifecycle-platform-components.html#93-services">9.3 Services</a></li><li><a class="" href="lifecycle-platform-components.html#94-broadcastreceiver">9.4 BroadcastReceiver</a></li><li><a class="" href="lifecycle-platform-components.html#95-contentprovider">9.5 ContentProvider</a></li><li><a class="" href="lifecycle-platform-components.html#96-intents-and-pendingintents">9.6 Intents and PendingIntents</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="android-data-layer.html">10. Android Data Layer</a></summary><ul class="subtopics"><li><a class="" href="android-data-layer.html#table-of-contents">Table of Contents</a></li><li><a class="" href="android-data-layer.html#101-networking">10.1 Networking</a></li><li><a class="" href="android-data-layer.html#102-persistence">10.2 Persistence</a></li><li><a class="" href="android-data-layer.html#103-offline-first-design">10.3 Offline-First Design</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="testing.html">11. Testing</a></summary><ul class="subtopics"><li><a class="" href="testing.html#table-of-contents">Table of Contents</a></li><li><a class="" href="testing.html#111-unit-testing">11.1 Unit Testing</a></li><li><a class="" href="testing.html#112-ui-testing">11.2 UI Testing</a></li><li><a class="" href="testing.html#113-integration-and-end-to-end-testing">11.3 Integration and End-to-End Testing</a></li><li><a class="" href="testing.html#quick-reference-interview-cheat-sheet">Quick-Reference Interview Cheat Sheet</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="build-gradle-release.html">12. Build, Gradle &amp; Release</a></summary><ul class="subtopics"><li><a class="" href="build-gradle-release.html#table-of-contents">Table of Contents</a></li><li><a class="" href="build-gradle-release.html#121-gradle-basics">12.1 Gradle Basics</a></li><li><a class="" href="build-gradle-release.html#122-build-performance">12.2 Build Performance</a></li><li><a class="" href="build-gradle-release.html#123-release">12.3 Release</a></li><li><a class="" href="build-gradle-release.html#summary-table-quick-reference">Summary Table: Quick Reference</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="security-privacy.html">13. Security &amp; Privacy</a></summary><ul class="subtopics"><li><a class="" href="security-privacy.html#table-of-contents">Table of Contents</a></li><li><a class="" href="security-privacy.html#131-android-security-basics">13.1 Android Security Basics</a></li><li><a class="" href="security-privacy.html#132-data-security">13.2 Data Security</a></li><li><a class="" href="security-privacy.html#interview-qa-master-list">Interview Q&amp;A Master List</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="performance-beyond-rendering.html">14. Performance Beyond Rendering</a></summary><ul class="subtopics"><li><a class="" href="performance-beyond-rendering.html#table-of-contents">Table of Contents</a></li><li><a class="" href="performance-beyond-rendering.html#141-startup-performance">14.1 Startup Performance</a></li><li><a class="" href="performance-beyond-rendering.html#142-battery-and-resource-usage">14.2 Battery and Resource Usage</a></li><li><a class="" href="performance-beyond-rendering.html#143-anr-and-crash-debugging">14.3 ANR and Crash Debugging</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="senior-staff-system-design.html">15. Senior/Staff System Design</a></summary><ul class="subtopics"><li><a class="" href="senior-staff-system-design.html#table-of-contents">Table of Contents</a></li><li><a class="" href="senior-staff-system-design.html#151-android-app-architecture-design">15.1 Android App Architecture Design</a></li><li><a class="" href="senior-staff-system-design.html#152-trade-off-thinking">15.2 Trade-Off Thinking</a></li><li><a class="" href="senior-staff-system-design.html#153-legacy-code-and-migration">15.3 Legacy Code and Migration</a></li><li><a class="" href="senior-staff-system-design.html#154-engineering-leadership">15.4 Engineering Leadership</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="interview-q-a-cheatsheet.html">16. Interview Q&amp;A &amp; Cheatsheet</a></summary><ul class="subtopics"><li><a class="" href="interview-q-a-cheatsheet.html#table-of-contents">Table of Contents</a></li><li><a class="" href="interview-q-a-cheatsheet.html#section-16--model-answers-by-category">Section 16 — Model Answers by Category</a></li><li><a class="" href="interview-q-a-cheatsheet.html#section-17--must-revise-checklist">Section 17 — Must-Revise Checklist</a></li><li><a class="" href="interview-q-a-cheatsheet.html#section-18--senior-answer-framework-with-worked-examples">Section 18 — Senior Answer Framework with Worked Examples</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="references.html">References</a></summary><ul class="subtopics"><li><a class="" href="references.html#table-of-contents">Table of Contents</a></li><li><a class="" href="references.html#section-1--data-structures--big-o">Section 1 — Data Structures &amp; Big O</a></li><li><a class="" href="references.html#section-2--kotlin--java-fundamentals">Section 2 — Kotlin &amp; Java Fundamentals</a></li><li><a class="" href="references.html#section-3--concurrency--threading">Section 3 — Concurrency &amp; Threading</a></li><li><a class="" href="references.html#section-4--thread-communication">Section 4 — Thread Communication</a></li><li><a class="" href="references.html#section-5--ipc-binder-aidl-messenger">Section 5 — IPC: Binder, AIDL, Messenger</a></li><li><a class="" href="references.html#section-6--memory-management">Section 6 — Memory Management</a></li><li><a class="" href="references.html#section-7--architecture-patterns">Section 7 — Architecture Patterns</a></li><li><a class="" href="references.html#section-8--view-rendering">Section 8 — View Rendering</a></li><li><a class="" href="references.html#section-9--lifecycle--platform-components">Section 9 — Lifecycle &amp; Platform Components</a></li><li><a class="" href="references.html#section-10--data-layer">Section 10 — Data Layer</a></li><li><a class="" href="references.html#section-11--testing">Section 11 — Testing</a></li><li><a class="" href="references.html#section-12--build-gradle--release">Section 12 — Build, Gradle &amp; Release</a></li><li><a class="" href="references.html#section-13--security--privacy">Section 13 — Security &amp; Privacy</a></li><li><a class="" href="references.html#section-14--performance-beyond-rendering">Section 14 — Performance (Beyond Rendering)</a></li><li><a class="" href="references.html#section-15--system-design">Section 15 — System Design</a></li><li><a class="" href="references.html#section-16--interview-qa-cheatsheet">Section 16 — Interview Q&amp;A Cheatsheet</a></li><li><a class="" href="references.html#section-17--must-revise-checklist">Section 17 — Must-Revise Checklist</a></li><li><a class="" href="references.html#section-18--seniorstaff-answer-framework">Section 18 — Senior/Staff Answer Framework</a></li><li><a class="" href="references.html#books">Books</a></li></ul></details></nav>
+<aside class="toc-right"><div class="toc-h">On this page</div><ul class="toc-tree"><li class="toc-grp"><a class="toc-2" href="#table-of-contents"><span class="tcaret tcaret-none"></span>Table of Contents</a></li><li class="toc-grp"><a class="toc-2" href="#71-mvc-mvp-mvvm-mvi"><span class="tcaret">▶</span>7.1 MVC, MVP, MVVM, MVI</a><ul class="toc-subs"><li><a class="toc-3" href="#mvc--and-massive-activity">MVC — and &quot;Massive Activity&quot;</a></li><li><a class="toc-3" href="#mvp--passive-view-and-presenter">MVP — Passive View and Presenter</a></li><li><a class="toc-3" href="#mvvm--viewmodel-stateflow-immutable-state">MVVM — ViewModel, StateFlow, Immutable State</a></li><li><a class="toc-3" href="#mvi--udf--intent-reducer-state-side-effects">MVI / UDF — Intent, Reducer, State, Side Effects</a></li><li><a class="toc-3" href="#pattern-comparison-table">Pattern Comparison Table</a></li></ul></li><li class="toc-grp"><a class="toc-2" href="#72-clean-architecture"><span class="tcaret">▶</span>7.2 Clean Architecture</a><ul class="toc-subs"><li><a class="toc-3" href="#separation-of-concerns-and-the-dependency-rule">Separation of Concerns and the Dependency Rule</a></li><li><a class="toc-3" href="#layers-presentation-domain-data">Layers: Presentation, Domain, Data</a></li><li><a class="toc-3" href="#use-cases--interactors">Use Cases / Interactors</a></li><li><a class="toc-3" href="#mappers">Mappers</a></li><li><a class="toc-3" href="#dependency-inversion">Dependency Inversion</a></li><li><a class="toc-3" href="#testability-per-layer">Testability Per Layer</a></li><li><a class="toc-3" href="#is-the-domain-layer-always-required">Is the Domain Layer Always Required?</a></li><li><a class="toc-3" href="#avoiding-over-engineering">Avoiding Over-Engineering</a></li></ul></li><li class="toc-grp"><a class="toc-2" href="#73-repository-pattern"><span class="tcaret">▶</span>7.3 Repository Pattern</a><ul class="toc-subs"><li><a class="toc-3" href="#abstraction-and-single-source-of-truth">Abstraction and Single Source of Truth</a></li><li><a class="toc-3" href="#repository-vs-data-source">Repository vs Data Source</a></li><li><a class="toc-3" href="#caching-and-refresh-strategies">Caching and Refresh Strategies</a></li><li><a class="toc-3" href="#model-mapping-dto--entity--domain">Model Mapping: DTO → Entity → Domain</a></li><li><a class="toc-3" href="#offline-first-architecture">Offline-First Architecture</a></li></ul></li><li class="toc-grp"><a class="toc-2" href="#74-dependency-injection"><span class="tcaret">▶</span>7.4 Dependency Injection</a><ul class="toc-subs"><li><a class="toc-3" href="#constructor-vs-field-injection">Constructor vs Field Injection</a></li><li><a class="toc-3" href="#interface-binding">Interface Binding</a></li><li><a class="toc-3" href="#scopes">Scopes</a></li><li><a class="toc-3" href="#qualifiers-and-modules">Qualifiers and Modules</a></li><li><a class="toc-3" href="#testing-with-fakes">Testing with Fakes</a></li><li><a class="toc-3" href="#hilt-basics">Hilt Basics</a></li><li><a class="toc-3" href="#di-vs-service-locator">DI vs Service Locator</a></li><li><a class="toc-3" href="#hilt-vs-manual-dagger-vs-manual-di">Hilt vs Manual Dagger vs Manual DI</a></li></ul></li><li class="toc-grp"><a class="toc-2" href="#75-modularization"><span class="tcaret">▶</span>7.5 Modularization</a><ul class="toc-subs"><li><a class="toc-3" href="#module-types-and-roles">Module Types and Roles</a></li><li><a class="toc-3" href="#api-vs-implementation-separation">API vs Implementation Separation</a></li><li><a class="toc-3" href="#dependency-direction-and-avoiding-cycles">Dependency Direction and Avoiding Cycles</a></li><li><a class="toc-3" href="#build-speed">Build Speed</a></li><li><a class="toc-3" href="#feature-based-vs-layer-based">Feature-Based vs Layer-Based</a></li><li><a class="toc-3" href="#dynamic-feature-modules">Dynamic Feature Modules</a></li><li><a class="toc-3" href="#convention-plugins">Convention Plugins</a></li><li><a class="toc-3" href="#when-does-modularization-become-over-engineering">When Does Modularization Become Over-Engineering?</a></li></ul></li><li class="toc-grp"><a class="toc-2" href="#quick-reference-cheat-sheet"><span class="tcaret">▶</span>Quick-Reference Cheat Sheet</a><ul class="toc-subs"><li><a class="toc-3" href="#architecture-pattern-decision-tree">Architecture Pattern Decision Tree</a></li><li><a class="toc-3" href="#stateflow-vs-sharedflow-vs-channel-for-events">StateFlow vs SharedFlow vs Channel for Events</a></li><li><a class="toc-3" href="#hilt-scopes-quick-reference">Hilt Scopes Quick Reference</a></li><li><a class="toc-3" href="#module-dependency-direction">Module Dependency Direction</a></li></ul></li></ul></aside>
+<div class="backdrop"></div>
+<div class="content">
+<div class="mtop"><button onclick="toggleNav()" aria-label="Menu">☰</button><a class="home" href="../index.html">🏠</a><span class="t">7. Architecture Patterns</span></div>
+<a class="arrow left" href="android-memory-management.html" title="Previous (6. Android Memory Management)">‹</a>
+<a class="arrow right" href="view-rendering.html" title="Next (8. View Rendering)">›</a>
+<div class="wrap">
+<h1 id="7-architecture-patterns">7. Architecture Patterns</h1>
+<blockquote>Senior/Staff-level study material covering MVC/MVP/MVVM/MVI, Clean Architecture,<br>Repository Pattern, Dependency Injection, and Modularization.</blockquote>
+<hr>
+<h2 id="table-of-contents">Table of Contents</h2>
+<ol>
+<li><a href="#71-mvc-mvp-mvvm-mvi">7.1 MVC, MVP, MVVM, MVI</a></li>
+<ul>
+<li><a href="#mvc--and-massive-activity">MVC — and &quot;Massive Activity&quot;</a></li>
+<li><a href="#mvp--passive-view-and-presenter">MVP — Passive View and Presenter</a></li>
+<li><a href="#mvvm--viewmodel-stateflow-immutable-state">MVVM — ViewModel, StateFlow, Immutable State</a></li>
+<li><a href="#mvi--udf--intent-reducer-state-side-effects">MVI / UDF — Intent, Reducer, State, Side Effects</a></li>
+<li><a href="#pattern-comparison-table">Pattern Comparison Table</a></li>
+</ul>
+<li><a href="#72-clean-architecture">7.2 Clean Architecture</a></li>
+<ul>
+<li><a href="#separation-of-concerns-and-the-dependency-rule">Separation of Concerns and the Dependency Rule</a></li>
+<li><a href="#layers-presentation-domain-data">Layers: Presentation, Domain, Data</a></li>
+<li><a href="#use-cases--interactors">Use Cases / Interactors</a></li>
+<li><a href="#mappers">Mappers</a></li>
+<li><a href="#dependency-inversion">Dependency Inversion</a></li>
+<li><a href="#testability-per-layer">Testability Per Layer</a></li>
+<li><a href="#is-the-domain-layer-always-required">Is the Domain Layer Always Required?</a></li>
+</ul>
+<li><a href="#73-repository-pattern">7.3 Repository Pattern</a></li>
+<ul>
+<li><a href="#abstraction-and-single-source-of-truth">Abstraction and Single Source of Truth</a></li>
+<li><a href="#caching-and-refresh-strategies">Caching and Refresh Strategies</a></li>
+<li><a href="#model-mapping-dto--entity--domain">Model Mapping: DTO → Entity → Domain</a></li>
+<li><a href="#offline-first-architecture">Offline-First Architecture</a></li>
+</ul>
+<li><a href="#74-dependency-injection">7.4 Dependency Injection</a></li>
+<ul>
+<li><a href="#constructor-vs-field-injection">Constructor vs Field Injection</a></li>
+<li><a href="#interface-binding">Interface Binding</a></li>
+<li><a href="#scopes">Scopes</a></li>
+<li><a href="#qualifiers-and-modules">Qualifiers and Modules</a></li>
+<li><a href="#testing-with-fakes">Testing with Fakes</a></li>
+<li><a href="#hilt-basics">Hilt Basics</a></li>
+<li><a href="#di-vs-service-locator">DI vs Service Locator</a></li>
+<li><a href="#hilt-vs-manual-dagger-vs-manual-di">Hilt vs Manual DI</a></li>
+</ul>
+<li><a href="#75-modularization">7.5 Modularization</a></li>
+<ul>
+<li><a href="#module-types-and-roles">Module Types and Roles</a></li>
+<li><a href="#api-vs-implementation-separation">API vs Implementation Separation</a></li>
+<li><a href="#dependency-direction-and-avoiding-cycles">Dependency Direction and Avoiding Cycles</a></li>
+<li><a href="#build-speed">Build Speed</a></li>
+<li><a href="#feature-based-vs-layer-based">Feature-Based vs Layer-Based</a></li>
+<li><a href="#dynamic-feature-modules">Dynamic Feature Modules</a></li>
+<li><a href="#convention-plugins">Convention Plugins</a></li>
+<li><a href="#when-does-modularization-become-over-engineering">When Does Modularization Become Over-Engineering?</a></li>
+</ul>
+</ol>
+<hr>
+<h2 id="71-mvc-mvp-mvvm-mvi">7.1 MVC, MVP, MVVM, MVI</h2>
+<h3 id="mvc--and-massive-activity">MVC — and &quot;Massive Activity&quot;</h3>
+<h4 id="definition">Definition</h4>
+<p>Model-View-Controller is the oldest of the mainstream patterns. The <strong>Model</strong> holds data and business logic, the <strong>View</strong> renders the UI, and the <strong>Controller</strong> sits in the middle — it receives user input, tells the Model to change, and tells the View to update.</p>
+<h4 id="android-reality">Android Reality</h4>
+<p>In a naive Android MVC implementation the Activity or Fragment plays the Controller role — but it also inflates the layout, receives lifecycle callbacks, handles permissions, starts animations, and does I/O. Nothing in the framework enforces separation, so everything funnels into the Activity. This is the <strong>&quot;Massive Activity&quot;</strong> anti-pattern.</p>
+<p>A 2,000-line Activity is not a sign of bad programmers; it is a sign that MVC has no architectural constraint preventing the Controller from absorbing its neighbours&#x27; responsibilities. The View and Controller collapse into a single class because <code>setContentView()</code> and <code>onClick()</code> live in the same place.</p>
+<h4 id="problems">Problems</h4>
+<ul>
+<li><strong>Untestable</strong>: the Controller is an Activity, which requires a live Android runtime to run.</li>
+<li><strong>Tight coupling</strong>: the Controller directly references both Model and View; swapping either requires touching the Controller.</li>
+<li><strong>Lifecycle mismatch</strong>: the Controller is torn down on configuration change, forcing state restoration boilerplate.</li>
+<li><strong>No ownership</strong>: when everyone is responsible for everything, nothing has a clear owner.</li>
+</ul>
+<h4 id="interview-angles">Interview Angles</h4>
+<p><strong>Q: Why does MVC become messy in Android?</strong> &quot;The framework offers no separation between View and Controller. The Activity is both the entry point for user events and the owner of the UI hierarchy, and there is no protocol forcing a clean interface between them. So logic migrates to the path of least resistance — and that path is always the Activity.&quot;</p>
+<p><strong>Q: What is &quot;Massive Activity&quot;?</strong> &quot;It&#x27;s an Activity that has grown to encompass networking, business logic, UI manipulation, persistence, and lifecycle handling — everything MVC left unassigned ends up there. It&#x27;s the natural end state of unconstrained MVC on Android.&quot;</p>
+<hr>
+<h3 id="mvp--passive-view-and-presenter">MVP — Passive View and Presenter</h3>
+<h4 id="definition-1">Definition</h4>
+<p>Model-View-Presenter fixes MVC&#x27;s biggest problem by introducing a strict contract between the View and the Presenter via an interface. The <strong>View</strong> is deliberately passive — it forwards user events to the Presenter and blindly applies whatever the Presenter tells it to display. The <strong>Presenter</strong> owns all presentation logic and has no dependency on Android framework classes, which means it&#x27;s testable with plain JUnit.</p>
+<pre><code>// The View contract — implemented by the Activity/Fragment
+interface LoginView {
+    fun showLoading()
+    fun hideLoading()
+    fun showError(message: String)
+    fun navigateToHome()
+}
+
+// The Presenter — pure Kotlin, no android imports
+class LoginPresenter(
+    private val authRepository: AuthRepository,
+    private val view: LoginView   // &lt;-- holds a View reference
+) {
+    fun onLoginClicked(email: String, password: String) {
+        view.showLoading()
+        authRepository.login(email, password) { result -&gt;
+            view.hideLoading()
+            when (result) {
+                is Success -&gt; view.navigateToHome()
+                is Failure -&gt; view.showError(result.message)
+            }
+        }
+    }
+}
+
+// The Activity
+class LoginActivity : AppCompatActivity(), LoginView {
+    private lateinit var presenter: LoginPresenter
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        presenter = LoginPresenter(AuthRepository(), this)  // passes &#x27;this&#x27; as view
+        binding.loginButton.setOnClickListener {
+            presenter.onLoginClicked(binding.emailField.text.toString(), binding.passwordField.text.toString())
+        }
+    }
+
+    override fun showLoading() { binding.progress.isVisible = true }
+    override fun hideLoading() { binding.progress.isVisible = false }
+    override fun showError(message: String) { Toast.makeText(this, message, Toast.LENGTH_SHORT).show() }
+    override fun navigateToHome() { startActivity(Intent(this, HomeActivity::class.java)) }
+}</code></pre>
+<h4 id="lifecycle-leak-risk">Lifecycle Leak Risk</h4>
+<p>The Presenter holds a direct reference to the View, which is the Activity. If an async operation completes after the Activity is destroyed — say a network call returns during a configuration change — the Presenter calls methods on a dead Activity. The three common mitigations are:</p>
+<ol>
+<li><strong>Nullable view</strong>: call <code>view?.showError(...)</code>. Null the reference in <code>onDestroy</code>.</li>
+<li><strong>WeakReference</strong>: <code>WeakReference&lt;LoginView&gt;</code>. Slightly more ergonomic; slightly more fragile.</li>
+<li><strong>Detach on lifecycle</strong>: expose <code>attachView(view)</code> / <code>detachView()</code> and call <code>detachView()</code> in <code>onDestroy()</code>.</li>
+</ol>
+<pre><code>class LoginPresenter(private val authRepository: AuthRepository) {
+    private var view: LoginView? = null
+
+    fun attachView(v: LoginView) { view = v }
+    fun detachView() { view = null }
+
+    fun onLoginClicked(email: String, password: String) {
+        view?.showLoading()
+        authRepository.login(email, password) { result -&gt;
+            view?.hideLoading()  // safe: view may be null if Activity destroyed
+            when (result) {
+                is Success -&gt; view?.navigateToHome()
+                is Failure -&gt; view?.showError(result.message)
+            }
+        }
+    }
+}</code></pre>
+<h4 id="trade-offs">Trade-offs</h4>
+<table border="1" cellpadding="6" cellspacing="0">
+<thead><tr>
+<th>Pro</th>
+<th>Con</th>
+</tr></thead><tbody>
+<tr><td>Presenter is pure Kotlin — JUnit-testable without Robolectric</td><td>View interface becomes large and mechanical</td></tr>
+<tr><td>Clear ownership boundary</td><td>One interface per screen means boilerplate doubles</td></tr>
+<tr><td>Works with existing XML layouts</td><td>Lifecycle coupling still manual</td></tr>
+<tr><td>No Android SDK dependencies in Presenter</td><td>No built-in config-change survival</td></tr>
+</tbody></table>
+<h4 id="interview-angles-1">Interview Angles</h4>
+<p><strong>Q: MVP vs MVVM — which do you prefer and why?</strong> &quot;MVVM is almost always the right choice for new code. The ViewModel is lifecycle-aware — it survives configuration changes without any manual detach/attach plumbing — and it exposes observable state that the View drives reactively. With MVP, you&#x27;re managing the lifecycle contract entirely by hand; MVVM offloads that to the Jetpack ViewModel component. MVP&#x27;s main remaining advantage is familiarity in codebases that are already heavily invested in it, but rewriting working MVP code is usually not worth the churn.&quot;</p>
+<p><strong>Q: How does Presenter communicate with the View?</strong> &quot;Through the View interface. The Presenter calls methods on the interface, and the Activity or Fragment is the concrete implementation. That indirection is what makes the Presenter unit-testable — in a test I just pass in a mock <code>LoginView</code> and I never need an Activity at all.&quot;</p>
+<p><strong>Q: How do you avoid leaking the Activity?</strong> &quot;I null out the view reference in <code>detachView()</code> or <code>onDestroy()</code>, and I use <code>view?.method()</code> everywhere so calls on a null reference are silent no-ops. The alternative is storing the View in a <code>WeakReference</code>, which is slightly more ergonomic but slightly more fragile — I prefer the explicit null check.&quot;</p>
+<hr>
+<h3 id="mvvm--viewmodel-stateflow-immutable-state">MVVM — ViewModel, StateFlow, Immutable State</h3>
+<h4 id="definition-2">Definition</h4>
+<p>Model-View-ViewModel separates UI state management from the UI itself. The <strong>ViewModel</strong> owns all UI state and exposes it as observable streams. The <strong>View</strong> — whether that&#x27;s an Activity, Fragment, or Composable — observes state and re-renders; it never mutates state directly. The <strong>Model</strong> is the data and domain layer underneath.</p>
+<h4 id="why-viewmodel-survives-configuration-change">Why ViewModel Survives Configuration Change</h4>
+<p><code>ViewModel</code> is stored in a <code>ViewModelStore</code> owned by the <code>ViewModelStoreOwner</code>, which is the Activity. That <code>ViewModelStore</code> is retained across configuration changes via <code>onRetainNonConfigurationInstance()</code> — the ViewModel instance stays alive in a store that outlives the Activity instance. Only when the Activity finishes permanently — through a back press or a call to <code>finish()</code> — does the <code>ViewModelStore</code> clear and <code>onCleared()</code> fire.</p>
+<pre><code>// The ViewModel — no Context, no View references
+class LoginViewModel(
+    private val authRepository: AuthRepository
+) : ViewModel() {
+
+    // Mutable state kept private — only ViewModel can write
+    private val _uiState = MutableStateFlow&lt;LoginUiState&gt;(LoginUiState.Idle)
+    // Immutable view — View only observes this
+    val uiState: StateFlow&lt;LoginUiState&gt; = _uiState.asStateFlow()
+
+    // One-time events via SharedFlow (not StateFlow — see below)
+    private val _events = MutableSharedFlow&lt;LoginEvent&gt;(extraBufferCapacity = 1)
+    val events: SharedFlow&lt;LoginEvent&gt; = _events.asSharedFlow()
+
+    fun onLoginClicked(email: String, password: String) {
+        viewModelScope.launch {
+            _uiState.value = LoginUiState.Loading
+            authRepository.login(email, password)
+                .onSuccess {
+                    _uiState.value = LoginUiState.Success
+                    _events.emit(LoginEvent.NavigateToHome)
+                }
+                .onFailure { e -&gt;
+                    _uiState.value = LoginUiState.Error(e.message ?: &quot;Unknown error&quot;)
+                }
+        }
+    }
+}
+
+// Immutable sealed UI state
+sealed interface LoginUiState {
+    data object Idle : LoginUiState
+    data object Loading : LoginUiState
+    data object Success : LoginUiState
+    data class Error(val message: String) : LoginUiState
+}
+
+// One-time navigation events
+sealed interface LoginEvent {
+    data object NavigateToHome : LoginEvent
+}</code></pre>
+<pre><code>// The Composable — observes, never mutates
+@Composable
+fun LoginScreen(viewModel: LoginViewModel = hiltViewModel()) {
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+
+    // Consume one-time events
+    LaunchedEffect(Unit) {
+        viewModel.events.collect { event -&gt;
+            when (event) {
+                is LoginEvent.NavigateToHome -&gt; { /* navigate */ }
+            }
+        }
+    }
+
+    when (uiState) {
+        is LoginUiState.Idle -&gt; LoginForm(onLoginClicked = viewModel::onLoginClicked)
+        is LoginUiState.Loading -&gt; CircularProgressIndicator()
+        is LoginUiState.Success -&gt; { /* handled via event */ }
+        is LoginUiState.Error -&gt; ErrorMessage((uiState as LoginUiState.Error).message)
+    }
+}</code></pre>
+<h4 id="immutable-state--why-it-matters">Immutable State — Why It Matters</h4>
+<ul>
+<li>The View cannot accidentally corrupt ViewModel state because the exposed <code>StateFlow</code> is read-only.</li>
+<li>Every state transition happens in the ViewModel under controlled conditions — inside a coroutine, at a single mutation point.</li>
+<li>Compose can compare previous and new state to decide what to recompose, but that only works with value equality, which immutable data classes provide.</li>
+<li>You can log every state transition, and each log entry is a complete, self-contained picture of the UI at that moment — which makes debugging dramatically easier.</li>
+</ul>
+<h4 id="what-should-not-be-in-a-viewmodel">What Should NOT Be in a ViewModel</h4>
+<ul>
+<li><code>Context</code> (unless <code>AndroidViewModel</code> is justified — prefer passing primitives or injecting abstractions).</li>
+<li>References to <code>Activity</code>, <code>Fragment</code>, <code>View</code>, or <code>Binding</code>.</li>
+<li>Navigation logic that requires Android SDK types.</li>
+<li>Heavy I/O done without a coroutine scope (use <code>viewModelScope</code>).</li>
+<li>Business logic that belongs in a Use Case / Interactor.</li>
+</ul>
+<h4 id="stateflow-vs-livedata">StateFlow vs LiveData</h4>
+<table border="1" cellpadding="6" cellspacing="0">
+<thead><tr>
+<th></th>
+<th>StateFlow</th>
+<th>LiveData</th>
+</tr></thead><tbody>
+<tr><td>Kotlin-idiomatic</td><td>Yes</td><td>No (Java heritage)</td></tr>
+<tr><td>Null-safe</td><td>Requires <code>&lt;T : Any&gt;</code> trick</td><td>Allows null values</td></tr>
+<tr><td>Config change</td><td>Both survive — ViewModel retains them</td><td>Same</td></tr>
+<tr><td>Backpressure</td><td>Conflates by default</td><td>Conflates by default</td></tr>
+<tr><td>Lifecycle awareness</td><td>Manual (<code>collectAsStateWithLifecycle</code>)</td><td>Built-in</td></tr>
+<tr><td>Testability</td><td><code>kotlinx.coroutines.test</code> turbine</td><td><code>InstantTaskExecutorRule</code></td></tr>
+</tbody></table>
+<h4 id="stateflow-vs-sharedflow-for-events">StateFlow vs SharedFlow for Events</h4>
+<p>Use <code>SharedFlow</code> — not <code>StateFlow</code> — for one-time events like navigation or toasts. The reason is that <code>StateFlow</code> replays its last value to every new collector, so a new collector after a config change would re-trigger a &quot;NavigateToHome&quot; event and send the user to the wrong screen. <code>SharedFlow</code> with <code>replay = 0</code> fires once and that&#x27;s it. The alternative is a <code>Channel&lt;Event&gt;</code> consumed as a <code>Flow</code>, which also gives you single-delivery semantics.</p>
+<h4 id="interview-angles-2">Interview Angles</h4>
+<p><strong>Q: Why ViewModel?</strong> &quot;Config-change survival without any manual save/restore plumbing. The ViewModel lives across Activity re-creation, so UI state — the search query, the scroll position, the in-flight network request — persists automatically. You don&#x27;t have to serialize anything into a <code>Bundle</code> and restore it in <code>onCreate</code>.&quot;</p>
+<p><strong>Q: What should not be inside ViewModel?</strong> &quot;Anything that carries a <code>Context</code> or a <code>View</code> — Activity, Fragment, View, Binding, NavController. Holding those creates a memory leak because the ViewModel outlives the Activity instance. The ViewModel should be pure Kotlin: repositories, use cases, and coroutines only.&quot;</p>
+<p><strong>Q: How does MVVM help testing?</strong> &quot;The ViewModel is pure Kotlin with no framework dependencies, so I can test it with plain JUnit. I inject mock repositories, call the ViewModel methods, and assert on the emitted <code>StateFlow</code> values. No Activity, no Instrumentation, no Robolectric.&quot;</p>
+<p><strong>Q: ViewModel vs Presenter?</strong> &quot;Both separate presentation logic from the View, but there are four key differences. First, the ViewModel survives config changes natively because the framework retains it across Activity re-creation; a Presenter has no such mechanism and you have to do the detach/attach dance manually. Second, the ViewModel exposes observable streams and the View drives itself reactively; a Presenter calls methods on the View interface imperatively. Third, the ViewModel holds no reference to the View at all; a Presenter does, which is where the leak risk comes from. And fourth, the ViewModel is a Jetpack component with built-in lifecycle integration; a Presenter is a plain object you wire up yourself.&quot;</p>
+<p><strong>Q: How do you expose UI state?</strong> &quot;I use a single immutable <code>data class</code> or <code>sealed interface</code> representing the complete screen state, exposed as a <code>StateFlow&lt;UiState&gt;</code>. One-time events — navigation, toasts — go into a separate <code>SharedFlow&lt;Event&gt;</code>. The key thing I avoid is multiple independent <code>StateFlow</code> or <code>LiveData</code> fields that can produce contradictory combinations. If <code>isLoading</code> and <code>error</code> are separate fields, there&#x27;s nothing stopping a bug from setting both to true at once, which is a state the UI never has a consistent answer for.&quot;</p>
+<hr>
+<h3 id="mvi--udf--intent-reducer-state-side-effects">MVI / UDF — Intent, Reducer, State, Side Effects</h3>
+<h4 id="definition-3">Definition</h4>
+<p>Model-View-Intent and Unidirectional Data Flow are closely related ideas. The key principle is that data always flows in one direction: <strong>View → Intent/Action → Reducer → State → View</strong>. There is exactly one source of truth — the current State — and the only way to change it is to pass an Intent through the Reducer. That constraint is what makes the system predictable.</p>
+<pre><code>User gesture
+    │
+    ▼
+ Intent/Action  (what happened: &quot;LoginClicked(email, pass)&quot;)
+    │
+    ▼
+  Reducer       (pure function: (State, Intent) → State)
+    │
+    ▼
+   State        (immutable snapshot of the entire screen)
+    │
+    ▼
+   View         (renders the State; generates new Intents)</code></pre>
+<h4 id="kotlin-example-mvi-with-viewmodel">Kotlin Example: MVI with ViewModel</h4>
+<pre><code>// 1. Intents — everything the user can do
+sealed interface LoginIntent {
+    data class LoginClicked(val email: String, val password: String) : LoginIntent
+    data object DismissError : LoginIntent
+    data object ForgotPasswordClicked : LoginIntent
+}
+
+// 2. State — complete, immutable snapshot of the screen
+data class LoginState(
+    val email: String = &quot;&quot;,
+    val password: String = &quot;&quot;,
+    val isLoading: Boolean = false,
+    val error: String? = null,
+    val isLoggedIn: Boolean = false
+)
+
+// 3. Side Effects — one-time outputs that are NOT state
+sealed interface LoginSideEffect {
+    data object NavigateToHome : LoginSideEffect
+    data object NavigateToForgotPassword : LoginSideEffect
+}
+
+// 4. ViewModel acts as the store; reduce() is the reducer
+class LoginViewModel(
+    private val authRepository: AuthRepository
+) : ViewModel() {
+
+    private val _state = MutableStateFlow(LoginState())
+    val state: StateFlow&lt;LoginState&gt; = _state.asStateFlow()
+
+    private val _sideEffects = MutableSharedFlow&lt;LoginSideEffect&gt;()
+    val sideEffects: SharedFlow&lt;LoginSideEffect&gt; = _sideEffects.asSharedFlow()
+
+    fun dispatch(intent: LoginIntent) {
+        when (intent) {
+            is LoginIntent.LoginClicked -&gt; login(intent.email, intent.password)
+            is LoginIntent.DismissError -&gt; reduce { copy(error = null) }
+            is LoginIntent.ForgotPasswordClicked -&gt; viewModelScope.launch {
+                _sideEffects.emit(LoginSideEffect.NavigateToForgotPassword)
+            }
+        }
+    }
+
+    private fun login(email: String, password: String) {
+        viewModelScope.launch {
+            reduce { copy(isLoading = true, error = null) }
+            authRepository.login(email, password)
+                .onSuccess {
+                    reduce { copy(isLoading = false, isLoggedIn = true) }
+                    _sideEffects.emit(LoginSideEffect.NavigateToHome)
+                }
+                .onFailure { e -&gt;
+                    reduce { copy(isLoading = false, error = e.message) }
+                }
+        }
+    }
+
+    // Convenience: atomically update state
+    private fun reduce(block: LoginState.() -&gt; LoginState) {
+        _state.update { it.block() }
+    }
+}</code></pre>
+<h4 id="what-is-a-reducer">What Is a Reducer?</h4>
+<p>A reducer is a <strong>pure function</strong> — <code>(CurrentState, Intent) → NewState</code>. It takes the current state and an intent describing what happened, and returns the new state without mutating the old one, without side effects, and without any I/O. That purity is what makes every state transition predictable and trivially testable.</p>
+<pre><code>// Pure reducer (no side effects — async is handled outside)
+fun reduce(state: LoginState, intent: LoginIntent): LoginState = when (intent) {
+    is LoginIntent.DismissError -&gt; state.copy(error = null)
+    is LoginIntent.LoginClicked -&gt; state.copy(isLoading = true, error = null)
+    // ... etc
+}</code></pre>
+<h4 id="side-effects">Side Effects</h4>
+<p>A side effect is anything that escapes the State → View cycle — navigation, showing a toast, triggering analytics, writing to a file. Side effects cannot be represented as State because State is re-emitted to every new collector, which means a config change would re-trigger navigation and send the user somewhere they didn&#x27;t ask to go. The right approach is to model them separately as a <code>SharedFlow&lt;SideEffect&gt;</code> that fires once and is consumed once.</p>
+<h4 id="predictable-state-and-easier-debugging">Predictable State and Easier Debugging</h4>
+<p>Because every state change passes through a single <code>reduce()</code>, three things become straightforward that are hard in other patterns. First, you can log every <code>(intent, state_before, state_after)</code> triple and have a complete audit trail of how the UI got to where it is. Second, you can write a test that feeds a sequence of intents and asserts the sequence of states — it&#x27;s fully deterministic because the reducer is a pure function. And third, you can time-travel debug: record every intent that fired, replay them against the initial state, and reproduce any bug exactly.</p>
+<h4 id="mvi-boilerplate-warning">MVI Boilerplate Warning</h4>
+<p>MVI adds real ceremony: every user action becomes a sealed class, every state change is a <code>copy()</code>, every side effect is another sealed class. For a simple screen — one toggle, one button — that&#x27;s overkill. Reserve MVI for screens with many concurrent state transitions, or where state consistency is critical enough to justify the extra structure.</p>
+<h4 id="interview-angles-3">Interview Angles</h4>
+<p><strong>Q: MVVM vs MVI — when do you choose MVI?</strong> &quot;MVVM is sufficient for most screens. I&#x27;d reach for MVI in three situations. First, when the screen has many interdependent state fields that can become inconsistent if updated independently — a form with cross-field validation or a multi-step wizard is a good example. Second, when I need strict auditability of state transitions, like in a finance or health context. And third, when I want time-travel debugging. MVI&#x27;s cost is boilerplate; its payoff is predictability at scale.&quot;</p>
+<p><strong>Q: How would you model loading/success/error?</strong> &quot;There are two clean approaches. The first is a sealed interface for the resource state:&quot;</p>
+<pre><code>sealed interface Async&lt;out T&gt; {
+    data object Loading : Async&lt;Nothing&gt;
+    data class Success&lt;T&gt;(val data: T) : Async&lt;T&gt;
+    data class Error(val throwable: Throwable) : Async&lt;Nothing&gt;
+}</code></pre>
+<p>The second is fields in a data class:</p>
+<pre><code>data class FeedState(
+    val items: List&lt;Item&gt; = emptyList(),
+    val isLoading: Boolean = false,
+    val error: String? = null
+)</code></pre>
+<p>&quot;The sealed approach is cleaner when loading, success, and error are mutually exclusive — one at a time, no overlap. The data-class approach is better when loading can overlay existing content, like in a pull-to-refresh where you want to show the old list while the new one is fetching.&quot;</p>
+<p><strong>Q: How do you handle one-time events (navigation, toasts)?</strong> &quot;I use <code>SharedFlow&lt;SideEffect&gt;</code> with <code>replay = 0</code>. The View collects from <code>LaunchedEffect(Unit)</code> so it subscribes exactly once per composition lifecycle. The thing I never do is put navigation targets in <code>StateFlow</code> — a config change replays the last state and you end up re-triggering navigation on every screen rotation.&quot;</p>
+<p><strong>Q: What is a reducer?</strong> &quot;A pure function that takes the current state and an intent, and returns the new state — no I/O, no mutation, no side effects. That purity is what makes it so easy to unit test: you call <code>reduce(state, intent)</code> and assert on the return value. No coroutines, no mocks, no async — just inputs and outputs.&quot;</p>
+<hr>
+<h3 id="pattern-comparison-table">Pattern Comparison Table</h3>
+<table border="1" cellpadding="6" cellspacing="0">
+<thead><tr>
+<th>Concern</th>
+<th>MVC</th>
+<th>MVP</th>
+<th>MVVM</th>
+<th>MVI</th>
+</tr></thead><tbody>
+<tr><td>Config change survival</td><td>No — Activity is Controller</td><td>No — manual detach/attach</td><td>Yes — ViewModel retained</td><td>Yes — ViewModel retained</td></tr>
+<tr><td>UI testing</td><td>Hard — Activity is logic</td><td>Medium — mock View interface</td><td>Easy — mock repo, assert StateFlow</td><td>Easy — feed intents, assert states</td></tr>
+<tr><td>View reference in logic layer</td><td>Yes (Controller = Activity)</td><td>Yes (Presenter holds View)</td><td>No (ViewModel has none)</td><td>No (ViewModel has none)</td></tr>
+<tr><td>State management</td><td>Ad hoc</td><td>Ad hoc</td><td>StateFlow / LiveData</td><td>Single immutable State</td></tr>
+<tr><td>Boilerplate</td><td>Low</td><td>Medium</td><td>Medium</td><td>High</td></tr>
+<tr><td>Debugging</td><td>Hard</td><td>Medium</td><td>Good</td><td>Excellent (pure transitions)</td></tr>
+<tr><td>One-time events</td><td>N/A</td><td>Direct View calls</td><td>SharedFlow / Channel</td><td>SideEffect stream</td></tr>
+<tr><td>Best for</td><td>Tiny prototypes</td><td>Legacy XML + unit tests</td><td>Most new Compose screens</td><td>Complex multi-state screens</td></tr>
+</tbody></table>
+<hr>
+<h2 id="72-clean-architecture">7.2 Clean Architecture</h2>
+<h3 id="separation-of-concerns-and-the-dependency-rule">Separation of Concerns and the Dependency Rule</h3>
+<p><strong>Separation of concerns</strong> means each layer knows only what it needs to know. The UI does not reach into the database. The database does not know ViewModels exist.</p>
+<p><strong>The Dependency Rule</strong> (Robert C. Martin): source code dependencies must point <strong>inward only</strong>. Inner circles know nothing about outer circles. Outer circles depend on inner circles — never the reverse.</p>
+<pre><code>      ┌─────────────────────────────────┐
+      │        Presentation Layer       │  ← depends on Domain
+      │   (ViewModel, Composable, UI)   │
+      └───────────────┬─────────────────┘
+                      │
+      ┌───────────────▼─────────────────┐
+      │          Domain Layer           │  ← depends on nothing
+      │  (Use Cases, Entities, Repo IF) │
+      └───────────────┬─────────────────┘
+                      │
+      ┌───────────────▼─────────────────┐
+      │           Data Layer            │  ← depends on Domain (implements its interfaces)
+      │ (Repository impl, API, Room DB) │
+      └─────────────────────────────────┘</code></pre>
+<p>The Data layer implements interfaces defined in the Domain layer — that&#x27;s dependency inversion in action. High-level policy, the Domain, does not depend on low-level detail like the network or the database; both the Domain and the Data layer depend on the abstractions that sit between them.</p>
+<hr>
+<h3 id="layers-presentation-domain-data">Layers: Presentation, Domain, Data</h3>
+<h4 id="presentation-layer">Presentation Layer</h4>
+<p>Responsibility: render UI, handle user events, and manage lifecycle-safe state.</p>
+<ul>
+<li><code>ViewModel</code> — orchestrates use case calls, maps domain models to UI models.</li>
+<li>Composables and Fragments — render state, dispatch events.</li>
+<li>UI models — different from domain entities; optimised for display, with things like pre-formatted strings already in place.</li>
+<li>Navigation logic.</li>
+</ul>
+<h4 id="domain-layer">Domain Layer</h4>
+<p>Responsibility: encapsulate business rules independently of any framework or infrastructure detail.</p>
+<ul>
+<li><strong>Entities</strong> — core business models such as <code>Doctor</code> or <code>Appointment</code>. No Android imports — pure Kotlin.</li>
+<li><strong>Use Cases / Interactors</strong> — single-responsibility operations like <code>GetAvailableSlotsUseCase</code> or <code>BookAppointmentUseCase</code>. Each use case encapsulates exactly one business operation.</li>
+<li><strong>Repository interfaces</strong> — defined here, implemented in the Data layer. The domain dictates the contract; the data layer fulfils it.</li>
+</ul>
+<pre><code>// Domain entity — pure Kotlin
+data class Doctor(
+    val id: String,
+    val name: String,
+    val specialty: String,
+    val rating: Float
+)
+
+// Repository interface — defined in Domain, implemented in Data
+interface DoctorRepository {
+    suspend fun getDoctors(specialty: String): Result&lt;List&lt;Doctor&gt;&gt;
+    suspend fun getDoctorById(id: String): Result&lt;Doctor&gt;
+}
+
+// Use case — orchestrates business logic
+class GetDoctorsBySpecialtyUseCase(
+    private val doctorRepository: DoctorRepository
+) {
+    suspend operator fun invoke(specialty: String): Result&lt;List&lt;Doctor&gt;&gt; {
+        require(specialty.isNotBlank()) { &quot;Specialty must not be blank&quot; }
+        return doctorRepository.getDoctors(specialty)
+            .map { doctors -&gt; doctors.sortedByDescending { it.rating } }
+    }
+}</code></pre>
+<h4 id="data-layer">Data Layer</h4>
+<p>Responsibility: implement the repository contracts and manage all I/O concerns — networking, database, file system.</p>
+<ul>
+<li><strong>Repository implementations</strong> — implement the domain&#x27;s interfaces.</li>
+<li><strong>Remote data sources</strong> — Retrofit services, GraphQL clients.</li>
+<li><strong>Local data sources</strong> — Room DAOs, SharedPreferences, DataStore.</li>
+<li><strong>DTOs</strong> — data transfer objects shaped for the network API (often auto-generated from Swagger/OpenAPI).</li>
+<li><strong>Entities</strong> — database entities shaped for Room schema.</li>
+<li><strong>Mappers</strong> — convert between DTOs/entities and domain models.</li>
+</ul>
+<pre><code>// Data layer: implements the domain interface
+class DoctorRepositoryImpl(
+    private val remoteDataSource: DoctorRemoteDataSource,
+    private val localDataSource: DoctorLocalDataSource,
+    private val mapper: DoctorMapper
+) : DoctorRepository {
+
+    override suspend fun getDoctors(specialty: String): Result&lt;List&lt;Doctor&gt;&gt; {
+        return try {
+            val dtos = remoteDataSource.fetchDoctors(specialty)
+            val doctors = dtos.map { mapper.toDomain(it) }
+            localDataSource.saveDoctors(doctors.map { mapper.toEntity(it) })
+            Result.success(doctors)
+        } catch (e: Exception) {
+            // Fallback to cache
+            val cached = localDataSource.getDoctors(specialty)
+            if (cached.isNotEmpty()) Result.success(cached.map { mapper.toDomain(it) })
+            else Result.failure(e)
+        }
+    }
+}</code></pre>
+<hr>
+<h3 id="use-cases--interactors">Use Cases / Interactors</h3>
+<p>A use case is a <strong>single business operation</strong> — one class, one public method, conventionally <code>operator fun invoke()</code>. That&#x27;s not a hard rule from Clean Architecture; it&#x27;s an idiomatic Kotlin convention that makes use cases feel like callable functions, which keeps the call sites clean.</p>
+<h4 id="why-use-cases">Why Use Cases?</h4>
+<p>There are four reasons to introduce use cases. First, they prevent fat ViewModels — without them, ViewModels orchestrate business logic directly, they grow, and they become hard to test and impossible to reuse. Second, reusability: <code>GetDoctorsBySpecialtyUseCase</code> can be called from a search screen ViewModel and a profile screen ViewModel without duplicating the logic in both. Third, testability: a use case takes plain Kotlin inputs, returns plain Kotlin outputs, and can be tested with a mock repository — no Android runtime needed. And fourth, single responsibility: one use case equals one business operation, which makes it easy to reason about and easy to change in isolation.</p>
+<h4 id="when-are-use-cases-not-worth-it">When Are Use Cases Not Worth It?</h4>
+<p>For a simple CRUD operation with no business logic — say, &quot;get a list of settings items,&quot; which is just a passthrough to the repository — the use case adds a layer of indirection without pulling its weight. The Zocdoc Android codebase uses &quot;Interactor&quot; as a synonym for use case; both terms describe the same concept.</p>
+<h4 id="testing-a-use-case">Testing a Use Case</h4>
+<pre><code>class GetDoctorsBySpecialtyUseCaseTest {
+    private val repository: DoctorRepository = mockk()
+    private val useCase = GetDoctorsBySpecialtyUseCase(repository)
+
+    @Test
+    fun `returns doctors sorted by rating descending`() = runTest {
+        val unsorted = listOf(
+            Doctor(&quot;1&quot;, &quot;Dr. A&quot;, &quot;cardiology&quot;, rating = 3.5f),
+            Doctor(&quot;2&quot;, &quot;Dr. B&quot;, &quot;cardiology&quot;, rating = 4.9f),
+            Doctor(&quot;3&quot;, &quot;Dr. C&quot;, &quot;cardiology&quot;, rating = 4.1f)
+        )
+        coEvery { repository.getDoctors(&quot;cardiology&quot;) } returns Result.success(unsorted)
+
+        val result = useCase(&quot;cardiology&quot;)
+
+        assertTrue(result.isSuccess)
+        assertEquals(listOf(&quot;Dr. B&quot;, &quot;Dr. C&quot;, &quot;Dr. A&quot;), result.getOrThrow().map { it.name })
+    }
+
+    @Test
+    fun `throws for blank specialty`() = runTest {
+        assertFailsWith&lt;IllegalArgumentException&gt; { useCase(&quot;&quot;) }
+    }
+}</code></pre>
+<hr>
+<h3 id="mappers">Mappers</h3>
+<p>Mappers translate between the data representations of each layer. Having explicit mapper classes does three things: it keeps domain models free of serialization annotations like <code>@SerializedName</code> or <code>@ColumnInfo</code>; it makes the mapping logic testable in isolation; and it prevents API field names from leaking into the domain.</p>
+<pre><code>class DoctorMapper {
+    fun toDomain(dto: DoctorDto): Doctor = Doctor(
+        id = dto.providerId,          // rename from API field name
+        name = &quot;${dto.firstName} ${dto.lastName}&quot;,
+        specialty = dto.primarySpecialty,
+        rating = dto.averageRating?.toFloat() ?: 0f
+    )
+
+    fun toEntity(domain: Doctor): DoctorEntity = DoctorEntity(
+        id = domain.id,
+        name = domain.name,
+        specialty = domain.specialty,
+        rating = domain.rating,
+        cachedAt = System.currentTimeMillis()
+    )
+
+    fun toDomain(entity: DoctorEntity): Doctor = Doctor(
+        id = entity.id,
+        name = entity.name,
+        specialty = entity.specialty,
+        rating = entity.rating
+    )
+}</code></pre>
+<hr>
+<h3 id="dependency-inversion">Dependency Inversion</h3>
+<p>The Domain layer defines interfaces like <code>DoctorRepository</code>. The Data layer provides concrete implementations like <code>DoctorRepositoryImpl</code>. At runtime, the DI framework — Hilt or Dagger — wires the implementation to the interface. The practical consequences are that the Domain layer has zero knowledge of Retrofit, Room, or any data technology; swapping the network library requires changing only the Data layer; and tests can inject a fake repository without touching any networking code.</p>
+<hr>
+<h3 id="testability-per-layer">Testability Per Layer</h3>
+<table border="1" cellpadding="6" cellspacing="0">
+<thead><tr>
+<th>Layer</th>
+<th>What You Test</th>
+<th>How</th>
+</tr></thead><tbody>
+<tr><td>Presentation</td><td>ViewModel state transitions</td><td>JUnit + MockK, <code>runTest</code>, Turbine</td></tr>
+<tr><td>Domain</td><td>Use case logic, entities</td><td>JUnit + MockK, pure Kotlin</td></tr>
+<tr><td>Data</td><td>Repository coordination, mappers, DAO queries</td><td>JUnit + MockK for repository; Room in-memory DB for DAOs</td></tr>
+<tr><td>Integration</td><td>Repository + real Room DB</td><td>Instrumented test with <code>Room.inMemoryDatabaseBuilder</code></td></tr>
+</tbody></table>
+<hr>
+<h3 id="is-the-domain-layer-always-required">Is the Domain Layer Always Required?</h3>
+<p>No — and Google&#x27;s official Android documentation explicitly calls the domain layer optional. It&#x27;s worth adding when the business logic is complex enough to warrant isolation, like eligibility checks or pricing calculations; when the same operation is reused across multiple ViewModels; or when the team is large enough that you need clear ownership boundaries.</p>
+<p>Skip it when the screen is a thin CRUD form and the ViewModel calls the repository directly, when you&#x27;re building a small app or a prototype, or when the use case would be a one-liner that just delegates straight to the repository.</p>
+<p><strong>Over-engineering warning</strong>: adding use cases that are pure delegation — <code>class GetDoctorsUseCase { suspend operator fun invoke() = repository.getDoctors() }</code> — creates indirection without any value. The test coverage of that use case is identical to the test coverage of the repository call in the ViewModel. Add a layer only when it pulls its weight.</p>
+<hr>
+<h3 id="avoiding-over-engineering">Avoiding Over-Engineering</h3>
+<ul>
+<li>Start with two layers: Presentation — the ViewModel — plus Data — the Repository. Add the Domain layer only when business logic complexity genuinely justifies it.</li>
+<li>Use the &quot;rule of three&quot;: if the same logic appears in three places, extract a use case. If it only appears once, leave it in the ViewModel.</li>
+<li>Complexity is a cost. Every class is one more file to navigate and one more abstraction to explain to a new engineer.</li>
+</ul>
+<hr>
+<h2 id="73-repository-pattern">7.3 Repository Pattern</h2>
+<h3 id="abstraction-and-single-source-of-truth">Abstraction and Single Source of Truth</h3>
+<p>A <strong>repository</strong> is a class that abstracts all data sources behind a domain-friendly API. The ViewModel or use case just asks &quot;give me doctors by specialty&quot; — it never knows or cares whether that comes from the network, a cache, a database, or some combination of all three.</p>
+<p><strong>Single source of truth</strong> means one canonical owner of data. For most apps, that&#x27;s the <strong>local database</strong>. The repository writes all remote data into the DB, and the UI reads exclusively from the DB. The three consequences of that are: the UI always sees consistent data with no race conditions between network and DB reads; offline reads just work because the DB always has something; and the network becomes a sync mechanism rather than a direct read path.</p>
+<pre><code>interface DoctorRepository {
+    fun getDoctors(specialty: String): Flow&lt;List&lt;Doctor&gt;&gt;  // returns Flow, not suspend
+    suspend fun refreshDoctors(specialty: String)           // triggers network sync
+}
+
+class DoctorRepositoryImpl(
+    private val remoteDataSource: DoctorRemoteDataSource,
+    private val localDataSource: DoctorLocalDataSource,
+    private val mapper: DoctorMapper
+) : DoctorRepository {
+
+    // Room emits a new list every time the DB changes
+    override fun getDoctors(specialty: String): Flow&lt;List&lt;Doctor&gt;&gt; =
+        localDataSource.getDoctorsFlow(specialty)
+            .map { entities -&gt; entities.map(mapper::toDomain) }
+
+    // Called by ViewModel.init or pull-to-refresh
+    override suspend fun refreshDoctors(specialty: String) {
+        val dtos = remoteDataSource.fetchDoctors(specialty)
+        localDataSource.saveDoctors(dtos.map(mapper::toEntity))
+        // DB write triggers Flow emission above — UI updates automatically
+    }
+}</code></pre>
+<hr>
+<h3 id="repository-vs-data-source">Repository vs Data Source</h3>
+<table border="1" cellpadding="6" cellspacing="0">
+<thead><tr>
+<th></th>
+<th>Repository</th>
+<th>Data Source</th>
+</tr></thead><tbody>
+<tr><td>Responsibility</td><td>Coordinate, cache, map</td><td>Single I/O concern</td></tr>
+<tr><td>Examples</td><td><code>DoctorRepositoryImpl</code></td><td><code>DoctorRemoteDataSource</code>, <code>DoctorLocalDataSource</code></td></tr>
+<tr><td>Knows about caching</td><td>Yes</td><td>No</td></tr>
+<tr><td>Knows about domain models</td><td>Yes (via mapper)</td><td>No — works with DTOs/entities</td></tr>
+<tr><td>Called by</td><td>Use Case or ViewModel</td><td>Repository only</td></tr>
+</tbody></table>
+<p>Data sources are single-responsibility: <code>DoctorRemoteDataSource</code> knows how to make network calls and that&#x27;s all — it knows nothing about the local DB. <code>DoctorLocalDataSource</code> wraps Room and knows nothing about the network. The repository is the coordinator that decides which to call and when.</p>
+<hr>
+<h3 id="caching-and-refresh-strategies">Caching and Refresh Strategies</h3>
+<h4 id="cache-first">Cache-First</h4>
+<p>Return cached data immediately, refresh in the background, and let the UI observe the DB via Flow.</p>
+<pre><code>fun getDoctors(specialty: String): Flow&lt;List&lt;Doctor&gt;&gt; = flow {
+    // 1. Emit cached data immediately
+    val cached = localDataSource.getDoctors(specialty)
+    if (cached.isNotEmpty()) emit(cached.map(mapper::toDomain))
+
+    // 2. Fetch fresh data
+    try {
+        val fresh = remoteDataSource.fetchDoctors(specialty)
+        localDataSource.saveDoctors(fresh.map(mapper::toEntity))
+        emit(fresh.map(mapper::toDomain))
+    } catch (e: Exception) {
+        if (cached.isEmpty()) throw e  // rethrow only if no cached data
+    }
+}</code></pre>
+<h4 id="network-first-with-fallback">Network-First (with fallback)</h4>
+<p>Try the network first; if it fails, fall back to the cache.</p>
+<pre><code>suspend fun getDoctor(id: String): Doctor {
+    return try {
+        val dto = remoteDataSource.fetchDoctor(id)
+        val entity = mapper.toEntity(mapper.toDomain(dto))
+        localDataSource.saveDoctor(entity)
+        mapper.toDomain(dto)
+    } catch (e: IOException) {
+        localDataSource.getDoctor(id)
+            ?.let(mapper::toDomain)
+            ?: throw e
+    }
+}</code></pre>
+<h4 id="ttl-based-refresh">TTL-Based Refresh</h4>
+<p>Cache results with a timestamp and re-fetch only when the cache is stale.</p>
+<pre><code>suspend fun getDoctors(specialty: String): List&lt;Doctor&gt; {
+    val cacheAge = localDataSource.getCacheAge(specialty)
+    val isStale = cacheAge == null || System.currentTimeMillis() - cacheAge &gt; CACHE_TTL_MS
+    if (isStale) {
+        val dtos = remoteDataSource.fetchDoctors(specialty)
+        localDataSource.saveDoctors(dtos.map(mapper::toEntity), timestamp = System.currentTimeMillis())
+    }
+    return localDataSource.getDoctors(specialty).map(mapper::toDomain)
+}</code></pre>
+<hr>
+<h3 id="model-mapping-dto--entity--domain">Model Mapping: DTO → Entity → Domain</h3>
+<p>There are three distinct model types, each serving a distinct purpose:</p>
+<table border="1" cellpadding="6" cellspacing="0">
+<thead><tr>
+<th>Model Type</th>
+<th>Owned By</th>
+<th>Purpose</th>
+<th>Annotations</th>
+</tr></thead><tbody>
+<tr><td><strong>DTO</strong> (Data Transfer Object)</td><td>Data / Network</td><td>Shape of the API response</td><td><code>@SerializedName</code>, <code>@Json</code></td></tr>
+<tr><td><strong>Entity</strong></td><td>Data / Database</td><td>Schema of the Room table</td><td><code>@Entity</code>, <code>@ColumnInfo</code></td></tr>
+<tr><td><strong>Domain Model</strong></td><td>Domain</td><td>Business concept</td><td>None — pure Kotlin</td></tr>
+</tbody></table>
+<p>Explicit mapper classes keep these types decoupled. The domain model never gains a <code>@SerializedName</code> annotation, and the DTO never gains a <code>@ColumnInfo</code> annotation — each type stays clean for its purpose.</p>
+<hr>
+<h3 id="offline-first-architecture">Offline-First Architecture</h3>
+<p>Offline-first means the app functions fully without connectivity and syncs when connectivity returns. There are five key components. First, the local DB as the canonical store — all reads come from Room; the network only populates or updates the DB. Second, observing the DB with Flow — <code>localDataSource.getDoctorsFlow()</code> emits whenever data changes, so the UI reacts to DB changes rather than to network responses directly. Third, WorkManager for background sync — it schedules periodic refreshes even when the app is in the background. Fourth, optimistic updates — write user actions to the DB immediately, show the result, sync to the server in the background, and roll back on failure. And fifth, conflict resolution — define a merge strategy such as last-write-wins, server-wins, or field-level merge for when offline writes collide with server state.</p>
+<pre><code>// WorkManager sync task — called by OS even when app is backgrounded
+class SyncDoctorsWorker(
+    ctx: Context,
+    params: WorkerParameters,
+    private val repository: DoctorRepository
+) : CoroutineWorker(ctx, params) {
+
+    override suspend fun doWork(): Result {
+        return try {
+            repository.refreshDoctors(inputData.getString(&quot;specialty&quot;) ?: &quot;&quot;)
+            Result.success()
+        } catch (e: Exception) {
+            if (runAttemptCount &lt; 3) Result.retry() else Result.failure()
+        }
+    }
+}</code></pre>
+<h4 id="interview-angles-4">Interview Angles</h4>
+<p><strong>Q: What is a repository?</strong> &quot;It&#x27;s a class that abstracts all data sources behind a domain-friendly API. Callers ask &#x27;give me doctors by specialty&#x27; — they don&#x27;t know or care whether that comes from the network, the DB cache, or both.&quot;</p>
+<p><strong>Q: Repository vs data source — what is the difference?</strong> &quot;A data source has single responsibility for one I/O mechanism — network or database, not both. The repository is the coordinator: it decides when to fetch, when to cache, how to map, and what to return. The data sources do the raw I/O; the repository makes the policy decisions.&quot;</p>
+<p><strong>Q: Where should caching live?</strong> &quot;In the repository. The ViewModel and use cases should never contain cache invalidation logic. The repository is the single place that knows the data freshness policy — that&#x27;s its whole job.&quot;</p>
+<p><strong>Q: How do you support offline-first?</strong> &quot;I use Room as the single source of truth. I expose data via <code>Flow&lt;List&lt;T&gt;&gt;</code> from the DAO, which emits automatically whenever the DB changes. The ViewModel or use case triggers a network refresh separately; that result gets written to the DB, which causes the Flow to re-emit, and the UI updates automatically. The UI never reads from the network directly.&quot;</p>
+<hr>
+<h2 id="74-dependency-injection">7.4 Dependency Injection</h2>
+<h3 id="constructor-vs-field-injection">Constructor vs Field Injection</h3>
+<h4 id="constructor-injection-preferred">Constructor Injection (Preferred)</h4>
+<p>Dependencies are passed through the constructor — this is the purest form of DI:</p>
+<pre><code>class LoginViewModel(
+    private val authRepository: AuthRepository,    // injected via constructor
+    private val analyticsLogger: AnalyticsLogger
+) : ViewModel()</code></pre>
+<p><strong>Advantages</strong>:</p>
+<ul>
+<li>Dependencies are explicit and visible at the call site.</li>
+<li>The class cannot be instantiated without providing all dependencies — it&#x27;s impossible to forget one.</li>
+<li>Easy to swap in tests: <code>LoginViewModel(mockk(), mockk())</code>.</li>
+<li>Immutable references with <code>val</code> — thread-safe by construction.</li>
+<li>Works naturally with Hilt&#x27;s <code>@HiltViewModel</code>.</li>
+</ul>
+<h4 id="field-injection">Field Injection</h4>
+<p>Dependencies are annotated with <code>@Inject</code> on fields; the DI framework populates them after construction.</p>
+<pre><code>@AndroidEntryPoint
+class LoginActivity : AppCompatActivity() {
+    @Inject lateinit var analyticsLogger: AnalyticsLogger  // field injection
+}</code></pre>
+<p><strong>When field injection is necessary</strong>: Android framework classes — Activity, Fragment, Service, BroadcastReceiver — are instantiated by the OS, so you cannot control their constructors. Hilt therefore uses field injection for <code>@AndroidEntryPoint</code> classes. For everything else, prefer constructor injection.</p>
+<p><strong>Disadvantages of field injection</strong>:</p>
+<ul>
+<li><code>lateinit var</code> — accessing the field before injection throws <code>UninitializedPropertyAccessException</code>.</li>
+<li>Dependencies are not visible in the constructor signature, which makes the class harder to understand at a glance.</li>
+<li>Harder to use in unit tests because you have to manually set the field rather than just passing arguments.</li>
+</ul>
+<hr>
+<h3 id="interface-binding">Interface Binding</h3>
+<p>Interface binding wires a concrete implementation to an interface so that callers depend on the abstraction rather than the implementation. In Hilt, you do this with a <code>@Binds</code> method in a <code>@Module</code>.</p>
+<pre><code>// The interface (defined in Domain)
+interface AuthRepository {
+    suspend fun login(email: String, password: String): Result&lt;User&gt;
+}
+
+// The implementation (defined in Data)
+class AuthRepositoryImpl @Inject constructor(
+    private val apiService: AuthApiService,
+    private val userDao: UserDao
+) : AuthRepository {
+    override suspend fun login(email: String, password: String): Result&lt;User&gt; { ... }
+}
+
+// Hilt module: tells the graph &quot;when someone asks for AuthRepository, give them AuthRepositoryImpl&quot;
+@Module
+@InstallIn(SingletonComponent::class)
+abstract class AuthModule {
+    @Binds
+    @Singleton
+    abstract fun bindAuthRepository(impl: AuthRepositoryImpl): AuthRepository
+}</code></pre>
+<hr>
+<h3 id="scopes">Scopes</h3>
+<p>A <strong>scope</strong> determines how long a provided dependency lives and ensures that all injections within that scope receive the <strong>same instance</strong> — rather than a new object on every injection.</p>
+<table border="1" cellpadding="6" cellspacing="0">
+<thead><tr>
+<th>Scope Annotation</th>
+<th>Component</th>
+<th>Lifetime</th>
+</tr></thead><tbody>
+<tr><td><code>@Singleton</code></td><td><code>SingletonComponent</code></td><td>App lifetime</td></tr>
+<tr><td><code>@ActivityRetainedScoped</code></td><td><code>ActivityRetainedComponent</code></td><td>Activity lifetime, survives config change</td></tr>
+<tr><td><code>@ActivityScoped</code></td><td><code>ActivityComponent</code></td><td>Activity instance lifetime</td></tr>
+<tr><td><code>@ViewModelScoped</code></td><td><code>ViewModelComponent</code></td><td>ViewModel lifetime</td></tr>
+<tr><td><code>@FragmentScoped</code></td><td><code>FragmentComponent</code></td><td>Fragment instance lifetime</td></tr>
+<tr><td>Unscoped</td><td>—</td><td>New instance every injection</td></tr>
+</tbody></table>
+<pre><code>// Singleton: one instance for the entire app
+@Module
+@InstallIn(SingletonComponent::class)
+object NetworkModule {
+    @Provides
+    @Singleton
+    fun provideOkHttpClient(): OkHttpClient = OkHttpClient.Builder().build()
+
+    @Provides
+    @Singleton
+    fun provideRetrofit(client: OkHttpClient): Retrofit =
+        Retrofit.Builder()
+            .baseUrl(&quot;https://api.zocdoc.com/&quot;)
+            .client(client)
+            .build()
+}
+
+// ViewModelScoped: one instance per ViewModel, cleared when ViewModel is cleared
+@Module
+@InstallIn(ViewModelComponent::class)
+object ViewModelModule {
+    @Provides
+    @ViewModelScoped
+    fun provideLoginPresenterHelper(): LoginPresenterHelper = LoginPresenterHelper()
+}</code></pre>
+<p><strong>Why scoping matters</strong>: without <code>@Singleton</code>, each injection creates a new instance. Two classes that both inject <code>OkHttpClient</code> would get different clients, wasting resources and breaking connection pooling. Scoping ensures shared resources are truly shared.</p>
+<p><strong>Common mistake</strong>: scoping a dependency to a wider scope than its own dependencies allow. If a <code>@Singleton</code> <code>NetworkModule</code> holds a reference to an <code>@ActivityScoped</code> dependency, the Activity leaks into the singleton and is never garbage-collected. Hilt catches this mistake at compile time.</p>
+<hr>
+<h3 id="qualifiers-and-modules">Qualifiers and Modules</h3>
+<p><strong>Qualifiers</strong> distinguish multiple bindings of the same type. Without them, Hilt would have no way to tell two <code>String</code> providers apart and the build would fail with an ambiguous binding error.</p>
+<pre><code>@Qualifier
+@Retention(AnnotationRetention.BINARY)
+annotation class BaseUrl
+
+@Qualifier
+@Retention(AnnotationRetention.BINARY)
+annotation class ApiKey
+
+@Module
+@InstallIn(SingletonComponent::class)
+object AppConfigModule {
+    @Provides
+    @Singleton
+    @BaseUrl
+    fun provideBaseUrl(): String = &quot;https://api.zocdoc.com/&quot;
+
+    @Provides
+    @Singleton
+    @ApiKey
+    fun provideApiKey(): String = BuildConfig.API_KEY
+}
+
+// Usage:
+class ApiClient @Inject constructor(
+    @BaseUrl private val baseUrl: String,
+    @ApiKey private val apiKey: String
+)</code></pre>
+<p><strong>Modules</strong> are the containers for binding declarations. The convention is to organize them by concern:</p>
+<pre><code>NetworkModule       — OkHttpClient, Retrofit, API services
+DatabaseModule      — Room DB, DAOs
+RepositoryModule    — @Binds repository implementations
+UseCaseModule       — use case providers (if not using @Inject constructor)
+AnalyticsModule     — analytics loggers</code></pre>
+<hr>
+<h3 id="testing-with-fakes">Testing with Fakes</h3>
+<p>DI enables replacing real implementations with fakes in tests. There are two strategies:</p>
+<h4 id="1-constructor-injection--pass-fakes-directly">1. Constructor injection — pass fakes directly</h4>
+<pre><code>@Test
+fun `login success updates state to Success`() = runTest {
+    val fakeRepo = FakeAuthRepository(shouldSucceed = true)
+    val viewModel = LoginViewModel(fakeRepo, FakeAnalyticsLogger())
+
+    viewModel.onLoginClicked(&quot;user@example.com&quot;, &quot;password&quot;)
+
+    assertEquals(LoginUiState.Success, viewModel.uiState.value)
+}</code></pre>
+<h4 id="2-hilt-test-modules--replace-binding-in-instrumented-tests">2. Hilt test modules — replace binding in instrumented tests</h4>
+<pre><code>// Replace the real AuthRepository binding in tests
+@Module
+@TestInstallIn(components = [SingletonComponent::class], replaces = [AuthModule::class])
+abstract class FakeAuthModule {
+    @Binds
+    @Singleton
+    abstract fun bindAuthRepository(impl: FakeAuthRepository): AuthRepository
+}</code></pre>
+<p><strong>Fake vs Mock</strong>: A <em>fake</em> is a simplified but working implementation of an interface — for example, an in-memory list standing in for a database. A <em>mock</em> is a test double that records calls and can be configured to return specific values. Fakes tend to be more stable for DI replacement because they have real behaviour; mocks are better when you specifically want to verify interaction sequences.</p>
+<hr>
+<h3 id="hilt-basics">Hilt Basics</h3>
+<p>Hilt is built on Dagger 2 and eliminates the vast majority of its boilerplate by providing predefined components that are already tied to the Android lifecycle.</p>
+<pre><code>// 1. Add @HiltAndroidApp to Application
+@HiltAndroidApp
+class ZocdocApplication : Application()
+
+// 2. Annotate entry points
+@AndroidEntryPoint
+class LoginActivity : AppCompatActivity() {
+    // Field injection available here
+}
+
+// 3. Inject ViewModel
+@HiltViewModel
+class LoginViewModel @Inject constructor(
+    private val authRepository: AuthRepository
+) : ViewModel()
+
+// 4. Get ViewModel in Composable
+@Composable
+fun LoginScreen(viewModel: LoginViewModel = hiltViewModel()) { ... }
+
+// 5. Provide dependencies
+@Module
+@InstallIn(SingletonComponent::class)
+object NetworkModule {
+    @Provides
+    @Singleton
+    fun provideRetrofit(): Retrofit { ... }
+}</code></pre>
+<h4 id="hilt-vs-dagger-2">Hilt vs Dagger 2</h4>
+<table border="1" cellpadding="6" cellspacing="0">
+<thead><tr>
+<th></th>
+<th>Hilt</th>
+<th>Dagger 2</th>
+</tr></thead><tbody>
+<tr><td>Setup</td><td><code>@HiltAndroidApp</code></td><td>Manual <code>AppComponent</code>, manual injection calls</td></tr>
+<tr><td>Components</td><td>Predefined (Singleton, Activity, ViewModel…)</td><td>Custom components, hand-written</td></tr>
+<tr><td>Boilerplate</td><td>Minimal</td><td>High</td></tr>
+<tr><td>Flexibility</td><td>Less — follows Hilt&#x27;s component hierarchy</td><td>More — build any graph shape</td></tr>
+<tr><td>Compile-time safety</td><td>Yes</td><td>Yes</td></tr>
+<tr><td>Recommended for</td><td>New Android projects</td><td>Custom/multi-process apps, libraries</td></tr>
+</tbody></table>
+<hr>
+<h3 id="di-vs-service-locator">DI vs Service Locator</h3>
+<p>Both patterns decouple consumers from concrete types, but they differ fundamentally in <em>who</em> performs the lookup.</p>
+<table border="1" cellpadding="6" cellspacing="0">
+<thead><tr>
+<th></th>
+<th>Dependency Injection</th>
+<th>Service Locator</th>
+</tr></thead><tbody>
+<tr><td>Who resolves dependencies?</td><td>The framework (Hilt/Dagger) at construction time</td><td>The class itself, by calling a registry</td></tr>
+<tr><td>Dependencies visible?</td><td>Yes — constructor signature</td><td>No — hidden inside the class</td></tr>
+<tr><td>Testability</td><td>High — swap implementations at construction</td><td>Low — must configure global registry</td></tr>
+<tr><td>Coupling</td><td>Loose — class doesn&#x27;t know about the container</td><td>Tight — class calls <code>ServiceLocator.get&lt;T&gt;()</code></td></tr>
+<tr><td>Example</td><td><code>class Foo @Inject constructor(val bar: Bar)</code></td><td><code>val bar = ServiceLocator.get&lt;Bar&gt;()</code></td></tr>
+</tbody></table>
+<p>Service locator is considered an anti-pattern in most contexts. It hides dependencies, makes classes harder to test, and creates implicit global state — all the things DI is designed to avoid.</p>
+<hr>
+<h3 id="hilt-vs-manual-dagger-vs-manual-di">Hilt vs Manual Dagger vs Manual DI</h3>
+<p><strong>Manual DI</strong> means hand-wired constructor injection with no framework at all:</p>
+<pre><code>// Application class manually wires the dependency graph
+class AppContainer(context: Context) {
+    val db = Room.databaseBuilder(context, AppDatabase::class.java, &quot;app-db&quot;).build()
+    val userDao = db.userDao()
+    val authApiService = Retrofit.Builder().build().create(AuthApiService::class.java)
+    val authRepository: AuthRepository = AuthRepositoryImpl(authApiService, userDao)
+    fun makeLoginViewModel() = LoginViewModel(authRepository)
+}</code></pre>
+<p>Pros: no annotation processing, fully transparent, fast build. Cons: all wiring is manual — it scales poorly, there&#x27;s no scoping support, and boilerplate grows roughly linearly with the graph size.</p>
+<p><strong>When to use what</strong>:</p>
+<ul>
+<li><strong>Hilt</strong> for almost all new Android apps. It reduces boilerplate, integrates with the Jetpack lifecycle, and has first-party support from Google.</li>
+<li><strong>Manual Dagger 2</strong> for large legacy codebases already invested in Dagger, or apps with unusual component graphs like multi-process setups or shared libraries.</li>
+<li><strong>Manual DI</strong> for small projects, prototypes, or when teaching. Also useful for test containers where you want to wire fakes without the overhead of the Hilt test infrastructure.</li>
+</ul>
+<h4 id="interview-angles-5">Interview Angles</h4>
+<p><strong>Q: Why use DI?</strong> &quot;DI inverts control over dependency creation. The consumer doesn&#x27;t construct its own dependencies — they&#x27;re provided from outside. That decouples the consumer from the concrete type, enables substitution — fakes in tests, different implementations at runtime — and centralises configuration in one place rather than scattered across the codebase.&quot;</p>
+<p><strong>Q: Constructor injection vs field injection — which do you prefer?</strong> &quot;Constructor injection whenever possible. The dependency is explicit in the signature, enforced at compile time, and naturally <code>val</code> so it&#x27;s immutable. Field injection is unavoidable for Android framework classes like Activity and Fragment because the OS constructs them and you don&#x27;t control the constructor. Everywhere else — ViewModels, repositories, use cases, data sources — I use constructor injection.&quot;</p>
+<p><strong>Q: What is scoping?</strong> &quot;Scoping ensures that all injections within a given component receive the same instance. <code>@Singleton</code> means one instance for the life of the app. <code>@ViewModelScoped</code> means one instance per ViewModel lifecycle. Without scoping, every injection creates a new instance — and that&#x27;s expensive for stateful objects like database connections or HTTP clients.&quot;</p>
+<p><strong>Q: How does DI improve testing?</strong> &quot;Because dependencies are injected rather than constructed internally, tests can substitute any real dependency with a fake or a mock. There&#x27;s no global state and no static factory to configure — I just pass a different object to the constructor. That makes tests fast because there&#x27;s no real I/O, and reliable because there&#x27;s no shared mutable state between tests.&quot;</p>
+<p><strong>Q: Hilt vs manual DI?</strong> &quot;Hilt provides scoping, lifecycle integration, and boilerplate elimination at the cost of annotation processing time and coupling to the framework. Manual DI is transparent and framework-free but scales poorly in large apps. Hilt is the right default for any app of meaningful size; I&#x27;d use manual DI for small prototypes or in situations where annotation processing is a hard constraint.&quot;</p>
+<hr>
+<h2 id="75-modularization">7.5 Modularization</h2>
+<h3 id="module-types-and-roles">Module Types and Roles</h3>
+<p>A well-modularized Android app organises code into modules with clear, non-overlapping responsibilities and explicit dependency declarations.</p>
+<pre><code>:app                  — application module; ties everything together; thin
+:feature:search       — one user-facing feature
+:feature:booking      — another user-facing feature
+:feature:profile      — another user-facing feature
+:core:ui              — shared Compose components, themes, design tokens
+:core:network         — Retrofit setup, auth interceptors, base API types
+:core:data            — shared repositories, Room database
+:core:domain          — shared domain models, interfaces
+:core:analytics       — FEM/analytics infrastructure
+:core:testing         — test utilities, fakes, base test classes</code></pre>
+<table border="1" cellpadding="6" cellspacing="0">
+<thead><tr>
+<th>Module Type</th>
+<th>Contains</th>
+<th>Depends On</th>
+</tr></thead><tbody>
+<tr><td><code>:app</code></td><td>Application class, MainActivity, navigation graph, DI component wiring</td><td>All feature modules, all core modules</td></tr>
+<tr><td><code>:feature:*</code></td><td>Screens, ViewModels, feature-specific use cases, feature-specific DI modules</td><td><code>:core:*</code> modules; never other <code>:feature:*</code> modules</td></tr>
+<tr><td><code>:core:ui</code></td><td>Compose components, themes, color tokens, typography</td><td>Nothing (or only <code>:core:domain</code>)</td></tr>
+<tr><td><code>:core:network</code></td><td>OkHttp, Retrofit, API services, auth interceptors</td><td><code>:core:domain</code> for model types</td></tr>
+<tr><td><code>:core:data</code></td><td>Repository implementations, Room entities, DAOs, data sources</td><td><code>:core:network</code>, <code>:core:domain</code></td></tr>
+<tr><td><code>:core:domain</code></td><td>Entities, repository interfaces, use case base classes</td><td>Nothing — innermost layer</td></tr>
+<tr><td><code>:core:testing</code></td><td>Fakes, test rules, test builders</td><td>All modules under test</td></tr>
+</tbody></table>
+<hr>
+<h3 id="api-vs-implementation-separation">API vs Implementation Separation</h3>
+<p>For large feature modules, split the module into <code>:feature:search:api</code> and <code>:feature:search:impl</code>.</p>
+<ul>
+<li><strong><code>:feature:search:api</code></strong>: the public contract — interfaces, domain models, navigation routes. Other features that need to navigate to search or consume search results depend only on <code>:api</code>.</li>
+<li><strong><code>:feature:search:impl</code></strong>: the private implementation — ViewModels, Composables, Retrofit services, Room tables. Only <code>:app</code> depends on <code>:impl</code>, to wire DI.</li>
+</ul>
+<pre><code>:feature:booking:impl → :feature:search:api   (to navigate to search)
+:app                  → :feature:search:impl  (to register DI module)
+:app                  → :feature:booking:impl</code></pre>
+<p>The benefits are: <code>booking</code> recompiles when <code>search:api</code> changes, but NOT when <code>search:impl</code> changes; changes to search&#x27;s internal implementation never force a recompile of <code>booking</code>; and the boundary is enforced — <code>booking</code> cannot call internal search ViewModel methods even if someone wants to.</p>
+<hr>
+<h3 id="dependency-direction-and-avoiding-cycles">Dependency Direction and Avoiding Cycles</h3>
+<p>The <strong>dependency rule</strong> maps directly to modules: feature modules depend on core modules; core modules never depend on feature modules; and feature modules never depend on each other, except through <code>:api</code> contracts wired by <code>:app</code>.</p>
+<pre><code>CORRECT:
+:feature:booking → :core:data → :core:domain
+
+WRONG — cycle:
+:feature:booking → :feature:search
+:feature:search  → :feature:booking   ← CYCLE</code></pre>
+<p><strong>How to prevent cycles</strong>: there are four approaches. First, architecture lint rules — Gradle or tools like Dependency Guard can fail the build on unexpected dependencies. Second, extract shared concepts to core — if <code>booking</code> and <code>search</code> share a domain concept, move it to <code>:core:domain</code>. Third, event bus or shared interface — if <code>search</code> must notify <code>booking</code>, define a <code>SearchCompletedListener</code> interface in <code>:core:domain</code>; <code>booking</code> implements it; <code>search</code> calls it; neither knows about the other&#x27;s implementation. And fourth, decouple via <code>:app</code> — the <code>:app</code> module can wire feature interactions directly because it depends on both features.</p>
+<p><strong>Detecting cycles</strong>: <code>./gradlew :app:dependencies</code> and tools like <code>gradle-dependency-graph-generator</code> visualise the full graph. Gradle will fail the build entirely on a cycle, so they rarely survive long.</p>
+<hr>
+<h3 id="build-speed">Build Speed</h3>
+<p>Modularization&#x27;s primary concrete engineering benefit is <strong>incremental compilation</strong>. Gradle compiles a module only when its sources or its direct dependencies have actually changed.</p>
+<pre><code>Full app compile time without modules:  ~8 minutes
+After unrelated feature change:          ~8 minutes (entire :app recompiles)
+
+With modules:
+Change in :feature:booking:               recompile :feature:booking + :app
+All other modules:                        cache hit — skipped
+Effective compile time:                  ~45 seconds</code></pre>
+<p>There are four key mechanisms. The <strong>Gradle build cache</strong> hashes module inputs and caches the output <code>.jar</code> — if nothing in <code>:core:domain</code> changed, the cached <code>.jar</code> is reused with no compilation at all. <strong>Parallel compilation</strong> lets independent modules compile at the same time via <code>org.gradle.parallel=true</code>. The <strong>configuration cache</strong> (<code>org.gradle.configuration-cache=true</code>) skips the Gradle configuration phase on repeated builds. And <strong>ABI stability</strong> means that if a module&#x27;s public API doesn&#x27;t change, none of its dependents recompile even when the module&#x27;s implementation changes internally.</p>
+<p><strong>Convention plugins</strong> (see below) ensure consistent Gradle configuration without copying boilerplate into every <code>build.gradle.kts</code>.</p>
+<hr>
+<h3 id="feature-based-vs-layer-based">Feature-Based vs Layer-Based</h3>
+<h4 id="feature-based-vertical-slices">Feature-Based (Vertical Slices)</h4>
+<p>Each module contains all layers for one feature — ViewModel, Composable, repository, data source, DTO.</p>
+<pre><code>:feature:search     — SearchViewModel, SearchScreen, SearchRepository, SearchApiService
+:feature:booking    — BookingViewModel, BookingScreen, BookingRepository, BookingApiService</code></pre>
+<p><strong>Pros</strong>: high cohesion within the feature; natural team ownership; changing a feature touches one module. <strong>Cons</strong>: shared infrastructure like network setup and the Room database either duplicates across features or requires a <code>:core:*</code> module anyway.</p>
+<h4 id="layer-based-horizontal-slices">Layer-Based (Horizontal Slices)</h4>
+<p>Each module contains one architectural layer for all features.</p>
+<pre><code>:presentation   — all ViewModels and Composables
+:domain         — all use cases and entities
+:data           — all repositories and data sources</code></pre>
+<p><strong>Pros</strong>: clean separation of concerns by layer; architecture rules are easy to enforce. <strong>Cons</strong>: low cohesion — adding a feature touches three modules; poor ownership alignment (who owns <code>:data</code>?); and poor build parallelism because <code>:presentation</code> depends on <code>:domain</code> which depends on <code>:data</code>, creating a serial compilation chain.</p>
+<h4 id="hybrid-recommended-for-large-apps">Hybrid (Recommended for Large Apps)</h4>
+<p>Feature-based at the top level, with shared core layers extracted into <code>:core:*</code> modules.</p>
+<pre><code>:feature:search:api / :feature:search:impl
+:feature:booking:api / :feature:booking:impl
+:core:domain
+:core:data
+:core:ui
+:core:network</code></pre>
+<hr>
+<h3 id="dynamic-feature-modules">Dynamic Feature Modules</h3>
+<p>Dynamic Feature Modules enable <strong>on-demand delivery</strong> — the user downloads and installs parts of the app after the initial install, which reduces the base APK size.</p>
+<pre><code>// In :feature:onboarding (a DFM):
+// build.gradle.kts
+plugins { id(&quot;com.android.dynamic-feature&quot;) }
+android { ... }
+dependencies { implementation(project(&quot;:app&quot;)) }  // DFM depends on base app, reverse of normal</code></pre>
+<p>The implications are worth understanding before reaching for them. DFM code is not available at app start if it hasn&#x27;t been downloaded yet, so all calls must go through <code>SplitInstallManager</code>. Navigation to DFM screens requires checking install state first. DFMs complicate DI — Hilt supports them via <code>@DefineComponent</code> plus <code>@InstallIn(customComponent)</code>, but it&#x27;s non-trivial. They&#x27;re best suited to large optional features like AR try-on or full offline maps, where the size reduction justifies the significant added complexity. Testing DFM install flows also requires specific test infrastructure that most teams don&#x27;t already have.</p>
+<hr>
+<h3 id="convention-plugins">Convention Plugins</h3>
+<p>Convention plugins — also called build logic plugins — centralise Gradle configuration and eliminate copy-paste across <code>build.gradle.kts</code> files.</p>
+<pre><code>// buildSrc/src/main/kotlin/AndroidFeatureConventionPlugin.kt
+class AndroidFeatureConventionPlugin : Plugin&lt;Project&gt; {
+    override fun apply(target: Project) {
+        with(target) {
+            pluginManager.apply(&quot;com.android.library&quot;)
+            pluginManager.apply(&quot;org.jetbrains.kotlin.android&quot;)
+            pluginManager.apply(&quot;com.google.dagger.hilt.android&quot;)
+
+            extensions.configure&lt;LibraryExtension&gt; {
+                compileSdk = 35
+                defaultConfig.minSdk = 26
+                compileOptions {
+                    sourceCompatibility = JavaVersion.VERSION_17
+                    targetCompatibility = JavaVersion.VERSION_17
+                }
+            }
+
+            dependencies {
+                &quot;implementation&quot;(project(&quot;:core:ui&quot;))
+                &quot;implementation&quot;(project(&quot;:core:domain&quot;))
+                &quot;testImplementation&quot;(project(&quot;:core:testing&quot;))
+                // ... common deps
+            }
+        }
+    }
+}</code></pre>
+<pre><code>// :feature:search:impl/build.gradle.kts
+plugins { id(&quot;zocdoc.android.feature&quot;) }  // single line replaces 50 lines of boilerplate
+
+dependencies {
+    implementation(project(&quot;:feature:search:api&quot;))  // feature-specific only
+}</code></pre>
+<p><strong>Benefits</strong>: version updates to <code>compileSdk</code>, <code>minSdk</code>, or Kotlin happen in one place; new modules get the correct configuration by applying a single plugin; and consistency is enforced — no module can accidentally slip onto a different SDK version.</p>
+<hr>
+<h3 id="when-does-modularization-become-over-engineering">When Does Modularization Become Over-Engineering?</h3>
+<p>There are six signs you&#x27;ve over-modularized. First, modules with only 1–3 files — the boundary adds more cognitive overhead than it saves. Second, most changes touch all modules — if every PR reaches <code>:core:domain</code>, <code>:core:data</code>, <code>:feature:X</code>, and <code>:app</code>, the modules are too fine-grained and you should consider merging. Third, the team is small — 2 or 3 engineers don&#x27;t need module ownership boundaries. Fourth, circular dependency pressure — if you keep wanting to add cross-module dependencies, the boundary is in the wrong place. Fifth, the build is not bottlenecked on compilation — on small apps the Gradle configuration overhead can easily exceed the compilation time savings. And sixth, navigation becomes a maze — excessive api/impl splits, interface indirection for simple screen transitions, and Hilt component hierarchies for DFMs can add complexity that dwarfs any benefit on a small codebase.</p>
+<p><strong>Guideline</strong>: start with 3–5 modules — <code>:app</code>, <code>:core:network</code>, <code>:core:ui</code>, and one <code>:feature:*</code> — and split features into their own modules only when a team boundary emerges, compile times become painful, or a feature is a natural candidate for on-demand delivery.</p>
+<h4 id="interview-angles-6">Interview Angles</h4>
+<p><strong>Q: How would you modularize a large Android app?</strong> &quot;I&#x27;d start with a hybrid approach: feature modules for each user-facing feature — <code>:feature:search</code>, <code>:feature:booking</code> — shared <code>:core:*</code> modules for network, UI, domain, data, and testing, and a thin <code>:app</code> module that wires navigation and DI. Within large feature modules I&#x27;d separate <code>:api</code> — the public contract — from <code>:impl</code> — the private implementation — to keep recompilation scope as narrow as possible.&quot;</p>
+<p><strong>Q: Feature-based vs layer-based — which do you choose?</strong> &quot;Feature-based, with shared infrastructure extracted to core modules. Layer-based creates serial build chains and poor team ownership — nobody owns &#x27;all the data sources for the whole app.&#x27; Features are the natural unit of ownership, and they&#x27;re also the natural unit of on-demand delivery if you ever need Dynamic Feature Modules.&quot;</p>
+<p><strong>Q: How do you prevent dependency cycles?</strong> &quot;The architectural rule is that feature modules depend on core modules, and feature modules never depend on each other except through <code>:api</code> contracts wired by <code>:app</code>. I enforce that with Gradle build linting or Dependency Guard. Whenever I feel the urge to add a cross-feature dependency, that&#x27;s a signal the shared concept belongs in <code>:core:domain</code>.&quot;</p>
+<p><strong>Q: How does modularization improve build time?</strong> &quot;Gradle&#x27;s incremental build and build cache only recompile modules whose inputs changed. If I touch <code>:feature:booking</code>, Gradle recompiles only <code>:feature:booking</code> and <code>:app</code> — every other module uses its cached output. Without modules, any change forces a recompile of the entire <code>:app</code> module.&quot;</p>
+<p><strong>Q: When does modularization become over-engineering?</strong> &quot;When the cost of maintaining module boundaries — Gradle configuration, interface indirection, DI wiring, navigation boilerplate — exceeds the benefit in build speed, team ownership, and test isolation. The typical indicators are modules with fewer than around 10 files, small teams that don&#x27;t need ownership boundaries, and build times that were never a bottleneck in the first place.&quot;</p>
+<hr>
+<h2 id="quick-reference-cheat-sheet">Quick-Reference Cheat Sheet</h2>
+<h3 id="architecture-pattern-decision-tree">Architecture Pattern Decision Tree</h3>
+<pre><code>New screen?
+├─ Complex multi-state + large team → MVI
+├─ Most cases → MVVM (ViewModel + StateFlow)
+└─ Maintaining existing MVP code → stay MVP
+
+Need domain layer?
+├─ Business logic reused across ViewModels → Yes, Use Cases
+├─ Simple CRUD passthrough → No, call Repository from ViewModel directly
+└─ Rule of three: logic appears 3+ times → Yes, extract Use Case
+
+Repository fetch strategy?
+├─ Offline-first → DB as source of truth + Flow from Room + background sync
+├─ Always fresh → Network-first with in-memory cache
+└─ Tolerate staleness → TTL-based cache
+
+Modularization?
+├─ &lt;5 engineers, early-stage app → 1-3 modules
+├─ Growing team, compile pain → feature + core modules
+└─ On-demand delivery needed → Dynamic Feature Modules</code></pre>
+<h3 id="stateflow-vs-sharedflow-vs-channel-for-events">StateFlow vs SharedFlow vs Channel for Events</h3>
+<table border="1" cellpadding="6" cellspacing="0">
+<thead><tr>
+<th></th>
+<th>StateFlow</th>
+<th>SharedFlow</th>
+<th>Channel</th>
+</tr></thead><tbody>
+<tr><td>Replays last value</td><td>Yes</td><td>Configurable (default 0)</td><td>No</td></tr>
+<tr><td>Use for</td><td>UI state</td><td>One-time events with multiple collectors</td><td>One-time events, single consumer</td></tr>
+<tr><td>Config change re-triggers</td><td>Yes — replays state</td><td>No (replay=0)</td><td>No</td></tr>
+<tr><td>Backpressure</td><td>Conflates</td><td>Configurable</td><td>Suspends</td></tr>
+</tbody></table>
+<h3 id="hilt-scopes-quick-reference">Hilt Scopes Quick Reference</h3>
+<pre><code>@Singleton       → AppComponent    → whole app lifetime
+@ActivityRetainedScoped → survives config change
+@ActivityScoped  → single Activity instance
+@ViewModelScoped → single ViewModel instance
+@FragmentScoped  → single Fragment instance
+(unscoped)       → new instance per injection</code></pre>
+<h3 id="module-dependency-direction">Module Dependency Direction</h3>
+<pre><code>:app → :feature:* → :core:data → :core:domain
+                  → :core:ui
+                  → :core:network → :core:domain
+(arrows = &quot;depends on&quot;)
+No upward arrows. No cross-feature arrows (except through :api contracts).</code></pre>
+<div class="pager">
+<a class="prev" href="android-memory-management.html"><span class="lbl">‹ Previous</span>6. Android Memory Management</a>
+<a class="next" href="view-rendering.html"><span class="lbl">Next ›</span>8. View Rendering</a>
+</div>
+</div></div>
+<script src="../site.js"></script>
+</body></html>

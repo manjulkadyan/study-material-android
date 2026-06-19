@@ -1,0 +1,1845 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>10. Android Data Layer</title>
+<link rel="stylesheet" href="../style.css"></head>
+<body class="has-toc" data-prev="lifecycle-platform-components.html" data-next="testing.html">
+<nav class="sidebar"><a class="brand" href="../index.html">📱 Android Study Guide — Home</a><details class="topic"><summary><span class="caret">▶</span><a href="data-structures-big-o.html">1. Data Structures &amp; Big O</a></summary><ul class="subtopics"><li><a class="" href="data-structures-big-o.html#11-data-structures--collections--12-big-o-notation">1.1 Data Structures &amp; Collections · 1.2 Big O Notation</a></li><li><a class="" href="data-structures-big-o.html#table-of-contents">Table of Contents</a></li><li><a class="" href="data-structures-big-o.html#1-arrays">1. Arrays</a></li><li><a class="" href="data-structures-big-o.html#2-arraylist--mutablelist">2. ArrayList / MutableList</a></li><li><a class="" href="data-structures-big-o.html#3-linkedlist">3. LinkedList</a></li><li><a class="" href="data-structures-big-o.html#4-stack">4. Stack</a></li><li><a class="" href="data-structures-big-o.html#5-queue">5. Queue</a></li><li><a class="" href="data-structures-big-o.html#6-deque">6. Deque</a></li><li><a class="" href="data-structures-big-o.html#7-hashmap--mutablemap">7. HashMap / MutableMap</a></li><li><a class="" href="data-structures-big-o.html#8-hashset--mutableset">8. HashSet / MutableSet</a></li><li><a class="" href="data-structures-big-o.html#9-linkedhashmap">9. LinkedHashMap</a></li><li><a class="" href="data-structures-big-o.html#10-treemap--sortedmap">10. TreeMap / SortedMap</a></li><li><a class="" href="data-structures-big-o.html#11-priorityqueue--heap">11. PriorityQueue / Heap</a></li><li><a class="" href="data-structures-big-o.html#12-trie">12. Trie</a></li><li><a class="" href="data-structures-big-o.html#13-graphs">13. Graphs</a></li><li><a class="" href="data-structures-big-o.html#14-android-specific-collections">14. Android-Specific Collections</a></li><li><a class="" href="data-structures-big-o.html#15-big-o-notation">15. Big O Notation</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="kotlin-java-fundamentals.html">2. Kotlin &amp; Java Fundamentals</a></summary><ul class="subtopics"><li><a class="" href="kotlin-java-fundamentals.html#table-of-contents">Table of Contents</a></li><li><a class="" href="kotlin-java-fundamentals.html#21-kotlin-fundamentals">2.1 Kotlin Fundamentals</a></li><li><a class="" href="kotlin-java-fundamentals.html#22-kotlin-generics">2.2 Kotlin Generics</a></li><li><a class="" href="kotlin-java-fundamentals.html#23-java-fundamentals">2.3 Java Fundamentals</a></li><li><a class="" href="kotlin-java-fundamentals.html#24-kotlin-java-interop">2.4 Kotlin-Java Interop</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="concurrency-android-threading.html">3. Concurrency &amp; Android Threading</a></summary><ul class="subtopics"><li><a class="" href="concurrency-android-threading.html#table-of-contents">Table of Contents</a></li><li><a class="" href="concurrency-android-threading.html#31-java-thread-basics">3.1 Java Thread Basics</a></li><li><a class="" href="concurrency-android-threading.html#32-locks-and-synchronization">3.2 Locks and Synchronization</a></li><li><a class="" href="concurrency-android-threading.html#33-volatile-and-atomic-classes">3.3 Volatile and Atomic Classes</a></li><li><a class="" href="concurrency-android-threading.html#34-waitnotify-and-producer-consumer">3.4 Wait/Notify and Producer-Consumer</a></li><li><a class="" href="concurrency-android-threading.html#35-executors-and-task-execution">3.5 Executors and Task Execution</a></li><li><a class="" href="concurrency-android-threading.html#36-android-application-threads">3.6 Android Application Threads</a></li><li><a class="" href="concurrency-android-threading.html#37-handler--looper--messagequeue">3.7 Handler / Looper / MessageQueue</a></li><li><a class="" href="concurrency-android-threading.html#38-kotlin-coroutines-on-android">3.8 Kotlin Coroutines on Android</a></li><li><a class="" href="concurrency-android-threading.html#39-flow-stateflow-sharedflow-channel">3.9 Flow, StateFlow, SharedFlow, Channel</a></li><li><a class="" href="concurrency-android-threading.html#310-background-work">3.10 Background Work</a></li><li><a class="" href="concurrency-android-threading.html#quick-reference-interview-cheat-sheet">Quick-Reference: Interview Cheat Sheet</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="thread-communication.html">4. Thread Communication</a></summary><ul class="subtopics"><li><a class="" href="thread-communication.html#table-of-contents">Table of Contents</a></li><li><a class="" href="thread-communication.html#41-pipes">4.1 Pipes</a></li><li><a class="" href="thread-communication.html#42-shared-memory">4.2 Shared Memory</a></li><li><a class="" href="thread-communication.html#43-signaling">4.3 Signaling</a></li><li><a class="" href="thread-communication.html#44-blockingqueue">4.4 BlockingQueue</a></li><li><a class="" href="thread-communication.html#45-message-passing--android-handlerloopermessagequeue">4.5 Message Passing — Android Handler/Looper/MessageQueue</a></li><li><a class="" href="thread-communication.html#cross-cutting-shared-memory-vs-message-passing">Cross-cutting: Shared Memory vs Message Passing</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="ipc-binder-aidl-messenger.html">5. IPC: Binder, AIDL, Messenger</a></summary><ul class="subtopics"><li><a class="" href="ipc-binder-aidl-messenger.html#table-of-contents">Table of Contents</a></li><li><a class="" href="ipc-binder-aidl-messenger.html#51-android-process-model">5.1 Android Process Model</a></li><li><a class="" href="ipc-binder-aidl-messenger.html#52-binder">5.2 Binder</a></li><li><a class="" href="ipc-binder-aidl-messenger.html#53-aidl">5.3 AIDL</a></li><li><a class="" href="ipc-binder-aidl-messenger.html#54-messenger">5.4 Messenger</a></li><li><a class="" href="ipc-binder-aidl-messenger.html#parcelable-vs-serializable">Parcelable vs Serializable</a></li><li><a class="" href="ipc-binder-aidl-messenger.html#aidl-vs-messenger-decision-guide">AIDL vs Messenger Decision Guide</a></li><li><a class="" href="ipc-binder-aidl-messenger.html#interview-quick-reference">Interview Quick-Reference</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="android-memory-management.html">6. Android Memory Management</a></summary><ul class="subtopics"><li><a class="" href="android-memory-management.html#table-of-contents">Table of Contents</a></li><li><a class="" href="android-memory-management.html#61-jvmart-memory-basics">6.1 JVM/ART Memory Basics</a></li><li><a class="" href="android-memory-management.html#62-android-memory-leaks">6.2 Android Memory Leaks</a></li><li><a class="" href="android-memory-management.html#63-context-leaks">6.3 Context Leaks</a></li><li><a class="" href="android-memory-management.html#64-bitmap-and-image-memory">6.4 Bitmap and Image Memory</a></li><li><a class="" href="android-memory-management.html#65-leak-detection-and-profiling">6.5 Leak Detection and Profiling</a></li><li><a class="" href="android-memory-management.html#interview-quick-reference">Interview Quick-Reference</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="architecture-patterns.html">7. Architecture Patterns</a></summary><ul class="subtopics"><li><a class="" href="architecture-patterns.html#table-of-contents">Table of Contents</a></li><li><a class="" href="architecture-patterns.html#71-mvc-mvp-mvvm-mvi">7.1 MVC, MVP, MVVM, MVI</a></li><li><a class="" href="architecture-patterns.html#72-clean-architecture">7.2 Clean Architecture</a></li><li><a class="" href="architecture-patterns.html#73-repository-pattern">7.3 Repository Pattern</a></li><li><a class="" href="architecture-patterns.html#74-dependency-injection">7.4 Dependency Injection</a></li><li><a class="" href="architecture-patterns.html#75-modularization">7.5 Modularization</a></li><li><a class="" href="architecture-patterns.html#quick-reference-cheat-sheet">Quick-Reference Cheat Sheet</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="view-rendering.html">8. View Rendering</a></summary><ul class="subtopics"><li><a class="" href="view-rendering.html#table-of-contents">Table of Contents</a></li><li><a class="" href="view-rendering.html#81-traditional-view-system-rendering">8.1 Traditional View System Rendering</a></li><li><a class="" href="view-rendering.html#82-choreographer-vsync-and-frame-rendering">8.2 Choreographer, VSync, and Frame Rendering</a></li><li><a class="" href="view-rendering.html#83-recyclerview-performance">8.3 RecyclerView Performance</a></li><li><a class="" href="view-rendering.html#84-jetpack-compose-rendering">8.4 Jetpack Compose Rendering</a></li><li><a class="" href="view-rendering.html#85-performance-tools">8.5 Performance Tools</a></li><li><a class="" href="view-rendering.html#interview-cheat-sheet">Interview Cheat Sheet</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="lifecycle-platform-components.html">9. Lifecycle &amp; Platform Components</a></summary><ul class="subtopics"><li><a class="" href="lifecycle-platform-components.html#table-of-contents">Table of Contents</a></li><li><a class="" href="lifecycle-platform-components.html#91-activity">9.1 Activity</a></li><li><a class="" href="lifecycle-platform-components.html#92-fragment">9.2 Fragment</a></li><li><a class="" href="lifecycle-platform-components.html#93-services">9.3 Services</a></li><li><a class="" href="lifecycle-platform-components.html#94-broadcastreceiver">9.4 BroadcastReceiver</a></li><li><a class="" href="lifecycle-platform-components.html#95-contentprovider">9.5 ContentProvider</a></li><li><a class="" href="lifecycle-platform-components.html#96-intents-and-pendingintents">9.6 Intents and PendingIntents</a></li></ul></details><details class="topic active" open><summary><span class="caret">▶</span><a href="android-data-layer.html">10. Android Data Layer</a></summary><ul class="subtopics"><li><a class="spy" href="#table-of-contents">Table of Contents</a></li><li><a class="spy" href="#101-networking">10.1 Networking</a></li><li><a class="spy" href="#102-persistence">10.2 Persistence</a></li><li><a class="spy" href="#103-offline-first-design">10.3 Offline-First Design</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="testing.html">11. Testing</a></summary><ul class="subtopics"><li><a class="" href="testing.html#table-of-contents">Table of Contents</a></li><li><a class="" href="testing.html#111-unit-testing">11.1 Unit Testing</a></li><li><a class="" href="testing.html#112-ui-testing">11.2 UI Testing</a></li><li><a class="" href="testing.html#113-integration-and-end-to-end-testing">11.3 Integration and End-to-End Testing</a></li><li><a class="" href="testing.html#quick-reference-interview-cheat-sheet">Quick-Reference Interview Cheat Sheet</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="build-gradle-release.html">12. Build, Gradle &amp; Release</a></summary><ul class="subtopics"><li><a class="" href="build-gradle-release.html#table-of-contents">Table of Contents</a></li><li><a class="" href="build-gradle-release.html#121-gradle-basics">12.1 Gradle Basics</a></li><li><a class="" href="build-gradle-release.html#122-build-performance">12.2 Build Performance</a></li><li><a class="" href="build-gradle-release.html#123-release">12.3 Release</a></li><li><a class="" href="build-gradle-release.html#summary-table-quick-reference">Summary Table: Quick Reference</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="security-privacy.html">13. Security &amp; Privacy</a></summary><ul class="subtopics"><li><a class="" href="security-privacy.html#table-of-contents">Table of Contents</a></li><li><a class="" href="security-privacy.html#131-android-security-basics">13.1 Android Security Basics</a></li><li><a class="" href="security-privacy.html#132-data-security">13.2 Data Security</a></li><li><a class="" href="security-privacy.html#interview-qa-master-list">Interview Q&amp;A Master List</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="performance-beyond-rendering.html">14. Performance Beyond Rendering</a></summary><ul class="subtopics"><li><a class="" href="performance-beyond-rendering.html#table-of-contents">Table of Contents</a></li><li><a class="" href="performance-beyond-rendering.html#141-startup-performance">14.1 Startup Performance</a></li><li><a class="" href="performance-beyond-rendering.html#142-battery-and-resource-usage">14.2 Battery and Resource Usage</a></li><li><a class="" href="performance-beyond-rendering.html#143-anr-and-crash-debugging">14.3 ANR and Crash Debugging</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="senior-staff-system-design.html">15. Senior/Staff System Design</a></summary><ul class="subtopics"><li><a class="" href="senior-staff-system-design.html#table-of-contents">Table of Contents</a></li><li><a class="" href="senior-staff-system-design.html#151-android-app-architecture-design">15.1 Android App Architecture Design</a></li><li><a class="" href="senior-staff-system-design.html#152-trade-off-thinking">15.2 Trade-Off Thinking</a></li><li><a class="" href="senior-staff-system-design.html#153-legacy-code-and-migration">15.3 Legacy Code and Migration</a></li><li><a class="" href="senior-staff-system-design.html#154-engineering-leadership">15.4 Engineering Leadership</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="interview-q-a-cheatsheet.html">16. Interview Q&amp;A &amp; Cheatsheet</a></summary><ul class="subtopics"><li><a class="" href="interview-q-a-cheatsheet.html#table-of-contents">Table of Contents</a></li><li><a class="" href="interview-q-a-cheatsheet.html#section-16--model-answers-by-category">Section 16 — Model Answers by Category</a></li><li><a class="" href="interview-q-a-cheatsheet.html#section-17--must-revise-checklist">Section 17 — Must-Revise Checklist</a></li><li><a class="" href="interview-q-a-cheatsheet.html#section-18--senior-answer-framework-with-worked-examples">Section 18 — Senior Answer Framework with Worked Examples</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="references.html">References</a></summary><ul class="subtopics"><li><a class="" href="references.html#table-of-contents">Table of Contents</a></li><li><a class="" href="references.html#section-1--data-structures--big-o">Section 1 — Data Structures &amp; Big O</a></li><li><a class="" href="references.html#section-2--kotlin--java-fundamentals">Section 2 — Kotlin &amp; Java Fundamentals</a></li><li><a class="" href="references.html#section-3--concurrency--threading">Section 3 — Concurrency &amp; Threading</a></li><li><a class="" href="references.html#section-4--thread-communication">Section 4 — Thread Communication</a></li><li><a class="" href="references.html#section-5--ipc-binder-aidl-messenger">Section 5 — IPC: Binder, AIDL, Messenger</a></li><li><a class="" href="references.html#section-6--memory-management">Section 6 — Memory Management</a></li><li><a class="" href="references.html#section-7--architecture-patterns">Section 7 — Architecture Patterns</a></li><li><a class="" href="references.html#section-8--view-rendering">Section 8 — View Rendering</a></li><li><a class="" href="references.html#section-9--lifecycle--platform-components">Section 9 — Lifecycle &amp; Platform Components</a></li><li><a class="" href="references.html#section-10--data-layer">Section 10 — Data Layer</a></li><li><a class="" href="references.html#section-11--testing">Section 11 — Testing</a></li><li><a class="" href="references.html#section-12--build-gradle--release">Section 12 — Build, Gradle &amp; Release</a></li><li><a class="" href="references.html#section-13--security--privacy">Section 13 — Security &amp; Privacy</a></li><li><a class="" href="references.html#section-14--performance-beyond-rendering">Section 14 — Performance (Beyond Rendering)</a></li><li><a class="" href="references.html#section-15--system-design">Section 15 — System Design</a></li><li><a class="" href="references.html#section-16--interview-qa-cheatsheet">Section 16 — Interview Q&amp;A Cheatsheet</a></li><li><a class="" href="references.html#section-17--must-revise-checklist">Section 17 — Must-Revise Checklist</a></li><li><a class="" href="references.html#section-18--seniorstaff-answer-framework">Section 18 — Senior/Staff Answer Framework</a></li><li><a class="" href="references.html#books">Books</a></li></ul></details></nav>
+<aside class="toc-right"><div class="toc-h">On this page</div><ul class="toc-tree"><li class="toc-grp"><a class="toc-2" href="#table-of-contents"><span class="tcaret tcaret-none"></span>Table of Contents</a></li><li class="toc-grp"><a class="toc-2" href="#101-networking"><span class="tcaret">▶</span>10.1 Networking</a><ul class="toc-subs"><li><a class="toc-3" href="#http-basics">HTTP Basics</a></li><li><a class="toc-3" href="#rest-principles">REST Principles</a></li><li><a class="toc-3" href="#json-serialization">JSON Serialization</a></li><li><a class="toc-3" href="#okhttp">OkHttp</a></li><li><a class="toc-3" href="#retrofit">Retrofit</a></li><li><a class="toc-3" href="#interceptors">Interceptors</a></li><li><a class="toc-3" href="#authentication-and-token-refresh">Authentication and Token Refresh</a></li><li><a class="toc-3" href="#timeouts">Timeouts</a></li><li><a class="toc-3" href="#retries">Retries</a></li><li><a class="toc-3" href="#caching">Caching</a></li><li><a class="toc-3" href="#pagination">Pagination</a></li><li><a class="toc-3" href="#error-mapping">Error Mapping</a></li><li><a class="toc-3" href="#idempotency">Idempotency</a></li><li><a class="toc-3" href="#tls-basics">TLS Basics</a></li><li><a class="toc-3" href="#certificate-pinning">Certificate Pinning</a></li><li><a class="toc-3" href="#interview-angles-networking">Interview Angles: Networking</a></li></ul></li><li class="toc-grp"><a class="toc-2" href="#102-persistence"><span class="tcaret">▶</span>10.2 Persistence</a><ul class="toc-subs"><li><a class="toc-3" href="#sqlite-basics">SQLite Basics</a></li><li><a class="toc-3" href="#room">Room</a></li><li><a class="toc-3" href="#entity">Entity</a></li><li><a class="toc-3" href="#dao">DAO</a></li><li><a class="toc-3" href="#transactions">Transactions</a></li><li><a class="toc-3" href="#migrations">Migrations</a></li><li><a class="toc-3" href="#indexes">Indexes</a></li><li><a class="toc-3" href="#foreign-keys-and-relations">Foreign Keys and Relations</a></li><li><a class="toc-3" href="#flow-from-room">Flow from Room</a></li><li><a class="toc-3" href="#datastore">DataStore</a></li><li><a class="toc-3" href="#sharedpreferences-legacy">SharedPreferences Legacy</a></li><li><a class="toc-3" href="#file-storage-and-scoped-storage">File Storage and Scoped Storage</a></li><li><a class="toc-3" href="#interview-angles-persistence">Interview Angles: Persistence</a></li></ul></li><li class="toc-grp"><a class="toc-2" href="#103-offline-first-design"><span class="tcaret">▶</span>10.3 Offline-First Design</a><ul class="toc-subs"><li><a class="toc-3" href="#single-source-of-truth">Single Source of Truth</a></li><li><a class="toc-3" href="#cache-invalidation">Cache Invalidation</a></li><li><a class="toc-3" href="#sync-strategy">Sync Strategy</a></li><li><a class="toc-3" href="#conflict-resolution">Conflict Resolution</a></li><li><a class="toc-3" href="#optimistic-updates">Optimistic Updates</a></li><li><a class="toc-3" href="#retry-queue">Retry Queue</a></li><li><a class="toc-3" href="#local-first-ui">Local-First UI</a></li><li><a class="toc-3" href="#networkboundresource-pattern">NetworkBoundResource Pattern</a></li><li><a class="toc-3" href="#workmanager-for-sync">WorkManager for Sync</a></li><li><a class="toc-3" href="#pagination-with-local-cache">Pagination with Local Cache</a></li><li><a class="toc-3" href="#interview-angles-offline-first">Interview Angles: Offline-First</a></li></ul></li></ul></aside>
+<div class="backdrop"></div>
+<div class="content">
+<div class="mtop"><button onclick="toggleNav()" aria-label="Menu">☰</button><a class="home" href="../index.html">🏠</a><span class="t">10. Android Data Layer</span></div>
+<a class="arrow left" href="lifecycle-platform-components.html" title="Previous (9. Lifecycle &amp; Platform Components)">‹</a>
+<a class="arrow right" href="testing.html" title="Next (11. Testing)">›</a>
+<div class="wrap">
+<h1 id="10-android-data-layer">10. Android Data Layer</h1>
+<p>Senior/Staff-level study material — exhaustive coverage for technical interviews.</p>
+<hr>
+<h2 id="table-of-contents">Table of Contents</h2>
+<ul>
+<li><a href="#101-networking">10.1 Networking</a></li>
+<ul>
+<li><a href="#http-basics">HTTP Basics</a></li>
+<li><a href="#rest-principles">REST Principles</a></li>
+<li><a href="#json-serialization">JSON Serialization</a></li>
+<li><a href="#okhttp">OkHttp</a></li>
+<li><a href="#retrofit">Retrofit</a></li>
+<li><a href="#interceptors">Interceptors</a></li>
+<li><a href="#authentication-and-token-refresh">Authentication and Token Refresh</a></li>
+<li><a href="#timeouts">Timeouts</a></li>
+<li><a href="#retries">Retries</a></li>
+<li><a href="#caching">Caching</a></li>
+<li><a href="#pagination">Pagination</a></li>
+<li><a href="#error-mapping">Error Mapping</a></li>
+<li><a href="#idempotency">Idempotency</a></li>
+<li><a href="#tls-basics">TLS Basics</a></li>
+<li><a href="#certificate-pinning">Certificate Pinning</a></li>
+<li><a href="#interview-angles-networking">Interview Angles: Networking</a></li>
+</ul>
+<li><a href="#102-persistence">10.2 Persistence</a></li>
+<ul>
+<li><a href="#sqlite-basics">SQLite Basics</a></li>
+<li><a href="#room">Room</a></li>
+<li><a href="#entity">Entity</a></li>
+<li><a href="#dao">DAO</a></li>
+<li><a href="#transactions">Transactions</a></li>
+<li><a href="#migrations">Migrations</a></li>
+<li><a href="#indexes">Indexes</a></li>
+<li><a href="#foreign-keys-and-relations">Foreign Keys and Relations</a></li>
+<li><a href="#flow-from-room">Flow from Room</a></li>
+<li><a href="#datastore">DataStore</a></li>
+<li><a href="#sharedpreferences-legacy">SharedPreferences Legacy</a></li>
+<li><a href="#file-storage-and-scoped-storage">File Storage and Scoped Storage</a></li>
+<li><a href="#interview-angles-persistence">Interview Angles: Persistence</a></li>
+</ul>
+<li><a href="#103-offline-first-design">10.3 Offline-First Design</a></li>
+<ul>
+<li><a href="#single-source-of-truth">Single Source of Truth</a></li>
+<li><a href="#cache-invalidation">Cache Invalidation</a></li>
+<li><a href="#sync-strategy">Sync Strategy</a></li>
+<li><a href="#conflict-resolution">Conflict Resolution</a></li>
+<li><a href="#optimistic-updates">Optimistic Updates</a></li>
+<li><a href="#retry-queue">Retry Queue</a></li>
+<li><a href="#local-first-ui">Local-First UI</a></li>
+<li><a href="#networkboundresource-pattern">NetworkBoundResource Pattern</a></li>
+<li><a href="#workmanager-for-sync">WorkManager for Sync</a></li>
+<li><a href="#pagination-with-local-cache">Pagination with Local Cache</a></li>
+<li><a href="#interview-angles-offline-first">Interview Angles: Offline-First</a></li>
+</ul>
+</ul>
+<hr>
+<h2 id="101-networking">10.1 Networking</h2>
+<h3 id="http-basics">HTTP Basics</h3>
+<p>HTTP is a stateless request/response protocol running over TCP/IP — every call is independent, no session memory, and every Android network call goes over HTTP or HTTPS.</p>
+<p><strong>Methods and semantics</strong>:</p>
+<table border="1" cellpadding="6" cellspacing="0">
+<thead><tr>
+<th>Method</th>
+<th>Safe</th>
+<th>Idempotent</th>
+<th>Has Body</th>
+<th>Use</th>
+</tr></thead><tbody>
+<tr><td>GET</td><td>Yes</td><td>Yes</td><td>No</td><td>Fetch resource</td></tr>
+<tr><td>POST</td><td>No</td><td>No</td><td>Yes</td><td>Create resource</td></tr>
+<tr><td>PUT</td><td>No</td><td>Yes</td><td>Yes</td><td>Replace resource</td></tr>
+<tr><td>PATCH</td><td>No</td><td>No</td><td>Yes</td><td>Partial update</td></tr>
+<tr><td>DELETE</td><td>No</td><td>Yes</td><td>No</td><td>Remove resource</td></tr>
+<tr><td>HEAD</td><td>Yes</td><td>Yes</td><td>No</td><td>Fetch headers only</td></tr>
+</tbody></table>
+<p><strong>Status code families</strong>:</p>
+<ul>
+<li><code>1xx</code> — Informational (100 Continue, 101 Switching Protocols)</li>
+<li><code>2xx</code> — Success (200 OK, 201 Created, 204 No Content)</li>
+<li><code>3xx</code> — Redirection (301 Moved Permanently, 304 Not Modified)</li>
+<li><code>4xx</code> — Client errors (400 Bad Request, 401 Unauthorized, 403 Forbidden, 404 Not Found, 409 Conflict, 422 Unprocessable, 429 Too Many Requests)</li>
+<li><code>5xx</code> — Server errors (500 Internal, 503 Service Unavailable, 504 Gateway Timeout)</li>
+</ul>
+<p><strong>Headers that matter on Android</strong>:</p>
+<ul>
+<li><code>Content-Type: application/json</code> — request/response body type</li>
+<li><code>Authorization: Bearer &lt;token&gt;</code> — auth header</li>
+<li><code>Cache-Control</code> — caching directives</li>
+<li><code>ETag</code> / <code>If-None-Match</code> — conditional requests for cache validation</li>
+<li><code>Last-Modified</code> / <code>If-Modified-Since</code> — time-based conditional requests</li>
+<li><code>Accept-Encoding: gzip</code> — OkHttp adds this automatically; saves 60–80% bandwidth</li>
+<li><code>Connection: keep-alive</code> — persistent connections (HTTP/1.1 default)</li>
+</ul>
+<p><strong>HTTP/2 benefits</strong>: multiplexed streams over single TCP connection (no head-of-line blocking at HTTP layer), header compression (HPACK), server push. OkHttp supports HTTP/2 automatically when server supports it.</p>
+<p><strong>Android implications</strong>: All network operations must be off the main thread. <code>NetworkOnMainThreadException</code> is thrown if you try. OkHttp uses a thread pool internally; Retrofit bridges to coroutines/RxJava.</p>
+<hr>
+<h3 id="rest-principles">REST Principles</h3>
+<p>REST is an architectural style, not a protocol — it&#x27;s Roy Fielding&#x27;s set of six constraints that, when followed, produce a scalable, loosely coupled web API. The constraints are:</p>
+<ol>
+<li><strong>Client-Server</strong>: Separation of UI from data storage</li>
+<li><strong>Stateless</strong>: Each request contains all context — no server-side session</li>
+<li><strong>Cacheable</strong>: Responses must declare themselves cacheable or not</li>
+<li><strong>Uniform Interface</strong>: Standard resource identification (URI), manipulation through representations, self-descriptive messages, HATEOAS (often skipped in practice)</li>
+<li><strong>Layered System</strong>: Client doesn&#x27;t know if it&#x27;s talking to an origin server or proxy</li>
+<li><strong>Code on Demand</strong> (optional): Server can send executable code</li>
+</ol>
+<p><strong>Resource modeling</strong>:</p>
+<pre><code>GET    /users/{id}          — fetch user
+POST   /users               — create user
+PUT    /users/{id}          — replace user
+PATCH  /users/{id}          — partial update
+DELETE /users/{id}          — delete user
+GET    /users/{id}/orders   — sub-resource</code></pre>
+<p><strong>Trade-offs vs GraphQL</strong>:</p>
+<ul>
+<li>REST: multiple round-trips for nested data (N+1), simple caching</li>
+<li>GraphQL: single round-trip, precise data fetching, complex caching (no HTTP caching by default)</li>
+</ul>
+<hr>
+<h3 id="json-serialization">JSON Serialization</h3>
+<p>JSON serialization is the process of converting between Kotlin/Java objects and JSON strings — and on Android there are two dominant modern approaches, plus one legacy one to know about:</p>
+<p><strong>Gson</strong> (Google, legacy):</p>
+<pre><code>val gson = Gson()
+val json = gson.toJson(user)       // serialize
+val user = gson.fromJson(json, User::class.java)  // deserialize</code></pre>
+<p>Problems: uses reflection, no null safety for Kotlin, poor performance on large payloads.</p>
+<p><strong>Moshi</strong> (Square, modern):</p>
+<pre><code>val moshi = Moshi.Builder()
+    .addLast(KotlinJsonAdapterFactory())  // reflection adapter, or use codegen
+    .build()
+val adapter = moshi.adapter(User::class.java)
+val json = adapter.toJson(user)
+val user = adapter.fromJson(json)</code></pre>
+<p>Codegen with <code>@JsonClass(generateAdapter = true)</code> — faster than reflection, null-safe, Kotlin-idiomatic.</p>
+<p><strong>Kotlinx.serialization</strong> (JetBrains, newest):</p>
+<pre><code>@Serializable
+data class User(val id: Int, val name: String)
+
+val json = Json.encodeToString(User(1, &quot;Alice&quot;))
+val user = Json.decodeFromString&lt;User&gt;(json)</code></pre>
+<p>Compile-time code generation, no reflection, first-class Kotlin support, excellent performance.</p>
+<p><strong>Key serialization concerns on Android</strong>:</p>
+<ul>
+<li><strong>Unknown fields</strong>: Moshi ignores by default; <code>@JsonClass</code> codegen does too. Gson silently ignores. Important for API versioning.</li>
+<li><strong>Null vs missing field</strong>: JSON <code>null</code> vs field absence — Kotlin default parameters handle absence; explicit null annotations handle <code>null</code>.</li>
+<li><strong>Custom adapters</strong>: For Date, BigDecimal, sealed classes, polymorphism.</li>
+<li><strong>Performance</strong>: Reflection-based is 2–5x slower than codegen; matters for lists with 1000+ items.</li>
+</ul>
+<p><strong>Retrofit + Moshi</strong>:</p>
+<pre><code>val retrofit = Retrofit.Builder()
+    .baseUrl(&quot;https://api.example.com/&quot;)
+    .addConverterFactory(MoshiConverterFactory.create(moshi))
+    .client(okHttpClient)
+    .build()</code></pre>
+<hr>
+<h3 id="okhttp">OkHttp</h3>
+<p>OkHttp is the HTTP client that lives underneath Retrofit — it manages connections, the request/response lifecycle, and the interceptor chain that lets you inject middleware at every call.</p>
+<p><strong>Internals</strong>:</p>
+<ul>
+<li><code>Dispatcher</code>: Manages async call execution. Default: 64 max concurrent requests, 5 per host. Backed by <code>ExecutorService</code>.</li>
+<li><code>ConnectionPool</code>: Reuses TCP connections. Default: 5 connections, 5-minute keep-alive.</li>
+<li><code>Cache</code>: Disk-backed HTTP cache using <code>DiskLruCache</code>.</li>
+<li><code>Interceptor chain</code>: Each interceptor calls <code>chain.proceed()</code> to pass to the next. Application interceptors run before caching; network interceptors run after.</li>
+</ul>
+<p><strong>Basic setup</strong>:</p>
+<pre><code>val okHttpClient = OkHttpClient.Builder()
+    .connectTimeout(10, TimeUnit.SECONDS)
+    .readTimeout(30, TimeUnit.SECONDS)
+    .writeTimeout(30, TimeUnit.SECONDS)
+    .cache(Cache(cacheDir, 10 * 1024 * 1024)) // 10MB cache
+    .addInterceptor(loggingInterceptor)
+    .addInterceptor(authInterceptor)
+    .authenticator(tokenRefreshAuthenticator)
+    .build()</code></pre>
+<p><strong>Call lifecycle</strong>:</p>
+<ol>
+<li><code>client.newCall(request)</code> creates a <code>RealCall</code></li>
+<li><code>call.enqueue(callback)</code> dispatches to Dispatcher thread pool</li>
+<li>Interceptor chain executes: application interceptors → cache → network interceptors → server</li>
+<li>Response flows back through the chain</li>
+</ol>
+<p><strong>Failure modes</strong>:</p>
+<ul>
+<li><code>ConnectException</code> — cannot reach host</li>
+<li><code>SocketTimeoutException</code> — timeout hit</li>
+<li><code>SSLHandshakeException</code> — TLS failure</li>
+<li><code>UnknownHostException</code> — DNS failure</li>
+<li>Response with error status code — NOT an exception in OkHttp; must check <code>response.isSuccessful</code></li>
+</ul>
+<hr>
+<h3 id="retrofit">Retrofit</h3>
+<p>Retrofit is a type-safe HTTP client that turns annotated Kotlin interfaces into working HTTP calls, using OkHttp as the transport layer underneath.</p>
+<p><strong>Interface definition</strong>:</p>
+<pre><code>interface UserApi {
+    @GET(&quot;users/{id}&quot;)
+    suspend fun getUser(@Path(&quot;id&quot;) id: String): User
+
+    @GET(&quot;users&quot;)
+    suspend fun getUsers(
+        @Query(&quot;page&quot;) page: Int,
+        @Query(&quot;limit&quot;) limit: Int
+    ): PagedResponse&lt;User&gt;
+
+    @POST(&quot;users&quot;)
+    suspend fun createUser(@Body user: CreateUserRequest): User
+
+    @PATCH(&quot;users/{id}&quot;)
+    suspend fun updateUser(
+        @Path(&quot;id&quot;) id: String,
+        @Body update: UpdateUserRequest
+    ): User
+
+    @DELETE(&quot;users/{id}&quot;)
+    suspend fun deleteUser(@Path(&quot;id&quot;) id: String): Response&lt;Unit&gt;
+
+    @GET(&quot;users&quot;)
+    suspend fun getUsersRaw(): Response&lt;List&lt;User&gt;&gt;  // wrap in Response&lt;T&gt; for status code access
+
+    @Multipart
+    @POST(&quot;uploads&quot;)
+    suspend fun uploadFile(
+        @Part file: MultipartBody.Part,
+        @Part(&quot;description&quot;) description: RequestBody
+    ): UploadResponse
+
+    @Headers(&quot;Cache-Control: no-cache&quot;)
+    @GET(&quot;feed&quot;)
+    suspend fun getFeed(): List&lt;FeedItem&gt;
+}</code></pre>
+<p><strong>Suspend functions</strong>: Retrofit 2.6+ natively supports <code>suspend fun</code> with coroutines. The call runs on a background thread managed by OkHttp&#x27;s Dispatcher; no manual thread switching needed.</p>
+<p><strong><code>Response&lt;T&gt;</code> vs plain <code>T</code></strong>:</p>
+<ul>
+<li><code>T</code> directly: Retrofit throws <code>HttpException</code> for non-2xx; good for simple cases</li>
+<li><code>Response&lt;T&gt;</code>: gives access to status code, headers, raw body; handle non-2xx yourself</li>
+</ul>
+<p><strong>Retrofit internals</strong>: Uses <code>CallAdapter</code> to convert OkHttp <code>Call&lt;T&gt;</code> to coroutine/RxJava. Uses <code>Converter</code> (Moshi/Gson/etc.) to serialize/deserialize bodies. Generates proxy objects via Java <code>Proxy.newProxyInstance</code> using the interface annotations.</p>
+<p><strong>Dynamic URLs</strong>:</p>
+<pre><code>@GET
+suspend fun getFromUrl(@Url url: String): SomeResponse</code></pre>
+<hr>
+<h3 id="interceptors">Interceptors</h3>
+<p>Interceptors are middleware in the OkHttp chain — each one receives a <code>Chain</code>, can inspect or modify the request, calls <code>chain.proceed()</code> to pass it along, and can then inspect or modify the response on the way back.</p>
+<p><strong>Two types</strong>:</p>
+<ul>
+<li><code>addInterceptor</code> (application interceptors): Runs once, even for cached responses. Good for: auth headers, logging, retry logic.</li>
+<li><code>addNetworkInterceptor</code> (network interceptors): Runs only for actual network calls, not for cached responses. Good for: request/response body rewriting, monitoring actual bytes sent/received.</li>
+</ul>
+<p><strong>Logging interceptor</strong>:</p>
+<pre><code>val logging = HttpLoggingInterceptor().apply {
+    level = if (BuildConfig.DEBUG) 
+        HttpLoggingInterceptor.Level.BODY 
+    else 
+        HttpLoggingInterceptor.Level.NONE
+}</code></pre>
+<p><strong>Critical</strong>: Never log request/response bodies in production — bodies can contain tokens, PII, PHI.</p>
+<p><strong>Auth header interceptor</strong>:</p>
+<pre><code>class AuthInterceptor(private val tokenProvider: TokenProvider) : Interceptor {
+    override fun intercept(chain: Chain): Response {
+        val token = tokenProvider.getAccessToken() // synchronous, from memory/prefs
+        val request = chain.request().newBuilder()
+            .header(&quot;Authorization&quot;, &quot;Bearer $token&quot;)
+            .build()
+        return chain.proceed(request)
+    }
+}</code></pre>
+<p><strong>Retry interceptor</strong>:</p>
+<pre><code>class RetryInterceptor(private val maxRetries: Int = 3) : Interceptor {
+    override fun intercept(chain: Chain): Response {
+        var attempt = 0
+        var response: Response
+        do {
+            if (attempt &gt; 0) {
+                Thread.sleep(2.0.pow(attempt).toLong() * 100) // exponential backoff
+            }
+            response = chain.proceed(chain.request())
+            attempt++
+        } while (!response.isSuccessful &amp;&amp; isRetryable(response.code) &amp;&amp; attempt &lt; maxRetries)
+        return response
+    }
+
+    private fun isRetryable(code: Int) = code == 503 || code == 504 || code == 429
+}</code></pre>
+<p><strong>Order matters</strong>: Interceptors are called in the order added. Typical order: logging → auth → retry.</p>
+<hr>
+<h3 id="authentication-and-token-refresh">Authentication and Token Refresh</h3>
+<p>Most APIs hand you a short-lived access token and a long-lived refresh token. When the access token expires and you get a 401, the client has to silently obtain a new one and replay the original request — all without the user noticing.</p>
+<p><strong>The race condition problem</strong>: If 3 requests fire simultaneously and all get 401, you don&#x27;t want 3 concurrent token refresh calls — that&#x27;s wasteful and may break some OAuth providers (refresh tokens are often single-use).</p>
+<p><strong>Safe single-flight token refresh with OkHttp <code>Authenticator</code></strong>:</p>
+<pre><code>class TokenRefreshAuthenticator(
+    private val tokenRepository: TokenRepository,
+    private val authApi: AuthApi
+) : Authenticator {
+
+    // Mutex ensures only one refresh happens at a time
+    private val refreshMutex = Mutex()
+
+    override fun authenticate(route: Route?, response: Response): Request? {
+        // If we&#x27;ve already retried once for this request chain, give up
+        if (response.request.header(&quot;Authorization-Retried&quot;) != null) {
+            return null // return null to propagate 401 to caller
+        }
+
+        // runBlocking is acceptable here — Authenticator is called from OkHttp&#x27;s
+        // IO thread pool, never the main thread
+        val newToken = runBlocking {
+            refreshMutex.withLock {
+                // Double-check: another thread may have already refreshed
+                val currentToken = tokenRepository.getAccessToken()
+                val requestToken = response.request
+                    .header(&quot;Authorization&quot;)
+                    ?.removePrefix(&quot;Bearer &quot;)
+
+                if (currentToken != null &amp;&amp; currentToken != requestToken) {
+                    // Token was already refreshed by another thread — reuse it
+                    currentToken
+                } else {
+                    // We need to actually refresh
+                    try {
+                        val refreshToken = tokenRepository.getRefreshToken()
+                            ?: return@withLock null
+                        val refreshResponse = authApi.refresh(RefreshRequest(refreshToken))
+                        tokenRepository.saveTokens(refreshResponse.accessToken, refreshResponse.refreshToken)
+                        refreshResponse.accessToken
+                    } catch (e: Exception) {
+                        tokenRepository.clearTokens()
+                        null // triggers logout
+                    }
+                }
+            }
+        } ?: return null // null = don&#x27;t retry, propagate 401
+
+        return response.request.newBuilder()
+            .header(&quot;Authorization&quot;, &quot;Bearer $newToken&quot;)
+            .header(&quot;Authorization-Retried&quot;, &quot;true&quot;)
+            .build()
+    }
+}</code></pre>
+<p><strong>Key details</strong>:</p>
+<ul>
+<li><code>Authenticator</code> is only invoked on <code>401 Unauthorized</code> (not 403).</li>
+<li>Returning <code>null</code> from <code>authenticate()</code> stops retrying and propagates the 401.</li>
+<li>The <code>Mutex</code> (from kotlinx.coroutines) is a non-reentrant coroutine-safe lock.</li>
+<li>The &quot;double-check&quot; idiom (compare stored token to the one that failed) avoids a redundant refresh when two requests get 401 simultaneously.</li>
+<li><code>runBlocking</code> is intentional here — <code>Authenticator.authenticate()</code> is a synchronous interface.</li>
+<li>For the <code>authApi</code> client used inside the authenticator, use a <strong>separate <code>OkHttpClient</code> without the authenticator</strong> to avoid infinite loops.</li>
+</ul>
+<p><strong>Alternative: Interceptor-based approach</strong> (less standard but used when 401 doesn&#x27;t reliably trigger Authenticator):</p>
+<pre><code>class TokenRefreshInterceptor(
+    private val tokenRepository: TokenRepository,
+    private val authApi: AuthApi
+) : Interceptor {
+    private val refreshMutex = Mutex()
+
+    override fun intercept(chain: Chain): Response {
+        val response = chain.proceed(chain.request())
+        if (response.code != 401) return response
+
+        response.close() // Must close before proceeding again
+
+        val newToken = runBlocking {
+            refreshMutex.withLock {
+                val current = tokenRepository.getAccessToken()
+                val failed = chain.request().header(&quot;Authorization&quot;)?.removePrefix(&quot;Bearer &quot;)
+                if (current != null &amp;&amp; current != failed) {
+                    current
+                } else {
+                    val refresh = tokenRepository.getRefreshToken() ?: return@withLock null
+                    try {
+                        val r = authApi.refresh(RefreshRequest(refresh))
+                        tokenRepository.saveTokens(r.accessToken, r.refreshToken)
+                        r.accessToken
+                    } catch (e: Exception) {
+                        null
+                    }
+                }
+            }
+        } ?: return response
+
+        return chain.proceed(
+            chain.request().newBuilder()
+                .header(&quot;Authorization&quot;, &quot;Bearer $newToken&quot;)
+                .build()
+        )
+    }
+}</code></pre>
+<p><strong>Failure modes</strong>:</p>
+<ul>
+<li>Refresh token is also expired → clear tokens, emit logout event (use a <code>SharedFlow</code> or similar event bus).</li>
+<li>Infinite loop if the auth endpoint itself returns 401 → guard with separate <code>OkHttpClient</code> or check URL.</li>
+<li>Race condition if Mutex is not used → multiple refreshes, tokens overwritten with stale data.</li>
+</ul>
+<hr>
+<h3 id="timeouts">Timeouts</h3>
+<p>Timeouts are limits on how long OkHttp is willing to wait at each phase of an HTTP call — connect, read, and write are each configurable independently.</p>
+<p><strong>Three timeout types</strong>:</p>
+<ul>
+<li><code>connectTimeout</code>: Time to establish TCP connection. Default: 10s. Set to 10–15s.</li>
+<li><code>readTimeout</code>: Time to wait for data between bytes from server. Default: 10s. For long-polling or streaming, increase significantly.</li>
+<li><code>writeTimeout</code>: Time to upload request body. Default: 10s. Increase for file uploads.</li>
+<li><code>callTimeout</code> (OkHttp 3.11+): End-to-end timeout for entire call including retries and redirects.</li>
+</ul>
+<p><strong>Per-request timeout override</strong>:</p>
+<pre><code>// OkHttp supports per-call timeouts via the Call API
+val call = okHttpClient.newBuilder()
+    .readTimeout(60, TimeUnit.SECONDS)
+    .build()
+    .newCall(request)</code></pre>
+<p>With Retrofit, use a custom <code>CallAdapter</code> or create dedicated client instances for long operations.</p>
+<p><strong>Failure modes</strong>:</p>
+<ul>
+<li><code>SocketTimeoutException</code> — read or write timeout hit</li>
+<li><code>ConnectException</code> — connect timeout hit (or refused)</li>
+<li>Setting timeouts too high → users wait forever; too low → flaky on slow connections</li>
+<li>File uploads need higher write timeout; video playback needs higher read timeout</li>
+</ul>
+<hr>
+<h3 id="retries">Retries</h3>
+<p>Retries are automatic re-attempts of a failed request — the goal is to recover from transient failures transparently, without the user ever seeing an error.</p>
+<p><strong>What to retry</strong>:</p>
+<ul>
+<li><code>5xx</code> (except 501) — transient server failures</li>
+<li><code>429 Too Many Requests</code> — rate limit (respect <code>Retry-After</code> header)</li>
+<li>Network errors (<code>IOException</code>) — connection drops, DNS failures</li>
+<li><strong>Never retry <code>4xx</code> except 429</strong> — 400/401/403/404 are client errors; retrying won&#x27;t help</li>
+</ul>
+<p><strong>Exponential backoff with jitter</strong>:</p>
+<pre><code>class RetryInterceptor(
+    private val maxAttempts: Int = 3,
+    private val initialDelayMs: Long = 100
+) : Interceptor {
+
+    override fun intercept(chain: Chain): Response {
+        val request = chain.request()
+        var attempt = 0
+        var lastResponse: Response? = null
+
+        while (attempt &lt; maxAttempts) {
+            if (attempt &gt; 0) {
+                lastResponse?.close()
+                val delayMs = initialDelayMs * (1L shl (attempt - 1)) + Random.nextLong(0, 100)
+                Thread.sleep(delayMs)
+            }
+            try {
+                val response = chain.proceed(request)
+                if (response.isSuccessful || !shouldRetry(response.code)) {
+                    return response
+                }
+                lastResponse = response
+            } catch (e: IOException) {
+                if (attempt == maxAttempts - 1) throw e
+            }
+            attempt++
+        }
+        return lastResponse!!
+    }
+
+    private fun shouldRetry(code: Int) = code == 429 || code in 500..599 &amp;&amp; code != 501
+}</code></pre>
+<p><strong>Idempotency and retries</strong>: Only retry idempotent operations automatically. For POST (non-idempotent creates), require explicit user confirmation or use a client-generated idempotency key.</p>
+<p><strong>OkHttp built-in retries</strong>: OkHttp itself retries on connection failures (not on HTTP errors). This is controlled by <code>retryOnConnectionFailure(true)</code> (default). It does NOT retry on 5xx.</p>
+<hr>
+<h3 id="caching">Caching</h3>
+<p>HTTP caching means storing responses locally so you can skip the network entirely for data you&#x27;ve already fetched recently.</p>
+<p><strong>HTTP cache headers</strong>:</p>
+<ul>
+<li><code>Cache-Control: max-age=300</code> — cache for 5 minutes</li>
+<li><code>Cache-Control: no-cache</code> — revalidate with server before using</li>
+<li><code>Cache-Control: no-store</code> — never cache</li>
+<li><code>Cache-Control: public</code> — any cache may store</li>
+<li><code>Cache-Control: private</code> — only client cache</li>
+<li><code>ETag: &quot;abc123&quot;</code> — version token; client sends <code>If-None-Match: &quot;abc123&quot;</code> → server returns 304 if unchanged</li>
+<li><code>Last-Modified: Thu, 01 Jan 2026 00:00:00 GMT</code> — time-based equivalent</li>
+</ul>
+<p><strong>OkHttp cache setup</strong>:</p>
+<pre><code>val cache = Cache(
+    directory = File(context.cacheDir, &quot;http_cache&quot;),
+    maxSize = 50L * 1024 * 1024 // 50 MB
+)
+
+val client = OkHttpClient.Builder()
+    .cache(cache)
+    .build()</code></pre>
+<p><strong>Force cache / force network</strong>:</p>
+<pre><code>// Only use cache, fail if not cached
+request.newBuilder()
+    .cacheControl(CacheControl.FORCE_CACHE)
+    .build()
+
+// Only use network, ignore cache
+request.newBuilder()
+    .cacheControl(CacheControl.FORCE_NETWORK)
+    .build()</code></pre>
+<p><strong>Offline-mode pattern</strong>:</p>
+<pre><code>class CacheInterceptor(private val context: Context) : Interceptor {
+    override fun intercept(chain: Chain): Response {
+        val request = if (!context.isNetworkAvailable()) {
+            chain.request().newBuilder()
+                .cacheControl(CacheControl.Builder()
+                    .onlyIfCached()
+                    .maxStale(7, TimeUnit.DAYS)
+                    .build())
+                .build()
+        } else {
+            chain.request()
+        }
+        return chain.proceed(request)
+    }
+}</code></pre>
+<p><strong>Trade-offs</strong>:</p>
+<ul>
+<li>HTTP cache is appropriate for GET requests with stable data</li>
+<li>For mutable data (feed, user profile), prefer Room as the cache (offline-first) over HTTP cache</li>
+<li>HTTP cache is transparent to the app; Room cache is explicit and controllable</li>
+</ul>
+<hr>
+<h3 id="pagination">Pagination</h3>
+<p>Pagination is the pattern of fetching a large dataset in manageable chunks rather than pulling everything at once — critical for feeds, search results, or any list that could grow unbounded.</p>
+<p><strong>Three pagination strategies</strong>:</p>
+<p><strong>1. Offset/Limit (page-based)</strong>:</p>
+<pre><code>GET /posts?page=2&amp;limit=20</code></pre>
+<p>Problem: If items are inserted/deleted between pages, you get duplicate or skipped items.</p>
+<p><strong>2. Cursor-based (keyset)</strong>:</p>
+<pre><code>GET /posts?after=cursor_opaque_string&amp;limit=20</code></pre>
+<p>The cursor encodes the last item&#x27;s sort key (e.g., <code>base64(id + timestamp)</code>). Stable for real-time feeds. Cannot jump to arbitrary pages.</p>
+<p><strong>3. Timestamp-based</strong>:</p>
+<pre><code>GET /posts?before=2026-01-01T00:00:00Z&amp;limit=20</code></pre>
+<p>Variant of cursor; natural for time-ordered feeds.</p>
+<p><strong>Paging 3 library</strong> (the standard Android approach):</p>
+<pre><code>// PagingSource for network-only
+class PostPagingSource(
+    private val api: PostApi
+) : PagingSource&lt;String, Post&gt;() {
+
+    override fun getRefreshKey(state: PagingState&lt;String, Post&gt;): String? {
+        return state.anchorPosition?.let { anchor -&gt;
+            state.closestItemToPosition(anchor)?.id
+        }
+    }
+
+    override suspend fun load(params: LoadParams&lt;String&gt;): LoadResult&lt;String, Post&gt; {
+        return try {
+            val cursor = params.key
+            val response = api.getPosts(cursor = cursor, limit = params.loadSize)
+            LoadResult.Page(
+                data = response.items,
+                prevKey = null, // can&#x27;t go back
+                nextKey = response.nextCursor
+            )
+        } catch (e: Exception) {
+            LoadResult.Error(e)
+        }
+    }
+}
+
+// RemoteMediator for network + Room cache (covered in 10.3)</code></pre>
+<pre><code>// ViewModel
+val pager = Pager(
+    config = PagingConfig(pageSize = 20, enablePlaceholders = false),
+    pagingSourceFactory = { PostPagingSource(api) }
+).flow.cachedIn(viewModelScope)
+
+// UI
+val lazyItems = viewModel.pager.collectAsLazyPagingItems()
+LazyColumn {
+    items(lazyItems) { item -&gt;
+        PostItem(item)
+    }
+    lazyItems.apply {
+        when {
+            loadState.refresh is LoadState.Loading -&gt; LoadingSpinner()
+            loadState.append is LoadState.Loading -&gt; PageLoadingSpinner()
+            loadState.append is LoadState.Error -&gt; RetryButton { retry() }
+        }
+    }
+}</code></pre>
+<hr>
+<h3 id="error-mapping">Error Mapping</h3>
+<p>Error mapping is the practice of converting raw HTTP and network exceptions into domain-specific sealed class errors that the UI layer can actually reason about. Without it, ViewModels receive raw <code>HttpException</code>, <code>IOException</code>, <code>SocketTimeoutException</code> — networking implementation details that have no business in the UI.</p>
+<p><strong>Domain error model</strong>:</p>
+<pre><code>sealed class NetworkError {
+    object NoInternet : NetworkError()
+    object Timeout : NetworkError()
+    data class ServerError(val code: Int, val message: String) : NetworkError()
+    data class Unauthorized(val message: String) : NetworkError()
+    object NotFound : NetworkError()
+    data class Unknown(val throwable: Throwable) : NetworkError()
+}</code></pre>
+<p><strong>Error mapping function</strong>:</p>
+<pre><code>fun Throwable.toNetworkError(): NetworkError = when (this) {
+    is UnknownHostException, is ConnectException -&gt; NetworkError.NoInternet
+    is SocketTimeoutException -&gt; NetworkError.Timeout
+    is HttpException -&gt; when (code()) {
+        401 -&gt; NetworkError.Unauthorized(message())
+        404 -&gt; NetworkError.NotFound
+        in 500..599 -&gt; NetworkError.ServerError(code(), message())
+        else -&gt; NetworkError.ServerError(code(), message())
+    }
+    else -&gt; NetworkError.Unknown(this)
+}</code></pre>
+<p><strong>Parsing error response bodies</strong>:</p>
+<pre><code>// Server returns: {&quot;error&quot;: &quot;validation_failed&quot;, &quot;details&quot;: &quot;Email is invalid&quot;}
+data class ApiError(val error: String, val details: String?)
+
+fun HttpException.parseErrorBody(moshi: Moshi): ApiError? {
+    return try {
+        val body = response()?.errorBody()?.string() ?: return null
+        moshi.adapter(ApiError::class.java).fromJson(body)
+    } catch (e: Exception) {
+        null
+    }
+}</code></pre>
+<p><strong>Result type pattern</strong>:</p>
+<pre><code>sealed class Result&lt;out T&gt; {
+    data class Success&lt;T&gt;(val data: T) : Result&lt;T&gt;()
+    data class Error(val error: NetworkError) : Result&lt;Nothing&gt;()
+}
+
+// Repository usage
+suspend fun getUser(id: String): Result&lt;User&gt; = try {
+    Result.Success(api.getUser(id))
+} catch (e: Exception) {
+    Result.Error(e.toNetworkError())
+}</code></pre>
+<p>Alternatively, Kotlin&#x27;s built-in <code>kotlin.Result&lt;T&gt;</code> or Arrow&#x27;s <code>Either&lt;Error, Success&gt;</code> serve the same purpose.</p>
+<hr>
+<h3 id="idempotency">Idempotency</h3>
+<p>An operation is idempotent when performing it multiple times produces exactly the same result as performing it once — which determines whether it&#x27;s safe to automatically retry on failure.</p>
+<p><strong>HTTP idempotency</strong>:</p>
+<ul>
+<li>GET, PUT, DELETE, HEAD: idempotent</li>
+<li>POST, PATCH: NOT idempotent by default</li>
+</ul>
+<p><strong>Client-side idempotency key for POST</strong>:</p>
+<pre><code>// Client generates a unique key for each logical operation
+val idempotencyKey = UUID.randomUUID().toString()
+
+@POST(&quot;orders&quot;)
+suspend fun createOrder(
+    @Header(&quot;Idempotency-Key&quot;) key: String,
+    @Body order: CreateOrderRequest
+): Order</code></pre>
+<p>If the network fails after the server processes the request (but before the response arrives), the client can retry with the same key — the server recognizes the duplicate and returns the original result without creating a second order.</p>
+<p><strong>Android scenarios where idempotency matters</strong>:</p>
+<ul>
+<li>Payment/booking APIs — user taps &quot;Book&quot; twice due to slow response</li>
+<li>File uploads — upload failed mid-way, retry should not create a duplicate entry</li>
+<li>Form submissions — user navigates back and resubmits</li>
+</ul>
+<p><strong>Avoiding duplicate requests in the UI</strong>:</p>
+<pre><code>class BookingViewModel : ViewModel() {
+    private var bookingJob: Job? = null
+
+    fun book() {
+        if (bookingJob?.isActive == true) return // guard
+        bookingJob = viewModelScope.launch {
+            _state.update { it.copy(isLoading = true) }
+            // ... make request
+        }
+    }
+}</code></pre>
+<hr>
+<h3 id="tls-basics">TLS Basics</h3>
+<p>TLS is the encryption layer that turns HTTP into HTTPS — and on Android 9 and above, cleartext HTTP is blocked by default via <code>android:usesCleartextTraffic=&quot;false&quot;</code>, so HTTPS is effectively mandatory.</p>
+<p><strong>TLS handshake steps</strong> (simplified):</p>
+<ol>
+<li>Client → Server: <code>ClientHello</code> (supported TLS versions, cipher suites, random nonce)</li>
+<li>Server → Client: <code>ServerHello</code> + Certificate + (optional) <code>CertificateRequest</code></li>
+<li>Client validates certificate against trusted CAs</li>
+<li>Key exchange (ECDHE or similar) → shared secret</li>
+<li>Both sides derive session keys from shared secret</li>
+<li>Encrypted communication begins</li>
+</ol>
+<p><strong>Android trusted CAs</strong>: Android maintains a system CA store. Apps trust all system CAs by default. Enterprise apps can add custom CAs via <code>network_security_config.xml</code>.</p>
+<p><strong>TLS configuration in OkHttp</strong>:</p>
+<pre><code>// Restrict to TLS 1.2+ and strong cipher suites
+val spec = ConnectionSpec.Builder(ConnectionSpec.MODERN_TLS)
+    .tlsVersions(TlsVersion.TLS_1_3, TlsVersion.TLS_1_2)
+    .cipherSuites(
+        CipherSuite.TLS_AES_128_GCM_SHA256,
+        CipherSuite.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256
+    )
+    .build()
+
+val client = OkHttpClient.Builder()
+    .connectionSpecs(listOf(spec))
+    .build()</code></pre>
+<p><strong><code>network_security_config.xml</code></strong> (Android 7+):</p>
+<pre><code>&lt;network-security-config&gt;
+    &lt;base-config cleartextTrafficPermitted=&quot;false&quot;&gt;
+        &lt;trust-anchors&gt;
+            &lt;certificates src=&quot;system&quot; /&gt;
+        &lt;/trust-anchors&gt;
+    &lt;/base-config&gt;
+    &lt;domain-config&gt;
+        &lt;domain includeSubdomains=&quot;true&quot;&gt;api.example.com&lt;/domain&gt;
+        &lt;pin-set expiration=&quot;2027-01-01&quot;&gt;
+            &lt;pin digest=&quot;SHA-256&quot;&gt;AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=&lt;/pin&gt;
+            &lt;pin digest=&quot;SHA-256&quot;&gt;BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB=&lt;/pin&gt;
+        &lt;/pin-set&gt;
+    &lt;/domain-config&gt;
+&lt;/network-security-config&gt;</code></pre>
+<hr>
+<h3 id="certificate-pinning">Certificate Pinning</h3>
+<p>Certificate pinning means hard-coding the expected public key hash of your server into the app and refusing any TLS connection that doesn&#x27;t match — even if the certificate is otherwise valid and CA-signed.</p>
+<p><strong>Why it matters</strong>: Prevents man-in-the-middle attacks where an attacker has compromised a CA or installed a corporate proxy certificate. Critical for apps handling financial or health data.</p>
+<p><strong>Two types</strong>:</p>
+<ul>
+<li><strong>Certificate pinning</strong>: Pin the entire certificate (brittle — breaks on cert renewal)</li>
+<li><strong>Public key pinning</strong>: Pin the public key from the certificate (survives cert renewals if the key pair is retained)</li>
+</ul>
+<p><strong>OkHttp CertificatePinner</strong>:</p>
+<pre><code>val certificatePinner = CertificatePinner.Builder()
+    .add(&quot;api.example.com&quot;, &quot;sha256/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=&quot;)
+    .add(&quot;api.example.com&quot;, &quot;sha256/BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB=&quot;) // backup pin
+    .build()
+
+val client = OkHttpClient.Builder()
+    .certificatePinner(certificatePinner)
+    .build()</code></pre>
+<p><strong>How to get the pin</strong>:</p>
+<pre><code>openssl s_client -connect api.example.com:443 | \
+    openssl x509 -pubkey -noout | \
+    openssl pkey -pubin -outform der | \
+    openssl dgst -sha256 -binary | \
+    base64</code></pre>
+<p><strong>Failure modes</strong>:</p>
+<ul>
+<li>Pin mismatch → <code>SSLPeerUnverifiedException</code> — entire HTTPS call fails</li>
+<li>Certificate renewal without updating pin → <strong>app-wide outage</strong></li>
+<li>Corporate proxies / debugging proxies (Charles, mitmproxy) → pinning fails intentionally</li>
+</ul>
+<p><strong>Mitigation strategies</strong>:</p>
+<ul>
+<li>Always include at least <strong>two pins</strong> (primary + backup)</li>
+<li>Set an expiration date and rotate pins before renewal</li>
+<li>Implement a <strong>remote kill switch</strong> to disable pinning via a trusted configuration endpoint fetched without pinning</li>
+<li>Use <code>network_security_config.xml</code> for declarative pinning (framework enforced, survives ProGuard)</li>
+</ul>
+<p><strong>Debug builds</strong>: Typically disable pinning or add the debug certificate pin to avoid blocking local proxies.</p>
+<hr>
+<h3 id="interview-angles-networking">Interview Angles: Networking</h3>
+<p><strong>Q: How do you handle token refresh safely?</strong></p>
+<p>&quot;There are two problems to solve simultaneously. The first is a 401 triggering multiple concurrent refresh calls — if three requests all fail at once, you don&#x27;t want three parallel hits to the auth server. The second is re-using a stale token after another thread already refreshed it. I solve both with OkHttp&#x27;s <code>Authenticator</code> interface combined with a <code>Mutex</code>. The <code>Authenticator</code> is only invoked on a 401. The <code>Mutex</code> serializes access so only one refresh actually happens. And there&#x27;s a double-check inside the lock: I compare the stored token to the token that failed — if they&#x27;re already different, another thread refreshed while I was waiting, so I just reuse the new token and skip the network call. That combination eliminates both races.&quot;</p>
+<p><strong>Q: How do you model network errors?</strong></p>
+<p>&quot;The rule I follow is: never let <code>HttpException</code> or <code>IOException</code> escape the data layer. At the repository boundary I map all exceptions to a <code>sealed class NetworkError</code> using a Kotlin extension function on <code>Throwable</code>. For server errors with structured bodies, I parse the <code>errorBody()</code> from <code>HttpException</code>. The ViewModel gets a <code>Result&lt;T&gt;</code> or <code>Either&lt;NetworkError, T&gt;</code> — never a raw exception — which means the UI logic can just pattern-match on human-readable cases like <code>NoInternet</code>, <code>Timeout</code>, <code>Unauthorized</code>, <code>ServerError</code>, without caring about HTTP internals.&quot;</p>
+<p><strong>Q: How do you avoid duplicate requests?</strong></p>
+<p>&quot;There are three layers I use. First, a ViewModel-level guard — before launching a new coroutine job, I check if one is already active and bail out if so; that handles double-taps and fast navigation. Second, for non-idempotent POST requests, I generate a UUID per logical operation and include it as an <code>Idempotency-Key</code> header — the server can then recognize a retry and return the original result without creating a duplicate. Third, for search and autocomplete, I apply <code>debounce()</code> in the <code>StateFlow</code> pipeline so rapid keystrokes only trigger one network call.&quot;</p>
+<p><strong>Q: How do you handle pagination?</strong></p>
+<p>&quot;I use Paging 3. For a pure-network list, I write a <code>PagingSource</code> that fetches from the API. For a network-plus-local-cache setup, I use <code>RemoteMediator</code> alongside a Room-backed <code>PagingSource</code> — the <code>RemoteMediator</code> fetches from the network and writes to Room, and the <code>PagingSource</code> reads from Room, so the DB is always the source of truth. The <code>PagingConfig</code> controls <code>pageSize</code>, <code>initialLoadSize</code>, and <code>prefetchDistance</code>. In the ViewModel I expose <code>.flow.cachedIn(viewModelScope)</code> so the paged data survives config changes. In Compose I collect with <code>collectAsLazyPagingItems()</code> and handle the <code>LoadState</code> for loading, error, and empty states.&quot;</p>
+<p><strong>Q: Retry strategy for failed requests?</strong></p>
+<p>&quot;My default is exponential backoff with jitter in an <code>Interceptor</code>. I retry <code>5xx</code> errors — except 501, which means &#x27;not implemented&#x27; and will never succeed on retry — and network <code>IOException</code>. For 429 I respect the <code>Retry-After</code> header. I cap at three attempts. The critical rule is that I never auto-retry non-idempotent <code>POST</code> requests unless they carry an idempotency key, because retrying a POST that the server already processed would create a duplicate. For background sync specifically, I delegate to <code>WorkManager</code>, which handles retries with <code>BackoffPolicy.EXPONENTIAL</code> and survives process death.&quot;</p>
+<hr>
+<h2 id="102-persistence">10.2 Persistence</h2>
+<h3 id="sqlite-basics">SQLite Basics</h3>
+<p>SQLite is a lightweight relational database embedded directly in every Android device — a single on-disk file, accessed through the <code>android.database.sqlite</code> package, with no separate server process.</p>
+<p><strong>Key characteristics</strong>:</p>
+<ul>
+<li>Single writer at a time (WAL mode allows concurrent reads)</li>
+<li>ACID transactions</li>
+<li>Dynamically typed (type affinity, not strict enforcement)</li>
+<li>No network overhead; reads/writes directly to a file in <code>data/data/&lt;package&gt;/databases/</code></li>
+</ul>
+<p><strong>WAL mode (Write-Ahead Logging)</strong>: Room enables WAL by default since Room 2.2. In WAL mode, writes go to a <code>.wal</code> file and are periodically checkpointed into the main database. Allows concurrent reads during writes (much better performance for read-heavy apps).</p>
+<p><strong>Raw SQLite pattern</strong> (rarely used directly; Room is preferred):</p>
+<pre><code>val db = context.openOrCreateDatabase(&quot;app.db&quot;, Context.MODE_PRIVATE, null)
+db.execSQL(&quot;CREATE TABLE IF NOT EXISTS users (id TEXT PRIMARY KEY, name TEXT)&quot;)
+val cursor = db.rawQuery(&quot;SELECT * FROM users WHERE id = ?&quot;, arrayOf(userId))
+cursor.use {
+    while (it.moveToNext()) {
+        val id = it.getString(it.getColumnIndex(&quot;id&quot;))
+    }
+}</code></pre>
+<p>Problems with raw SQLite: manual cursor management, no compile-time query validation, no type safety, tedious migrations.</p>
+<hr>
+<h3 id="room">Room</h3>
+<p>Room is the Jetpack persistence library — it sits on top of SQLite and gives you compile-time query verification, type-safe DAOs, migration scaffolding, and first-class support for <code>Flow</code> and <code>LiveData</code>.</p>
+<p><strong>Setup</strong>:</p>
+<pre><code>// build.gradle.kts
+implementation(&quot;androidx.room:room-runtime:2.6.1&quot;)
+implementation(&quot;androidx.room:room-ktx:2.6.1&quot;)
+ksp(&quot;androidx.room:room-compiler:2.6.1&quot;)</code></pre>
+<p><strong>The three core components</strong>:</p>
+<ol>
+<li><code>@Entity</code> — maps to a database table</li>
+<li><code>@Dao</code> — Data Access Object; defines SQL queries as Kotlin functions</li>
+<li><code>@Database</code> — the database holder; creates/opens the SQLite file</li>
+</ol>
+<p><strong>Database declaration</strong>:</p>
+<pre><code>@Database(
+    entities = [UserEntity::class, PostEntity::class],
+    version = 3,
+    exportSchema = true  // exports schema JSON; required for migration testing
+)
+@TypeConverters(DateConverter::class)
+abstract class AppDatabase : RoomDatabase() {
+    abstract fun userDao(): UserDao
+    abstract fun postDao(): PostDao
+
+    companion object {
+        @Volatile private var instance: AppDatabase? = null
+
+        fun getInstance(context: Context): AppDatabase =
+            instance ?: synchronized(this) {
+                instance ?: Room.databaseBuilder(
+                    context.applicationContext,
+                    AppDatabase::class.java,
+                    &quot;app_database&quot;
+                )
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
+                .fallbackToDestructiveMigration() // ONLY in dev; never in production
+                .build().also { instance = it }
+            }
+    }
+}</code></pre>
+<p><strong>Room compilation</strong>: The <code>@Database</code> annotation processor generates <code>AppDatabase_Impl</code>, validates all <code>@Query</code> annotations at compile time (SQL syntax, column names, return types), generates efficient boilerplate. This compile-time validation is the single biggest advantage over raw SQLite.</p>
+<hr>
+<h3 id="entity">Entity</h3>
+<p>An <code>@Entity</code> is a Kotlin data class that maps directly to a SQLite table — each property becomes a column, and Room&#x27;s annotation processor generates all the schema DDL at compile time.</p>
+<pre><code>@Entity(
+    tableName = &quot;users&quot;,
+    indices = [
+        Index(value = [&quot;email&quot;], unique = true),
+        Index(value = [&quot;last_name&quot;, &quot;first_name&quot;])
+    ],
+    foreignKeys = [
+        ForeignKey(
+            entity = TeamEntity::class,
+            parentColumns = [&quot;id&quot;],
+            childColumns = [&quot;team_id&quot;],
+            onDelete = ForeignKey.CASCADE  // or SET_NULL, RESTRICT, NO_ACTION
+        )
+    ]
+)
+data class UserEntity(
+    @PrimaryKey val id: String,              // String PKs: use UUIDs
+    @ColumnInfo(name = &quot;first_name&quot;) val firstName: String,
+    @ColumnInfo(name = &quot;last_name&quot;) val lastName: String,
+    val email: String,
+    @ColumnInfo(name = &quot;team_id&quot;) val teamId: String?,
+    @ColumnInfo(name = &quot;created_at&quot;) val createdAt: Long,  // Store dates as epoch ms
+    @Ignore val transientField: String = &quot;&quot; // not persisted
+)</code></pre>
+<p><strong>Type converters</strong>: Room stores only primitives, Strings, ByteArray, and Boxed primitives natively. For complex types:</p>
+<pre><code>class DateConverter {
+    @TypeConverter fun fromDate(date: Date?): Long? = date?.time
+    @TypeConverter fun toDate(ms: Long?): Date? = ms?.let { Date(it) }
+}</code></pre>
+<p><strong>Embedded objects</strong>:</p>
+<pre><code>data class Address(val street: String, val city: String)
+
+@Entity
+data class UserEntity(
+    @PrimaryKey val id: String,
+    @Embedded val address: Address  // columns: street, city stored directly in users table
+)</code></pre>
+<hr>
+<h3 id="dao">DAO</h3>
+<p>A DAO (Data Access Object) is an interface annotated with <code>@Dao</code> where you declare your SQL operations as abstract Kotlin functions — Room generates the entire implementation at compile time.</p>
+<pre><code>@Dao
+interface UserDao {
+    // Simple queries
+    @Query(&quot;SELECT * FROM users WHERE id = :id&quot;)
+    suspend fun getUserById(id: String): UserEntity?
+
+    @Query(&quot;SELECT * FROM users WHERE team_id = :teamId ORDER BY last_name ASC&quot;)
+    suspend fun getUsersByTeam(teamId: String): List&lt;UserEntity&gt;
+
+    // Reactive queries (return Flow)
+    @Query(&quot;SELECT * FROM users ORDER BY last_name ASC&quot;)
+    fun getAllUsersFlow(): Flow&lt;List&lt;UserEntity&gt;&gt;
+
+    @Query(&quot;SELECT * FROM users WHERE id = :id&quot;)
+    fun getUserByIdFlow(id: String): Flow&lt;UserEntity?&gt;
+
+    // Insert operations
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertUser(user: UserEntity)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertUsers(users: List&lt;UserEntity&gt;)
+
+    // Update
+    @Update
+    suspend fun updateUser(user: UserEntity): Int  // returns rows affected
+
+    // Delete
+    @Delete
+    suspend fun deleteUser(user: UserEntity)
+
+    @Query(&quot;DELETE FROM users WHERE id = :id&quot;)
+    suspend fun deleteUserById(id: String)
+
+    @Query(&quot;DELETE FROM users&quot;)
+    suspend fun deleteAllUsers()
+
+    // Upsert (Room 2.5+)
+    @Upsert
+    suspend fun upsertUser(user: UserEntity)
+
+    // Partial updates with POJO
+    @Query(&quot;UPDATE users SET email = :email WHERE id = :id&quot;)
+    suspend fun updateEmail(id: String, email: String)
+
+    // Count
+    @Query(&quot;SELECT COUNT(*) FROM users&quot;)
+    suspend fun count(): Int
+
+    // JOIN query returning custom POJO
+    @Query(&quot;&quot;&quot;
+        SELECT u.*, t.name as team_name 
+        FROM users u 
+        LEFT JOIN teams t ON u.team_id = t.id 
+        WHERE u.id = :userId
+    &quot;&quot;&quot;)
+    suspend fun getUserWithTeam(userId: String): UserWithTeam?
+}</code></pre>
+<p><strong><code>OnConflictStrategy</code></strong>:</p>
+<ul>
+<li><code>REPLACE</code>: delete old row, insert new (triggers DELETE + INSERT, may break foreign key cascades)</li>
+<li><code>IGNORE</code>: keep old row, ignore new (returns -1 for the rowId)</li>
+<li><code>ABORT</code> (default): throw exception</li>
+</ul>
+<hr>
+<h3 id="transactions">Transactions</h3>
+<p>A database transaction groups multiple operations into one atomic unit — they all succeed together or all roll back together. Room provides the <code>@Transaction</code> annotation to declare this, plus <code>database.withTransaction {}</code> for cross-DAO operations.</p>
+<pre><code>@Dao
+interface UserDao {
+    @Transaction
+    suspend fun replaceAllUsers(users: List&lt;UserEntity&gt;) {
+        deleteAllUsers()
+        insertUsers(users)
+    }
+
+    @Insert
+    suspend fun insertUsers(users: List&lt;UserEntity&gt;)
+
+    @Query(&quot;DELETE FROM users&quot;)
+    suspend fun deleteAllUsers()
+}</code></pre>
+<p><strong>Database-level transaction</strong> (when spanning multiple DAOs):</p>
+<pre><code>suspend fun syncUsersAndTeams(
+    users: List&lt;UserEntity&gt;,
+    teams: List&lt;TeamEntity&gt;
+) {
+    database.withTransaction {
+        database.teamDao().insertAll(teams)
+        database.userDao().insertUsers(users)  // users reference teams via FK
+    }
+}</code></pre>
+<p><code>database.withTransaction</code> is a Room extension that wraps the lambda in a SQLite transaction. Any exception inside will roll back the transaction.</p>
+<p><strong>Why transactions matter</strong>:</p>
+<ul>
+<li><strong>Atomicity</strong>: If an app process is killed mid-sync, partial state is not visible</li>
+<li><strong>Performance</strong>: Inserting 1000 rows in a single transaction is 10–50x faster than 1000 individual inserts (avoids 1000 journal writes)</li>
+<li><strong>Consistency</strong>: Foreign key constraints are checked at transaction commit, not per-insert</li>
+</ul>
+<hr>
+<h3 id="migrations">Migrations</h3>
+<p>A migration is how you evolve the database schema across app versions without losing user data — Room validates every migration against a generated schema snapshot, so if your SQL is wrong you find out at build time, not in production.</p>
+<p><strong>Room migration mechanics</strong>:</p>
+<ol>
+<li>Increment the <code>version</code> in <code>@Database</code></li>
+<li>Write a <code>Migration</code> object with the SQL <code>ALTER</code>/<code>CREATE</code>/<code>DROP</code> statements</li>
+<li>Register with <code>addMigrations()</code></li>
+<li>Room validates the final schema against the generated schema JSON</li>
+</ol>
+<pre><code>val MIGRATION_1_2 = object : Migration(1, 2) {
+    override fun migrate(database: SupportSQLiteDatabase) {
+        database.execSQL(&quot;ALTER TABLE users ADD COLUMN profile_image_url TEXT&quot;)
+    }
+}
+
+val MIGRATION_2_3 = object : Migration(2, 3) {
+    override fun migrate(database: SupportSQLiteDatabase) {
+        // SQLite doesn&#x27;t support DROP COLUMN directly (before API 35)
+        // Must recreate the table
+        database.execSQL(&quot;&quot;&quot;
+            CREATE TABLE users_new (
+                id TEXT NOT NULL PRIMARY KEY,
+                first_name TEXT NOT NULL,
+                last_name TEXT NOT NULL,
+                email TEXT NOT NULL
+            )
+        &quot;&quot;&quot;)
+        database.execSQL(&quot;&quot;&quot;
+            INSERT INTO users_new (id, first_name, last_name, email)
+            SELECT id, first_name, last_name, email FROM users
+        &quot;&quot;&quot;)
+        database.execSQL(&quot;DROP TABLE users&quot;)
+        database.execSQL(&quot;ALTER TABLE users_new RENAME TO users&quot;)
+    }
+}</code></pre>
+<p><strong>Multi-version migration</strong>: Room supports jumping multiple versions:</p>
+<pre><code>val MIGRATION_1_3 = object : Migration(1, 3) { ... }
+// Room will use 1→3 directly if available, falling back to 1→2→3</code></pre>
+<p><strong>Auto-migrations (Room 2.4+)</strong>:</p>
+<pre><code>@Database(
+    ...,
+    version = 4,
+    autoMigrations = [
+        AutoMigration(from = 3, to = 4)  // simple addColumn works automatically
+    ]
+)</code></pre>
+<p>For complex changes (renames, drops), use <code>@AutoMigrationSpec</code>:</p>
+<pre><code>@RenameColumn(tableName = &quot;users&quot;, fromColumnName = &quot;name&quot;, toColumnName = &quot;full_name&quot;)
+class Migration3to4Spec : AutoMigrationSpec</code></pre>
+<p><strong>Testing migrations</strong>:</p>
+<pre><code>@RunWith(AndroidJUnit4::class)
+class MigrationTest {
+    @get:Rule val helper = MigrationTestHelper(
+        InstrumentationRegistry.getInstrumentation(),
+        AppDatabase::class.java
+    )
+
+    @Test
+    fun migrate1To2() {
+        helper.createDatabase(TEST_DB, 1).apply {
+            execSQL(&quot;INSERT INTO users VALUES(&#x27;1&#x27;, &#x27;Alice&#x27;, &#x27;Smith&#x27;, &#x27;alice@test.com&#x27;)&quot;)
+            close()
+        }
+        val db = helper.runMigrationsAndValidate(TEST_DB, 2, true, MIGRATION_1_2)
+        // validate data is preserved
+        val cursor = db.query(&quot;SELECT profile_image_url FROM users WHERE id = &#x27;1&#x27;&quot;)
+        assertThat(cursor.moveToFirst()).isTrue()
+        assertThat(cursor.getString(0)).isNull()
+    }
+}</code></pre>
+<p><strong><code>fallbackToDestructiveMigration()</code></strong>: Only for development. In production, a missing migration drops and recreates the database — all user data is lost. Never use in production.</p>
+<hr>
+<h3 id="indexes">Indexes</h3>
+<p>A database index is a B-tree structure that speeds up queries on specific columns — the trade-off is extra storage and slightly slower writes, because each insert or update has to maintain the index tree as well as the table.</p>
+<pre><code>@Entity(
+    tableName = &quot;posts&quot;,
+    indices = [
+        Index(value = [&quot;user_id&quot;]),                        // index for FK lookups
+        Index(value = [&quot;created_at&quot;]),                     // index for time-based queries
+        Index(value = [&quot;user_id&quot;, &quot;created_at&quot;]),          // composite index for filtered + sorted
+        Index(value = [&quot;slug&quot;], unique = true)             // unique constraint via index
+    ]
+)
+data class PostEntity(
+    @PrimaryKey val id: String,
+    val userId: String,
+    val slug: String,
+    val title: String,
+    val createdAt: Long
+)</code></pre>
+<p><strong>When to add indexes</strong>:</p>
+<ul>
+<li>Foreign key columns (always — SQLite does not auto-index FKs unlike PostgreSQL)</li>
+<li>Columns used in <code>WHERE</code> clauses of frequent queries</li>
+<li>Columns used in <code>ORDER BY</code> (especially for large tables)</li>
+<li>Columns used in <code>JOIN</code> conditions</li>
+</ul>
+<p><strong>When indexes hurt</strong>:</p>
+<ul>
+<li>INSERT/UPDATE/DELETE are slower (must update index B-tree)</li>
+<li>Extra storage per row</li>
+<li>Full table scans are faster for tables with &lt; ~100 rows</li>
+</ul>
+<p><strong>EXPLAIN QUERY PLAN</strong> (use in debug mode to verify index usage):</p>
+<pre><code>val cursor = db.query(&quot;EXPLAIN QUERY PLAN SELECT * FROM posts WHERE user_id = &#x27;1&#x27;&quot;, null)
+// Output should show &quot;SEARCH posts USING INDEX idx_posts_user_id&quot;
+// Not &quot;SCAN posts&quot; which is a full table scan</code></pre>
+<hr>
+<h3 id="foreign-keys-and-relations">Foreign Keys and Relations</h3>
+<p>Foreign keys enforce referential integrity at the database level — a child row simply cannot reference a parent that doesn&#x27;t exist, and Room can cascade deletes or set nulls automatically when a parent is removed.</p>
+<pre><code>// Enable foreign keys — not enabled by default in SQLite!
+val db = Room.databaseBuilder(...)
+    .addCallback(object : RoomDatabase.Callback() {
+        override fun onOpen(db: SupportSQLiteDatabase) {
+            db.execSQL(&quot;PRAGMA foreign_keys = ON&quot;)
+        }
+    })
+    .build()</code></pre>
+<p><strong>Relations in Room</strong>: Room does not support SQL JOINs in <code>@Query</code> returning entity objects directly. Instead, use data classes with <code>@Relation</code>:</p>
+<pre><code>data class UserWithPosts(
+    @Embedded val user: UserEntity,
+    @Relation(
+        parentColumn = &quot;id&quot;,
+        entityColumn = &quot;user_id&quot;
+    )
+    val posts: List&lt;PostEntity&gt;
+)
+
+@Dao
+interface UserDao {
+    @Transaction
+    @Query(&quot;SELECT * FROM users WHERE id = :userId&quot;)
+    suspend fun getUserWithPosts(userId: String): UserWithPosts?
+}</code></pre>
+<p><code>@Transaction</code> is required on <code>@Relation</code> queries — Room makes two separate queries (one for users, one for posts) and merges them in memory; the transaction ensures consistency.</p>
+<p><strong>Many-to-many</strong>:</p>
+<pre><code>@Entity(primaryKeys = [&quot;user_id&quot;, &quot;tag_id&quot;])
+data class UserTagCrossRef(
+    @ColumnInfo(name = &quot;user_id&quot;) val userId: String,
+    @ColumnInfo(name = &quot;tag_id&quot;) val tagId: String
+)
+
+data class UserWithTags(
+    @Embedded val user: UserEntity,
+    @Relation(
+        parentColumn = &quot;id&quot;,
+        entityColumn = &quot;id&quot;,
+        associateBy = Junction(UserTagCrossRef::class,
+            parentColumn = &quot;user_id&quot;,
+            entityColumn = &quot;tag_id&quot;)
+    )
+    val tags: List&lt;TagEntity&gt;
+)</code></pre>
+<hr>
+<h3 id="flow-from-room">Flow from Room</h3>
+<p>When a Room DAO method returns <code>Flow&lt;T&gt;</code>, it emits the current query result immediately and then automatically re-emits every time the underlying table changes — which means the UI never has to poll; it just collects and stays current.</p>
+<pre><code>@Dao
+interface UserDao {
+    @Query(&quot;SELECT * FROM users ORDER BY last_name ASC&quot;)
+    fun getAllUsers(): Flow&lt;List&lt;UserEntity&gt;&gt;
+}</code></pre>
+<p><strong>How it works internally</strong>: Room uses <code>InvalidationTracker</code> — a table observer that detects when tables are modified by tracking statement IDs. When a tracked table changes, it notifies all observing <code>Flow</code> collectors, which re-execute their query.</p>
+<p><strong>Combining Room Flow with network data</strong>:</p>
+<pre><code>class UserRepository(
+    private val userDao: UserDao,
+    private val userApi: UserApi
+) {
+    // Expose Room Flow — UI always shows local data
+    val users: Flow&lt;List&lt;User&gt;&gt; = userDao.getAllUsers()
+        .map { entities -&gt; entities.map { it.toUser() } }
+
+    // Refresh from network — writes to Room, triggers Flow
+    suspend fun refresh() {
+        val remoteUsers = userApi.getUsers()
+        userDao.insertUsers(remoteUsers.map { it.toEntity() })
+    }
+}</code></pre>
+<p><strong>Important</strong>: Room queries on <code>Flow</code> run on the I/O dispatcher internally. But if you&#x27;re collecting and doing other work, use <code>.flowOn(Dispatchers.IO)</code> explicitly in the repository, and collect on the main thread in the ViewModel.</p>
+<p><strong>One-shot vs reactive</strong>:</p>
+<ul>
+<li><code>suspend fun</code> DAO functions: one-shot, coroutine-based</li>
+<li><code>Flow&lt;T&gt;</code> DAO functions: reactive, long-lived observation</li>
+<li>Use <code>Flow</code> for anything the UI displays live; use <code>suspend fun</code> for write operations</li>
+</ul>
+<hr>
+<h3 id="datastore">DataStore</h3>
+<p>DataStore is the modern replacement for <code>SharedPreferences</code> — it does the same key-value job but uses coroutines and <code>Flow</code> throughout, so all I/O is async, off the main thread, and errors surface properly instead of silently failing.</p>
+<p><strong>Two variants</strong>:</p>
+<p><strong>Preferences DataStore</strong> — for untyped key-value data (analogous to SharedPreferences):</p>
+<pre><code>val Context.dataStore by preferencesDataStore(name = &quot;settings&quot;)
+
+// Keys
+val DARK_MODE_KEY = booleanPreferencesKey(&quot;dark_mode&quot;)
+val USER_ID_KEY = stringPreferencesKey(&quot;user_id&quot;)
+val THEME_KEY = intPreferencesKey(&quot;theme&quot;)
+
+// Read (returns Flow — always up-to-date)
+val isDarkMode: Flow&lt;Boolean&gt; = context.dataStore.data
+    .map { prefs -&gt; prefs[DARK_MODE_KEY] ?: false }
+
+// Write
+suspend fun setDarkMode(enabled: Boolean) {
+    context.dataStore.edit { prefs -&gt;
+        prefs[DARK_MODE_KEY] = enabled
+    }
+}</code></pre>
+<p><strong>Proto DataStore</strong> — for typed, schema-validated data using Protocol Buffers:</p>
+<pre><code>// user_settings.proto
+syntax = &quot;proto3&quot;;
+message UserSettings {
+    bool dark_mode = 1;
+    string user_id = 2;
+    int32 theme = 3;
+}</code></pre>
+<pre><code>object UserSettingsSerializer : Serializer&lt;UserSettings&gt; {
+    override val defaultValue = UserSettings.getDefaultInstance()
+    override suspend fun readFrom(input: InputStream): UserSettings =
+        UserSettings.parseFrom(input)
+    override suspend fun writeTo(t: UserSettings, output: OutputStream) =
+        t.writeTo(output)
+}
+
+val Context.userSettingsDataStore by dataStore(
+    fileName = &quot;user_settings.pb&quot;,
+    serializer = UserSettingsSerializer
+)
+
+// Read
+val settings: Flow&lt;UserSettings&gt; = context.userSettingsDataStore.data
+
+// Write
+suspend fun setDarkMode(enabled: Boolean) {
+    context.userSettingsDataStore.updateData { current -&gt;
+        current.toBuilder().setDarkMode(enabled).build()
+    }
+}</code></pre>
+<p><strong>DataStore vs SharedPreferences</strong>:</p>
+<table border="1" cellpadding="6" cellspacing="0">
+<thead><tr>
+<th>Aspect</th>
+<th>SharedPreferences</th>
+<th>DataStore</th>
+</tr></thead><tbody>
+<tr><td>API</td><td>Synchronous (with <code>apply</code>/<code>commit</code>)</td><td>Coroutine <code>Flow</code></td></tr>
+<tr><td>Thread safety</td><td>Not thread-safe on <code>commit()</code></td><td>Thread-safe by design</td></tr>
+<tr><td>Error handling</td><td>Silent failures</td><td>Throws <code>IOException</code> via Flow</td></tr>
+<tr><td>ANR risk</td><td><code>commit()</code> on main thread</td><td>No — all I/O off main thread</td></tr>
+<tr><td>Type safety</td><td>Runtime cast</td><td>Compile-time (Proto) or Key type (Preferences)</td></tr>
+<tr><td>Schema evolution</td><td>Manual</td><td>Proto: backward compatible</td></tr>
+<tr><td>Atomicity</td><td><code>apply()</code> is async, <code>commit()</code> sync</td><td>Transactional via <code>edit {}</code></td></tr>
+</tbody></table>
+<p><strong>When to use each</strong>:</p>
+<ul>
+<li><code>SharedPreferences</code>: Only when modifying legacy code that already uses it; migrate incrementally.</li>
+<li><code>Preferences DataStore</code>: Simple key-value user settings, feature flags, lightweight state.</li>
+<li><code>Proto DataStore</code>: Structured settings that evolve over time; need type safety and schema.</li>
+<li><code>Room</code>: Anything with relational structure, queries, or collections.</li>
+</ul>
+<hr>
+<h3 id="sharedpreferences-legacy">SharedPreferences Legacy</h3>
+<p>SharedPreferences is the original Android key-value store — it writes to XML files and is still common in legacy codebases, but it has enough problems that all new code should use DataStore instead.</p>
+<pre><code>val prefs = context.getSharedPreferences(&quot;app_prefs&quot;, Context.MODE_PRIVATE)
+
+// Read
+val userId = prefs.getString(&quot;user_id&quot;, null)
+val count = prefs.getInt(&quot;count&quot;, 0)
+
+// Write
+prefs.edit()
+    .putString(&quot;user_id&quot;, &quot;abc123&quot;)
+    .putInt(&quot;count&quot;, 42)
+    .apply()  // async write; prefer this over commit()
+    // .commit()  // synchronous; blocks calling thread; only for critical data before process kill</code></pre>
+<p><strong>Failure modes</strong>:</p>
+<ul>
+<li><code>commit()</code> on main thread → ANR risk</li>
+<li>Not safe for concurrent writes from multiple threads — race conditions</li>
+<li>No mechanism for observing changes in coroutines (must use <code>OnSharedPreferenceChangeListener</code> with manual lifecycle)</li>
+<li>XML parsing overhead — loads entire file on first access</li>
+</ul>
+<p><strong>Migration to DataStore</strong>:</p>
+<pre><code>val migration = SharedPreferencesMigration(context, &quot;old_prefs_name&quot;)
+val Context.dataStore by preferencesDataStore(
+    name = &quot;new_prefs&quot;,
+    produceMigrations = { context -&gt;
+        listOf(SharedPreferencesMigration(context, &quot;old_prefs_name&quot;))
+    }
+)</code></pre>
+<hr>
+<h3 id="file-storage-and-scoped-storage">File Storage and Scoped Storage</h3>
+<p>Android&#x27;s file storage APIs are for persisting binary data — images, PDFs, downloads, audio — that doesn&#x27;t fit neatly into a relational table or a key-value store.</p>
+<p><strong>Storage locations</strong>:</p>
+<ul>
+<li><code>context.filesDir</code> — internal storage, private to app, persists until uninstall</li>
+<li><code>context.cacheDir</code> — internal cache, private to app, may be cleared by system</li>
+<li><code>context.getExternalFilesDir(Environment.DIRECTORY_PICTURES)</code> — external storage app-specific directory, no permissions needed (API 19+)</li>
+<li><code>Environment.getExternalStoragePublicDirectory()</code> — public directories (deprecated on API 29+)</li>
+</ul>
+<p><strong>Scoped Storage (API 29+)</strong>: Android 10 introduced scoped storage — apps can no longer access arbitrary files in external storage. They are limited to:</p>
+<ul>
+<li>Their own app-specific external directory</li>
+<li>Shared media collections via <code>MediaStore</code> API</li>
+<li>Other files via the <code>Storage Access Framework</code> (SAF) — user picks file via system UI</li>
+</ul>
+<pre><code>// Writing to app-specific external storage (no permission needed)
+val file = File(context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS), &quot;report.pdf&quot;)
+file.outputStream().use { output -&gt;
+    pdfBytes.inputStream().copyTo(output)
+}
+
+// Sharing a file to another app (FileProvider required)
+val uri = FileProvider.getUriForFile(
+    context,
+    &quot;${context.packageName}.fileprovider&quot;,
+    file
+)
+val intent = Intent(Intent.ACTION_VIEW).apply {
+    setDataAndType(uri, &quot;application/pdf&quot;)
+    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+}</code></pre>
+<p><strong>FileProvider</strong>: Required for sharing files between apps (API 24+). Configure in <code>AndroidManifest.xml</code> and <code>res/xml/file_paths.xml</code>.</p>
+<p><strong>MediaStore for photos/videos</strong>:</p>
+<pre><code>// Read photos (no permission needed for own photos; READ_MEDIA_IMAGES for others on API 33+)
+val query = contentResolver.query(
+    MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+    arrayOf(MediaStore.Images.Media._ID, MediaStore.Images.Media.DISPLAY_NAME),
+    null, null,
+    &quot;${MediaStore.Images.Media.DATE_TAKEN} DESC&quot;
+)</code></pre>
+<hr>
+<h3 id="interview-angles-persistence">Interview Angles: Persistence</h3>
+<p><strong>Q: Room migration strategy.</strong></p>
+<p>&quot;Whenever I change the schema, I increment the <code>@Database</code> version by one and write a <code>Migration</code> object with the raw SQL — <code>ALTER TABLE</code> for adding a column, and the full recreate pattern for dropping or renaming a column because SQLite doesn&#x27;t support <code>DROP COLUMN</code> before API 35. I register the migration with <code>addMigrations()</code>. I keep <code>exportSchema = true</code> and commit the generated schema JSON to version control so I can catch mismatches with <code>MigrationTestHelper</code> in an instrumentation test. For simple addColumn changes in newer Room versions, <code>AutoMigration</code> handles it with zero SQL. And the one rule I never break in production is no <code>fallbackToDestructiveMigration</code> — that silently wipes user data when a migration is missing.&quot;</p>
+<p><strong>Q: SharedPreferences vs DataStore.</strong></p>
+<p>&quot;DataStore is strictly better on every axis that matters. It&#x27;s async, <code>Flow</code>-based, thread-safe, and surfaces <code>IOException</code> through the Flow error channel instead of silently swallowing it. There&#x27;s zero ANR risk because I/O never touches the main thread. <code>SharedPreferences.commit()</code> blocks the calling thread and can cause ANRs, and <code>apply()</code> is async but gives you no way to know if it failed. The only reason I&#x27;d touch SharedPreferences today is to maintain legacy code — and even then I&#x27;d migrate it with <code>SharedPreferencesMigration</code> as soon as practical. For new settings, I use Preferences DataStore for simple key-value and Proto DataStore when the shape evolves over time.&quot;</p>
+<p><strong>Q: When use database vs file vs DataStore?</strong></p>
+<ul>
+<li><strong>Room</strong>: Structured relational data with queries, sorting, filtering — user data, feed items, appointments. Anything with rows and columns.</li>
+<li><strong>DataStore</strong>: User preferences, settings, lightweight app state — small, keyed values without structure.</li>
+<li><strong>File</strong>: Binary data — images, PDFs, downloads, audio. Not queryable; addressed by path/URI.</li>
+<li><strong>SharedPreferences</strong>: Legacy only; migrate away.</li>
+</ul>
+<p><strong>Q: How do you design offline cache?</strong></p>
+<p>&quot;I use Room as the single source of truth. Network responses are written to Room; the ViewModel never holds its own copy of data — it just observes a Room <code>Flow</code>. That separation means the network layer and the UI layer are completely decoupled: new data lands in Room, Room notifies all active Flows, the UI updates automatically. Cache invalidation is also free — I just write to Room and every observer gets the new data without any explicit notification code.&quot;</p>
+<p><strong>Q: How do you handle schema changes?</strong></p>
+<p>&quot;I write a <code>Migration</code> for every version increment, no exceptions, because users may have builds several versions behind. For adding a column, <code>ALTER TABLE</code> is fine. For dropping or renaming a column on SQLite pre-API 35, I use the recreate pattern: create a new table with the desired schema, copy the data with <code>INSERT INTO new_name SELECT ... FROM old_name</code>, drop the original, then rename the new table. I test every migration path with <code>MigrationTestHelper</code> — create the database at version N, run the migration, then assert the data survived and the schema matches.&quot;</p>
+<hr>
+<h2 id="103-offline-first-design">10.3 Offline-First Design</h2>
+<h3 id="single-source-of-truth">Single Source of Truth</h3>
+<p>The single source of truth is the principle that one place — typically Room — is the definitive data source for the UI, and the network is just a mechanism to push updates into that place, never a direct source.</p>
+<p><strong>Why it matters</strong>:</p>
+<ul>
+<li>The UI always reads from the local DB, so there are no loading spinners for data you&#x27;ve already cached.</li>
+<li>State is predictable — there are no race conditions between a network response landing and what the UI is displaying.</li>
+<li>Offline support is natural — the local DB always has something to show, even with no connectivity.</li>
+<li>Error handling is simpler — network failures update DB state or surface a flag, rather than being wired directly into UI state.</li>
+</ul>
+<p><strong>Implementation pattern</strong>:</p>
+<pre><code>Network Response → Repository → Room DB → Flow → ViewModel → UI
+                                   ↑
+                         (UI reads ONLY from here)</code></pre>
+<p>The ViewModel never holds a copy of data; it only transforms what comes from the Room Flow. The repository orchestrates: fetch from network → write to Room → Room Flow notifies UI.</p>
+<p><strong>Contrast with non-SSOT pattern</strong> (anti-pattern):</p>
+<pre><code>// BAD: two sources of data → UI can show inconsistent state
+viewModelScope.launch {
+    _state.update { it.copy(users = dao.getAll()) }  // initial load from DB
+    val fresh = api.getUsers()
+    _state.update { it.copy(users = fresh) }          // overwrite with network
+}</code></pre>
+<p>The SSOT approach instead: write fresh data to DB, let the DB Flow update the state.</p>
+<hr>
+<h3 id="cache-invalidation">Cache Invalidation</h3>
+<p>Cache invalidation is the problem of knowing when locally cached data is stale enough to warrant a fresh network fetch — and it turns out there are several complementary strategies, each appropriate in different situations.</p>
+<p><strong>Strategies</strong>:</p>
+<p><strong>1. TTL (Time-To-Live)</strong>:</p>
+<pre><code>@Entity
+data class FeedItemEntity(
+    @PrimaryKey val id: String,
+    val content: String,
+    val fetchedAt: Long = System.currentTimeMillis()
+)
+
+fun FeedItemEntity.isStale(ttlMs: Long = 5 * 60 * 1000): Boolean {
+    return System.currentTimeMillis() - fetchedAt &gt; ttlMs
+}
+
+// Repository: refresh if stale
+suspend fun getFeed(): Flow&lt;List&lt;FeedItem&gt;&gt; {
+    val cached = feedDao.getAll().first()
+    if (cached.isEmpty() || cached.first().isStale()) {
+        fetchAndStore()
+    }
+    return feedDao.getAllFlow().map { ... }
+}</code></pre>
+<p><strong>2. ETag/Last-Modified</strong> (server-driven):</p>
+<pre><code>// Store ETag with cached data
+val etag = response.header(&quot;ETag&quot;)
+feedDao.saveEtag(etag)
+
+// Next request: send If-None-Match header
+val cachedEtag = feedDao.getEtag()
+val request = Request.Builder()
+    .url(url)
+    .header(&quot;If-None-Match&quot;, cachedEtag ?: &quot;&quot;)
+    .build()
+
+// 304 → use cache; 200 → update cache with new ETag</code></pre>
+<p><strong>3. Event-driven invalidation</strong>:</p>
+<pre><code>// Push notification or WebSocket event triggers refresh
+class PushNotificationHandler {
+    fun onFeedUpdated() {
+        coroutineScope.launch { feedRepository.refresh() }
+    }
+}</code></pre>
+<p><strong>4. Manual pull-to-refresh</strong>: User-initiated invalidation. Always appropriate as a fallback.</p>
+<p><strong>Stale-while-revalidate pattern</strong>: Show cached data immediately; trigger refresh in background; update UI when new data arrives (Room Flow handles the update automatically).</p>
+<hr>
+<h3 id="sync-strategy">Sync Strategy</h3>
+<p>A sync strategy is how you keep local data in sync with the server — especially important when the user has made mutations while offline that now need to reach the server.</p>
+<p>Read sync — server to local — is straightforward: fetch and overwrite. Write sync — local to server — is more complex because local changes need to reach the server eventually, and failures have to be handled.</p>
+<p><strong>Full sync</strong> (simple, high bandwidth):</p>
+<pre><code>suspend fun fullSync() {
+    val remoteData = api.getAllItems()
+    database.withTransaction {
+        dao.deleteAll()
+        dao.insertAll(remoteData.map { it.toEntity() })
+    }
+}</code></pre>
+<p>Good for small datasets. Bad for large datasets or frequent updates.</p>
+<p><strong>Delta sync</strong> (incremental):</p>
+<pre><code>// Server returns only items changed since a timestamp
+suspend fun deltaSync(lastSyncTime: Long) {
+    val delta = api.getChangedItems(since = lastSyncTime)
+    database.withTransaction {
+        dao.upsertAll(delta.updated.map { it.toEntity() })
+        dao.deleteByIds(delta.deleted)
+        preferences.setLastSyncTime(System.currentTimeMillis())
+    }
+}</code></pre>
+<p>Requires server support. More complex but scalable.</p>
+<p><strong>Two-phase sync</strong> (for write conflicts):</p>
+<ol>
+<li>Push local changes → server</li>
+<li>Pull server changes → local</li>
+<li>Merge conflicts</li>
+</ol>
+<p><strong>Sync triggers</strong>:</p>
+<ul>
+<li>App foreground: immediate sync on resume</li>
+<li>Periodic: WorkManager <code>PeriodicWorkRequest</code> (minimum 15 minutes)</li>
+<li>Event-driven: FCM push notification triggers sync</li>
+<li>Network reconnection: <code>ConnectivityManager.NetworkCallback</code></li>
+</ul>
+<pre><code>// Network reconnection trigger
+val networkCallback = object : ConnectivityManager.NetworkCallback() {
+    override fun onAvailable(network: Network) {
+        coroutineScope.launch { syncRepository.sync() }
+    }
+}
+connectivityManager.registerDefaultNetworkCallback(networkCallback)</code></pre>
+<hr>
+<h3 id="conflict-resolution">Conflict Resolution</h3>
+<p>A conflict exists when a resource has been modified both locally while offline and independently on the server — and the two versions are now inconsistent with each other.</p>
+<p><strong>Conflict detection</strong>:</p>
+<ul>
+<li>Server-side versioning: each entity carries a <code>version</code> integer or <code>updatedAt</code> timestamp. The client sends the version it last saw, and the server rejects the request if the stored version is different.</li>
+<li>Optimistic locking: a <code>PUT /items/1</code> body includes <code>{&quot;version&quot;: 5, ...}</code>. The server returns <code>409 Conflict</code> if the stored version is no longer 5.</li>
+</ul>
+<p><strong>Resolution strategies</strong>:</p>
+<p><strong>1. Last-write-wins (LWW)</strong>: The most recent write (by timestamp) wins. Simple but can silently discard changes. Appropriate for user settings, preferences.</p>
+<p><strong>2. Server-wins</strong>: On conflict, discard local changes and use server data. Simple; appropriate when server data is authoritative (financial transactions).</p>
+<pre><code>fun resolveConflict(local: ItemEntity, remote: ItemEntity): ItemEntity = remote</code></pre>
+<p><strong>3. Client-wins</strong>: Local changes always win. Rare; appropriate only when client is the single writer.</p>
+<p><strong>4. Merge</strong>: For field-level conflicts (e.g., user updates <code>name</code>, server updates <code>email</code> independently) — merge non-conflicting fields. Requires CRDT or OT for true merge.</p>
+<pre><code>fun mergeItems(local: ItemEntity, remote: ItemEntity): ItemEntity {
+    return remote.copy(
+        name = if (local.nameModifiedAt &gt; remote.nameModifiedAt) local.name else remote.name,
+        email = if (local.emailModifiedAt &gt; remote.emailModifiedAt) local.email else remote.email
+    )
+}</code></pre>
+<p><strong>5. User-assisted</strong>: Show conflict UI and let the user choose. Appropriate for document editors (Google Docs model).</p>
+<p><strong>Android pattern with Room</strong>:</p>
+<pre><code>@Entity
+data class ItemEntity(
+    @PrimaryKey val id: String,
+    val content: String,
+    val serverVersion: Int,
+    val isDirty: Boolean,  // true = modified locally, not yet synced
+    val localModifiedAt: Long
+)
+
+suspend fun sync() {
+    val dirtyItems = dao.getDirtyItems()
+    dirtyItems.forEach { item -&gt;
+        try {
+            val response = api.updateItem(item.id, item.toRequest(), expectedVersion = item.serverVersion)
+            dao.upsert(response.toEntity().copy(isDirty = false))
+        } catch (e: HttpException) {
+            if (e.code() == 409) {
+                val serverItem = api.getItem(item.id)
+                val resolved = resolveConflict(item, serverItem.toEntity())
+                dao.upsert(resolved)
+            }
+        }
+    }
+}</code></pre>
+<hr>
+<h3 id="optimistic-updates">Optimistic Updates</h3>
+<p>An optimistic update means applying a user action immediately to the local database and UI before the server has confirmed it — then reconciling once the server responds. The reason to do this is that it eliminates perceived latency for common operations like likes, bookmarks, and deletes. The UI feels instantaneous.</p>
+<p><strong>Pattern</strong>:</p>
+<pre><code>class BookmarkViewModel(
+    private val bookmarkRepository: BookmarkRepository
+) : ViewModel() {
+
+    fun toggleBookmark(postId: String, currentlyBookmarked: Boolean) {
+        viewModelScope.launch {
+            // 1. Optimistically update local DB immediately
+            bookmarkRepository.setBookmarked(postId, !currentlyBookmarked)
+
+            // 2. Send to server
+            try {
+                bookmarkRepository.syncBookmark(postId, !currentlyBookmarked)
+            } catch (e: Exception) {
+                // 3. Rollback on failure
+                bookmarkRepository.setBookmarked(postId, currentlyBookmarked)
+                _events.emit(BookmarkEvent.SyncFailed)
+            }
+        }
+    }
+}</code></pre>
+<pre><code>// Repository
+suspend fun setBookmarked(postId: String, bookmarked: Boolean) {
+    bookmarkDao.setBookmarked(postId, bookmarked)  // immediate local write → UI updates via Flow
+}
+
+suspend fun syncBookmark(postId: String, bookmarked: Boolean) {
+    if (bookmarked) {
+        api.addBookmark(postId)
+    } else {
+        api.removeBookmark(postId)
+    }
+}</code></pre>
+<p><strong>Failure modes</strong>:</p>
+<ul>
+<li>Network failure → rollback required</li>
+<li>Server rejects action (e.g., 403 — not authorized) → rollback + show error</li>
+<li>Server returns different state (e.g., post was deleted) → update local DB with server response</li>
+</ul>
+<p><strong>Complex operations</strong>: For multi-step operations (booking a slot), optimistic updates are riskier. Use explicit loading states instead.</p>
+<hr>
+<h3 id="retry-queue">Retry Queue</h3>
+<p>A retry queue is a persistent store of failed mutations that should be retried once connectivity is restored. The key word is persistent — if the app is killed while offline, any in-memory queue is lost, so the queue must live in Room to survive process death.</p>
+<pre><code>@Entity(tableName = &quot;pending_operations&quot;)
+data class PendingOperationEntity(
+    @PrimaryKey val id: String = UUID.randomUUID().toString(),
+    val operationType: String,  // &quot;BOOKMARK_ADD&quot;, &quot;POST_CREATE&quot;, etc.
+    val payload: String,        // JSON-serialized operation data
+    val createdAt: Long = System.currentTimeMillis(),
+    val attempts: Int = 0,
+    val lastAttemptAt: Long? = null
+)
+
+@Dao
+interface PendingOperationDao {
+    @Query(&quot;SELECT * FROM pending_operations ORDER BY created_at ASC&quot;)
+    suspend fun getAll(): List&lt;PendingOperationEntity&gt;
+
+    @Insert
+    suspend fun insert(op: PendingOperationEntity)
+
+    @Delete
+    suspend fun delete(op: PendingOperationEntity)
+
+    @Query(&quot;UPDATE pending_operations SET attempts = attempts + 1, last_attempt_at = :now WHERE id = :id&quot;)
+    suspend fun incrementAttempts(id: String, now: Long = System.currentTimeMillis())
+}</code></pre>
+<pre><code>class RetryQueueProcessor(
+    private val dao: PendingOperationDao,
+    private val handlers: Map&lt;String, OperationHandler&gt;
+) {
+    suspend fun processQueue() {
+        val pending = dao.getAll()
+        pending.forEach { op -&gt;
+            if (op.attempts &gt;= MAX_ATTEMPTS) {
+                dao.delete(op)
+                return@forEach
+            }
+            try {
+                handlers[op.operationType]?.handle(op.payload)
+                dao.delete(op)
+            } catch (e: Exception) {
+                dao.incrementAttempts(op.id)
+            }
+        }
+    }
+}</code></pre>
+<p><strong>WorkManager integration</strong> (see below): The queue processor is triggered by WorkManager on network availability.</p>
+<hr>
+<h3 id="local-first-ui">Local-First UI</h3>
+<p>Local-first UI is the pattern where every user interaction writes to local storage immediately, the UI derives all its state purely from that local storage, and network sync happens transparently in the background. There are three principles that define it: user actions never wait for the network, all displayed data comes from a Room <code>Flow</code>, and sync is background, transparent, and resilient to failure.</p>
+<p><strong>Architecture</strong>:</p>
+<pre><code>User Action → ViewModel → Repository
+                              ↓ (write locally)
+                          Room DB ← Network Sync (background)
+                              ↓ (Flow)
+                          ViewModel → UI</code></pre>
+<p><strong>Sync status indicator</strong>:</p>
+<pre><code>sealed class SyncState {
+    object Idle : SyncState()
+    object Syncing : SyncState()
+    data class Error(val message: String) : SyncState()
+    data class LastSynced(val timestamp: Long) : SyncState()
+}
+
+data class FeedUiState(
+    val items: List&lt;FeedItem&gt;,
+    val syncState: SyncState = SyncState.Idle
+)</code></pre>
+<p>The UI shows items immediately from Room; a sync indicator in the corner shows background sync progress. The user can always see and interact with content.</p>
+<hr>
+<h3 id="networkboundresource-pattern">NetworkBoundResource Pattern</h3>
+<p><code>NetworkBoundResource</code> is a pattern from the Google Architecture Blueprints — pre-Paging-3 era — that coordinates cache and network in a single Flow: it always shows local data first, fetches fresh data from the network in parallel if needed, and writes the result back to the local cache.</p>
+<p><strong>Modern Kotlin implementation using Flow</strong>:</p>
+<pre><code>fun &lt;LocalType, RemoteType&gt; networkBoundResource(
+    query: () -&gt; Flow&lt;LocalType&gt;,           // DB query
+    fetch: suspend () -&gt; RemoteType,        // Network call
+    saveFetchResult: suspend (RemoteType) -&gt; Unit,  // Write to DB
+    shouldFetch: (LocalType) -&gt; Boolean = { true }, // Cache validity check
+    onFetchFailed: (Throwable) -&gt; Unit = {}
+): Flow&lt;Resource&lt;LocalType&gt;&gt; = flow {
+
+    emit(Resource.Loading())
+
+    val data = query().first()
+
+    val flow = if (shouldFetch(data)) {
+        emit(Resource.Loading(data))  // Show cached data while fetching
+        try {
+            saveFetchResult(fetch())
+            query().map { Resource.Success(it) }
+        } catch (t: Throwable) {
+            onFetchFailed(t)
+            query().map { Resource.Error(t, it) }  // Show error + stale cached data
+        }
+    } else {
+        query().map { Resource.Success(it) }
+    }
+
+    emitAll(flow)
+}
+
+sealed class Resource&lt;T&gt;(val data: T? = null, val error: Throwable? = null) {
+    class Success&lt;T&gt;(data: T) : Resource&lt;T&gt;(data)
+    class Error&lt;T&gt;(error: Throwable, data: T? = null) : Resource&lt;T&gt;(data, error)
+    class Loading&lt;T&gt;(data: T? = null) : Resource&lt;T&gt;(data)
+}</code></pre>
+<p><strong>Usage in repository</strong>:</p>
+<pre><code>fun getFeed(): Flow&lt;Resource&lt;List&lt;FeedItem&gt;&gt;&gt; = networkBoundResource(
+    query = { feedDao.getAllFlow().map { it.map(FeedItemEntity::toFeedItem) } },
+    fetch = { api.getFeed() },
+    saveFetchResult = { remote -&gt;
+        database.withTransaction {
+            feedDao.deleteAll()
+            feedDao.insertAll(remote.map(RemoteFeedItem::toEntity))
+        }
+    },
+    shouldFetch = { cached -&gt;
+        cached.isEmpty() || cached.firstOrNull()?.isStale() == true
+    }
+)</code></pre>
+<p><strong>ViewModel consumption</strong>:</p>
+<pre><code>val feedState: StateFlow&lt;FeedUiState&gt; = repository.getFeed()
+    .map { resource -&gt;
+        when (resource) {
+            is Resource.Loading -&gt; FeedUiState(
+                items = resource.data ?: emptyList(),
+                isLoading = true
+            )
+            is Resource.Success -&gt; FeedUiState(items = resource.data ?: emptyList())
+            is Resource.Error -&gt; FeedUiState(
+                items = resource.data ?: emptyList(),
+                error = resource.error?.toNetworkError()
+            )
+        }
+    }
+    .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), FeedUiState())</code></pre>
+<hr>
+<h3 id="workmanager-for-sync">WorkManager for Sync</h3>
+<p>WorkManager is the Jetpack library for deferrable, guaranteed background work — work that must survive process death and device reboots and still run eventually. It is the right choice for sync because it gives you four things that nothing else provides together: guaranteed execution even if the app is killed, respect for battery optimization and Doze mode, constraint support (run only when connected to the network, charging, etc.), and built-in exponential backoff retry.</p>
+<p><strong>Sync worker</strong>:</p>
+<pre><code>class SyncWorker(
+    context: Context,
+    params: WorkerParameters,
+    private val syncRepository: SyncRepository
+) : CoroutineWorker(context, params) {
+
+    override suspend fun doWork(): Result {
+        return try {
+            syncRepository.sync()
+            Result.success()
+        } catch (e: Exception) {
+            if (runAttemptCount &lt; 3) {
+                Result.retry()  // WorkManager will retry with exponential backoff
+            } else {
+                Result.failure(workDataOf(&quot;error&quot; to e.message))
+            }
+        }
+    }
+
+    companion object {
+        fun buildRequest(): PeriodicWorkRequest {
+            val constraints = Constraints.Builder()
+                .setRequiredNetworkType(NetworkType.CONNECTED)
+                .build()
+
+            return PeriodicWorkRequestBuilder&lt;SyncWorker&gt;(15, TimeUnit.MINUTES)
+                .setConstraints(constraints)
+                .setBackoffCriteria(BackoffPolicy.EXPEDITED, 10, TimeUnit.SECONDS)
+                .build()
+        }
+    }
+}</code></pre>
+<p><strong>One-time immediate sync</strong> (on app foreground):</p>
+<pre><code>fun scheduleImmediateSync() {
+    val request = OneTimeWorkRequestBuilder&lt;SyncWorker&gt;()
+        .setConstraints(Constraints.Builder()
+            .setRequiredNetworkType(NetworkType.CONNECTED)
+            .build())
+        .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
+        .build()
+
+    WorkManager.getInstance(context)
+        .enqueueUniqueWork(
+            &quot;immediate_sync&quot;,
+            ExistingWorkPolicy.KEEP,  // Don&#x27;t enqueue if already running
+            request
+        )
+}</code></pre>
+<p><strong>DI with WorkManager</strong> (Hilt/Dagger):</p>
+<pre><code>@HiltWorker
+class SyncWorker @AssistedInject constructor(
+    @Assisted context: Context,
+    @Assisted params: WorkerParameters,
+    private val syncRepository: SyncRepository
+) : CoroutineWorker(context, params)
+
+// In Application class:
+WorkManager.initialize(
+    this,
+    Configuration.Builder()
+        .setWorkerFactory(HiltWorkerFactory)
+        .build()
+)</code></pre>
+<p><strong>Observing work status</strong>:</p>
+<pre><code>WorkManager.getInstance(context)
+    .getWorkInfosByTagFlow(&quot;sync&quot;)
+    .collect { workInfos -&gt;
+        val isSyncing = workInfos.any { it.state == WorkInfo.State.RUNNING }
+        _syncState.value = if (isSyncing) SyncState.Syncing else SyncState.Idle
+    }</code></pre>
+<p><strong>Trade-offs vs other background approaches</strong>:</p>
+<ul>
+<li><code>JobScheduler</code>: Lower level; WorkManager uses it on API 23+</li>
+<li><code>AlarmManager</code>: For exact-time wakeups; not for deferrable sync</li>
+<li><code>Foreground Service</code>: For immediate, user-aware long-running work (music playback, location tracking); not appropriate for silent sync</li>
+<li><code>CoroutineScope</code> in Application: Not guaranteed to survive process kill</li>
+</ul>
+<hr>
+<h3 id="pagination-with-local-cache">Pagination with Local Cache</h3>
+<p><code>RemoteMediator</code> is Paging 3&#x27;s mechanism for combining a Room-backed <code>PagingSource</code> with network fetching — Room is the source of truth for what the UI displays, and <code>RemoteMediator</code> is responsible for populating and refreshing Room as the user scrolls.</p>
+<p><strong>Architecture</strong>:</p>
+<pre><code>UI → PagingData (from Room PagingSource)
+           ↑
+       Room DB ← RemoteMediator (fetches from network, writes to Room)</code></pre>
+<p><strong>RemoteMediator implementation</strong>:</p>
+<pre><code>@OptIn(ExperimentalPagingApi::class)
+class FeedRemoteMediator(
+    private val database: AppDatabase,
+    private val api: FeedApi
+) : RemoteMediator&lt;Int, FeedItemEntity&gt;() {
+
+    override suspend fun initialize(): InitializeAction {
+        val lastRefresh = database.remoteKeyDao().getLastRefresh()
+        return if (System.currentTimeMillis() - (lastRefresh ?: 0) &lt; CACHE_TIMEOUT) {
+            InitializeAction.SKIP_INITIAL_REFRESH
+        } else {
+            InitializeAction.LAUNCH_INITIAL_REFRESH
+        }
+    }
+
+    override suspend fun load(
+        loadType: LoadType,
+        state: PagingState&lt;Int, FeedItemEntity&gt;
+    ): MediatorResult {
+        return try {
+            val page = when (loadType) {
+                LoadType.REFRESH -&gt; 1
+                LoadType.PREPEND -&gt; return MediatorResult.Success(endOfPaginationReached = true)
+                LoadType.APPEND -&gt; {
+                    val lastPage = database.remoteKeyDao().getLastPage()
+                        ?: return MediatorResult.Success(endOfPaginationReached = false)
+                    lastPage + 1
+                }
+            }
+
+            val response = api.getFeed(page = page, pageSize = state.config.pageSize)
+
+            database.withTransaction {
+                if (loadType == LoadType.REFRESH) {
+                    database.feedDao().clearAll()
+                    database.remoteKeyDao().clearAll()
+                }
+                database.feedDao().insertAll(response.items.map { it.toEntity() })
+                database.remoteKeyDao().insert(
+                    RemoteKey(page = page, lastRefresh = System.currentTimeMillis())
+                )
+            }
+
+            MediatorResult.Success(endOfPaginationReached = response.items.size &lt; state.config.pageSize)
+        } catch (e: IOException) {
+            MediatorResult.Error(e)
+        } catch (e: HttpException) {
+            MediatorResult.Error(e)
+        }
+    }
+
+    companion object {
+        const val CACHE_TIMEOUT = 30 * 60 * 1000L // 30 minutes
+    }
+}</code></pre>
+<p><strong>Pager with RemoteMediator</strong>:</p>
+<pre><code>@OptIn(ExperimentalPagingApi::class)
+val pager = Pager(
+    config = PagingConfig(
+        pageSize = 20,
+        prefetchDistance = 5,
+        enablePlaceholders = false
+    ),
+    remoteMediator = FeedRemoteMediator(database, api),
+    pagingSourceFactory = { database.feedDao().pagingSource() }
+).flow.cachedIn(viewModelScope)</code></pre>
+<p><strong>DAO for Paging</strong>:</p>
+<pre><code>@Dao
+interface FeedDao {
+    @Query(&quot;SELECT * FROM feed_items ORDER BY position ASC&quot;)
+    fun pagingSource(): PagingSource&lt;Int, FeedItemEntity&gt;
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAll(items: List&lt;FeedItemEntity&gt;)
+
+    @Query(&quot;DELETE FROM feed_items&quot;)
+    suspend fun clearAll()
+}</code></pre>
+<p><strong>RemoteKey table</strong>: Stores the page cursor for each list type, so <code>RemoteMediator.load(APPEND)</code> knows what page to fetch next. Can also store <code>nextCursor</code> for cursor-based pagination.</p>
+<p><strong>Offline behavior</strong>: When the network is unavailable, <code>RemoteMediator.load()</code> returns <code>MediatorResult.Error</code>. The <code>PagingSource</code> still serves Room data. The UI should handle the <code>LoadState.Error</code> in <code>loadState.mediator</code> vs <code>loadState.source</code> separately.</p>
+<hr>
+<h3 id="interview-angles-offline-first">Interview Angles: Offline-First</h3>
+<p><strong>Q: Design an offline-first feed.</strong></p>
+<p>&quot;Room is the single source of truth. The ViewModel exposes a <code>StateFlow</code> derived from a Room <code>Flow</code>, and the UI only ever reads from that — it has no idea whether the data came from the network or the cache. The repository has two operations: <code>observe()</code> returns the Room Flow, and <code>refresh()</code> hits the network and writes to Room, which automatically re-emits through the Flow. For paginated feeds I use Paging 3 with <code>RemoteMediator</code> — it keeps Room populated as the user scrolls, so the UI is always driven by Room pages. Background freshness comes from WorkManager, which periodically triggers a sync when the device has connectivity. For cache invalidation I use a <code>fetchedAt</code> timestamp on entities, or ETags if the server supports them. For mutations like likes and bookmarks, I write optimistically to Room immediately and then sync to the network in the background with a Room-backed retry queue, so mutations survive process death.&quot;</p>
+<p><strong>Q: How do you sync local changes?</strong></p>
+<p>&quot;I mark every local mutation with <code>isDirty = true</code> in Room at the point of write. When connectivity is restored — either via a <code>ConnectivityManager.NetworkCallback</code> or a WorkManager job that runs under a <code>NetworkType.CONNECTED</code> constraint — I query all dirty rows and send them to the server one by one. On success I mark the row <code>isDirty = false</code>. On failure I increment an <code>attempts</code> counter and retry with exponential backoff. Because the queue lives in Room, it survives process death — so even if the user force-closes the app mid-sync, the pending operations are still there when they reopen it. If attempts exceed the maximum I surface an error to the user rather than silently discarding the change.&quot;</p>
+<p><strong>Q: What happens when server and local data conflict?</strong></p>
+<p>&quot;I detect conflicts with optimistic locking — every write includes a <code>version</code> field, and the server returns <code>409 Conflict</code> if the stored version doesn&#x27;t match. On a 409, the resolution depends on the business domain: for user preferences, last-write-wins by timestamp is usually fine; for financial or booking data, the server wins because it&#x27;s the authoritative record; for profile fields that the user edited independently, a field-level merge is possible if I track a <code>modifiedAt</code> timestamp per field. After resolution, whatever the canonical state is gets written to Room and emits through the Flow. For genuinely complex conflicts I surface it to the user — show them both versions and let them choose.&quot;</p>
+<p><strong>Q: How do you avoid stale data?</strong></p>
+<p>&quot;I layer several strategies. First, every Room entity has a <code>fetchedAt</code> timestamp, and the repository checks it on load — if it&#x27;s expired, it triggers a refresh in the background while still showing the cached data immediately. Second, I use ETag-based revalidation when the server supports it: send <code>If-None-Match</code> with the cached ETag, and if nothing changed the server returns a 304 with near-zero bandwidth cost. Third, FCM push notifications can trigger an immediate refresh when the server knows data has changed. Fourth, pull-to-refresh as a user-initiated fallback. And fifth, I refresh on <code>onResume()</code> or when the lifecycle hits <code>STARTED</code>, so the feed is never stale just because the user left the app for a few minutes. The model that ties all of this together is stale-while-revalidate: show cached data immediately, refresh in the background, and let Room&#x27;s Flow deliver the update automatically when it arrives.&quot;</p>
+<hr>
+<p><em>End of Section 10: Android Data Layer</em></p>
+<div class="pager">
+<a class="prev" href="lifecycle-platform-components.html"><span class="lbl">‹ Previous</span>9. Lifecycle &amp; Platform Components</a>
+<a class="next" href="testing.html"><span class="lbl">Next ›</span>11. Testing</a>
+</div>
+</div></div>
+<script src="../site.js"></script>
+</body></html>

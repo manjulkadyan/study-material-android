@@ -1,0 +1,1344 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>8. View Rendering</title>
+<link rel="stylesheet" href="../style.css"></head>
+<body class="has-toc" data-prev="architecture-patterns.html" data-next="lifecycle-platform-components.html">
+<nav class="sidebar"><a class="brand" href="../index.html">📱 Android Study Guide — Home</a><details class="topic"><summary><span class="caret">▶</span><a href="data-structures-big-o.html">1. Data Structures &amp; Big O</a></summary><ul class="subtopics"><li><a class="" href="data-structures-big-o.html#11-data-structures--collections--12-big-o-notation">1.1 Data Structures &amp; Collections · 1.2 Big O Notation</a></li><li><a class="" href="data-structures-big-o.html#table-of-contents">Table of Contents</a></li><li><a class="" href="data-structures-big-o.html#1-arrays">1. Arrays</a></li><li><a class="" href="data-structures-big-o.html#2-arraylist--mutablelist">2. ArrayList / MutableList</a></li><li><a class="" href="data-structures-big-o.html#3-linkedlist">3. LinkedList</a></li><li><a class="" href="data-structures-big-o.html#4-stack">4. Stack</a></li><li><a class="" href="data-structures-big-o.html#5-queue">5. Queue</a></li><li><a class="" href="data-structures-big-o.html#6-deque">6. Deque</a></li><li><a class="" href="data-structures-big-o.html#7-hashmap--mutablemap">7. HashMap / MutableMap</a></li><li><a class="" href="data-structures-big-o.html#8-hashset--mutableset">8. HashSet / MutableSet</a></li><li><a class="" href="data-structures-big-o.html#9-linkedhashmap">9. LinkedHashMap</a></li><li><a class="" href="data-structures-big-o.html#10-treemap--sortedmap">10. TreeMap / SortedMap</a></li><li><a class="" href="data-structures-big-o.html#11-priorityqueue--heap">11. PriorityQueue / Heap</a></li><li><a class="" href="data-structures-big-o.html#12-trie">12. Trie</a></li><li><a class="" href="data-structures-big-o.html#13-graphs">13. Graphs</a></li><li><a class="" href="data-structures-big-o.html#14-android-specific-collections">14. Android-Specific Collections</a></li><li><a class="" href="data-structures-big-o.html#15-big-o-notation">15. Big O Notation</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="kotlin-java-fundamentals.html">2. Kotlin &amp; Java Fundamentals</a></summary><ul class="subtopics"><li><a class="" href="kotlin-java-fundamentals.html#table-of-contents">Table of Contents</a></li><li><a class="" href="kotlin-java-fundamentals.html#21-kotlin-fundamentals">2.1 Kotlin Fundamentals</a></li><li><a class="" href="kotlin-java-fundamentals.html#22-kotlin-generics">2.2 Kotlin Generics</a></li><li><a class="" href="kotlin-java-fundamentals.html#23-java-fundamentals">2.3 Java Fundamentals</a></li><li><a class="" href="kotlin-java-fundamentals.html#24-kotlin-java-interop">2.4 Kotlin-Java Interop</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="concurrency-android-threading.html">3. Concurrency &amp; Android Threading</a></summary><ul class="subtopics"><li><a class="" href="concurrency-android-threading.html#table-of-contents">Table of Contents</a></li><li><a class="" href="concurrency-android-threading.html#31-java-thread-basics">3.1 Java Thread Basics</a></li><li><a class="" href="concurrency-android-threading.html#32-locks-and-synchronization">3.2 Locks and Synchronization</a></li><li><a class="" href="concurrency-android-threading.html#33-volatile-and-atomic-classes">3.3 Volatile and Atomic Classes</a></li><li><a class="" href="concurrency-android-threading.html#34-waitnotify-and-producer-consumer">3.4 Wait/Notify and Producer-Consumer</a></li><li><a class="" href="concurrency-android-threading.html#35-executors-and-task-execution">3.5 Executors and Task Execution</a></li><li><a class="" href="concurrency-android-threading.html#36-android-application-threads">3.6 Android Application Threads</a></li><li><a class="" href="concurrency-android-threading.html#37-handler--looper--messagequeue">3.7 Handler / Looper / MessageQueue</a></li><li><a class="" href="concurrency-android-threading.html#38-kotlin-coroutines-on-android">3.8 Kotlin Coroutines on Android</a></li><li><a class="" href="concurrency-android-threading.html#39-flow-stateflow-sharedflow-channel">3.9 Flow, StateFlow, SharedFlow, Channel</a></li><li><a class="" href="concurrency-android-threading.html#310-background-work">3.10 Background Work</a></li><li><a class="" href="concurrency-android-threading.html#quick-reference-interview-cheat-sheet">Quick-Reference: Interview Cheat Sheet</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="thread-communication.html">4. Thread Communication</a></summary><ul class="subtopics"><li><a class="" href="thread-communication.html#table-of-contents">Table of Contents</a></li><li><a class="" href="thread-communication.html#41-pipes">4.1 Pipes</a></li><li><a class="" href="thread-communication.html#42-shared-memory">4.2 Shared Memory</a></li><li><a class="" href="thread-communication.html#43-signaling">4.3 Signaling</a></li><li><a class="" href="thread-communication.html#44-blockingqueue">4.4 BlockingQueue</a></li><li><a class="" href="thread-communication.html#45-message-passing--android-handlerloopermessagequeue">4.5 Message Passing — Android Handler/Looper/MessageQueue</a></li><li><a class="" href="thread-communication.html#cross-cutting-shared-memory-vs-message-passing">Cross-cutting: Shared Memory vs Message Passing</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="ipc-binder-aidl-messenger.html">5. IPC: Binder, AIDL, Messenger</a></summary><ul class="subtopics"><li><a class="" href="ipc-binder-aidl-messenger.html#table-of-contents">Table of Contents</a></li><li><a class="" href="ipc-binder-aidl-messenger.html#51-android-process-model">5.1 Android Process Model</a></li><li><a class="" href="ipc-binder-aidl-messenger.html#52-binder">5.2 Binder</a></li><li><a class="" href="ipc-binder-aidl-messenger.html#53-aidl">5.3 AIDL</a></li><li><a class="" href="ipc-binder-aidl-messenger.html#54-messenger">5.4 Messenger</a></li><li><a class="" href="ipc-binder-aidl-messenger.html#parcelable-vs-serializable">Parcelable vs Serializable</a></li><li><a class="" href="ipc-binder-aidl-messenger.html#aidl-vs-messenger-decision-guide">AIDL vs Messenger Decision Guide</a></li><li><a class="" href="ipc-binder-aidl-messenger.html#interview-quick-reference">Interview Quick-Reference</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="android-memory-management.html">6. Android Memory Management</a></summary><ul class="subtopics"><li><a class="" href="android-memory-management.html#table-of-contents">Table of Contents</a></li><li><a class="" href="android-memory-management.html#61-jvmart-memory-basics">6.1 JVM/ART Memory Basics</a></li><li><a class="" href="android-memory-management.html#62-android-memory-leaks">6.2 Android Memory Leaks</a></li><li><a class="" href="android-memory-management.html#63-context-leaks">6.3 Context Leaks</a></li><li><a class="" href="android-memory-management.html#64-bitmap-and-image-memory">6.4 Bitmap and Image Memory</a></li><li><a class="" href="android-memory-management.html#65-leak-detection-and-profiling">6.5 Leak Detection and Profiling</a></li><li><a class="" href="android-memory-management.html#interview-quick-reference">Interview Quick-Reference</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="architecture-patterns.html">7. Architecture Patterns</a></summary><ul class="subtopics"><li><a class="" href="architecture-patterns.html#table-of-contents">Table of Contents</a></li><li><a class="" href="architecture-patterns.html#71-mvc-mvp-mvvm-mvi">7.1 MVC, MVP, MVVM, MVI</a></li><li><a class="" href="architecture-patterns.html#72-clean-architecture">7.2 Clean Architecture</a></li><li><a class="" href="architecture-patterns.html#73-repository-pattern">7.3 Repository Pattern</a></li><li><a class="" href="architecture-patterns.html#74-dependency-injection">7.4 Dependency Injection</a></li><li><a class="" href="architecture-patterns.html#75-modularization">7.5 Modularization</a></li><li><a class="" href="architecture-patterns.html#quick-reference-cheat-sheet">Quick-Reference Cheat Sheet</a></li></ul></details><details class="topic active" open><summary><span class="caret">▶</span><a href="view-rendering.html">8. View Rendering</a></summary><ul class="subtopics"><li><a class="spy" href="#table-of-contents">Table of Contents</a></li><li><a class="spy" href="#81-traditional-view-system-rendering">8.1 Traditional View System Rendering</a></li><li><a class="spy" href="#82-choreographer-vsync-and-frame-rendering">8.2 Choreographer, VSync, and Frame Rendering</a></li><li><a class="spy" href="#83-recyclerview-performance">8.3 RecyclerView Performance</a></li><li><a class="spy" href="#84-jetpack-compose-rendering">8.4 Jetpack Compose Rendering</a></li><li><a class="spy" href="#85-performance-tools">8.5 Performance Tools</a></li><li><a class="spy" href="#interview-cheat-sheet">Interview Cheat Sheet</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="lifecycle-platform-components.html">9. Lifecycle &amp; Platform Components</a></summary><ul class="subtopics"><li><a class="" href="lifecycle-platform-components.html#table-of-contents">Table of Contents</a></li><li><a class="" href="lifecycle-platform-components.html#91-activity">9.1 Activity</a></li><li><a class="" href="lifecycle-platform-components.html#92-fragment">9.2 Fragment</a></li><li><a class="" href="lifecycle-platform-components.html#93-services">9.3 Services</a></li><li><a class="" href="lifecycle-platform-components.html#94-broadcastreceiver">9.4 BroadcastReceiver</a></li><li><a class="" href="lifecycle-platform-components.html#95-contentprovider">9.5 ContentProvider</a></li><li><a class="" href="lifecycle-platform-components.html#96-intents-and-pendingintents">9.6 Intents and PendingIntents</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="android-data-layer.html">10. Android Data Layer</a></summary><ul class="subtopics"><li><a class="" href="android-data-layer.html#table-of-contents">Table of Contents</a></li><li><a class="" href="android-data-layer.html#101-networking">10.1 Networking</a></li><li><a class="" href="android-data-layer.html#102-persistence">10.2 Persistence</a></li><li><a class="" href="android-data-layer.html#103-offline-first-design">10.3 Offline-First Design</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="testing.html">11. Testing</a></summary><ul class="subtopics"><li><a class="" href="testing.html#table-of-contents">Table of Contents</a></li><li><a class="" href="testing.html#111-unit-testing">11.1 Unit Testing</a></li><li><a class="" href="testing.html#112-ui-testing">11.2 UI Testing</a></li><li><a class="" href="testing.html#113-integration-and-end-to-end-testing">11.3 Integration and End-to-End Testing</a></li><li><a class="" href="testing.html#quick-reference-interview-cheat-sheet">Quick-Reference Interview Cheat Sheet</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="build-gradle-release.html">12. Build, Gradle &amp; Release</a></summary><ul class="subtopics"><li><a class="" href="build-gradle-release.html#table-of-contents">Table of Contents</a></li><li><a class="" href="build-gradle-release.html#121-gradle-basics">12.1 Gradle Basics</a></li><li><a class="" href="build-gradle-release.html#122-build-performance">12.2 Build Performance</a></li><li><a class="" href="build-gradle-release.html#123-release">12.3 Release</a></li><li><a class="" href="build-gradle-release.html#summary-table-quick-reference">Summary Table: Quick Reference</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="security-privacy.html">13. Security &amp; Privacy</a></summary><ul class="subtopics"><li><a class="" href="security-privacy.html#table-of-contents">Table of Contents</a></li><li><a class="" href="security-privacy.html#131-android-security-basics">13.1 Android Security Basics</a></li><li><a class="" href="security-privacy.html#132-data-security">13.2 Data Security</a></li><li><a class="" href="security-privacy.html#interview-qa-master-list">Interview Q&amp;A Master List</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="performance-beyond-rendering.html">14. Performance Beyond Rendering</a></summary><ul class="subtopics"><li><a class="" href="performance-beyond-rendering.html#table-of-contents">Table of Contents</a></li><li><a class="" href="performance-beyond-rendering.html#141-startup-performance">14.1 Startup Performance</a></li><li><a class="" href="performance-beyond-rendering.html#142-battery-and-resource-usage">14.2 Battery and Resource Usage</a></li><li><a class="" href="performance-beyond-rendering.html#143-anr-and-crash-debugging">14.3 ANR and Crash Debugging</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="senior-staff-system-design.html">15. Senior/Staff System Design</a></summary><ul class="subtopics"><li><a class="" href="senior-staff-system-design.html#table-of-contents">Table of Contents</a></li><li><a class="" href="senior-staff-system-design.html#151-android-app-architecture-design">15.1 Android App Architecture Design</a></li><li><a class="" href="senior-staff-system-design.html#152-trade-off-thinking">15.2 Trade-Off Thinking</a></li><li><a class="" href="senior-staff-system-design.html#153-legacy-code-and-migration">15.3 Legacy Code and Migration</a></li><li><a class="" href="senior-staff-system-design.html#154-engineering-leadership">15.4 Engineering Leadership</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="interview-q-a-cheatsheet.html">16. Interview Q&amp;A &amp; Cheatsheet</a></summary><ul class="subtopics"><li><a class="" href="interview-q-a-cheatsheet.html#table-of-contents">Table of Contents</a></li><li><a class="" href="interview-q-a-cheatsheet.html#section-16--model-answers-by-category">Section 16 — Model Answers by Category</a></li><li><a class="" href="interview-q-a-cheatsheet.html#section-17--must-revise-checklist">Section 17 — Must-Revise Checklist</a></li><li><a class="" href="interview-q-a-cheatsheet.html#section-18--senior-answer-framework-with-worked-examples">Section 18 — Senior Answer Framework with Worked Examples</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="references.html">References</a></summary><ul class="subtopics"><li><a class="" href="references.html#table-of-contents">Table of Contents</a></li><li><a class="" href="references.html#section-1--data-structures--big-o">Section 1 — Data Structures &amp; Big O</a></li><li><a class="" href="references.html#section-2--kotlin--java-fundamentals">Section 2 — Kotlin &amp; Java Fundamentals</a></li><li><a class="" href="references.html#section-3--concurrency--threading">Section 3 — Concurrency &amp; Threading</a></li><li><a class="" href="references.html#section-4--thread-communication">Section 4 — Thread Communication</a></li><li><a class="" href="references.html#section-5--ipc-binder-aidl-messenger">Section 5 — IPC: Binder, AIDL, Messenger</a></li><li><a class="" href="references.html#section-6--memory-management">Section 6 — Memory Management</a></li><li><a class="" href="references.html#section-7--architecture-patterns">Section 7 — Architecture Patterns</a></li><li><a class="" href="references.html#section-8--view-rendering">Section 8 — View Rendering</a></li><li><a class="" href="references.html#section-9--lifecycle--platform-components">Section 9 — Lifecycle &amp; Platform Components</a></li><li><a class="" href="references.html#section-10--data-layer">Section 10 — Data Layer</a></li><li><a class="" href="references.html#section-11--testing">Section 11 — Testing</a></li><li><a class="" href="references.html#section-12--build-gradle--release">Section 12 — Build, Gradle &amp; Release</a></li><li><a class="" href="references.html#section-13--security--privacy">Section 13 — Security &amp; Privacy</a></li><li><a class="" href="references.html#section-14--performance-beyond-rendering">Section 14 — Performance (Beyond Rendering)</a></li><li><a class="" href="references.html#section-15--system-design">Section 15 — System Design</a></li><li><a class="" href="references.html#section-16--interview-qa-cheatsheet">Section 16 — Interview Q&amp;A Cheatsheet</a></li><li><a class="" href="references.html#section-17--must-revise-checklist">Section 17 — Must-Revise Checklist</a></li><li><a class="" href="references.html#section-18--seniorstaff-answer-framework">Section 18 — Senior/Staff Answer Framework</a></li><li><a class="" href="references.html#books">Books</a></li></ul></details></nav>
+<aside class="toc-right"><div class="toc-h">On this page</div><ul class="toc-tree"><li class="toc-grp"><a class="toc-2" href="#table-of-contents"><span class="tcaret tcaret-none"></span>Table of Contents</a></li><li class="toc-grp"><a class="toc-2" href="#81-traditional-view-system-rendering"><span class="tcaret">▶</span>8.1 Traditional View System Rendering</a><ul class="toc-subs"><li><a class="toc-3" href="#view-hierarchy">View Hierarchy</a></li><li><a class="toc-3" href="#viewrootimpl">ViewRootImpl</a></li><li><a class="toc-3" href="#measure-pass">Measure Pass</a></li><li><a class="toc-3" href="#layout-pass">Layout Pass</a></li><li><a class="toc-3" href="#draw-pass">Draw Pass</a></li><li><a class="toc-3" href="#onmeasure">onMeasure()</a></li><li><a class="toc-3" href="#onlayout">onLayout()</a></li><li><a class="toc-3" href="#ondraw">onDraw()</a></li><li><a class="toc-3" href="#invalidate-vs-requestlayout">invalidate() vs requestLayout()</a></li><li><a class="toc-3" href="#canvas-and-paint">Canvas and Paint</a></li><li><a class="toc-3" href="#hardware-acceleration">Hardware Acceleration</a></li><li><a class="toc-3" href="#overdraw">Overdraw</a></li><li><a class="toc-3" href="#clipping">Clipping</a></li><li><a class="toc-3" href="#touch-dispatch">Touch Dispatch</a></li><li><a class="toc-3" href="#nested-layouts">Nested Layouts</a></li><li><a class="toc-3" href="#constraintlayout">ConstraintLayout</a></li><li><a class="toc-3" href="#recyclerview-rendering-view-system-level">RecyclerView Rendering (View-system level)</a></li><li><a class="toc-3" href="#custom-view">Custom View</a></li><li><a class="toc-3" href="#why-ondraw-avoids-allocations">Why onDraw() Avoids Allocations</a></li></ul></li><li class="toc-grp"><a class="toc-2" href="#82-choreographer-vsync-and-frame-rendering"><span class="tcaret">▶</span>8.2 Choreographer, VSync, and Frame Rendering</a><ul class="toc-subs"><li><a class="toc-3" href="#frame-deadlines">Frame Deadlines</a></li><li><a class="toc-3" href="#vsync">VSync</a></li><li><a class="toc-3" href="#choreographer-and-frame-callbacks">Choreographer and Frame Callbacks</a></li><li><a class="toc-3" href="#main-thread-work-and-frame-rendering">Main-Thread Work and Frame Rendering</a></li><li><a class="toc-3" href="#dropped-frames-and-jank">Dropped Frames and Jank</a></li><li><a class="toc-3" href="#frozen-frames">Frozen Frames</a></li><li><a class="toc-3" href="#slow-rendering">Slow Rendering</a></li></ul></li><li class="toc-grp"><a class="toc-2" href="#83-recyclerview-performance"><span class="tcaret">▶</span>8.3 RecyclerView Performance</a><ul class="toc-subs"><li><a class="toc-3" href="#viewholder-pattern">ViewHolder Pattern</a></li><li><a class="toc-3" href="#recycling-mechanics">Recycling Mechanics</a></li><li><a class="toc-3" href="#diffutil">DiffUtil</a></li><li><a class="toc-3" href="#listadapter">ListAdapter</a></li><li><a class="toc-3" href="#stable-ids">Stable IDs</a></li><li><a class="toc-3" href="#payload-updates">Payload Updates</a></li><li><a class="toc-3" href="#item-decoration">Item Decoration</a></li><li><a class="toc-3" href="#layoutmanager">LayoutManager</a></li><li><a class="toc-3" href="#prefetch">Prefetch</a></li><li><a class="toc-3" href="#nested-recyclerviews">Nested RecyclerViews</a></li><li><a class="toc-3" href="#avoiding-heavy-bind-work">Avoiding Heavy Bind Work</a></li><li><a class="toc-3" href="#image-loading-cancellation">Image Loading Cancellation</a></li><li><a class="toc-3" href="#pagination">Pagination</a></li></ul></li><li class="toc-grp"><a class="toc-2" href="#84-jetpack-compose-rendering"><span class="tcaret">▶</span>8.4 Jetpack Compose Rendering</a><ul class="toc-subs"><li><a class="toc-3" href="#composition">Composition</a></li><li><a class="toc-3" href="#recomposition">Recomposition</a></li><li><a class="toc-3" href="#layout-phase">Layout Phase</a></li><li><a class="toc-3" href="#drawing-phase">Drawing Phase</a></li><li><a class="toc-3" href="#state-reads-and-snapshot-state">State Reads and Snapshot State</a></li><li><a class="toc-3" href="#remember-and-remembersaveable">remember and rememberSaveable</a></li><li><a class="toc-3" href="#derivedstateof">derivedStateOf</a></li><li><a class="toc-3" href="#launchedeffect">LaunchedEffect</a></li><li><a class="toc-3" href="#disposableeffect">DisposableEffect</a></li><li><a class="toc-3" href="#sideeffect">SideEffect</a></li><li><a class="toc-3" href="#rememberupdatedstate">rememberUpdatedState</a></li><li><a class="toc-3" href="#stability-and-skippability">Stability and Skippability</a></li><li><a class="toc-3" href="#modifier-order">Modifier Order</a></li><li><a class="toc-3" href="#lazycolumn-keys">LazyColumn Keys</a></li><li><a class="toc-3" href="#state-hoisting">State Hoisting</a></li><li><a class="toc-3" href="#stateless-vs-stateful-composables">Stateless vs Stateful Composables</a></li><li><a class="toc-3" href="#compose-interop-with-views">Compose Interop with Views</a></li><li><a class="toc-3" href="#compose-testing">Compose Testing</a></li><li><a class="toc-3" href="#what-triggers-recomposition">What Triggers Recomposition</a></li><li><a class="toc-3" href="#avoiding-unnecessary-recomposition">Avoiding Unnecessary Recomposition</a></li></ul></li><li class="toc-grp"><a class="toc-2" href="#85-performance-tools"><span class="tcaret">▶</span>8.5 Performance Tools</a><ul class="toc-subs"><li><a class="toc-3" href="#android-studio-profiler">Android Studio Profiler</a></li><li><a class="toc-3" href="#layout-inspector">Layout Inspector</a></li><li><a class="toc-3" href="#cpu-profiler">CPU Profiler</a></li><li><a class="toc-3" href="#memory-profiler">Memory Profiler</a></li><li><a class="toc-3" href="#network-profiler">Network Profiler</a></li><li><a class="toc-3" href="#perfetto">Perfetto</a></li><li><a class="toc-3" href="#systrace">Systrace</a></li><li><a class="toc-3" href="#macrobenchmark">Macrobenchmark</a></li><li><a class="toc-3" href="#baseline-profiles">Baseline Profiles</a></li><li><a class="toc-3" href="#android-vitals">Android Vitals</a></li><li><a class="toc-3" href="#strictmode">StrictMode</a></li></ul></li><li class="toc-grp"><a class="toc-2" href="#interview-cheat-sheet"><span class="tcaret">▶</span>Interview Cheat Sheet</a><ul class="toc-subs"><li><a class="toc-3" href="#section-81--quick-answers">Section 8.1 — Quick Answers</a></li><li><a class="toc-3" href="#section-82--quick-answers">Section 8.2 — Quick Answers</a></li><li><a class="toc-3" href="#section-83--quick-answers">Section 8.3 — Quick Answers</a></li><li><a class="toc-3" href="#section-84--quick-answers">Section 8.4 — Quick Answers</a></li><li><a class="toc-3" href="#section-85--quick-answers">Section 8.5 — Quick Answers</a></li></ul></li></ul></aside>
+<div class="backdrop"></div>
+<div class="content">
+<div class="mtop"><button onclick="toggleNav()" aria-label="Menu">☰</button><a class="home" href="../index.html">🏠</a><span class="t">8. View Rendering</span></div>
+<a class="arrow left" href="architecture-patterns.html" title="Previous (7. Architecture Patterns)">‹</a>
+<a class="arrow right" href="lifecycle-platform-components.html" title="Next (9. Lifecycle &amp; Platform Components)">›</a>
+<div class="wrap">
+<h1 id="8-view-rendering">8. View Rendering</h1>
+<p>Senior/Staff-Level Android Interview Study Material</p>
+<hr>
+<h2 id="table-of-contents">Table of Contents</h2>
+<ul>
+<li><a href="#81-traditional-view-system-rendering">8.1 Traditional View System Rendering</a></li>
+<ul>
+<li><a href="#view-hierarchy">View Hierarchy</a></li>
+<li><a href="#viewrootimpl">ViewRootImpl</a></li>
+<li><a href="#measure-pass">Measure Pass</a></li>
+<li><a href="#layout-pass">Layout Pass</a></li>
+<li><a href="#draw-pass">Draw Pass</a></li>
+<li><a href="#onmeasure">onMeasure()</a></li>
+<li><a href="#onlayout">onLayout()</a></li>
+<li><a href="#ondraw">onDraw()</a></li>
+<li><a href="#invalidate-vs-requestlayout">invalidate() vs requestLayout()</a></li>
+<li><a href="#canvas-and-paint">Canvas and Paint</a></li>
+<li><a href="#hardware-acceleration">Hardware Acceleration</a></li>
+<li><a href="#overdraw">Overdraw</a></li>
+<li><a href="#clipping">Clipping</a></li>
+<li><a href="#touch-dispatch">Touch Dispatch</a></li>
+<li><a href="#nested-layouts">Nested Layouts</a></li>
+<li><a href="#constraintlayout">ConstraintLayout</a></li>
+<li><a href="#recyclerview-rendering-view-system-level">RecyclerView Rendering (View-system level)</a></li>
+<li><a href="#custom-view">Custom View</a></li>
+<li><a href="#why-ondraw-avoids-allocations">Why onDraw() Avoids Allocations</a></li>
+</ul>
+<li><a href="#82-choreographer-vsync-and-frame-rendering">8.2 Choreographer, VSync, and Frame Rendering</a></li>
+<ul>
+<li><a href="#frame-deadlines">Frame Deadlines</a></li>
+<li><a href="#vsync">VSync</a></li>
+<li><a href="#choreographer-and-frame-callbacks">Choreographer and Frame Callbacks</a></li>
+<li><a href="#main-thread-work-and-frame-rendering">Main-Thread Work and Frame Rendering</a></li>
+<li><a href="#dropped-frames-and-jank">Dropped Frames and Jank</a></li>
+<li><a href="#frozen-frames">Frozen Frames</a></li>
+<li><a href="#slow-rendering">Slow Rendering</a></li>
+</ul>
+<li><a href="#83-recyclerview-performance">8.3 RecyclerView Performance</a></li>
+<ul>
+<li><a href="#viewholder-pattern">ViewHolder Pattern</a></li>
+<li><a href="#recycling-mechanics">Recycling Mechanics</a></li>
+<li><a href="#diffutil">DiffUtil</a></li>
+<li><a href="#listadapter">ListAdapter</a></li>
+<li><a href="#stable-ids">Stable IDs</a></li>
+<li><a href="#payload-updates">Payload Updates</a></li>
+<li><a href="#item-decoration">Item Decoration</a></li>
+<li><a href="#layoutmanager">LayoutManager</a></li>
+<li><a href="#prefetch">Prefetch</a></li>
+<li><a href="#nested-recyclerviews">Nested RecyclerViews</a></li>
+<li><a href="#avoiding-heavy-bind-work">Avoiding Heavy Bind Work</a></li>
+<li><a href="#image-loading-cancellation">Image Loading Cancellation</a></li>
+<li><a href="#pagination">Pagination</a></li>
+</ul>
+<li><a href="#84-jetpack-compose-rendering">8.4 Jetpack Compose Rendering</a></li>
+<ul>
+<li><a href="#composition">Composition</a></li>
+<li><a href="#recomposition">Recomposition</a></li>
+<li><a href="#layout-phase">Layout Phase</a></li>
+<li><a href="#drawing-phase">Drawing Phase</a></li>
+<li><a href="#state-reads-and-snapshot-state">State Reads and Snapshot State</a></li>
+<li><a href="#remember-and-remembersaveable">remember and rememberSaveable</a></li>
+<li><a href="#derivedstateof">derivedStateOf</a></li>
+<li><a href="#launchedeffect">LaunchedEffect</a></li>
+<li><a href="#disposableeffect">DisposableEffect</a></li>
+<li><a href="#sideeffect">SideEffect</a></li>
+<li><a href="#rememberupdatedstate">rememberUpdatedState</a></li>
+<li><a href="#stability-and-skippability">Stability and Skippability</a></li>
+<li><a href="#modifier-order">Modifier Order</a></li>
+<li><a href="#lazycolumn-keys">LazyColumn Keys</a></li>
+<li><a href="#state-hoisting">State Hoisting</a></li>
+<li><a href="#stateless-vs-stateful-composables">Stateless vs Stateful Composables</a></li>
+<li><a href="#compose-interop-with-views">Compose Interop with Views</a></li>
+<li><a href="#compose-testing">Compose Testing</a></li>
+<li><a href="#what-triggers-recomposition">What Triggers Recomposition</a></li>
+<li><a href="#avoiding-unnecessary-recomposition">Avoiding Unnecessary Recomposition</a></li>
+</ul>
+<li><a href="#85-performance-tools">8.5 Performance Tools</a></li>
+<ul>
+<li><a href="#android-studio-profiler">Android Studio Profiler</a></li>
+<li><a href="#layout-inspector">Layout Inspector</a></li>
+<li><a href="#cpu-profiler">CPU Profiler</a></li>
+<li><a href="#memory-profiler">Memory Profiler</a></li>
+<li><a href="#network-profiler">Network Profiler</a></li>
+<li><a href="#perfetto">Perfetto</a></li>
+<li><a href="#systrace">Systrace</a></li>
+<li><a href="#macrobenchmark">Macrobenchmark</a></li>
+<li><a href="#baseline-profiles">Baseline Profiles</a></li>
+<li><a href="#android-vitals">Android Vitals</a></li>
+<li><a href="#strictmode">StrictMode</a></li>
+</ul>
+</ul>
+<hr>
+<h2 id="81-traditional-view-system-rendering">8.1 Traditional View System Rendering</h2>
+<h3 id="view-hierarchy">View Hierarchy</h3>
+<p>The View system organizes UI as a tree of <code>View</code> and <code>ViewGroup</code> objects rooted at a <code>DecorView</code>. A <code>ViewGroup</code> is itself a <code>View</code> that contains children, forming a parent-child tree. The tree is traversed top-down for measurement and layout, and bottom-up for drawing — children paint over parents.</p>
+<p><strong>Internals:</strong></p>
+<ul>
+<li><code>Activity.setContentView(layoutRes)</code> inflates XML into View objects and attaches them under the <code>DecorView</code>.</li>
+<li><code>DecorView</code> is a <code>FrameLayout</code> subclass managed by the Window. It holds the status bar, title bar, and the user&#x27;s content area.</li>
+<li>The Window is an abstraction over the display surface (<code>Surface</code>). A <code>Surface</code> is a raw buffer the GPU composites.</li>
+</ul>
+<p><strong>Android Implications:</strong></p>
+<ul>
+<li>Every pixel rendered must traverse this tree. A deep or wide tree means more nodes visited per frame.</li>
+<li>Flat hierarchies (fewer nesting levels) render faster because traversal is O(nodes) and measurement can be O(n²) in the worst case (when MeasureSpec.UNSPECIFIED or WRAP_CONTENT is used in nested WRAP_CONTENT parents).</li>
+</ul>
+<p><strong>Failure Modes:</strong></p>
+<ul>
+<li><code>InflateException</code> when a referenced attribute or style is missing.</li>
+<li>Memory leaks when a <code>Context</code> (often an <code>Activity</code>) is held by a static View reference after the Activity is destroyed.</li>
+</ul>
+<hr>
+<h3 id="viewrootimpl">ViewRootImpl</h3>
+<p><code>ViewRootImpl</code> is the bridge between the View tree and the display system. It is an internal Android class (<code>android.view.ViewRootImpl</code>) that implements <code>ViewParent</code> and <code>View.AttachInfo</code>. Every Window — and therefore every Activity — has exactly one <code>ViewRootImpl</code>.</p>
+<p><strong>Internals:</strong></p>
+<ul>
+<li>Created when <code>WindowManager.addView()</code> is called (which happens during <code>Activity.onResume()</code>).</li>
+<li>It holds a <code>Choreographer</code> subscription and drives the measure/layout/draw passes in <code>performTraversals()</code>.</li>
+<li>It communicates with <code>SurfaceFlinger</code> (the system compositor) via a <code>Surface</code> object.</li>
+<li>It manages the main-thread <code>Handler</code> that processes input events, configuration changes, and invalidation/relayout requests.</li>
+</ul>
+<p><strong>Android Implications:</strong></p>
+<ul>
+<li>All View operations (measure, layout, draw, touch) must happen on the thread that created the View — the main thread. Off-thread mutations cause <code>CalledFromWrongThreadException</code>.</li>
+<li><code>requestLayout()</code> and <code>invalidate()</code> ultimately send a message to <code>ViewRootImpl</code>&#x27;s handler, which coalesces them into the next frame traversal.</li>
+</ul>
+<p><strong>Trade-off:</strong> The synchronous traversal model means every frame is bounded by how much work the main thread can complete — roughly 16ms at 60 Hz or 8ms at 120 Hz.</p>
+<hr>
+<h3 id="measure-pass">Measure Pass</h3>
+<p>The measure pass determines the desired size of every View in the tree. It begins at <code>ViewRootImpl.performMeasure()</code> and propagates down via <code>View.measure()</code>.</p>
+<p><strong>Internals — MeasureSpec:</strong> <code>MeasureSpec</code> encodes both a <strong>mode</strong> and a <strong>size</strong> in a single <code>int</code>:</p>
+<table border="1" cellpadding="6" cellspacing="0">
+<thead><tr>
+<th>Mode</th>
+<th>Meaning</th>
+</tr></thead><tbody>
+<tr><td><code>EXACTLY</code></td><td>Parent dictates exact size (match_parent or dp value)</td></tr>
+<tr><td><code>AT_MOST</code></td><td>View may be up to this size (wrap_content in bounded parent)</td></tr>
+<tr><td><code>UNSPECIFIED</code></td><td>Parent imposes no constraint (scrollable containers)</td></tr>
+</tbody></table>
+<p>The measure pass is <strong>recursive</strong>: a parent calls <code>child.measure(widthSpec, heightSpec)</code> for each child, passing down constrained <code>MeasureSpec</code> values derived from its own <code>MeasureSpec</code> and the child&#x27;s layout params.</p>
+<p><strong>Performance:</strong> Re-measurement is expensive. A <code>LinearLayout</code> with <code>layout_weight</code> attributes forces two measure passes per weighted child. <code>RelativeLayout</code> also performs two passes. <code>ConstraintLayout</code> performs one pass in most cases.</p>
+<p><strong>Interview:</strong> &quot;WRAP_CONTENT in a ScrollView with a ListView&quot; used to be a classic O(n²) trap — <code>ScrollView</code> passes <code>UNSPECIFIED</code>, the <code>ListView</code> re-measures every child for each <code>onMeasure()</code> call.</p>
+<hr>
+<h3 id="layout-pass">Layout Pass</h3>
+<p>The layout pass assigns the final position — left, top, right, bottom — to every View, given the sizes determined by the measure pass. It begins at <code>ViewRootImpl.performLayout()</code> and calls <code>View.layout()</code>, which in turn calls <code>onLayout()</code>.</p>
+<p><strong>Internals:</strong></p>
+<ul>
+<li><code>View.layout(l, t, r, b)</code> stores the four coordinates and calls <code>onLayout()</code> if the size or position changed.</li>
+<li><code>ViewGroup.onLayout()</code> is where the group positions each child by calling <code>child.layout()</code>.</li>
+<li><code>View.getLeft()</code>, <code>getTop()</code>, <code>getRight()</code>, <code>getBottom()</code> are only valid after layout.</li>
+</ul>
+<p><strong>Failure Modes:</strong></p>
+<ul>
+<li>Calling <code>getWidth()</code> or <code>getHeight()</code> in <code>onCreate()</code> before layout completes returns 0. Use <code>View.post { }</code> or <code>doOnLayout { }</code> (KTX) to defer.</li>
+</ul>
+<hr>
+<h3 id="draw-pass">Draw Pass</h3>
+<p>The draw pass traverses the tree and renders each View to a <code>Canvas</code>. It begins at <code>ViewRootImpl.performDraw()</code>.</p>
+<p><strong>Internals (Software rendering):</strong></p>
+<ul>
+<li><code>ViewRootImpl</code> locks a <code>Canvas</code> from the <code>Surface</code> buffer.</li>
+<li><code>View.draw(canvas)</code> is called; it:</li>
+<ol>
+<li>Draws the background.</li>
+<li>Saves the canvas and fades edges if needed.</li>
+<li>Calls <code>onDraw(canvas)</code> — View&#x27;s own content.</li>
+<li>Calls <code>dispatchDraw(canvas)</code> — children.</li>
+<li>Draws decorators (scrollbars, foreground).</li>
+</ol>
+</ul>
+<p><strong>Internals (Hardware rendering — default since API 14):</strong></p>
+<ul>
+<li>Instead of writing directly to a software buffer, each View records drawing commands into a <code>RenderNode</code> (a display list).</li>
+<li>The RenderNode is replayed on the RenderThread (a separate thread introduced in API 21) via the GPU, using OpenGL ES or Vulkan.</li>
+<li>Only invalidated nodes are re-recorded; others are replayed from the cached display list.</li>
+</ul>
+<hr>
+<h3 id="onmeasure">onMeasure()</h3>
+<pre><code>override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
+    val desiredWidth = 200
+    val desiredHeight = 200
+    val width = resolveSize(desiredWidth, widthMeasureSpec)
+    val height = resolveSize(desiredHeight, heightMeasureSpec)
+    setMeasuredDimension(width, height)  // MUST be called
+}</code></pre>
+<p><strong>Rules:</strong></p>
+<ul>
+<li><strong>Must</strong> call <code>setMeasuredDimension()</code> — failing to do so throws <code>IllegalStateException</code>.</li>
+<li>Use <code>View.resolveSize()</code> or <code>MeasureSpec.getSize()</code> / <code>MeasureSpec.getMode()</code> helpers.</li>
+<li>For <code>ViewGroup</code>, call <code>measureChildren()</code> or <code>measureChildWithMargins()</code> before calling <code>setMeasuredDimension()</code>.</li>
+</ul>
+<p><strong>Trade-off:</strong> Overriding <code>onMeasure()</code> in a <code>ViewGroup</code> without properly measuring children causes those children to end up with zero dimensions.</p>
+<hr>
+<h3 id="onlayout">onLayout()</h3>
+<pre><code>override fun onLayout(changed: Boolean, l: Int, t: Int, r: Int, b: Int) {
+    // For a ViewGroup: position each child
+    var currentTop = paddingTop
+    for (child in children) {
+        if (child.visibility == View.GONE) continue
+        val childWidth = child.measuredWidth
+        val childHeight = child.measuredHeight
+        child.layout(paddingLeft, currentTop, paddingLeft + childWidth, currentTop + childHeight)
+        currentTop += childHeight
+    }
+}</code></pre>
+<p><strong>Rules:</strong></p>
+<ul>
+<li>Only called on <code>ViewGroup</code> subclasses (or Views that need to arrange things — rare).</li>
+<li><code>changed</code> is <code>true</code> if the size or position changed since the last layout.</li>
+</ul>
+<hr>
+<h3 id="ondraw">onDraw()</h3>
+<pre><code>override fun onDraw(canvas: Canvas) {
+    super.onDraw(canvas)
+    canvas.drawCircle(width / 2f, height / 2f, radius, paint)
+    canvas.drawText(label, x, y, textPaint)
+}</code></pre>
+<p><strong>Rules:</strong></p>
+<ul>
+<li>Never allocate objects here (no <code>Paint()</code>, no <code>Path()</code>, no <code>String</code> formatting with <code>+</code>).</li>
+<li>All <code>Paint</code> and <code>Path</code> objects are created once in <code>init {}</code> or a field initializer.</li>
+<li><code>canvas.save()</code> / <code>canvas.restore()</code> bracket transformations and clips.</li>
+</ul>
+<hr>
+<h3 id="invalidate-vs-requestlayout">invalidate() vs requestLayout()</h3>
+<table border="1" cellpadding="6" cellspacing="0">
+<thead><tr>
+<th></th>
+<th><code>invalidate()</code></th>
+<th><code>requestLayout()</code></th>
+</tr></thead><tbody>
+<tr><td><strong>What it does</strong></td><td>Marks the View as needing to be redrawn</td><td>Marks the View as needing a new measure + layout + draw pass</td></tr>
+<tr><td><strong>Scope</strong></td><td>Only the draw pass (onDraw) is repeated</td><td>Full traversal: onMeasure → onLayout → onDraw</td></tr>
+<tr><td><strong>Cost</strong></td><td>Cheaper — only redraws dirty region</td><td>More expensive — re-measures and re-lays out the subtree</td></tr>
+<tr><td><strong>When to use</strong></td><td>Visual change only (color, text, animation frame) — size/position unchanged</td><td>Size or position of the View has changed</td></tr>
+<tr><td><strong>Thread safety</strong></td><td><code>postInvalidate()</code> for off-main-thread</td><td><code>requestLayout()</code> is safe to call on any thread (posts to main handler)</td></tr>
+</tbody></table>
+<p>Both methods ultimately schedule a traversal in <code>ViewRootImpl</code>. Multiple <code>requestLayout()</code> calls within a single frame are coalesced into one traversal. One important gotcha: calling <code>requestLayout()</code> from within <code>onLayout()</code> — unless guarded — creates an infinite loop.</p>
+<p>The failure modes to watch for: calling <code>requestLayout()</code> when only a color changes wastes a full measure/layout pass unnecessarily. On the flip side, calling <code>invalidate()</code> when a text string that changes the View&#x27;s width is updated causes the View to draw at the old size.</p>
+<hr>
+<h3 id="canvas-and-paint">Canvas and Paint</h3>
+<p><code>Canvas</code> is the drawing surface abstraction. It wraps a <code>Bitmap</code> in software mode or records commands to a <code>RenderNode</code> in hardware mode. The key operations you reach for are <code>drawRect</code>, <code>drawCircle</code>, <code>drawPath</code>, <code>drawBitmap</code>, <code>drawText</code>, <code>drawLine</code>, <code>save</code>/<code>restore</code>, <code>clipRect</code>, <code>clipPath</code>, <code>translate</code>, <code>scale</code>, and <code>rotate</code>. <code>canvas.save()</code> pushes the current matrix-and-clip state; <code>canvas.restore()</code> pops it back. Always balance saves and restores — wrapping them in a try/finally is the safe pattern.</p>
+<p><code>Paint</code> describes how drawing operations render: it carries color, stroke width, typeface, anti-aliasing flag, shader, mask filter, and more. A few things to know: <code>Paint.setAntiAlias(true)</code> smooths edges at a small GPU cost; <code>setStyle</code> controls whether you fill, stroke, or do both; <code>setShader(LinearGradient(...))</code> gives you gradient fills; and <code>setColorFilter(PorterDuffColorFilter(...))</code> handles tinting.</p>
+<pre><code>// Create once in init, never in onDraw
+private val circlePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+    color = Color.BLUE
+    style = Paint.Style.FILL
+}</code></pre>
+<hr>
+<h3 id="hardware-acceleration">Hardware Acceleration</h3>
+<p>Hardware acceleration redirects drawing commands from the CPU to the GPU. It has been the default since API 14, enabled at the Application level in the manifest or overridden per-Window or per-View.</p>
+<p><strong>Internals:</strong></p>
+<ul>
+<li>Every hardware-accelerated View has a <code>RenderNode</code> that stores a <code>DisplayList</code> — a serialized sequence of drawing commands.</li>
+<li>When <code>invalidate()</code> is called on a View, only that View&#x27;s <code>RenderNode</code> is re-recorded. The RenderThread replays all non-dirty <code>RenderNode</code>s from cache.</li>
+<li>The RenderThread (a background GPU thread) handles actual GPU command submission independently from the main thread, reducing jank when the main thread is briefly busy.</li>
+</ul>
+<p><strong>Not all Canvas operations are hardware-accelerated:</strong></p>
+<ul>
+<li>Some <code>Paint</code> operations (e.g., certain <code>Xfermode</code>s) may fall back to software rendering.</li>
+<li><code>View.setLayerType(View.LAYER_TYPE_SOFTWARE, null)</code> forces software rendering for a subtree (useful for unsupported operations but costs performance).</li>
+</ul>
+<p>The key trade-off with hardware layers (<code>LAYER_TYPE_HARDWARE</code>): they cache a View&#x27;s rendered output as a GPU texture, which is great for animations that don&#x27;t change the View&#x27;s content — translates, scales, alpha fades. But the layer must be explicitly invalidated when content changes, or it shows stale pixels. <code>ViewPropertyAnimator</code> manages this automatically during animations, which is one reason to prefer it over manual hardware layer management.</p>
+<hr>
+<h3 id="overdraw">Overdraw</h3>
+<p>Overdraw occurs when the same pixel is drawn more than once per frame. Every extra draw cycle wastes GPU fill-rate and can cause thermal throttling on lower-end devices.</p>
+<p><strong>Detection:</strong> Enable &quot;Debug GPU Overdraw&quot; in Developer Options. The overlay colors pixels:</p>
+<ul>
+<li>No color: drawn once (ideal)</li>
+<li>Blue: 2x overdraw</li>
+<li>Green: 3x overdraw</li>
+<li>Pink: 4x overdraw</li>
+<li>Red: 5+ overdraw (problematic)</li>
+</ul>
+<p><strong>Causes:</strong></p>
+<ul>
+<li>Opaque <code>View</code> background + opaque <code>Window</code> background both rendering.</li>
+<li><code>CardView</code> background + content <code>View</code> background.</li>
+<li>Drawing transparent regions.</li>
+</ul>
+<p><strong>Fixes:</strong></p>
+<ul>
+<li>Remove redundant backgrounds: <code>activity.window.setBackgroundDrawableResource(android.R.color.transparent)</code> if the Activity&#x27;s root View already sets a background.</li>
+<li>Use <code>canvas.clipRect()</code> to skip drawing outside a region.</li>
+<li>Use <code>View.setWillNotDraw(true)</code> on <code>ViewGroup</code>s that don&#x27;t draw themselves.</li>
+</ul>
+<hr>
+<h3 id="clipping">Clipping</h3>
+<p>Clipping restricts drawing to a region of the <code>Canvas</code>, preventing pixels outside the clip from being modified.</p>
+<pre><code>override fun onDraw(canvas: Canvas) {
+    canvas.save()
+    canvas.clipRect(left, top, right, bottom)
+    // Only pixels within the rect are affected
+    canvas.drawBitmap(bitmap, 0f, 0f, null)
+    canvas.restore()
+}</code></pre>
+<p><strong>Uses:</strong></p>
+<ul>
+<li>Reducing overdraw by skipping drawing behind opaque regions.</li>
+<li>Rounded corners: <code>canvas.clipPath(roundRectPath)</code> (software only — on hardware, use <code>View.setClipToOutline(true)</code> with <code>ViewOutlineProvider</code>).</li>
+<li>Compositing effects.</li>
+</ul>
+<p>One trade-off to keep in mind: <code>clipPath()</code> disables hardware acceleration for that draw call, falling back to software. For hardware-accelerated clipping, prefer <code>Outline</code>-based clipping via <code>View.setClipToOutline(true)</code> with a <code>ViewOutlineProvider</code>.</p>
+<hr>
+<h3 id="touch-dispatch">Touch Dispatch</h3>
+<p>Touch events follow a dispatch chain from the root <code>ViewGroup</code> down through children, and each level in the hierarchy has the opportunity to intercept the event before it reaches the target.</p>
+<p><strong>The three-method pattern:</strong></p>
+<table border="1" cellpadding="6" cellspacing="0">
+<thead><tr>
+<th>Method</th>
+<th>Purpose</th>
+<th>Returning <code>true</code></th>
+</tr></thead><tbody>
+<tr><td><code>dispatchTouchEvent(ev)</code></td><td>Entry point; routes to intercept or child</td><td>Event is consumed by this View&#x27;s tree</td></tr>
+<tr><td><code>onInterceptTouchEvent(ev)</code></td><td>ViewGroup only; can steal an ongoing gesture</td><td>This ViewGroup will handle subsequent events</td></tr>
+<tr><td><code>onTouchEvent(ev)</code></td><td>Handles the event in this View</td><td>Event is consumed</td></tr>
+</tbody></table>
+<p><strong>Dispatch flow for <code>ACTION_DOWN</code>:</strong></p>
+<ol>
+<li><code>Activity.dispatchTouchEvent()</code> → <code>ViewRootImpl</code> → root <code>ViewGroup</code>.</li>
+<li>Each <code>ViewGroup</code> calls <code>onInterceptTouchEvent()</code>. If it returns <code>false</code>, the event descends to children.</li>
+<li>Children are hit-tested (largest z-order child first). A matching child&#x27;s <code>dispatchTouchEvent()</code> is called.</li>
+<li>If no child consumes it, the <code>ViewGroup</code>&#x27;s own <code>onTouchEvent()</code> is called.</li>
+<li>If nothing consumes <code>ACTION_DOWN</code>, subsequent events are not sent to that View.</li>
+</ol>
+<p><code>ACTION_CANCEL</code> is sent to a child when a parent intercepts mid-gesture. Always handle <code>ACTION_CANCEL</code> the same way you handle <code>ACTION_UP</code> in custom Views — it signals &quot;the gesture you were tracking is no longer yours.&quot;</p>
+<p><code>requestDisallowInterceptTouchEvent(true)</code> is called by a child on its parent to block <code>onInterceptTouchEvent()</code> from being called — the classic use case is a horizontal <code>ViewPager</code> nested inside a vertical <code>RecyclerView</code>, where the inner scroll view needs to own horizontal swipes.</p>
+<hr>
+<h3 id="nested-layouts">Nested Layouts</h3>
+<p>Every extra level of nesting adds nodes to the traversal. The really dangerous case is when certain combinations cause exponential measurement: a <code>LinearLayout</code> with <code>WRAP_CONTENT</code> inside a <code>ScrollView</code> with <code>WRAP_CONTENT</code> produces O(n²) measurement passes. The reason is that <code>ScrollView</code> passes <code>UNSPECIFIED</code> to its children, and with <code>UNSPECIFIED</code>, <code>LinearLayout</code> cannot cache measurement results for its own <code>WRAP_CONTENT</code> children — so every call to <code>measure()</code> propagates all the way back down the tree.</p>
+<p>The fix is to use <code>ConstraintLayout</code> to flatten the hierarchy — replace three levels of <code>LinearLayout</code> and <code>RelativeLayout</code> with a single flat <code>ConstraintLayout</code>.</p>
+<p>One thing interviewers like to ask about is <code>RelativeLayout</code>&#x27;s double-measure pass: it measures children twice — once to gather relative constraints and once to resolve them.</p>
+<hr>
+<h3 id="constraintlayout">ConstraintLayout</h3>
+<p><code>ConstraintLayout</code> is a <code>ViewGroup</code> that positions children using a system of horizontal and vertical constraints. The key benefit is that it replaces deeply nested <code>LinearLayout</code>/<code>RelativeLayout</code> trees with a single flat level.</p>
+<p><strong>Internals:</strong></p>
+<ul>
+<li>Uses the Cassowary constraint-solving algorithm (same as Apple&#x27;s Auto Layout).</li>
+<li>Each View has constraints anchoring it to parent edges, other Views&#x27; edges, or guidelines.</li>
+<li>Resolves all constraints in O(n) for a well-formed layout (no circular dependencies).</li>
+<li><code>Barrier</code>, <code>Group</code>, <code>Guideline</code>, and <code>Flow</code> are virtual helpers (zero-size Views) that assist positioning.</li>
+</ul>
+<p><strong>Key features:</strong></p>
+<ul>
+<li><code>layout_constraintDimensionRatio</code> for aspect ratio.</li>
+<li><code>layout_constraintPercent*</code> for percentage-based sizing.</li>
+<li><code>ConstraintSet</code> for programmatic constraint manipulation (useful for animations).</li>
+<li><code>MotionLayout</code> (a <code>ConstraintLayout</code> subclass) for declarative keyframe animations.</li>
+</ul>
+<p><strong>Trade-offs:</strong> It adds a dependency (<code>implementation &quot;androidx.constraintlayout:constraintlayout&quot;</code>) and slightly longer inflation time compared to a simple <code>FrameLayout</code>. XML authoring can also be verbose for complex layouts — the Layout Editor helps with that.</p>
+<hr>
+<h3 id="recyclerview-rendering-view-system-level">RecyclerView Rendering (View-system level)</h3>
+<p>At the View-system level, <code>RecyclerView</code> is just a <code>ViewGroup</code>. Its <code>onMeasure()</code> and <code>onLayout()</code> delegate to the attached <code>LayoutManager</code>, which measures and positions item Views. <code>RecyclerView</code> itself draws nothing other than item decorations. Each item View goes through the full measure/layout/draw cycle during <code>RecyclerView.dispatchLayout()</code>.</p>
+<p>The important rendering distinction: only <strong>visible</strong> items are measured and laid out. Off-screen items (beyond prefetch distance) are not in the tree.</p>
+<hr>
+<h3 id="custom-view">Custom View</h3>
+<p><strong>Complete template:</strong></p>
+<pre><code>class CircleView @JvmOverloads constructor(
+    context: Context,
+    attrs: AttributeSet? = null,
+    defStyleAttr: Int = 0
+) : View(context, attrs, defStyleAttr) {
+
+    private var radius = 50f
+    private val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.RED
+        style = Paint.Style.FILL
+    }
+    // Path and other objects also created here, never in onDraw
+
+    init {
+        // Read custom attributes
+        context.obtainStyledAttributes(attrs, R.styleable.CircleView, defStyleAttr, 0).use { ta -&gt;
+            radius = ta.getDimension(R.styleable.CircleView_circleRadius, 50f)
+        }
+    }
+
+    override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
+        val desired = (radius * 2).toInt()
+        setMeasuredDimension(
+            resolveSize(desired, widthMeasureSpec),
+            resolveSize(desired, heightMeasureSpec)
+        )
+    }
+
+    override fun onDraw(canvas: Canvas) {
+        canvas.drawCircle(width / 2f, height / 2f, radius, paint)
+    }
+
+    fun setRadius(newRadius: Float) {
+        radius = newRadius
+        requestLayout() // size changed
+    }
+
+    fun setColor(color: Int) {
+        paint.color = color
+        invalidate() // only redraw needed
+    }
+}</code></pre>
+<p><strong>For <code>ViewGroup</code>:</strong> also override <code>onLayout()</code> and <code>generateLayoutParams()</code>.</p>
+<p><strong>Custom attributes:</strong> Define in <code>res/values/attrs.xml</code>:</p>
+<pre><code>&lt;declare-styleable name=&quot;CircleView&quot;&gt;
+    &lt;attr name=&quot;circleRadius&quot; format=&quot;dimension&quot; /&gt;
+&lt;/declare-styleable&gt;</code></pre>
+<hr>
+<h3 id="why-ondraw-avoids-allocations">Why onDraw() Avoids Allocations</h3>
+<p><code>onDraw()</code> is called up to 60–120 times per second — every frame where the View is dirty. Allocating objects inside it causes three problems. First, it creates GC pressure: the garbage collector must periodically run to reclaim those short-lived allocations, and a GC pause on the main thread stalls the render loop, which means a dropped frame. Second, it defeats JIT optimization: hotspot allocation in tight loops inhibits JIT inlining and escape analysis. Third, it creates heap churn: even if GC is fast in the generational sense, frequent allocation fills the young generation and triggers more frequent minor GCs.</p>
+<pre><code>// BAD — allocates a Paint object every frame
+override fun onDraw(canvas: Canvas) {
+    val p = Paint().apply { color = Color.RED } // allocated 60+ times/sec
+    canvas.drawRect(0f, 0f, 100f, 100f, p)
+}
+
+// GOOD — reuses pre-allocated object
+private val paint = Paint().apply { color = Color.RED }
+override fun onDraw(canvas: Canvas) {
+    canvas.drawRect(0f, 0f, 100f, 100f, paint)
+}</code></pre>
+<p><strong>Tools to detect:</strong> Android Studio Memory Profiler, StrictMode (not for GC directly, but for disk/network on main thread). For GC pauses specifically: Android Vitals / Perfetto trace showing GC events.</p>
+<hr>
+<h2 id="82-choreographer-vsync-and-frame-rendering">8.2 Choreographer, VSync, and Frame Rendering</h2>
+<h3 id="frame-deadlines">Frame Deadlines</h3>
+<p>A frame deadline is the time by which all CPU and GPU work for a frame must complete so the frame can be delivered to the display at the next refresh cycle.</p>
+<ul>
+<li>At 60 Hz: ~16.67 ms per frame.</li>
+<li>At 90 Hz: ~11.11 ms per frame.</li>
+<li>At 120 Hz: ~8.33 ms per frame.</li>
+</ul>
+<p>The frame deadline budget is split across the main thread (measure/layout/draw call recording) and the RenderThread (GPU command submission). Both must finish within the deadline.</p>
+<p><strong>Android &quot;jank budget&quot; breakdown:</strong></p>
+<ul>
+<li>Main thread: builds the display list (calls <code>onDraw</code>, composites layers, handles input). Target: &lt; 4–6 ms.</li>
+<li>RenderThread: translates display list to GPU commands, uploads textures. Target: &lt; 4–6 ms.</li>
+<li>GPU: executes the commands. Target: &lt; remaining time.</li>
+</ul>
+<p>If any stage misses the deadline, the frame is dropped and the previous frame is shown again.</p>
+<hr>
+<h3 id="vsync">VSync</h3>
+<p>VSync — short for Vertical Synchronization — is a hardware signal from the display that fires at the display&#x27;s refresh rate. It marks the moment when the display starts scanning out a new frame.</p>
+<p>Android doesn&#x27;t hand the raw hardware VSync directly to apps. Instead, <code>SurfaceFlinger</code> (the system compositor) subscribes to the hardware signal and then distributes a software VSync signal via <code>Choreographer</code> to applications. This software VSync may be phase-offset from the hardware signal to pipeline CPU and GPU work. Apps are synchronized to this software VSync so frame rendering stays aligned with display refresh.</p>
+<p>Android also uses triple buffering — three frame buffers: one being displayed, one being composited by SurfaceFlinger, and one being rendered by the app. This lets the app start the next frame immediately after submitting the current one, even if SurfaceFlinger hasn&#x27;t finished compositing yet.</p>
+<hr>
+<h3 id="choreographer-and-frame-callbacks">Choreographer and Frame Callbacks</h3>
+<p><code>Choreographer</code> is the Android class that coordinates frame timing on the main thread. It receives VSync signals and dispatches them to registered callbacks.</p>
+<pre><code>// Low-level frame callback (rarely used directly in app code)
+Choreographer.getInstance().postFrameCallback { frameTimeNanos -&gt;
+    // frameTimeNanos: timestamp in nanoseconds of the VSync that triggered this frame
+    // Perform animation updates here
+    if (animating) {
+        Choreographer.getInstance().postFrameCallback(this)
+    }
+}</code></pre>
+<p><strong>Frame callback types (in order of execution within a frame):</strong></p>
+<ol>
+<li><code>CALLBACK_INPUT</code> — processes input events.</li>
+<li><code>CALLBACK_ANIMATION</code> — <code>ValueAnimator</code>, <code>ObjectAnimator</code>, view animations.</li>
+<li><code>CALLBACK_INSETS_ANIMATION</code> — window inset animations.</li>
+<li><code>CALLBACK_TRAVERSAL</code> — <code>ViewRootImpl.performTraversals()</code> (measure/layout/draw).</li>
+<li><code>CALLBACK_COMMIT</code> — post-draw work.</li>
+</ol>
+<p>The ordering has an important implication: input is processed before traversal, and animation updates happen before traversal too. That means if an animation updates a View property, the updated value is reflected in the same frame&#x27;s draw pass — there is no one-frame lag.</p>
+<p><code>ValueAnimator</code>, <code>ObjectAnimator</code>, and <code>View.animate()</code> — the <code>ViewPropertyAnimator</code> — all drive themselves through <code>Choreographer</code> internally. In Compose, the <code>withFrameNanos</code> suspend function is the Compose-side equivalent.</p>
+<hr>
+<h3 id="main-thread-work-and-frame-rendering">Main-Thread Work and Frame Rendering</h3>
+<p>Every frame, the main thread must handle pending input events, run animation callbacks, execute <code>ViewRootImpl.performTraversals()</code> — which covers measure, layout, and draw recording — and respond to any <code>Handler</code> messages posted between frames.</p>
+<p>What blocks the main thread and causes jank: network I/O (never do this — <code>StrictMode.ThreadPolicy</code> detects it); disk reads and writes (avoid them, use coroutines with <code>Dispatchers.IO</code>); long computation (move it to <code>Dispatchers.Default</code>); synchronous <code>SharedPreferences</code> commits (<code>apply()</code> is async, <code>commit()</code> is sync); database queries on the main thread (Room&#x27;s <code>allowMainThreadQueries()</code> is a trap); overdone <code>onDraw()</code> or deeply nested measure passes; and large Bitmaps decoded synchronously.</p>
+<p>The rule of thumb: any work taking more than roughly 4 ms on the main thread risks missing the frame deadline.</p>
+<hr>
+<h3 id="dropped-frames-and-jank">Dropped Frames and Jank</h3>
+<p>A dropped frame occurs when the app fails to submit a rendered frame before the VSync deadline, so the previous frame repeats on screen. Jank is the perceptible stuttering that results from dropped frames — a single dropped frame at 60 Hz creates a 33 ms gap, two display cycles, between visual updates.</p>
+<p><strong>Threshold (Android Vitals):</strong></p>
+<ul>
+<li>&quot;Slow frames&quot;: frames that take &gt; 16 ms to render (at 60 Hz).</li>
+<li>&quot;Frozen frames&quot;: frames that take &gt; 700 ms.</li>
+<li>Google Play&#x27;s core vitals threshold: &lt; 0.1% frozen frames.</li>
+</ul>
+<p><strong>Debug approach:</strong></p>
+<ol>
+<li>Reproduce the jank scenario.</li>
+<li>Capture a system trace with Android Studio Profiler → CPU → System Trace (Perfetto backend).</li>
+<li>Look at the <code>Choreographer#doFrame</code> slice on the main thread.</li>
+<li>Identify which phase (measure, layout, draw, input) is taking too long.</li>
+<li>Look at <code>RenderThread</code> for GPU-side bottlenecks.</li>
+</ol>
+<hr>
+<h3 id="frozen-frames">Frozen Frames</h3>
+<p>A frozen frame is one where the app&#x27;s main thread does not produce a new frame for more than 700 ms. That 700 ms number is the threshold Android Vitals uses to flag severe jank.</p>
+<p><strong>Common causes:</strong></p>
+<ul>
+<li>ANR-adjacent conditions (deadlocks, long synchronous operations).</li>
+<li>Blocking <code>SharedPreferences.commit()</code> on a slow disk.</li>
+<li>Cold-start work pushed into the first Activity&#x27;s <code>onCreate()</code>.</li>
+<li>Synchronous <code>Bitmap.decodeFile()</code> on large images on the main thread.</li>
+</ul>
+<p><strong>Impact:</strong> Android Vitals reports frozen frames. A rate above 0.1% negatively affects Play Store ranking and user retention.</p>
+<hr>
+<h3 id="slow-rendering">Slow Rendering</h3>
+<p>Android defines slow rendering as frames that exceed the per-refresh-cycle deadline — more than 16 ms at 60 Hz, or more than 8.33 ms at 120 Hz. The official developer documentation calls these &quot;skipped frames perceived as jank.&quot;</p>
+<p><strong>Categories in Android Vitals:</strong></p>
+<ul>
+<li>Slow frames: &gt; 16 ms (or refresh-rate deadline).</li>
+<li>Frozen frames: &gt; 700 ms.</li>
+</ul>
+<p><strong>Detection:</strong> <code>adb shell dumpsys gfxinfo &lt;package&gt;</code> outputs frame timing statistics:</p>
+<pre><code>Janky frames: 42 (3.50%)
+50th percentile: 6ms
+90th percentile: 14ms
+95th percentile: 20ms
+99th percentile: 88ms</code></pre>
+<p><strong>Optimization loop:</strong></p>
+<ol>
+<li>Measure baseline with Macrobenchmark.</li>
+<li>Profile with Perfetto to find root cause.</li>
+<li>Fix (flatten hierarchy, move work off main thread, use Baseline Profiles).</li>
+<li>Measure again to confirm improvement.</li>
+</ol>
+<hr>
+<h2 id="83-recyclerview-performance">8.3 RecyclerView Performance</h2>
+<h3 id="viewholder-pattern">ViewHolder Pattern</h3>
+<p><code>ViewHolder</code> is a cache object that holds references to the Views within a single list item layout, eliminating repeated <code>findViewById()</code> calls on every bind.</p>
+<p><strong>Internals:</strong></p>
+<ul>
+<li><code>RecyclerView.ViewHolder</code> is an abstract class. Each <code>Adapter</code> defines a concrete subclass.</li>
+<li><code>Adapter.createViewHolder()</code> inflates the item layout and stores View references in the <code>ViewHolder</code>.</li>
+<li><code>Adapter.bindViewHolder()</code> populates the stored Views with item data.</li>
+<li><code>RecyclerView</code> manages a pool of <code>ViewHolder</code> objects and calls <code>bindViewHolder</code> when recycling.</li>
+</ul>
+<pre><code>class MyAdapter : RecyclerView.Adapter&lt;MyAdapter.VH&gt;() {
+
+    class VH(val binding: ItemMyBinding) : RecyclerView.ViewHolder(binding.root)
+
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH {
+        val binding = ItemMyBinding.inflate(LayoutInflater.from(parent.context), parent, false)
+        return VH(binding)
+    }
+
+    override fun onBindViewHolder(holder: VH, position: Int) {
+        val item = items[position]
+        holder.binding.title.text = item.title
+        // Load image — see image cancellation section
+    }
+
+    override fun getItemCount() = items.size
+}</code></pre>
+<p>ViewBinding — used in the template above — is preferred over <code>findViewById()</code> because it is null-safe and avoids a map lookup per view access.</p>
+<hr>
+<h3 id="recycling-mechanics">Recycling Mechanics</h3>
+<p><code>RecyclerView</code> maintains a <code>RecycledViewPool</code> per view type. When a <code>ViewHolder</code> scrolls off screen, it is returned to the pool or to a scrap heap. When a new item needs to be displayed, <code>RecyclerView</code> tries to obtain a <code>ViewHolder</code> from three places in order: first the scrap heap, where ViewHolders that just detached may be rebound cheaply or reused as-is if stable IDs match; then the <code>RecycledViewPool</code>, where ViewHolders recycled from any position must be fully rebound; and finally <code>onCreateViewHolder()</code>, if both caches are empty.</p>
+<p><code>getItemViewType(position)</code> returns an <code>int</code> identifying the layout type. <code>RecyclerView</code> maintains separate pools per view type, so ViewHolders are only recycled within their type. When you have multiple view types — headers, items, footers, ads — return different integers from <code>getItemViewType</code>, and each type needs its own <code>ViewHolder</code> subclass and <code>onCreateViewHolder</code> branch.</p>
+<pre><code>override fun getItemViewType(position: Int): Int = when (items[position]) {
+    is Header -&gt; TYPE_HEADER
+    is Item -&gt; TYPE_ITEM
+    else -&gt; TYPE_FOOTER
+}</code></pre>
+<hr>
+<h3 id="diffutil">DiffUtil</h3>
+<p><code>DiffUtil</code> computes the minimal set of updates — insertions, deletions, moves, and changes — between two lists using the Myers diff algorithm, then dispatches precise <code>notifyItemInserted</code>, <code>notifyItemRemoved</code>, <code>notifyItemMoved</code>, and <code>notifyItemChanged</code> calls. The key advantage over <code>notifyDataSetChanged()</code> is that <code>notifyDataSetChanged()</code> invalidates the entire list: every item is rebound, no add/remove/move animations play, and unchanged items are needlessly re-rendered. <code>DiffUtil</code> preserves those animations and avoids rebinding unchanged items.</p>
+<pre><code>class ItemDiffCallback : DiffUtil.ItemCallback&lt;Item&gt;() {
+    override fun areItemsTheSame(old: Item, new: Item): Boolean = old.id == new.id
+    override fun areContentsTheSame(old: Item, new: Item): Boolean = old == new
+    // Optional: return partial update payload
+    override fun getChangePayload(old: Item, new: Item): Any? {
+        return if (old.title != new.title) &quot;TITLE_CHANGED&quot; else null
+    }
+}</code></pre>
+<p>The Myers diff algorithm is O(N + D²) where N is the list size and D is the edit distance. For large lists — thousands of items — you should run <code>DiffUtil.calculateDiff()</code> off the main thread via <code>Dispatchers.Default</code> and post the result back.</p>
+<hr>
+<h3 id="listadapter">ListAdapter</h3>
+<p><code>ListAdapter&lt;T, VH&gt;</code> is a <code>RecyclerView.Adapter</code> subclass that wraps <code>AsyncListDiffer</code>, automatically running <code>DiffUtil</code> on a background thread so you don&#x27;t have to manage that yourself.</p>
+<pre><code>class MyListAdapter : ListAdapter&lt;Item, MyListAdapter.VH&gt;(ItemDiffCallback()) {
+
+    class VH(val binding: ItemMyBinding) : RecyclerView.ViewHolder(binding.root)
+
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int) =
+        VH(ItemMyBinding.inflate(LayoutInflater.from(parent.context), parent, false))
+
+    override fun onBindViewHolder(holder: VH, position: Int) {
+        holder.binding.title.text = getItem(position).title
+    }
+}
+
+// In Fragment/Activity:
+adapter.submitList(newList) // diff computed on background thread</code></pre>
+<p>Two trade-offs to know: <code>submitList()</code> with the same list object mutated in place will not detect changes — always pass a new list copy. And if <code>submitList()</code> is called again before the previous diff completes, the second call cancels the first, which can cause a &quot;lost update&quot; if rapid submissions are not debounced.</p>
+<hr>
+<h3 id="stable-ids">Stable IDs</h3>
+<p>When <code>setHasStableIds(true)</code> is set and <code>getItemId()</code> returns a unique, consistent ID per item, <code>RecyclerView</code> can use those IDs to match old and new ViewHolders without rebinding.</p>
+<pre><code>init { setHasStableIds(true) }
+override fun getItemId(position: Int) = items[position].id.toLong()</code></pre>
+<p>When you use <code>notifyDataSetChanged()</code>, stable IDs let <code>RecyclerView</code> reuse and animate ViewHolders that didn&#x27;t change. Without them, <code>notifyDataSetChanged()</code> always rebinds everything regardless. That said, stable IDs are mostly superseded by <code>DiffUtil</code>/<code>ListAdapter</code>, which is generally more powerful and correct. Misuse — returning non-unique IDs — causes visual artifacts.</p>
+<hr>
+<h3 id="payload-updates">Payload Updates</h3>
+<p>Payloads are optional objects you attach to <code>notifyItemChanged(position, payload)</code> calls that allow partial rebinding — updating only the changed portion of a ViewHolder without triggering a full rebind.</p>
+<pre><code>// Dispatch with payload
+adapter.notifyItemChanged(position, &quot;TITLE_CHANGED&quot;)
+
+// Handle in onBindViewHolder
+override fun onBindViewHolder(holder: VH, position: Int, payloads: MutableList&lt;Any&gt;) {
+    if (payloads.isEmpty()) {
+        super.onBindViewHolder(holder, position, payloads)
+        return
+    }
+    for (payload in payloads) {
+        if (payload == &quot;TITLE_CHANGED&quot;) {
+            holder.binding.title.text = getItem(position).title
+            // Skip reloading image, etc.
+        }
+    }
+}</code></pre>
+<p>The benefit is avoiding canceled and restarted expensive image loads when only a text field changed.</p>
+<hr>
+<h3 id="item-decoration">Item Decoration</h3>
+<p><code>RecyclerView.ItemDecoration</code> lets you draw additional content around or between items — dividers, spacing, badges — without modifying the item views themselves.</p>
+<pre><code>class DividerItemDecoration : RecyclerView.ItemDecoration() {
+    private val divider = DividerDrawable()
+
+    override fun onDraw(c: Canvas, parent: RecyclerView, state: RecyclerView.State) {
+        for (i in 0 until parent.childCount - 1) {
+            val child = parent.getChildAt(i)
+            divider.setBounds(child.left, child.bottom, child.right, child.bottom + divider.intrinsicHeight)
+            divider.draw(c)
+        }
+    }
+
+    override fun getItemOffsets(outRect: Rect, view: View, parent: RecyclerView, state: RecyclerView.State) {
+        outRect.bottom = divider.intrinsicHeight  // reserve space for divider
+    }
+}
+recyclerView.addItemDecoration(DividerItemDecoration())</code></pre>
+<p><strong>Key methods:</strong></p>
+<ul>
+<li><code>onDraw()</code> — draws behind item views.</li>
+<li><code>onDrawOver()</code> — draws in front of item views (overlays).</li>
+<li><code>getItemOffsets()</code> — adds padding around items for layout.</li>
+</ul>
+<hr>
+<h3 id="layoutmanager">LayoutManager</h3>
+<p><code>LayoutManager</code> is responsible for measuring and positioning item Views within <code>RecyclerView</code>. It drives the recycling mechanism by telling <code>RecyclerView</code> which positions are currently visible.</p>
+<p><strong>Built-in implementations:</strong></p>
+<table border="1" cellpadding="6" cellspacing="0">
+<thead><tr>
+<th>LayoutManager</th>
+<th>Use case</th>
+</tr></thead><tbody>
+<tr><td><code>LinearLayoutManager</code></td><td>Vertical or horizontal scrolling list</td></tr>
+<tr><td><code>GridLayoutManager</code></td><td>Grid with configurable span count; supports variable spans via <code>SpanSizeLookup</code></td></tr>
+<tr><td><code>StaggeredGridLayoutManager</code></td><td>Staggered grid (Pinterest-style)</td></tr>
+</tbody></table>
+<p>A custom <code>LayoutManager</code> is possible by extending <code>RecyclerView.LayoutManager</code>, but it&#x27;s complex to get right. You must implement <code>generateDefaultLayoutParams()</code>, <code>onLayoutChildren()</code>, <code>canScrollVertically()</code>/<code>canScrollHorizontally()</code>, and <code>scrollVerticallyBy()</code>/<code>scrollHorizontallyBy()</code>, and you have to handle recycling correctly throughout.</p>
+<hr>
+<h3 id="prefetch">Prefetch</h3>
+<p><code>RecyclerView</code>&#x27;s prefetch mechanism — part of <code>GapWorker</code>, introduced in API 25 — predicts which items will become visible during a fling and pre-creates and pre-binds their ViewHolders on the RenderThread during idle time, before they are actually needed.</p>
+<p>There are three parts to how it works. <code>LayoutManager</code> tells <code>RecyclerView</code> how many items to prefetch via <code>setInitialPrefetchItemCount()</code> — the default for <code>LinearLayoutManager</code> is 2. During a fling, <code>GapWorker</code> runs on the RenderThread in the gap between frames, performing <code>onCreateViewHolder()</code> and <code>onBindViewHolder()</code> for off-screen items. Those pre-bound ViewHolders are then placed in the <code>RecycledViewPool</code> or a prefetch cache, ready to be shown instantly.</p>
+<p>For nested RecyclerViews, call <code>setInitialPrefetchItemCount()</code> on the inner <code>LinearLayoutManager</code>:</p>
+<pre><code>innerLayoutManager.initialPrefetchItemCount = 4 // pre-bind 4 items per inner list</code></pre>
+<p>The trade-off is that prefetch consumes CPU during what would otherwise be idle time. For very heavy <code>onBindViewHolder()</code> calls, prefetch may not complete in time to actually help.</p>
+<hr>
+<h3 id="nested-recyclerviews">Nested RecyclerViews</h3>
+<p>The pattern is a horizontal <code>RecyclerView</code> inside each row of a vertical <code>RecyclerView</code> — common in &quot;shelf&quot; UIs like Netflix. There are two challenges to solve. First, the <code>RecycledViewPool</code> is not shared: by default each row&#x27;s horizontal <code>RecyclerView</code> has its own pool, so on rebind it destroys and recreates ViewHolders. Second, scroll state is not preserved: when a row is recycled and rebound, its horizontal scroll position resets.</p>
+<p><strong>Solutions:</strong></p>
+<pre><code>// Share RecycledViewPool across all inner RecyclerViews
+val sharedPool = RecyclerView.RecycledViewPool()
+sharedPool.setMaxRecycledViews(TYPE_ITEM, 20)
+
+// In onBindViewHolder for the outer adapter:
+holder.innerRecyclerView.setRecycledViewPool(sharedPool)
+holder.innerRecyclerView.layoutManager?.also { lm -&gt;
+    (lm as LinearLayoutManager).initialPrefetchItemCount = 4
+}</code></pre>
+<pre><code>// Preserve scroll state in a map keyed by item ID
+private val scrollStates = HashMap&lt;Long, Parcelable?&gt;()
+
+override fun onBindViewHolder(holder: VH, position: Int) {
+    val itemId = getItemId(position)
+    val state = scrollStates[itemId]
+    holder.innerRecyclerView.layoutManager?.onRestoreInstanceState(state)
+}
+
+override fun onViewRecycled(holder: VH) {
+    val itemId = getItemId(holder.absoluteAdapterPosition)
+    scrollStates[itemId] = holder.innerRecyclerView.layoutManager?.onSaveInstanceState()
+}</code></pre>
+<hr>
+<h3 id="avoiding-heavy-bind-work">Avoiding Heavy Bind Work</h3>
+<p><code>onBindViewHolder()</code> must complete in under roughly 1 ms to avoid contributing to frame jank. Heavy work that can blow that budget includes synchronous image decoding, complex string formatting, <code>SpannableString</code> creation with many spans, and deserializing data in-place.</p>
+<p>The fixes: pre-process data in the ViewModel before passing it to the adapter — format strings, build Spannables, decode thumbnails there, not in <code>onBindViewHolder</code>. Use Glide or Coil for async image loading, since they handle decoding off the main thread. And cache <code>SpannableString</code>s in the data model if they don&#x27;t change.</p>
+<hr>
+<h3 id="image-loading-cancellation">Image Loading Cancellation</h3>
+<p>When a <code>ViewHolder</code> is recycled, it may still have an in-flight image load request. If that recycled <code>ViewHolder</code> is rebound with a different URL, two requests compete for the same <code>ImageView</code>. The earlier request may finish last and show the wrong image — the classic &quot;image flicker&quot; bug. The solution with Glide:</p>
+<pre><code>override fun onBindViewHolder(holder: VH, position: Int) {
+    Glide.with(holder.itemView)
+        .load(item.imageUrl)
+        .into(holder.binding.image) // Glide automatically cancels the previous request on this ImageView
+}
+
+override fun onViewRecycled(holder: VH) {
+    Glide.with(holder.itemView).clear(holder.binding.image) // explicit cancel on recycle
+}</code></pre>
+<p>Glide tracks requests by <code>ImageView</code> instance and automatically cancels the previous request when a new one is started on the same target. Coil behaves similarly.</p>
+<hr>
+<h3 id="pagination">Pagination</h3>
+<p>Pagination loads data incrementally as the user scrolls, preventing the app from loading the entire dataset upfront.</p>
+<p><strong>Paging 3 library (recommended):</strong></p>
+<pre><code>// DataSource
+class ItemPagingSource : PagingSource&lt;Int, Item&gt;() {
+    override suspend fun load(params: LoadParams&lt;Int&gt;): LoadResult&lt;Int, Item&gt; {
+        val page = params.key ?: 1
+        return try {
+            val response = api.getItems(page = page, size = params.loadSize)
+            LoadResult.Page(
+                data = response.items,
+                prevKey = if (page == 1) null else page - 1,
+                nextKey = if (response.items.isEmpty()) null else page + 1
+            )
+        } catch (e: Exception) {
+            LoadResult.Error(e)
+        }
+    }
+    override fun getRefreshKey(state: PagingState&lt;Int, Item&gt;) = state.anchorPosition?.let { anchor -&gt;
+        state.closestPageToPosition(anchor)?.prevKey?.plus(1)
+            ?: state.closestPageToPosition(anchor)?.nextKey?.minus(1)
+    }
+}
+
+// ViewModel
+val pager = Pager(PagingConfig(pageSize = 20)) { ItemPagingSource() }
+    .flow.cachedIn(viewModelScope)
+
+// Adapter
+class ItemPagingAdapter : PagingDataAdapter&lt;Item, VH&gt;(ItemDiffCallback()) { ... }
+
+// Fragment
+lifecycleScope.launch {
+    viewModel.pager.collectLatest { pagingData -&gt;
+        adapter.submitData(pagingData)
+    }
+}</code></pre>
+<p><code>LoadStateAdapter</code> displays loading spinners and retry buttons at the list head or foot based on <code>PagingDataAdapter.loadStateFlow</code>.</p>
+<hr>
+<h2 id="84-jetpack-compose-rendering">8.4 Jetpack Compose Rendering</h2>
+<p>Compose&#x27;s rendering pipeline has three phases per frame — analogous to but distinct from the View system. Composition is what to display: Compose calls <code>@Composable</code> functions and builds the slot table. Layout is where to display it: it measures and positions layout nodes. Drawing is how to render it: it executes draw commands on <code>Canvas</code>.</p>
+<p>The key insight is that state changes restart from the earliest affected phase. A state change in a <code>DrawModifier</code> only re-runs drawing. A state change that affects size triggers layout plus drawing. A state change that adds or removes composables triggers full recomposition.</p>
+<hr>
+<h3 id="composition">Composition</h3>
+<p>Composition is the process of executing <code>@Composable</code> functions to build the UI tree — called the &quot;slot table&quot; internally, which is a data structure of groups and nodes.</p>
+<p><strong>Internals:</strong></p>
+<ul>
+<li>The Compose runtime maintains a <code>Composer</code> that tracks the current position in the slot table.</li>
+<li>When a <code>@Composable</code> function executes, it &quot;emits&quot; nodes — layout nodes, effect nodes — into the slot table at its current position.</li>
+<li><code>remember</code> keys store values in the slot table at a specific position — it&#x27;s positional, not a map lookup.</li>
+<li>The slot table is a compact array-based tree, not a DOM. It is private to the Compose runtime.</li>
+</ul>
+<p>Composition runs on first composition when a <code>ComposeView</code> or <code>setContent {}</code> is called, and then again as recomposition whenever a state value read during composition changes.</p>
+<hr>
+<h3 id="recomposition">Recomposition</h3>
+<p>Recomposition is the process of re-executing <code>@Composable</code> functions whose inputs have changed, to update the UI tree to reflect new state.</p>
+<p>It has three key properties. First, it is selective: only composables whose read state has changed are re-executed; composables with unchanged inputs are skipped if they are stable and skippable. Second, it is idempotent: composables should produce the same output for the same inputs, because they may be re-executed multiple times, out of order, or in parallel in future Compose versions. Third, it is restartable: the Compose compiler generates restart lambdas so the runtime can re-execute any composable from its entry point.</p>
+<p>What triggers recomposition: a <code>mutableStateOf</code>, <code>mutableStateListOf</code>, or <code>mutableStateMapOf</code> value that was read during composition is written to; a <code>StateFlow</code>, <code>LiveData</code>, or <code>Flow</code> collected with <code>collectAsState()</code> emits a new value; or a <code>remember</code> block&#x27;s keys change.</p>
+<p>What does not trigger recomposition: writing to state that was not read in the current composition scope, or calling a function that does not read any state.</p>
+<hr>
+<h3 id="layout-phase">Layout Phase</h3>
+<p>In Compose, the layout phase is handled by <code>LayoutNode</code>s — internal nodes in the composition tree. Composable functions like <code>Box</code>, <code>Column</code>, <code>Row</code>, and <code>Layout</code> emit <code>LayoutNode</code>s.</p>
+<p>The key design difference from the View system is that Compose uses a single-pass measurement approach. Each <code>LayoutNode</code> receives <code>Constraints</code> — min/max width and height — from its parent, measures its children, and returns its own size. This is O(n) per composable, which avoids the exponential worst case you can hit with nested <code>WRAP_CONTENT</code> in the View system.</p>
+<p><strong>Custom Layout:</strong></p>
+<pre><code>@Composable
+fun MyLayout(content: @Composable () -&gt; Unit) {
+    Layout(content = content) { measurables, constraints -&gt;
+        val placeables = measurables.map { it.measure(constraints) }
+        val width = placeables.maxOf { it.width }
+        val height = placeables.sumOf { it.height }
+        layout(width, height) {
+            var y = 0
+            placeables.forEach { placeable -&gt;
+                placeable.placeRelative(0, y)
+                y += placeable.height
+            }
+        }
+    }
+}</code></pre>
+<hr>
+<h3 id="drawing-phase">Drawing Phase</h3>
+<p>Compose drawing works similarly to the View system&#x27;s hardware-accelerated path: drawing commands are recorded into a <code>RenderNodeLayer</code>, which wraps <code>android.graphics.RenderNode</code>. Compose composables that use <code>Modifier.drawBehind</code>, <code>Modifier.drawWithContent</code>, <code>Canvas {}</code>, and similar drawing modifiers all record commands in this phase.</p>
+<pre><code>@Composable
+fun BlueDot() {
+    Box(
+        modifier = Modifier
+            .size(50.dp)
+            .drawBehind {
+                drawCircle(color = Color.Blue) // records into RenderNode — no allocation needed here per se
+            }
+    )
+}</code></pre>
+<hr>
+<h3 id="state-reads-and-snapshot-state">State Reads and Snapshot State</h3>
+<p>Compose&#x27;s state system is built on the snapshot abstraction. A <code>Snapshot</code> is a consistent view of all <code>MutableState</code> objects at a point in time.</p>
+<p>Read tracking works like this: when composition runs, the Compose runtime installs a global <code>ReadObserver</code> on the current <code>Snapshot</code>. Any <code>state.value</code> read within a composable is recorded by that observer, binding the composable to that state object. When the state is written, the <code>Snapshot</code> system marks affected composables as invalid and schedules them for recomposition on the next frame.</p>
+<p><strong>Three kinds of state containers:</strong></p>
+<pre><code>val counter = mutableStateOf(0)          // single value
+val list = mutableStateListOf&lt;Item&gt;()    // observable list (structural changes trigger recomposition)
+val map = mutableStateMapOf&lt;K, V&gt;()      // observable map</code></pre>
+<p>Snapshot isolation is also why composables must be side-effect free: Compose can make a snapshot of all state, run composition in a background thread — planned for future versions — and then apply changes atomically. A composable may be re-executed in a snapshot that is later discarded, so any side effects would be lost.</p>
+<hr>
+<h3 id="remember-and-remembersaveable">remember and rememberSaveable</h3>
+<p><strong><code>remember</code>:</strong></p>
+<pre><code>@Composable
+fun Counter() {
+    var count by remember { mutableStateOf(0) }
+    Button(onClick = { count++ }) { Text(&quot;Count: $count&quot;) }
+}</code></pre>
+<ul>
+<li>Stores the value in the composition tree&#x27;s slot table at the call site&#x27;s position.</li>
+<li>The value is retained across recompositions.</li>
+<li>The value is <strong>lost</strong> when the composable leaves the composition (e.g., navigated away, removed from UI).</li>
+<li>The value is <strong>lost</strong> on configuration change (rotation) unless wrapped with <code>rememberSaveable</code>.</li>
+</ul>
+<p><strong><code>rememberSaveable</code>:</strong></p>
+<pre><code>var count by rememberSaveable { mutableStateOf(0) }</code></pre>
+<ul>
+<li>Like <code>remember</code>, but persists through configuration changes by saving to the <code>SavedStateRegistry</code> (the same mechanism as <code>onSaveInstanceState</code>).</li>
+<li>The value must be <code>Parcelable</code>, <code>Serializable</code>, or a supported primitive type.</li>
+<li>For custom types, use a <code>Saver</code>:</li>
+</ul>
+<pre><code>val saver = Saver&lt;MyState, Map&lt;String, Any&gt;&gt;(
+    save = { mapOf(&quot;key&quot; to it.value) },
+    restore = { MyState(it[&quot;key&quot;] as Int) }
+)
+var state by rememberSaveable(stateSaver = saver) { mutableStateOf(MyState(0)) }</code></pre>
+<p>The interview distinction: <code>remember</code> survives recomposition. <code>rememberSaveable</code> survives recomposition, configuration change, and process recreation.</p>
+<hr>
+<h3 id="derivedstateof">derivedStateOf</h3>
+<p><code>derivedStateOf</code> creates a derived state that is only recomputed — and only triggers recomposition in its readers — when its dependencies change and the computed value actually changes. Use it when a composable should only recompose when a derived computation result changes, not every time an upstream state changes.</p>
+<pre><code>// BAD: list changes on every keystroke, but showButton only changes at the boundary
+val list = remember { mutableStateListOf&lt;Item&gt;() }
+val showButton = list.size &gt; 5  // reads list.size directly — any list change recomposes this
+
+// GOOD: showButton only recomposes consumers when the derived value changes
+val showButton by remember { derivedStateOf { list.size &gt; 5 } }</code></pre>
+<p>The derived state object reads its dependencies during its computation. When a dependency changes, it re-runs the computation. Crucially, it only invalidates downstream readers if the computed value actually changed, as determined by <code>equals()</code>.</p>
+<p><strong>LazyList scroll example:</strong></p>
+<pre><code>val listState = rememberLazyListState()
+val showScrollToTop by remember { derivedStateOf { listState.firstVisibleItemIndex &gt; 0 } }
+// showScrollToTop only changes when crossing 0 boundary, not on every scroll pixel</code></pre>
+<hr>
+<h3 id="launchedeffect">LaunchedEffect</h3>
+<p><code>LaunchedEffect</code> launches a coroutine scoped to the composition. The coroutine is cancelled and re-launched whenever the keys change.</p>
+<pre><code>@Composable
+fun FetchData(userId: String) {
+    var data by remember { mutableStateOf&lt;Data?&gt;(null) }
+    LaunchedEffect(userId) {  // key: userId
+        // Runs when userId changes. Cancelled if userId changes again before completion.
+        data = repository.fetchUser(userId)
+    }
+    // ...
+}</code></pre>
+<p>You can pass any number of keys. If any key changes, the previous coroutine is cancelled and a new one is launched. Use <code>Unit</code> or a constant when you want a one-time effect that only runs on first composition.</p>
+<p>The common failure mode is forgetting to pass the right key: if a key that should cause re-launch is omitted, you&#x27;ll show stale data after the key conceptually changes.</p>
+<hr>
+<h3 id="disposableeffect">DisposableEffect</h3>
+<p><code>DisposableEffect</code> is for non-coroutine side effects that need cleanup. It runs <code>onDispose</code> when keys change or when the composable leaves the composition.</p>
+<pre><code>@Composable
+fun LifecycleObserver(lifecycle: Lifecycle, onStart: () -&gt; Unit, onStop: () -&gt; Unit) {
+    DisposableEffect(lifecycle) {
+        val observer = LifecycleEventObserver { _, event -&gt;
+            when (event) {
+                Lifecycle.Event.ON_START -&gt; onStart()
+                Lifecycle.Event.ON_STOP -&gt; onStop()
+                else -&gt; {}
+            }
+        }
+        lifecycle.addObserver(observer)
+        onDispose {
+            lifecycle.removeObserver(observer)  // cleanup
+        }
+    }
+}</code></pre>
+<p>The distinction from <code>LaunchedEffect</code>: use <code>DisposableEffect</code> for register/unregister pairs — listeners, observers, callbacks. Use <code>LaunchedEffect</code> for coroutine-based work.</p>
+<hr>
+<h3 id="sideeffect">SideEffect</h3>
+<p><code>SideEffect</code> publishes Compose state to non-Compose code. It runs after every successful recomposition — not cancelled if recomposition fails — and has no cleanup mechanism.</p>
+<pre><code>@Composable
+fun AnalyticsTracker(screenName: String, analytics: Analytics) {
+    SideEffect {
+        analytics.setCurrentScreen(screenName)  // non-Compose side effect
+    }
+}</code></pre>
+<p>The right use case for <code>SideEffect</code> is synchronizing Compose state to an external mutable object that Compose doesn&#x27;t own — analytics, an ad SDK, or a non-Compose view bridge.</p>
+<hr>
+<h3 id="rememberupdatedstate">rememberUpdatedState</h3>
+<p><code>rememberUpdatedState</code> captures the latest value of a lambda or value that may change, for use inside a long-lived effect that should not be restarted when that value changes.</p>
+<pre><code>@Composable
+fun Timer(onTimeout: () -&gt; Unit) {
+    val currentOnTimeout by rememberUpdatedState(onTimeout)
+    LaunchedEffect(Unit) {  // key = Unit: never restarts
+        delay(5000L)
+        currentOnTimeout()  // always calls the latest lambda, not the one captured at launch
+    }
+}</code></pre>
+<p>Why you need it: if <code>onTimeout</code> were captured directly in the <code>LaunchedEffect</code> lambda, it would capture a stale closure whenever <code>onTimeout</code> changed — a new lambda from a recomposition. <code>rememberUpdatedState</code> ensures the effect always calls the latest version of the lambda without restarting the effect.</p>
+<hr>
+<h3 id="stability-and-skippability">Stability and Skippability</h3>
+<p>Stability determines whether Compose can skip recomposing a composable when its inputs haven&#x27;t changed.</p>
+<p><strong>Stable types:</strong></p>
+<ul>
+<li>Primitive types (<code>Int</code>, <code>String</code>, <code>Boolean</code>, etc.)</li>
+<li><code>@Stable</code> or <code>@Immutable</code> annotated classes.</li>
+<li><code>MutableState&lt;T&gt;</code> (Compose knows to read it and track changes).</li>
+<li>Classes where all public properties are themselves stable.</li>
+</ul>
+<p><strong>Unstable types</strong> (by default):</p>
+<ul>
+<li><code>List&lt;T&gt;</code>, <code>Map&lt;K,V&gt;</code>, <code>Set&lt;T&gt;</code> (interface types — Compose cannot guarantee they are immutable).</li>
+<li>Any class with a <code>var</code> public property.</li>
+<li>Mutable data classes.</li>
+</ul>
+<p>Skippability: a composable is skippable if all its parameters are stable. When a parent recomposes, Compose compares the new parameter values with the old ones using <code>equals()</code>. If all are equal, the composable is skipped entirely.</p>
+<pre><code>// Unstable — List&lt;T&gt; is not stable
+@Composable
+fun ItemList(items: List&lt;Item&gt;) { ... }  // recomposes even if items content hasn&#x27;t changed
+
+// Fix: wrap in a stable class
+@Immutable
+data class ItemList(val items: List&lt;Item&gt;)
+
+@Composable
+fun ItemList(items: ImmutableList&lt;Item&gt;) { ... }  // kotlinx.collections.immutable — stable</code></pre>
+<p><strong>Making classes stable:</strong></p>
+<pre><code>@Stable  // I promise to notify Compose of changes
+class MyState {
+    var value by mutableStateOf(0)  // MutableState — Compose can track
+}
+
+@Immutable  // I promise this will never change
+data class Config(val theme: String, val fontSize: Int)</code></pre>
+<p><strong>Compose Compiler Metrics:</strong> Run <code>./gradlew assembleDebug -PcomposeCompilerReports=true</code> to generate reports that show which composables are skippable or restartable and explain why specific parameters are considered unstable.</p>
+<hr>
+<h3 id="modifier-order">Modifier Order</h3>
+<p>Modifiers in Compose are applied in the order they are chained. The order matters because each modifier wraps the one after it.</p>
+<pre><code>// Padding THEN background: padding is outside the background
+Modifier.padding(8.dp).background(Color.Blue)
+
+// Background THEN padding: padding is inside the background
+Modifier.background(Color.Blue).padding(8.dp)</code></pre>
+<p>Think of modifiers as nesting — the first modifier in the chain is the outermost wrapper.</p>
+<p><strong><code>clickable</code> + <code>padding</code>:</strong></p>
+<pre><code>// Click area includes the padding (padding is inside clickable)
+Modifier.clickable { }.padding(16.dp)
+
+// Click area is the content only (padding is outside clickable)
+Modifier.padding(16.dp).clickable { }</code></pre>
+<p>From a performance angle, modifiers that read state restrict recomposition, layout, and drawing to the minimal scope. Modifiers that draw — <code>drawBehind</code>, <code>drawWithContent</code> — only re-run the drawing phase when their state changes, not a full recomposition.</p>
+<hr>
+<h3 id="lazycolumn-keys">LazyColumn Keys</h3>
+<p>A <code>key</code> in <code>LazyColumn</code> is a stable identifier for each item that allows Compose to match items across list updates and preserve state, animations, and focus correctly.</p>
+<pre><code>LazyColumn {
+    items(items = list, key = { item -&gt; item.id }) { item -&gt;
+        ItemRow(item = item)
+    }
+}</code></pre>
+<p>Without keys, items are matched by position. If an item is inserted at the top, all items below it are considered &quot;new&quot; and their state is lost — text field input, animation state, all of it.</p>
+<p>With keys, items are matched by key, so the list can animate insertions, deletions, and moves correctly, and Compose can restore item state — scroll position, <code>rememberSaveable</code> — correctly.</p>
+<p>Keys must be stable across recompositions — consistent for the same logical item — unique within the lazy list, and of primitive types or <code>Parcelable</code> for <code>rememberSaveable</code> to work correctly.</p>
+<hr>
+<h3 id="state-hoisting">State Hoisting</h3>
+<p>State hoisting is the pattern of moving state up the composable tree so that a composable becomes stateless — it receives state as parameters and emits events as lambdas.</p>
+<pre><code>// Stateful composable (hard to test, hard to reuse)
+@Composable
+fun Counter() {
+    var count by remember { mutableStateOf(0) }
+    Button(onClick = { count++ }) { Text(&quot;Count: $count&quot;) }
+}
+
+// Hoisted state — stateless composable
+@Composable
+fun Counter(count: Int, onIncrement: () -&gt; Unit) {
+    Button(onClick = onIncrement) { Text(&quot;Count: $count&quot;) }
+}
+
+// Caller owns the state
+@Composable
+fun CounterScreen() {
+    var count by remember { mutableStateOf(0) }
+    Counter(count = count, onIncrement = { count++ })
+}</code></pre>
+<p>The benefits are: testability — you can pass any count value to <code>Counter</code> in tests; reusability — <code>Counter</code> can be driven by any state source; a single source of truth since only one place owns the count; and the composable becomes stateless, which means it can be skippable and recomposition is more efficient.</p>
+<p>Hoist state to the lowest common ancestor of all composables that need to read or modify it.</p>
+<hr>
+<h3 id="stateless-vs-stateful-composables">Stateless vs Stateful Composables</h3>
+<table border="1" cellpadding="6" cellspacing="0">
+<thead><tr>
+<th></th>
+<th>Stateless</th>
+<th>Stateful</th>
+</tr></thead><tbody>
+<tr><td><strong>Definition</strong></td><td>Takes state as params, emits events as lambdas</td><td>Owns its own state via <code>remember</code></td></tr>
+<tr><td><strong>Testability</strong></td><td>Easily testable — control all inputs</td><td>Harder — internal state is hidden</td></tr>
+<tr><td><strong>Reusability</strong></td><td>High</td><td>Low</td></tr>
+<tr><td><strong>Recomposition efficiency</strong></td><td>Skippable if params are stable</td><td>Always re-executes when internal state changes</td></tr>
+<tr><td><strong>When to use</strong></td><td>Leaf composables, reusable UI components</td><td>Convenience wrapper holding state for a screen section</td></tr>
+</tbody></table>
+<p>A common pattern is to provide both a stateful and a stateless overload:</p>
+<pre><code>@Composable
+fun TextField(value: String, onValueChange: (String) -&gt; Unit) { ... }  // stateless
+
+@Composable
+fun TextField() {  // stateful convenience wrapper
+    var text by remember { mutableStateOf(&quot;&quot;) }
+    TextField(value = text, onValueChange = { text = it })
+}</code></pre>
+<hr>
+<h3 id="compose-interop-with-views">Compose Interop with Views</h3>
+<p><strong>AndroidView (embedding View in Compose):</strong></p>
+<pre><code>@Composable
+fun MapView(mapboxOptions: MapOptions) {
+    AndroidView(
+        factory = { context -&gt;
+            MapboxMapView(context, mapboxOptions)  // inflated once
+        },
+        update = { view -&gt;
+            view.setOptions(mapboxOptions)  // called on recomposition when mapboxOptions changes
+        },
+        onRelease = { view -&gt;
+            view.onDestroy()  // cleanup when composable leaves composition
+        }
+    )
+}</code></pre>
+<p><strong>ComposeView (embedding Compose in View):</strong></p>
+<pre><code>&lt;androidx.compose.ui.platform.ComposeView
+    android:id=&quot;@+id/compose_view&quot;
+    android:layout_width=&quot;match_parent&quot;
+    android:layout_height=&quot;wrap_content&quot; /&gt;</code></pre>
+<pre><code>composeView.setContent {
+    MezzanineTheme {
+        MyComposableScreen()
+    }
+}</code></pre>
+<p><code>AbstractComposeView</code> is a class you can subclass to create a custom View that hosts Compose content and exposes Compose properties as View XML attributes, which is useful for design systems.</p>
+<p>One lifecycle detail to be aware of: <code>ComposeView</code> integrates with <code>ViewTreeLifecycleOwner</code> and <code>ViewTreeSavedStateRegistryOwner</code>. In a <code>Fragment</code>, make sure the <code>ComposeView</code> is re-used across configuration changes to preserve composition — use <code>Fragment.onCreateView()</code> and store the <code>ComposeView</code>, or use <code>viewLifecycleOwner</code>.</p>
+<hr>
+<h3 id="compose-testing">Compose Testing</h3>
+<p><strong>Setup:</strong></p>
+<pre><code>@get:Rule
+val composeTestRule = createComposeRule()
+
+// or for Activity-level:
+@get:Rule
+val activityRule = createAndroidComposeRule&lt;MyActivity&gt;()</code></pre>
+<p><strong>Test structure:</strong></p>
+<pre><code>@Test
+fun counter_incrementsOnClick() {
+    composeTestRule.setContent {
+        Counter(count = 0, onIncrement = { /* track call */ })
+    }
+
+    composeTestRule.onNodeWithText(&quot;Count: 0&quot;).assertIsDisplayed()
+    composeTestRule.onNodeWithText(&quot;Count: 0&quot;).performClick()
+    // verify lambda was called
+}</code></pre>
+<p><strong>Semantic matchers:</strong></p>
+<ul>
+<li><code>onNodeWithText(&quot;...&quot;)</code>, <code>onNodeWithContentDescription(&quot;...&quot;)</code></li>
+<li><code>onNodeWithTag(&quot;testTag&quot;)</code> — set via <code>Modifier.testTag(&quot;testTag&quot;)</code></li>
+<li><code>onAllNodesWithTag(&quot;item&quot;).assertCountEquals(5)</code></li>
+</ul>
+<p><strong>Assertions:</strong> <code>assertIsDisplayed()</code>, <code>assertIsEnabled()</code>, <code>assertTextEquals(&quot;...&quot;)</code>, <code>assertHasClickAction()</code>.</p>
+<p><strong>Actions:</strong> <code>performClick()</code>, <code>performTextInput(&quot;...&quot;)</code>, <code>performScrollTo()</code>, <code>performGesture { swipeUp() }</code>.</p>
+<p><strong>Waiting for async operations:</strong></p>
+<pre><code>composeTestRule.waitUntil(timeoutMillis = 5000) {
+    composeTestRule.onAllNodesWithTag(&quot;item&quot;).fetchSemanticsNodes().size == 3
+}</code></pre>
+<p>Stateless composables — those with all state passed as parameters — are the easiest to test: pass controlled inputs and assert on the output.</p>
+<hr>
+<h3 id="what-triggers-recomposition">What Triggers Recomposition</h3>
+<p>Here is a comprehensive list of what triggers recomposition and what does not:</p>
+<table border="1" cellpadding="6" cellspacing="0">
+<thead><tr>
+<th>Trigger</th>
+<th>Mechanism</th>
+</tr></thead><tbody>
+<tr><td><code>mutableStateOf</code> value changes</td><td>Snapshot system invalidates readers</td></tr>
+<tr><td><code>mutableStateListOf</code> / <code>mutableStateMapOf</code> structural change</td><td>Observable list/map notifies snapshot</td></tr>
+<tr><td><code>collectAsState()</code> emits new value</td><td>StateFlow/Flow → MutableState bridge</td></tr>
+<tr><td><code>observeAsState()</code> emits new value</td><td>LiveData → MutableState bridge</td></tr>
+<tr><td><code>remember</code> key changes</td><td>Runtime discards remembered value, re-runs block</td></tr>
+<tr><td>Parent recomposes and parameter changes (unstable params)</td><td>Parent calls composable with new arg</td></tr>
+<tr><td><code>ProduceState</code> updates</td><td>Coroutine updates the produced state</td></tr>
+<tr><td><code>AnimationState</code> / <code>Animatable</code> tick</td><td>Animation updates state each frame</td></tr>
+</tbody></table>
+<p><strong>What does NOT trigger recomposition:</strong></p>
+<ul>
+<li>Writing to state that is not read within a composition scope.</li>
+<li>Changes to <code>derivedStateOf</code> where the derived value did not change.</li>
+<li>Parameter changes where the composable is skippable and all params are equal — that is, <code>equals()</code> returns true for all of them.</li>
+</ul>
+<hr>
+<h3 id="avoiding-unnecessary-recomposition">Avoiding Unnecessary Recomposition</h3>
+<p>There are several techniques. First, use stable types for parameters — wrap <code>List&lt;T&gt;</code> with <code>ImmutableList&lt;T&gt;</code> from <code>kotlinx.collections.immutable</code> or a custom <code>@Immutable</code> wrapper. Second, use <code>derivedStateOf</code> for computed values so that upstream state changes don&#x27;t propagate when the result doesn&#x27;t actually change. Third, hoist state to the right level — don&#x27;t read high-frequency state like scroll position or animation progress in composables that have expensive subtrees. Fourth, use <code>key { }</code> in <code>LazyColumn</code> — without keys, structural list changes recompose items by position unnecessarily. Fifth, stabilize lambdas — lambdas that capture unstable values are themselves unstable, so use <code>remember { lambda }</code> to stabilize lambdas that reference stable values:</p>
+<pre><code>val onClickStable = remember(item.id) { { viewModel.onClick(item.id) } }</code></pre>
+<p>Or use the Compose compiler&#x27;s <code>@NonSkippableComposable</code> annotation strategically.</p>
+<p>Sixth, move state reads to the lowest composable — if only a leaf composable needs a frequently-updating state, read it only there, not in a parent that would recompose a large subtree. Seventh, read state in a <code>DrawModifier</code> or <code>LayoutModifier</code>, which restricts the effect of a state change to only the drawing or layout phase rather than triggering a full recomposition.</p>
+<pre><code>// Full recomposition on scroll
+val scrollState = rememberScrollState()
+Text(modifier = Modifier.offset(y = scrollState.value.dp), ...)
+
+// Only layout phase re-runs (more efficient)
+Text(modifier = Modifier.offset { IntOffset(0, scrollState.value) }, ...)</code></pre>
+<p>Finally, profile first — use Android Studio&#x27;s Composition Tracing on API 30+ to see exactly which composables recompose and why, before spending time on speculative optimizations.</p>
+<hr>
+<h2 id="85-performance-tools">8.5 Performance Tools</h2>
+<h3 id="android-studio-profiler">Android Studio Profiler</h3>
+<p>Android Studio Profiler is the integrated performance analysis tool in Android Studio. It connects to a running process and provides real-time and recorded data across CPU, memory, and network dimensions.</p>
+<p>You get to it via <code>View → Tool Windows → Profiler</code> or the Profiler icon in the toolbar — select a running process to attach. Profiling sessions can be saved and reopened for offline analysis.</p>
+<p><strong>CPU recording modes:</strong></p>
+<table border="1" cellpadding="6" cellspacing="0">
+<thead><tr>
+<th>Mode</th>
+<th>Mechanism</th>
+<th>Best for</th>
+</tr></thead><tbody>
+<tr><td>Callstack Sample</td><td>Statistical sampling (default)</td><td>Quick overview, low overhead</td></tr>
+<tr><td>System Trace (Perfetto)</td><td>Kernel-level tracing</td><td>Jank analysis, thread interaction</td></tr>
+<tr><td>Java/Kotlin Method Trace</td><td>Instrumented — exact call times</td><td>Finding slow methods (adds overhead)</td></tr>
+</tbody></table>
+<p><strong>Key tracks in System Trace view:</strong></p>
+<ul>
+<li><code>Choreographer#doFrame</code> — marks the start of each frame&#x27;s work on the main thread.</li>
+<li><code>RenderThread</code> — GPU command submission.</li>
+<li><code>bindApplication</code>, <code>activityStart</code>, etc. — startup events.</li>
+<li><code>inflate</code> — layout inflation timing.</li>
+</ul>
+<hr>
+<h3 id="layout-inspector">Layout Inspector</h3>
+<p>Layout Inspector is an Android Studio tool that shows the live view hierarchy of a running app, including composable names and recomposition counts.</p>
+<p>It has four useful features. The 2D/3D view shows the View/Composable tree with a rotatable 3D layer view so you can see overlapping layers and overdraw. The attribute panel shows layout attributes — constraints, margins, text, color — for the selected node. Recomposition highlighting for Compose shows how many times each composable has recomposed during the session, with red highlights for unusually frequent recompositions. And live update mode can be toggled off to pause and inspect a specific moment.</p>
+<p>In practice, use it to identify which composable is recomposing too frequently, find unexpectedly deep or wide view hierarchies, and confirm that constraints and layout params are applied as intended.</p>
+<hr>
+<h3 id="cpu-profiler">CPU Profiler</h3>
+<p>The CPU Profiler records CPU usage and call stacks for the selected process. There are three recording modes to know.</p>
+<p>Callstack Sampling periodically captures the stack of all threads. It has low overhead — about 2–5% CPU cost — but it is statistical, so short-lived method calls may be missed. Use it for long recordings or production-like profiling.</p>
+<p>Method Tracing records every method entry and exit using <code>Debug.startMethodTracing()</code> under the hood. The overhead is high — 5 to 100 times slowdown — so performance results are not representative of real usage. Use it only to trace exact call sequences, not to measure timings.</p>
+<p>System Trace via Perfetto records kernel scheduler events, Binder calls, GPU events, and custom trace sections. It is the best mode for jank analysis — you can see frame timelines, RenderThread, and Choreographer. Add custom sections with <code>Trace.beginSection(&quot;MyWork&quot;)</code> and <code>Trace.endSection()</code>.</p>
+<pre><code>Trace.beginSection(&quot;BindViewHolder&quot;)
+try {
+    // expensive bind work
+} finally {
+    Trace.endSection()
+}</code></pre>
+<hr>
+<h3 id="memory-profiler">Memory Profiler</h3>
+<p>The Memory Profiler shows heap usage over time and captures heap dumps for analysis.</p>
+<p>The three key operations: record native allocations to track C++ heap allocations; record Java/Kotlin allocations to track JVM heap allocations with stack traces on API 26 and above; and capture a heap dump, which is a snapshot of all live objects on the heap.</p>
+<p>When analyzing a heap dump, look for large objects, <code>Activity</code> instances that should have been garbage-collected (leaked Activities), <code>Bitmap</code> objects and their sizes, and filter by class name — for example, searching &quot;Listener&quot; to find leaked listeners.</p>
+<p>For memory leak detection in general, use LeakCanary, which automatically detects leaked Activity, Fragment, and ViewModel references. It hooks into the GC and checks whether objects that should be collected are actually collected.</p>
+<p>One important detail about Bitmaps: on API 26 and above, Bitmap pixels are allocated in native memory, not the JVM heap. You need the Memory Profiler&#x27;s native allocation recorder to track bitmap memory on those versions.</p>
+<hr>
+<h3 id="network-profiler">Network Profiler</h3>
+<p>The Network Profiler shows network requests — Retrofit, OkHttp, Volley, and others — including timing, size, headers, and body.</p>
+<p>Use it to identify unexpectedly large API responses, confirm request/response timing, and debug caching by distinguishing cache-hit responses from network requests. It requires OkHttp profiling hooks or the Profiler agent on API 26 and above; HTTPS traffic is visible in debug mode, though certificate pinning may interfere.</p>
+<p>From an optimization standpoint: large JSON responses suggest considering field masking or GraphQL; parallel requests that could be batched should be combined; and any requests sitting on the critical path of app startup should be deferred or prefetched.</p>
+<hr>
+<h3 id="perfetto">Perfetto</h3>
+<p>Perfetto is the open-source system-level tracing platform used on Android and Chrome. It replaced Systrace as the recommended tracing tool, and Android Studio&#x27;s System Trace recording uses Perfetto under the hood.</p>
+<p>You can access it three ways: via Android Studio&#x27;s CPU Profiler → System Trace, which is the easiest and stays within the Studio UI; with <code>adb shell perfetto ...</code> for command-line capture and viewing at <code>ui.perfetto.dev</code>; or with the <code>adb shell record_android_trace</code> wrapper script for a simpler CLI.</p>
+<p>The key features: the Flamegraph visualizes CPU call stacks over time; Thread tracks show each thread&#x27;s scheduled and sleeping state, making blocking operations visible; the Frame timeline shows <code>doFrame</code> slices and highlights dropped frames in red; and you can add custom trace points with <code>Trace.beginSection</code>/<code>Trace.endSection</code> or the Perfetto SDK for C++. The Perfetto UI also supports SQL queries on the trace database for custom analysis.</p>
+<p>The jank debugging workflow: capture a system trace during a jank-inducing interaction such as a fast scroll; find a dropped frame — a red segment on the Frame track; expand the main thread track for that frame and locate the <code>Choreographer#doFrame</code> slice; identify which sub-slice took the most time — inflate, bindViews, custom measure, and so on; then drill into the RenderThread to check for GPU bottlenecks.</p>
+<hr>
+<h3 id="systrace">Systrace</h3>
+<p>Systrace is the predecessor to Perfetto. It captures the same kernel-level events — scheduler, interrupts, hardware counters — plus Android-specific events, and outputs an HTML file viewable in Chrome&#x27;s <code>chrome://tracing</code>.</p>
+<p>In terms of current status: Systrace&#x27;s Python tool (<code>systrace.py</code>) is deprecated and Perfetto is the recommended replacement. That said, the term &quot;Systrace&quot; is still widely used when referring to the concept of system-level tracing. And the custom trace event API is still valid and appears in both old Systrace output and the new Perfetto UI:</p>
+<pre><code>import android.os.Trace
+
+Trace.beginSection(&quot;MyExpensiveWork&quot;)
+try {
+    doExpensiveWork()
+} finally {
+    Trace.endSection()
+}</code></pre>
+<hr>
+<h3 id="macrobenchmark">Macrobenchmark</h3>
+<p><code>MacrobenchmarkRule</code> — from <code>androidx.benchmark:benchmark-macrobenchmark</code> — measures end-to-end performance of multi-process interactions: startup time, scroll performance, compile modes. It does this from the perspective of a separate instrumentation process.</p>
+<p>The reason for the separate process is important: Macrobenchmark runs as a separate app that controls the app under test via <code>UiAutomation</code>. This accurately simulates real-world cold, warm, and hot starts because the app&#x27;s process is actually started from scratch.</p>
+<pre><code>@RunWith(AndroidJUnit4::class)
+class StartupBenchmark {
+    @get:Rule
+    val benchmarkRule = MacrobenchmarkRule()
+
+    @Test
+    fun startup() = benchmarkRule.measureRepeated(
+        packageName = &quot;com.example.myapp&quot;,
+        metrics = listOf(StartupTimingMetric()),
+        compilationMode = CompilationMode.None(),  // cold start without AOT
+        startupMode = StartupMode.COLD,
+        iterations = 5
+    ) {
+        pressHome()
+        startActivityAndWait()  // measures time to first full draw
+    }
+}</code></pre>
+<p><strong>Metrics available:</strong></p>
+<ul>
+<li><code>StartupTimingMetric</code> — <code>timeToInitialDisplay</code>, <code>timeToFullDisplay</code>.</li>
+<li><code>FrameTimingMetric</code> — P50, P90, P99 frame durations, jank count.</li>
+<li><code>TraceSectionMetric(&quot;MySection&quot;)</code> — timing of a custom <code>Trace.beginSection</code>.</li>
+<li><code>MemoryUsageMetric</code> — RSS, PSS.</li>
+</ul>
+<p><strong>CompilationMode:</strong></p>
+<ul>
+<li><code>None()</code> — no pre-compilation (slowest, simulates cold first install).</li>
+<li><code>Partial(warmupIterations = 3)</code> — partial AOT from profile (simulates real user after a few runs).</li>
+<li><code>Full()</code> — full AOT (maximum performance baseline).</li>
+</ul>
+<p>Results are printed to logcat and the test report with statistical summaries — min, median, max. Continuous integration should fail if medians regress beyond a threshold.</p>
+<hr>
+<h3 id="baseline-profiles">Baseline Profiles</h3>
+<p>A Baseline Profile is a human-readable file — <code>baseline-prof.txt</code> — listing class names, method names, and field names that the Android Runtime (ART) should ahead-of-time (AOT) compile when the app is installed. This speeds up startup and eliminates JIT compilation latency for those critical code paths.</p>
+<p>The way it works: at app install time — or after a Play update — ART reads the Baseline Profile and AOT-compiles the listed methods into native code. On first launch, those methods execute at full native speed instead of being JIT-compiled. Without Baseline Profiles, JIT compilation happens on the first few launches, causing warmup jank.</p>
+<p><strong>Generating a Baseline Profile:</strong></p>
+<pre><code>@RunWith(AndroidJUnit4::class)
+class BaselineProfileGenerator {
+    @get:Rule
+    val rule = BaselineProfileRule()
+
+    @Test
+    fun generate() = rule.collect(
+        packageName = &quot;com.example.myapp&quot;
+    ) {
+        pressHome()
+        startActivityAndWait()
+        // Navigate through critical user journeys
+        device.findObject(By.text(&quot;Search&quot;)).click()
+        waitForIdle()
+    }
+}</code></pre>
+<p>Run with <code>./gradlew generateBaselineProfile</code>. The output <code>baseline-prof.txt</code> is committed to <code>app/src/main/</code>.</p>
+<p><code>ProfileInstaller</code> is a library that installs the Baseline Profile at app startup on Android 7 and above, even without Play, ensuring the profile is active from the very first launch.</p>
+<p><code>Startup Profiles</code> are a variant that marks specific methods as &quot;startup&quot; — these are compiled even more aggressively. Use the <code>@StartupProfile</code> annotation or the Macrobenchmark plus <code>StartupMode.COLD</code> workflow.</p>
+<p>Impact: Google reports 10 to 40% startup time improvement for typical apps. Compose-heavy apps see larger gains because Compose&#x27;s own runtime is also profiled.</p>
+<hr>
+<h3 id="android-vitals">Android Vitals</h3>
+<p>Android Vitals is Google Play Console&#x27;s dashboard that shows aggregated performance and stability metrics from real users&#x27; devices via opt-in telemetry.</p>
+<p><strong>Core Vitals (affect Play Store ranking):</strong></p>
+<table border="1" cellpadding="6" cellspacing="0">
+<thead><tr>
+<th>Metric</th>
+<th>Bad threshold</th>
+</tr></thead><tbody>
+<tr><td>ANR rate</td><td>&gt; 0.47% daily ANR sessions</td></tr>
+<tr><td>Crash rate</td><td>&gt; 1.09% daily crash sessions</td></tr>
+<tr><td>Frozen frame rate</td><td>&gt; 0.1% frozen frames</td></tr>
+<tr><td>Slow rendering rate</td><td>&gt; 50% slow frames (varies)</td></tr>
+</tbody></table>
+<p><strong>Additional metrics in Vitals:</strong></p>
+<ul>
+<li>Startup time (cold/warm/hot) — P50, P90.</li>
+<li>Battery usage (excessive wake locks, excessive wake-ups).</li>
+<li>App size.</li>
+<li>Permissions denied.</li>
+</ul>
+<p>In practice, use it to monitor Core Vitals regressions after each release, drill into the breakdown by device model and Android version to target fixes, and examine individual ANR and crash reports with stack traces.</p>
+<p>The key distinction from Perfetto and Macrobenchmark: Android Vitals shows real-user aggregate data across millions of devices, while Macrobenchmark is a controlled lab measurement. You need both — Vitals tells you there is a production regression, and Macrobenchmark is how you reproduce and fix it locally.</p>
+<hr>
+<h3 id="strictmode">StrictMode</h3>
+<p><code>StrictMode</code> is a developer tool that detects accidentally performed slow or risky operations on the main thread — and VM-wide — and either logs a warning, shows a dialog, or crashes the app when they occur.</p>
+<p><strong>ThreadPolicy — main-thread violations:</strong></p>
+<pre><code>StrictMode.setThreadPolicy(
+    StrictMode.ThreadPolicy.Builder()
+        .detectDiskReads()
+        .detectDiskWrites()
+        .detectNetwork()
+        .detectCustomSlowCalls()  // triggered by StrictMode.noteSlowCall(&quot;name&quot;)
+        .detectUnbufferedIo()
+        .penaltyLog()             // logcat warning (safest for development)
+        .penaltyDeath()           // crash the app (strict CI enforcement)
+        .build()
+)</code></pre>
+<p><strong>VmPolicy — heap/resource violations:</strong></p>
+<pre><code>StrictMode.setVmPolicy(
+    StrictMode.VmPolicy.Builder()
+        .detectLeakedSqlLiteObjects()
+        .detectLeakedClosableObjects()  // unclosed Cursor, InputStream, etc.
+        .detectLeakedRegistrationObjects()  // Activity leaked via BroadcastReceiver
+        .detectActivityLeaks()
+        .detectFileUriExposure()
+        .detectCleartextNetwork()         // HTTP instead of HTTPS
+        .penaltyLog()
+        .build()
+)</code></pre>
+<p><strong>Where to enable:</strong></p>
+<pre><code>// In Application.onCreate() or Activity.onCreate(), only in debug builds:
+if (BuildConfig.DEBUG) {
+    StrictMode.setThreadPolicy(...)
+    StrictMode.setVmPolicy(...)
+}</code></pre>
+<p>&quot;What is StrictMode useful for?&quot; — detecting disk and network access on the main thread, which are jank causes; leaked database cursors or streams, which are crash and memory causes; and unencrypted network traffic, which is a security cause. Enable it in debug builds only — never in production, because the penalties can crash the app.</p>
+<p>One gotcha: Compose itself performs file I/O for font loading on the main thread in some versions. If you see spurious violations, use <code>StrictMode.allowThreadDiskReads()</code> in a try/finally around Compose initialization.</p>
+<hr>
+<h2 id="interview-cheat-sheet">Interview Cheat Sheet</h2>
+<h3 id="section-81--quick-answers">Section 8.1 — Quick Answers</h3>
+<p><strong>Q: Explain measure/layout/draw.</strong> A: &quot;There are three sequential passes. Measure: each View reports its desired size given parent constraints encoded in a <code>MeasureSpec</code>. Layout: each <code>ViewGroup</code> positions its children using left, top, right, and bottom coordinates. Draw: each View records drawing commands to a <code>Canvas</code> or <code>RenderNode</code>. <code>ViewRootImpl</code> drives all three in <code>performTraversals()</code>.&quot;</p>
+<p><strong>Q: invalidate() vs requestLayout()?</strong> A: &quot;<code>invalidate()</code> only triggers a redraw — <code>onDraw</code> reruns. <code>requestLayout()</code> re-runs the full measure, layout, and draw pipeline. I use <code>invalidate()</code> for visual-only changes like color or animation frames, and <code>requestLayout()</code> when the View&#x27;s size or position has actually changed.&quot;</p>
+<p><strong>Q: Why are deeply nested layouts bad?</strong> A: &quot;Every extra nesting level adds nodes to traverse. The dangerous case is certain combinations — like <code>WRAP_CONTENT</code> inside <code>WRAP_CONTENT</code> — that cause O(n²) measurement passes. The fix is to use <code>ConstraintLayout</code> to flatten the hierarchy.&quot;</p>
+<p><strong>Q: How do you create a custom View?</strong> A: &quot;Extend <code>View</code>, override <code>onMeasure()</code> and call <code>setMeasuredDimension()</code>, and override <code>onDraw()</code>. Create <code>Paint</code> and <code>Path</code> objects in <code>init{}</code> — never in <code>onDraw</code>. Call <code>invalidate()</code> for visual changes and <code>requestLayout()</code> when size changes.&quot;</p>
+<p><strong>Q: Why should onDraw() avoid allocations?</strong> A: &quot;It gets called up to 120 times per second. Allocating objects there creates GC pressure, and a GC pause on the main thread drops a frame. Pre-allocate everything in <code>init {}</code>.&quot;</p>
+<h3 id="section-82--quick-answers">Section 8.2 — Quick Answers</h3>
+<p><strong>Q: What is jank?</strong> A: &quot;Jank is the visible stuttering you see when the app drops a frame — the display repeats the same frame for two or more VSync cycles, so the user perceives a stutter.&quot;</p>
+<p><strong>Q: Why does main-thread blocking cause dropped frames?</strong> A: &quot;The main thread has to finish measure, layout, and draw recording before the VSync deadline — about 8 to 16 ms depending on refresh rate. Any blocking work — disk, network, long computation — delays that, and if the deadline is missed the frame is dropped.&quot;</p>
+<p><strong>Q: How would you debug jank?</strong> A: &quot;I&#x27;d reproduce the scenario, capture a System Trace in Android Studio, find the dropped frames shown in red on the Frame track, then drill into the <code>Choreographer#doFrame</code> slice on the main thread to find which sub-slice is too slow. Once I know the root cause — too much work on the main thread, overly deep hierarchy, a missing Baseline Profile — I fix it and measure again to confirm the improvement.&quot;</p>
+<h3 id="section-83--quick-answers">Section 8.3 — Quick Answers</h3>
+<p><strong>Q: Why use DiffUtil?</strong> A: &quot;It computes the minimal diff between the old and new lists using the Myers algorithm, then dispatches precise <code>notifyItemInserted</code>, <code>notifyItemRemoved</code>, and <code>notifyItemMoved</code> calls. That means correct item animations and no unnecessary rebinding. <code>notifyDataSetChanged()</code> by contrast rebinds the entire list and kills all animations.&quot;</p>
+<p><strong>Q: How does RecyclerView recycle views?</strong> A: &quot;When a ViewHolder scrolls off screen, it goes into the <code>RecycledViewPool</code>, bucketed by view type. When a new position becomes visible, <code>RecyclerView</code> pulls a matching ViewHolder from the pool and rebinds it via <code>onBindViewHolder()</code>. If the pool is empty, it calls <code>onCreateViewHolder()</code> to inflate a new one.&quot;</p>
+<p><strong>Q: What causes RecyclerView jank?</strong> A: &quot;The main causes are heavy <code>onBindViewHolder()</code> work — synchronous image decoding, building complex <code>SpannableString</code>s — too many view types with pool sizes that are too small, not using <code>DiffUtil</code> so everything gets rebound on update, and missing prefetch setup for nested RecyclerViews.&quot;</p>
+<h3 id="section-84--quick-answers">Section 8.4 — Quick Answers</h3>
+<p><strong>Q: What triggers recomposition?</strong> A: &quot;A <code>MutableState</code> value that was read during composition gets written to; a <code>StateFlow</code> or <code>Flow</code> collected with <code>collectAsState()</code> emits a new value; or a parent recomposes with changed parameters when the composable is not skippable.&quot;</p>
+<p><strong>Q: What is state hoisting?</strong> A: &quot;State hoisting is moving state up the composable tree so the composable becomes stateless — it receives state as parameters and emits events as lambdas. The benefits are testability, reusability, and a single source of truth.&quot;</p>
+<p><strong>Q: Why does stability matter?</strong> A: &quot;Stable composables can be skipped during parent recomposition if none of their parameters changed. Unstable parameter types — plain <code>List</code>, mutable classes — prevent that skipping, so even if the data hasn&#x27;t changed, the composable reruns unnecessarily.&quot;</p>
+<p><strong>Q: remember vs rememberSaveable?</strong> A: &quot;<code>remember</code> survives recomposition but not configuration change. <code>rememberSaveable</code> also survives configuration change and process recreation via the <code>SavedStateRegistry</code>. I use <code>rememberSaveable</code> for user input or any transient UI state that must survive rotation.&quot;</p>
+<p><strong>Q: LaunchedEffect vs DisposableEffect?</strong> A: &quot;<code>LaunchedEffect</code> is for coroutine-based side effects — data fetches, delays — and it relaunches when keys change. <code>DisposableEffect</code> is for register/unregister pairs like listeners and observers; it calls <code>onDispose</code> when keys change or the composable leaves composition.&quot;</p>
+<p><strong>Q: How do you avoid unnecessary recomposition?</strong> A: &quot;There are a few levers: use stable or immutable parameter types; use <code>derivedStateOf</code> for computed values so upstream changes don&#x27;t propagate when the result is the same; read high-frequency state at the lowest composable level so only a small subtree reruns; use <code>key</code> in lazy lists; and stabilize lambdas with <code>remember</code>.&quot;</p>
+<h3 id="section-85--quick-answers">Section 8.5 — Quick Answers</h3>
+<p><strong>Q: How do you debug slow startup?</strong> A: &quot;I start with Macrobenchmark and <code>StartupTimingMetric</code> to get a quantified baseline. Then I capture a System Trace and look at the <code>bindApplication</code>, <code>activityStart</code>, and <code>inflate</code> slices to find what&#x27;s taking the time. The usual fixes are moving heavy initialization off the main thread and adding Baseline Profiles to eliminate JIT warmup.&quot;</p>
+<p><strong>Q: How do you debug jank?</strong> A: &quot;Capture a System Trace, find the dropped frame shown in red, identify the slow sub-slice inside <code>Choreographer#doFrame</code>, and fix the root cause. If it&#x27;s a Compose screen, I also check the Layout Inspector for recomposition counts to see if a composable is recomposing too frequently.&quot;</p>
+<p><strong>Q: What are Baseline Profiles?</strong> A: &quot;A Baseline Profile is a text file listing critical code paths that ART AOT-compiles at install time, eliminating JIT warmup on first launch. You generate them with Macrobenchmark&#x27;s <code>BaselineProfileRule</code>, commit the output <code>baseline-prof.txt</code> to the repo, and ship it with the app. The typical improvement is 10 to 40% on startup, and Compose-heavy apps tend to see larger gains.&quot;</p>
+<p><strong>Q: What is StrictMode useful for?</strong> A: &quot;Detecting disk and network I/O on the main thread — which are jank causes; leaked database cursors or streams — which cause crashes or memory waste; leaked Activity references; and cleartext HTTP, which is a security issue. You enable it in debug builds only, because penalties like <code>penaltyDeath()</code> will crash the app.&quot;</p>
+<div class="pager">
+<a class="prev" href="architecture-patterns.html"><span class="lbl">‹ Previous</span>7. Architecture Patterns</a>
+<a class="next" href="lifecycle-platform-components.html"><span class="lbl">Next ›</span>9. Lifecycle &amp; Platform Components</a>
+</div>
+</div></div>
+<script src="../site.js"></script>
+</body></html>

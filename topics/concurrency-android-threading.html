@@ -1,0 +1,927 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>3. Concurrency &amp; Android Threading</title>
+<link rel="stylesheet" href="../style.css"></head>
+<body class="has-toc" data-prev="kotlin-java-fundamentals.html" data-next="thread-communication.html">
+<nav class="sidebar"><a class="brand" href="../index.html">📱 Android Study Guide — Home</a><details class="topic"><summary><span class="caret">▶</span><a href="data-structures-big-o.html">1. Data Structures &amp; Big O</a></summary><ul class="subtopics"><li><a class="" href="data-structures-big-o.html#11-data-structures--collections--12-big-o-notation">1.1 Data Structures &amp; Collections · 1.2 Big O Notation</a></li><li><a class="" href="data-structures-big-o.html#table-of-contents">Table of Contents</a></li><li><a class="" href="data-structures-big-o.html#1-arrays">1. Arrays</a></li><li><a class="" href="data-structures-big-o.html#2-arraylist--mutablelist">2. ArrayList / MutableList</a></li><li><a class="" href="data-structures-big-o.html#3-linkedlist">3. LinkedList</a></li><li><a class="" href="data-structures-big-o.html#4-stack">4. Stack</a></li><li><a class="" href="data-structures-big-o.html#5-queue">5. Queue</a></li><li><a class="" href="data-structures-big-o.html#6-deque">6. Deque</a></li><li><a class="" href="data-structures-big-o.html#7-hashmap--mutablemap">7. HashMap / MutableMap</a></li><li><a class="" href="data-structures-big-o.html#8-hashset--mutableset">8. HashSet / MutableSet</a></li><li><a class="" href="data-structures-big-o.html#9-linkedhashmap">9. LinkedHashMap</a></li><li><a class="" href="data-structures-big-o.html#10-treemap--sortedmap">10. TreeMap / SortedMap</a></li><li><a class="" href="data-structures-big-o.html#11-priorityqueue--heap">11. PriorityQueue / Heap</a></li><li><a class="" href="data-structures-big-o.html#12-trie">12. Trie</a></li><li><a class="" href="data-structures-big-o.html#13-graphs">13. Graphs</a></li><li><a class="" href="data-structures-big-o.html#14-android-specific-collections">14. Android-Specific Collections</a></li><li><a class="" href="data-structures-big-o.html#15-big-o-notation">15. Big O Notation</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="kotlin-java-fundamentals.html">2. Kotlin &amp; Java Fundamentals</a></summary><ul class="subtopics"><li><a class="" href="kotlin-java-fundamentals.html#table-of-contents">Table of Contents</a></li><li><a class="" href="kotlin-java-fundamentals.html#21-kotlin-fundamentals">2.1 Kotlin Fundamentals</a></li><li><a class="" href="kotlin-java-fundamentals.html#22-kotlin-generics">2.2 Kotlin Generics</a></li><li><a class="" href="kotlin-java-fundamentals.html#23-java-fundamentals">2.3 Java Fundamentals</a></li><li><a class="" href="kotlin-java-fundamentals.html#24-kotlin-java-interop">2.4 Kotlin-Java Interop</a></li></ul></details><details class="topic active" open><summary><span class="caret">▶</span><a href="concurrency-android-threading.html">3. Concurrency &amp; Android Threading</a></summary><ul class="subtopics"><li><a class="spy" href="#table-of-contents">Table of Contents</a></li><li><a class="spy" href="#31-java-thread-basics">3.1 Java Thread Basics</a></li><li><a class="spy" href="#32-locks-and-synchronization">3.2 Locks and Synchronization</a></li><li><a class="spy" href="#33-volatile-and-atomic-classes">3.3 Volatile and Atomic Classes</a></li><li><a class="spy" href="#34-waitnotify-and-producer-consumer">3.4 Wait/Notify and Producer-Consumer</a></li><li><a class="spy" href="#35-executors-and-task-execution">3.5 Executors and Task Execution</a></li><li><a class="spy" href="#36-android-application-threads">3.6 Android Application Threads</a></li><li><a class="spy" href="#37-handler--looper--messagequeue">3.7 Handler / Looper / MessageQueue</a></li><li><a class="spy" href="#38-kotlin-coroutines-on-android">3.8 Kotlin Coroutines on Android</a></li><li><a class="spy" href="#39-flow-stateflow-sharedflow-channel">3.9 Flow, StateFlow, SharedFlow, Channel</a></li><li><a class="spy" href="#310-background-work">3.10 Background Work</a></li><li><a class="spy" href="#quick-reference-interview-cheat-sheet">Quick-Reference: Interview Cheat Sheet</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="thread-communication.html">4. Thread Communication</a></summary><ul class="subtopics"><li><a class="" href="thread-communication.html#table-of-contents">Table of Contents</a></li><li><a class="" href="thread-communication.html#41-pipes">4.1 Pipes</a></li><li><a class="" href="thread-communication.html#42-shared-memory">4.2 Shared Memory</a></li><li><a class="" href="thread-communication.html#43-signaling">4.3 Signaling</a></li><li><a class="" href="thread-communication.html#44-blockingqueue">4.4 BlockingQueue</a></li><li><a class="" href="thread-communication.html#45-message-passing--android-handlerloopermessagequeue">4.5 Message Passing — Android Handler/Looper/MessageQueue</a></li><li><a class="" href="thread-communication.html#cross-cutting-shared-memory-vs-message-passing">Cross-cutting: Shared Memory vs Message Passing</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="ipc-binder-aidl-messenger.html">5. IPC: Binder, AIDL, Messenger</a></summary><ul class="subtopics"><li><a class="" href="ipc-binder-aidl-messenger.html#table-of-contents">Table of Contents</a></li><li><a class="" href="ipc-binder-aidl-messenger.html#51-android-process-model">5.1 Android Process Model</a></li><li><a class="" href="ipc-binder-aidl-messenger.html#52-binder">5.2 Binder</a></li><li><a class="" href="ipc-binder-aidl-messenger.html#53-aidl">5.3 AIDL</a></li><li><a class="" href="ipc-binder-aidl-messenger.html#54-messenger">5.4 Messenger</a></li><li><a class="" href="ipc-binder-aidl-messenger.html#parcelable-vs-serializable">Parcelable vs Serializable</a></li><li><a class="" href="ipc-binder-aidl-messenger.html#aidl-vs-messenger-decision-guide">AIDL vs Messenger Decision Guide</a></li><li><a class="" href="ipc-binder-aidl-messenger.html#interview-quick-reference">Interview Quick-Reference</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="android-memory-management.html">6. Android Memory Management</a></summary><ul class="subtopics"><li><a class="" href="android-memory-management.html#table-of-contents">Table of Contents</a></li><li><a class="" href="android-memory-management.html#61-jvmart-memory-basics">6.1 JVM/ART Memory Basics</a></li><li><a class="" href="android-memory-management.html#62-android-memory-leaks">6.2 Android Memory Leaks</a></li><li><a class="" href="android-memory-management.html#63-context-leaks">6.3 Context Leaks</a></li><li><a class="" href="android-memory-management.html#64-bitmap-and-image-memory">6.4 Bitmap and Image Memory</a></li><li><a class="" href="android-memory-management.html#65-leak-detection-and-profiling">6.5 Leak Detection and Profiling</a></li><li><a class="" href="android-memory-management.html#interview-quick-reference">Interview Quick-Reference</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="architecture-patterns.html">7. Architecture Patterns</a></summary><ul class="subtopics"><li><a class="" href="architecture-patterns.html#table-of-contents">Table of Contents</a></li><li><a class="" href="architecture-patterns.html#71-mvc-mvp-mvvm-mvi">7.1 MVC, MVP, MVVM, MVI</a></li><li><a class="" href="architecture-patterns.html#72-clean-architecture">7.2 Clean Architecture</a></li><li><a class="" href="architecture-patterns.html#73-repository-pattern">7.3 Repository Pattern</a></li><li><a class="" href="architecture-patterns.html#74-dependency-injection">7.4 Dependency Injection</a></li><li><a class="" href="architecture-patterns.html#75-modularization">7.5 Modularization</a></li><li><a class="" href="architecture-patterns.html#quick-reference-cheat-sheet">Quick-Reference Cheat Sheet</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="view-rendering.html">8. View Rendering</a></summary><ul class="subtopics"><li><a class="" href="view-rendering.html#table-of-contents">Table of Contents</a></li><li><a class="" href="view-rendering.html#81-traditional-view-system-rendering">8.1 Traditional View System Rendering</a></li><li><a class="" href="view-rendering.html#82-choreographer-vsync-and-frame-rendering">8.2 Choreographer, VSync, and Frame Rendering</a></li><li><a class="" href="view-rendering.html#83-recyclerview-performance">8.3 RecyclerView Performance</a></li><li><a class="" href="view-rendering.html#84-jetpack-compose-rendering">8.4 Jetpack Compose Rendering</a></li><li><a class="" href="view-rendering.html#85-performance-tools">8.5 Performance Tools</a></li><li><a class="" href="view-rendering.html#interview-cheat-sheet">Interview Cheat Sheet</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="lifecycle-platform-components.html">9. Lifecycle &amp; Platform Components</a></summary><ul class="subtopics"><li><a class="" href="lifecycle-platform-components.html#table-of-contents">Table of Contents</a></li><li><a class="" href="lifecycle-platform-components.html#91-activity">9.1 Activity</a></li><li><a class="" href="lifecycle-platform-components.html#92-fragment">9.2 Fragment</a></li><li><a class="" href="lifecycle-platform-components.html#93-services">9.3 Services</a></li><li><a class="" href="lifecycle-platform-components.html#94-broadcastreceiver">9.4 BroadcastReceiver</a></li><li><a class="" href="lifecycle-platform-components.html#95-contentprovider">9.5 ContentProvider</a></li><li><a class="" href="lifecycle-platform-components.html#96-intents-and-pendingintents">9.6 Intents and PendingIntents</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="android-data-layer.html">10. Android Data Layer</a></summary><ul class="subtopics"><li><a class="" href="android-data-layer.html#table-of-contents">Table of Contents</a></li><li><a class="" href="android-data-layer.html#101-networking">10.1 Networking</a></li><li><a class="" href="android-data-layer.html#102-persistence">10.2 Persistence</a></li><li><a class="" href="android-data-layer.html#103-offline-first-design">10.3 Offline-First Design</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="testing.html">11. Testing</a></summary><ul class="subtopics"><li><a class="" href="testing.html#table-of-contents">Table of Contents</a></li><li><a class="" href="testing.html#111-unit-testing">11.1 Unit Testing</a></li><li><a class="" href="testing.html#112-ui-testing">11.2 UI Testing</a></li><li><a class="" href="testing.html#113-integration-and-end-to-end-testing">11.3 Integration and End-to-End Testing</a></li><li><a class="" href="testing.html#quick-reference-interview-cheat-sheet">Quick-Reference Interview Cheat Sheet</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="build-gradle-release.html">12. Build, Gradle &amp; Release</a></summary><ul class="subtopics"><li><a class="" href="build-gradle-release.html#table-of-contents">Table of Contents</a></li><li><a class="" href="build-gradle-release.html#121-gradle-basics">12.1 Gradle Basics</a></li><li><a class="" href="build-gradle-release.html#122-build-performance">12.2 Build Performance</a></li><li><a class="" href="build-gradle-release.html#123-release">12.3 Release</a></li><li><a class="" href="build-gradle-release.html#summary-table-quick-reference">Summary Table: Quick Reference</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="security-privacy.html">13. Security &amp; Privacy</a></summary><ul class="subtopics"><li><a class="" href="security-privacy.html#table-of-contents">Table of Contents</a></li><li><a class="" href="security-privacy.html#131-android-security-basics">13.1 Android Security Basics</a></li><li><a class="" href="security-privacy.html#132-data-security">13.2 Data Security</a></li><li><a class="" href="security-privacy.html#interview-qa-master-list">Interview Q&amp;A Master List</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="performance-beyond-rendering.html">14. Performance Beyond Rendering</a></summary><ul class="subtopics"><li><a class="" href="performance-beyond-rendering.html#table-of-contents">Table of Contents</a></li><li><a class="" href="performance-beyond-rendering.html#141-startup-performance">14.1 Startup Performance</a></li><li><a class="" href="performance-beyond-rendering.html#142-battery-and-resource-usage">14.2 Battery and Resource Usage</a></li><li><a class="" href="performance-beyond-rendering.html#143-anr-and-crash-debugging">14.3 ANR and Crash Debugging</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="senior-staff-system-design.html">15. Senior/Staff System Design</a></summary><ul class="subtopics"><li><a class="" href="senior-staff-system-design.html#table-of-contents">Table of Contents</a></li><li><a class="" href="senior-staff-system-design.html#151-android-app-architecture-design">15.1 Android App Architecture Design</a></li><li><a class="" href="senior-staff-system-design.html#152-trade-off-thinking">15.2 Trade-Off Thinking</a></li><li><a class="" href="senior-staff-system-design.html#153-legacy-code-and-migration">15.3 Legacy Code and Migration</a></li><li><a class="" href="senior-staff-system-design.html#154-engineering-leadership">15.4 Engineering Leadership</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="interview-q-a-cheatsheet.html">16. Interview Q&amp;A &amp; Cheatsheet</a></summary><ul class="subtopics"><li><a class="" href="interview-q-a-cheatsheet.html#table-of-contents">Table of Contents</a></li><li><a class="" href="interview-q-a-cheatsheet.html#section-16--model-answers-by-category">Section 16 — Model Answers by Category</a></li><li><a class="" href="interview-q-a-cheatsheet.html#section-17--must-revise-checklist">Section 17 — Must-Revise Checklist</a></li><li><a class="" href="interview-q-a-cheatsheet.html#section-18--senior-answer-framework-with-worked-examples">Section 18 — Senior Answer Framework with Worked Examples</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="references.html">References</a></summary><ul class="subtopics"><li><a class="" href="references.html#table-of-contents">Table of Contents</a></li><li><a class="" href="references.html#section-1--data-structures--big-o">Section 1 — Data Structures &amp; Big O</a></li><li><a class="" href="references.html#section-2--kotlin--java-fundamentals">Section 2 — Kotlin &amp; Java Fundamentals</a></li><li><a class="" href="references.html#section-3--concurrency--threading">Section 3 — Concurrency &amp; Threading</a></li><li><a class="" href="references.html#section-4--thread-communication">Section 4 — Thread Communication</a></li><li><a class="" href="references.html#section-5--ipc-binder-aidl-messenger">Section 5 — IPC: Binder, AIDL, Messenger</a></li><li><a class="" href="references.html#section-6--memory-management">Section 6 — Memory Management</a></li><li><a class="" href="references.html#section-7--architecture-patterns">Section 7 — Architecture Patterns</a></li><li><a class="" href="references.html#section-8--view-rendering">Section 8 — View Rendering</a></li><li><a class="" href="references.html#section-9--lifecycle--platform-components">Section 9 — Lifecycle &amp; Platform Components</a></li><li><a class="" href="references.html#section-10--data-layer">Section 10 — Data Layer</a></li><li><a class="" href="references.html#section-11--testing">Section 11 — Testing</a></li><li><a class="" href="references.html#section-12--build-gradle--release">Section 12 — Build, Gradle &amp; Release</a></li><li><a class="" href="references.html#section-13--security--privacy">Section 13 — Security &amp; Privacy</a></li><li><a class="" href="references.html#section-14--performance-beyond-rendering">Section 14 — Performance (Beyond Rendering)</a></li><li><a class="" href="references.html#section-15--system-design">Section 15 — System Design</a></li><li><a class="" href="references.html#section-16--interview-qa-cheatsheet">Section 16 — Interview Q&amp;A Cheatsheet</a></li><li><a class="" href="references.html#section-17--must-revise-checklist">Section 17 — Must-Revise Checklist</a></li><li><a class="" href="references.html#section-18--seniorstaff-answer-framework">Section 18 — Senior/Staff Answer Framework</a></li><li><a class="" href="references.html#books">Books</a></li></ul></details></nav>
+<aside class="toc-right"><div class="toc-h">On this page</div><ul class="toc-tree"><li class="toc-grp"><a class="toc-2" href="#table-of-contents"><span class="tcaret tcaret-none"></span>Table of Contents</a></li><li class="toc-grp"><a class="toc-2" href="#31-java-thread-basics"><span class="tcaret">▶</span>3.1 Java Thread Basics</a><ul class="toc-subs"><li><a class="toc-3" href="#process-vs-thread">Process vs Thread</a></li><li><a class="toc-3" href="#thread-lifecycle-states">Thread Lifecycle States</a></li><li><a class="toc-3" href="#context-switching">Context Switching</a></li><li><a class="toc-3" href="#race-conditions">Race Conditions</a></li><li><a class="toc-3" href="#critical-sections">Critical Sections</a></li><li><a class="toc-3" href="#shared-mutable-state">Shared Mutable State</a></li><li><a class="toc-3" href="#thread-safety-visibility-atomicity-ordering">Thread Safety, Visibility, Atomicity, Ordering</a></li><li><a class="toc-3" href="#concurrency-vs-parallelism">Concurrency vs Parallelism</a></li><li><a class="toc-3" href="#why-does-a-bug-disappear-under-a-debugger">Why Does a Bug Disappear Under a Debugger?</a></li></ul></li><li class="toc-grp"><a class="toc-2" href="#32-locks-and-synchronization"><span class="tcaret">▶</span>3.2 Locks and Synchronization</a><ul class="toc-subs"><li><a class="toc-3" href="#intrinsic-lock-monitor-lock">Intrinsic Lock (Monitor Lock)</a></li><li><a class="toc-3" href="#java-monitor">Java Monitor</a></li><li><a class="toc-3" href="#synchronized-method-vs-block">`synchronized` Method vs Block</a></li><li><a class="toc-3" href="#mutual-exclusion">Mutual Exclusion</a></li><li><a class="toc-3" href="#reentrant-locks">Reentrant Locks</a></li><li><a class="toc-3" href="#deadlock">Deadlock</a></li><li><a class="toc-3" href="#livelock">Livelock</a></li><li><a class="toc-3" href="#starvation">Starvation</a></li><li><a class="toc-3" href="#lock-contention-and-granularity">Lock Contention and Granularity</a></li></ul></li><li class="toc-grp"><a class="toc-2" href="#33-volatile-and-atomic-classes"><span class="tcaret">▶</span>3.3 Volatile and Atomic Classes</a><ul class="toc-subs"><li><a class="toc-3" href="#volatile--visibility-not-compound-atomicity">`volatile` — Visibility, Not Compound Atomicity</a></li><li><a class="toc-3" href="#atomicinteger-atomicboolean-atomicreference">`AtomicInteger`, `AtomicBoolean`, `AtomicReference`</a></li><li><a class="toc-3" href="#compare-and-swap-cas">Compare-And-Swap (CAS)</a></li><li><a class="toc-3" href="#decision-matrix">Decision Matrix</a></li></ul></li><li class="toc-grp"><a class="toc-2" href="#34-waitnotify-and-producer-consumer"><span class="tcaret">▶</span>3.4 Wait/Notify and Producer-Consumer</a><ul class="toc-subs"><li><a class="toc-3" href="#the-monitor-wait-set">The Monitor Wait Set</a></li><li><a class="toc-3" href="#spurious-wakeups">Spurious Wakeups</a></li><li><a class="toc-3" href="#guarded-block">Guarded Block</a></li><li><a class="toc-3" href="#producer-consumer-with-waitnotify">Producer-Consumer with `wait`/`notify`</a></li><li><a class="toc-3" href="#blockingqueue--prefer-this-over-manual-waitnotify">`BlockingQueue` — Prefer This Over Manual Wait/Notify</a></li></ul></li><li class="toc-grp"><a class="toc-2" href="#35-executors-and-task-execution"><span class="tcaret">▶</span>3.5 Executors and Task Execution</a><ul class="toc-subs"><li><a class="toc-3" href="#why-not-new-thread-per-task">Why Not `new Thread()` Per Task?</a></li><li><a class="toc-3" href="#executor-and-executorservice">`Executor` and `ExecutorService`</a></li><li><a class="toc-3" href="#thread-pool-types">Thread Pool Types</a></li><li><a class="toc-3" href="#callable-and-future">`Callable` and `Future`</a></li><li><a class="toc-3" href="#cancellation">Cancellation</a></li><li><a class="toc-3" href="#backpressure-and-queue-sizing">Backpressure and Queue Sizing</a></li><li><a class="toc-3" href="#thread-starvation">Thread Starvation</a></li></ul></li><li class="toc-grp"><a class="toc-2" href="#36-android-application-threads"><span class="tcaret">▶</span>3.6 Android Application Threads</a><ul class="toc-subs"><li><a class="toc-3" href="#main-thread-ui-thread">Main Thread (UI Thread)</a></li><li><a class="toc-3" href="#anr-application-not-responding">ANR (Application Not Responding)</a></li><li><a class="toc-3" href="#binder-threads">Binder Threads</a></li><li><a class="toc-3" href="#background-threads">Background Threads</a></li><li><a class="toc-3" href="#linux-process-and-scheduling">Linux Process and Scheduling</a></li><li><a class="toc-3" href="#debugging-main-thread-freezes">Debugging Main-Thread Freezes</a></li></ul></li><li class="toc-grp"><a class="toc-2" href="#37-handler--looper--messagequeue"><span class="tcaret">▶</span>3.7 Handler / Looper / MessageQueue</a><ul class="toc-subs"><li><a class="toc-3" href="#architecture-overview">Architecture Overview</a></li><li><a class="toc-3" href="#looper">Looper</a></li><li><a class="toc-3" href="#messagequeue">MessageQueue</a></li><li><a class="toc-3" href="#handler">Handler</a></li><li><a class="toc-3" href="#handlerthread">`HandlerThread`</a></li><li><a class="toc-3" href="#memory-leaks-from-delayed-messages">Memory Leaks from Delayed Messages</a></li><li><a class="toc-3" href="#communicating-with-the-ui-thread">Communicating with the UI Thread</a></li></ul></li><li class="toc-grp"><a class="toc-2" href="#38-kotlin-coroutines-on-android"><span class="tcaret">▶</span>3.8 Kotlin Coroutines on Android</a><ul class="toc-subs"><li><a class="toc-3" href="#what-is-a-coroutine">What Is a Coroutine?</a></li><li><a class="toc-3" href="#suspend-functions">`suspend` Functions</a></li><li><a class="toc-3" href="#coroutine-builders">Coroutine Builders</a></li><li><a class="toc-3" href="#coroutinescope">`CoroutineScope`</a></li><li><a class="toc-3" href="#coroutine-context">Coroutine Context</a></li><li><a class="toc-3" href="#dispatchers">Dispatchers</a></li><li><a class="toc-3" href="#structured-concurrency">Structured Concurrency</a></li><li><a class="toc-3" href="#job-vs-supervisorjob">`Job` vs `SupervisorJob`</a></li><li><a class="toc-3" href="#coroutinescope-vs-supervisorscope">`coroutineScope` vs `supervisorScope`</a></li><li><a class="toc-3" href="#withcontext">`withContext`</a></li><li><a class="toc-3" href="#exception-handling">Exception Handling</a></li><li><a class="toc-3" href="#cancellation-cooperation">Cancellation Cooperation</a></li><li><a class="toc-3" href="#main-safety">Main-Safety</a></li><li><a class="toc-3" href="#testing-coroutines">Testing Coroutines</a></li></ul></li><li class="toc-grp"><a class="toc-2" href="#39-flow-stateflow-sharedflow-channel"><span class="tcaret">▶</span>3.9 Flow, StateFlow, SharedFlow, Channel</a><ul class="toc-subs"><li><a class="toc-3" href="#cold-vs-hot-streams">Cold vs Hot Streams</a></li><li><a class="toc-3" href="#flow--cold-stream">`Flow` — Cold Stream</a></li><li><a class="toc-3" href="#flow-operators">Flow Operators</a></li><li><a class="toc-3" href="#stateflow--hot-state-holder">`StateFlow` — Hot State Holder</a></li><li><a class="toc-3" href="#sharedflow--hot-broadcast">`SharedFlow` — Hot Broadcast</a></li><li><a class="toc-3" href="#channel--one-to-one-communication">`Channel` — One-to-One Communication</a></li><li><a class="toc-3" href="#lifecycle-aware-collection">Lifecycle-Aware Collection</a></li></ul></li><li class="toc-grp"><a class="toc-2" href="#310-background-work"><span class="tcaret">▶</span>3.10 Background Work</a><ul class="toc-subs"><li><a class="toc-3" href="#categorizing-work">Categorizing Work</a></li><li><a class="toc-3" href="#workmanager">WorkManager</a></li><li><a class="toc-3" href="#periodic-work">Periodic Work</a></li><li><a class="toc-3" href="#chained-work">Chained Work</a></li><li><a class="toc-3" href="#expedited-work">Expedited Work</a></li><li><a class="toc-3" href="#cancellation-1">Cancellation</a></li><li><a class="toc-3" href="#jobscheduler">`JobScheduler`</a></li><li><a class="toc-3" href="#foreground-services">Foreground Services</a></li><li><a class="toc-3" href="#alarmmanager">`AlarmManager`</a></li><li><a class="toc-3" href="#broadcastreceiver-limitations">`BroadcastReceiver` Limitations</a></li><li><a class="toc-3" href="#doze-mode-and-app-standby">Doze Mode and App Standby</a></li><li><a class="toc-3" href="#retry-and-backoff">Retry and Backoff</a></li><li><a class="toc-3" href="#workmanager-vs-coroutine-decision">WorkManager vs Coroutine Decision</a></li><li><a class="toc-3" href="#debugging-background-work">Debugging Background Work</a></li></ul></li><li class="toc-grp"><a class="toc-2" href="#quick-reference-interview-cheat-sheet"><span class="tcaret">▶</span>Quick-Reference: Interview Cheat Sheet</a><ul class="toc-subs"><li><a class="toc-3" href="#race-condition">Race Condition</a></li><li><a class="toc-3" href="#thread-safe">Thread-Safe</a></li><li><a class="toc-3" href="#intrinsic-lock">Intrinsic Lock</a></li><li><a class="toc-3" href="#deadlock-prevention">Deadlock Prevention</a></li><li><a class="toc-3" href="#volatile-vs-atomicinteger">`volatile` vs `AtomicInteger`</a></li><li><a class="toc-3" href="#wait-vs-sleep">`wait()` vs `sleep()`</a></li><li><a class="toc-3" href="#why-not-globalscope">Why Not `GlobalScope`?</a></li><li><a class="toc-3" href="#structured-concurrency-1">Structured Concurrency</a></li><li><a class="toc-3" href="#job-vs-supervisorjob-1">`Job` vs `SupervisorJob`</a></li><li><a class="toc-3" href="#stateflow-vs-sharedflow">`StateFlow` vs `SharedFlow`</a></li><li><a class="toc-3" href="#repeatonlifecycle-vs-launchwhenstarted">`repeatOnLifecycle` vs `launchWhenStarted`</a></li><li><a class="toc-3" href="#workmanager-vs-coroutine">WorkManager vs Coroutine</a></li><li><a class="toc-3" href="#workmanager-vs-foreground-service">WorkManager vs Foreground Service</a></li></ul></li></ul></aside>
+<div class="backdrop"></div>
+<div class="content">
+<div class="mtop"><button onclick="toggleNav()" aria-label="Menu">☰</button><a class="home" href="../index.html">🏠</a><span class="t">3. Concurrency &amp; Android Threading</span></div>
+<a class="arrow left" href="kotlin-java-fundamentals.html" title="Previous (2. Kotlin &amp; Java Fundamentals)">‹</a>
+<a class="arrow right" href="thread-communication.html" title="Next (4. Thread Communication)">›</a>
+<div class="wrap">
+<h1 id="3-concurrency--android-threading">3. Concurrency &amp; Android Threading</h1>
+<blockquote><strong>Scope:</strong> Java thread fundamentals through Kotlin coroutines/Flow to Android-specific background work.  <br><strong>Interview weight:</strong> Very high — almost every Android senior/staff loop touches at least two subsections here.</blockquote>
+<hr>
+<h2 id="table-of-contents">Table of Contents</h2>
+<ul>
+<li><a href="#31-java-thread-basics">3.1 Java Thread Basics</a></li>
+<li><a href="#32-locks-and-synchronization">3.2 Locks and Synchronization</a></li>
+<li><a href="#33-volatile-and-atomic-classes">3.3 Volatile and Atomic Classes</a></li>
+<li><a href="#34-waitnotify-and-producer-consumer">3.4 Wait/Notify and Producer-Consumer</a></li>
+<li><a href="#35-executors-and-task-execution">3.5 Executors and Task Execution</a></li>
+<li><a href="#36-android-application-threads">3.6 Android Application Threads</a></li>
+<li><a href="#37-handler--looper--messagequeue">3.7 Handler / Looper / MessageQueue</a></li>
+<li><a href="#38-kotlin-coroutines-on-android">3.8 Kotlin Coroutines on Android</a></li>
+<li><a href="#39-flow-stateflow-sharedflow-channel">3.9 Flow, StateFlow, SharedFlow, Channel</a></li>
+<li><a href="#310-background-work">3.10 Background Work</a></li>
+</ul>
+<hr>
+<h2 id="31-java-thread-basics">3.1 Java Thread Basics</h2>
+<h3 id="process-vs-thread">Process vs Thread</h3>
+<p>A process is an isolated program instance — it gets its own memory space, file descriptors, and OS resources, and the kernel schedules it independently. Processes cannot share memory without explicit IPC.</p>
+<p>A thread is an execution unit that lives inside a process. All threads in a process share the same heap and static fields, but each has its own stack, program counter, and register set. Creating a thread is much cheaper than forking a process, but the shared address space is exactly what makes multi-threading dangerous.</p>
+<p>On Android, every <code>Application</code> normally runs in a single process (unless <code>android:process</code> is set on a component). Inside that process, the runtime starts several threads automatically — the main thread, GC threads, Binder threads, and so on.</p>
+<pre><code>// Cheapest way to observe threads in Android
+Thread.currentThread().name  // &quot;main&quot;, &quot;pool-1-thread-1&quot;, etc.
+android.os.Process.myPid()   // Linux PID of the process
+android.os.Process.myTid()   // Linux TID of the calling thread</code></pre>
+<h3 id="thread-lifecycle-states">Thread Lifecycle States</h3>
+<pre><code>NEW ──► RUNNABLE ──► RUNNING ──► TERMINATED
+                  ▲        │
+                  │        ▼
+               BLOCKED / WAITING / TIMED_WAITING</code></pre>
+<table border="1" cellpadding="6" cellspacing="0">
+<thead><tr>
+<th>State</th>
+<th>Meaning</th>
+</tr></thead><tbody>
+<tr><td><code>NEW</code></td><td>Thread object created, <code>start()</code> not yet called</td></tr>
+<tr><td><code>RUNNABLE</code></td><td>Ready to run; may or may not be on-CPU</td></tr>
+<tr><td><code>RUNNING</code></td><td>(JVM abstraction) scheduler gave it CPU time</td></tr>
+<tr><td><code>BLOCKED</code></td><td>Waiting to acquire an intrinsic monitor lock</td></tr>
+<tr><td><code>WAITING</code></td><td>Parked indefinitely via <code>wait()</code>, <code>join()</code>, <code>LockSupport.park()</code></td></tr>
+<tr><td><code>TIMED_WAITING</code></td><td>Same but with a timeout (<code>sleep</code>, <code>wait(ms)</code>, <code>join(ms)</code>)</td></tr>
+<tr><td><code>TERMINATED</code></td><td><code>run()</code> returned or threw an uncaught exception</td></tr>
+</tbody></table>
+<p>The key transition gotcha is this: a thread in <code>WAITING</code> cannot be scheduled until another thread calls <code>notify()</code>/<code>notifyAll()</code> or <code>unpark()</code>. A thread in <code>BLOCKED</code> is actively competing for a lock with other threads — it&#x27;s ready to run, it just can&#x27;t get in.</p>
+<h3 id="context-switching">Context Switching</h3>
+<p>The OS scheduler preempts threads on time-slice boundaries or when a thread blocks. Switching means saving the current thread&#x27;s registers and stack pointer, loading the next thread&#x27;s saved state, and updating the TLB. On Android (Linux scheduler — CFS, Completely Fair Scheduler), threads are scheduled by priority (nice value). <code>android.os.Process.setThreadPriority()</code> maps to nice values.</p>
+<p>The cost implication is that context switches carry CPU cache eviction overhead. Too many threads means too many switches, which means contention for CPU caches and a real slowdown in throughput. That is exactly why thread pools exist.</p>
+<h3 id="race-conditions">Race Conditions</h3>
+<p>A race condition occurs when program correctness depends on the relative timing of operations across two or more threads, and that timing is not controlled.</p>
+<p>Classic example — two threads each doing <code>balance += deposit</code>:</p>
+<pre><code>Thread A reads balance (100)
+Thread B reads balance (100)
+Thread A writes 100 + 50 = 150
+Thread B writes 100 + 75 = 175   // A&#x27;s update is lost!</code></pre>
+<p>The final value should be 225 but is 175. The compound &quot;read-modify-write&quot; operation is the hazard.</p>
+<h3 id="critical-sections">Critical Sections</h3>
+<p>A critical section is a block of code that accesses shared mutable state and must be executed by at most one thread at a time. The goal of every synchronization mechanism is to enforce mutual exclusion over critical sections while minimizing the time threads spend waiting.</p>
+<h3 id="shared-mutable-state">Shared Mutable State</h3>
+<p>There are three factors that create thread-safety problems. First, the data is shared — accessible from multiple threads. Second, it is mutable — the value can change. Third, there is no synchronization — no mechanism forces ordered, exclusive access.</p>
+<p>There are three solution paths. Either do not share the data and confine it to one thread (thread confinement). Or do not mutate it and use immutable or read-only data structures. Or synchronize access using locks, atomics, or lock-free algorithms.</p>
+<h3 id="thread-safety-visibility-atomicity-ordering">Thread Safety, Visibility, Atomicity, Ordering</h3>
+<p><strong>Thread safety</strong> means a class behaves correctly when accessed from multiple threads, regardless of scheduling, without additional synchronization by the caller.</p>
+<p><strong>Visibility</strong> is the guarantee that when thread A writes a variable, thread B actually sees that write. Without a happens-before relationship, the JMM allows threads to cache variables in registers or local CPU caches, so there is no such guarantee by default.</p>
+<p><strong>Atomicity</strong> means an operation completes in a single, indivisible step from the perspective of other threads. Reading or writing a 32-bit <code>int</code> or reference is atomic per JMM, but <code>long</code> and <code>double</code> on 32-bit JVMs are not guaranteed atomic because they require two separate 32-bit writes. Compound operations like <code>i++</code> are never atomic even for <code>int</code>.</p>
+<p><strong>Ordering</strong> is the rule that the JMM allows the compiler and CPU to reorder instructions, as long as the result is equivalent within a single thread. Another thread may observe a different order unless happens-before edges — from locks, <code>volatile</code>, or <code>final</code> fields — prevent it.</p>
+<h3 id="concurrency-vs-parallelism">Concurrency vs Parallelism</h3>
+<p>Concurrency is about structure — designing a program so that multiple logical tasks can overlap in time. A single-core machine can run concurrent code by interleaving.</p>
+<p>Parallelism is about execution — two or more tasks literally running at the same moment on multiple cores.</p>
+<p>On Android, a single-core device can be fully concurrent (async IO, handler messages) but not parallel. A multi-core device can do both.</p>
+<h3 id="why-does-a-bug-disappear-under-a-debugger">Why Does a Bug Disappear Under a Debugger?</h3>
+<p>Debuggers slow thread execution, insert memory barriers via breakpoints (the <code>int3</code> trap flushes caches), and change timing. A race that only triggers in a narrow timing window often disappears when execution speed changes — that is a Heisenbug. The cure is proper synchronization, not relying on timing.</p>
+<hr>
+<h2 id="32-locks-and-synchronization">3.2 Locks and Synchronization</h2>
+<h3 id="intrinsic-lock-monitor-lock">Intrinsic Lock (Monitor Lock)</h3>
+<p>Every Java object has exactly one intrinsic lock, also called a monitor lock. When a thread enters a <code>synchronized</code> block or method on that object, it acquires the lock. When it exits — normally or via exception — it releases the lock. The lock has two effects. First, mutual exclusion: only one thread holds the lock at a time. Second, visibility: acquiring a lock flushes the thread&#x27;s local cache, and releasing it flushes writes back to main memory, creating a happens-before edge.</p>
+<h3 id="java-monitor">Java Monitor</h3>
+<p>A monitor bundles three things: a mutex for mutual exclusion, a wait set for threads parked via <code>wait()</code>, and ownership tracking for which thread holds it and its reentry count.</p>
+<p>The JVM implements monitors using object headers (mark word). When uncontended, HotSpot uses biased locking — a single CAS. Under contention it inflates to a full OS mutex (futex on Linux).</p>
+<h3 id="synchronized-method-vs-block"><code>synchronized</code> Method vs Block</h3>
+<pre><code>// Method — locks on `this` (or the Class object for static)
+public synchronized void deposit(int amount) {
+    balance += amount;
+}
+
+// Block — explicit lock object, narrower scope
+public void deposit(int amount) {
+    synchronized (lock) {
+        balance += amount;
+    }
+}</code></pre>
+<p>Prefer the block form because there are three advantages. First, you can choose a more appropriate lock object — typically a private <code>Object lock = new Object()</code> rather than <code>this</code>. Second, you can narrow the synchronized region, keeping non-shared work outside the lock. Third, you avoid accidentally exposing the lock, since clients of <code>this</code> can also call <code>synchronized(account){}</code> and interfere.</p>
+<h3 id="mutual-exclusion">Mutual Exclusion</h3>
+<p>Mutual exclusion — mutex — guarantees that at most one thread executes a critical section at a time. In Java, holding the intrinsic lock of an object provides mutual exclusion over all <code>synchronized</code> blocks on that same object.</p>
+<h3 id="reentrant-locks">Reentrant Locks</h3>
+<p>Java&#x27;s intrinsic lock is reentrant: a thread that already holds a lock can acquire it again without deadlocking, because the JVM tracks a reentry count. This matters when a <code>synchronized</code> method calls another <code>synchronized</code> method on the same object.</p>
+<p><code>java.util.concurrent.locks.ReentrantLock</code> provides explicit, reentrant locking with extra features. There are four worth knowing: <code>tryLock(timeout)</code> to avoid blocking forever; <code>lockInterruptibly()</code> to respond to thread interruption while waiting; <code>Condition</code> objects for multiple wait sets per lock instead of the single wait set a monitor gives you; and a fairness option that queues waiting threads in FIFO order.</p>
+<pre><code>val lock = ReentrantLock()
+val notFull = lock.newCondition()
+val notEmpty = lock.newCondition()
+
+fun produce(item: Int) {
+    lock.lock()
+    try {
+        while (buffer.size == MAX) notFull.await()
+        buffer.add(item)
+        notEmpty.signal()
+    } finally {
+        lock.unlock()  // always in finally
+    }
+}</code></pre>
+<h3 id="deadlock">Deadlock</h3>
+<p>A deadlock occurs when two or more threads are permanently blocked, each waiting for a lock held by another.</p>
+<p>There are four necessary conditions — called the Coffman conditions — and all four must hold simultaneously. First, mutual exclusion: resources are held exclusively. Second, hold-and-wait: a thread holds a lock while waiting for another. Third, no preemption: locks cannot be forcibly taken away. Fourth, circular wait: A waits for B and B waits for A, or a longer cycle.</p>
+<p>Classic example:</p>
+<pre><code>// Thread 1
+synchronized (lockA) { synchronized (lockB) { /* work */ } }
+
+// Thread 2
+synchronized (lockB) { synchronized (lockA) { /* work */ } }</code></pre>
+<p>Prevention strategies:</p>
+<ul>
+<li>Lock ordering: always acquire locks in the same global order.</li>
+<li>Lock timeout: use <code>tryLock(timeout)</code> and back off if acquisition fails.</li>
+<li>Lock leveling: assign numerical levels to locks; always acquire in ascending order.</li>
+<li>Single lock: if possible, use one coarse-grained lock.</li>
+<li>Avoid holding locks while calling foreign code (callbacks, listeners).</li>
+</ul>
+<h3 id="livelock">Livelock</h3>
+<p>A livelock is when threads are not blocked but are continuously changing state in response to each other without making any progress. The analogy is two people in a corridor stepping aside simultaneously — each mirrors the other&#x27;s move and neither passes.</p>
+<h3 id="starvation">Starvation</h3>
+<p>Starvation is when a thread cannot gain access to a resource because other threads are always preferred. Common causes are unfair schedulers, high-priority threads monopolizing a lock, or a caller that always uses <code>notify()</code> instead of <code>notifyAll()</code>.</p>
+<p>The fix is to use a fair lock (<code>ReentrantLock(fair=true)</code>) and always prefer <code>notifyAll()</code> over <code>notify()</code>.</p>
+<h3 id="lock-contention-and-granularity">Lock Contention and Granularity</h3>
+<p>Contention occurs when multiple threads frequently try to acquire the same lock simultaneously, causing queueing and reduced throughput.</p>
+<p>Granularity is the scope of data protected by a single lock. A coarse-grained lock covers the whole object — simple but high contention. A fine-grained lock covers one data element (lock striping in <code>ConcurrentHashMap</code> is a good example) — low contention, but more complex and more prone to deadlock.</p>
+<p>The rule of thumb is: start coarse, measure, then refine. Premature lock splitting introduces bugs.</p>
+<hr>
+<h2 id="33-volatile-and-atomic-classes">3.3 Volatile and Atomic Classes</h2>
+<h3 id="volatile--visibility-not-compound-atomicity"><code>volatile</code> — Visibility, Not Compound Atomicity</h3>
+<p>The <code>volatile</code> keyword in Java/Kotlin does three things: it ensures every read comes from main memory rather than a register or cache; it ensures every write goes directly to main memory; and it establishes a happens-before relationship so that a write to a volatile field happens-before every subsequent read of that field. What it does NOT provide is atomicity for compound operations.</p>
+<p><code>volatile</code> is sufficient in two situations: a boolean flag written by one thread and read by others (such as <code>@Volatile var cancelled = false</code>), and a single-writer, multi-reader reference swap where you are swapping an immutable config object.</p>
+<p><code>volatile</code> is not enough when the operation is compound. <code>count++</code> is actually three steps — read, increment, write — so two threads can both read the same value and both write <code>oldValue + 1</code>, losing one increment. The same problem applies to check-then-act patterns like <code>if (!initialized) initialize()</code>, where two threads can both see <code>false</code> and both call <code>initialize()</code>. Any read-modify-write sequence has this hazard.</p>
+<h3 id="atomicinteger-atomicboolean-atomicreference"><code>AtomicInteger</code>, <code>AtomicBoolean</code>, <code>AtomicReference</code></h3>
+<p><code>java.util.concurrent.atomic</code> classes use CAS — Compare-And-Swap — CPU instructions to achieve lock-free, thread-safe operations on single variables.</p>
+<pre><code>val counter = AtomicInteger(0)
+counter.incrementAndGet()           // atomic i++, returns new value
+counter.getAndAdd(5)                // atomic i += 5, returns old value
+counter.compareAndSet(10, 20)       // if current == 10, set to 20; returns bool
+
+val flag = AtomicBoolean(false)
+flag.compareAndSet(false, true)     // safe initialization gate
+
+val ref = AtomicReference&lt;Config&gt;(initialConfig)
+ref.set(newConfig)                  // atomic reference swap</code></pre>
+<p><code>AtomicLong</code>, <code>AtomicIntegerArray</code>, and <code>AtomicReferenceArray</code> cover arrays.</p>
+<p><code>LongAdder</code> and <code>LongAccumulator</code> give better throughput under high contention because they maintain multiple cells that are summed on read, so there is no single hot CAS location.</p>
+<h3 id="compare-and-swap-cas">Compare-And-Swap (CAS)</h3>
+<p>CAS is a single CPU instruction (<code>CMPXCHG</code> on x86): if the memory location currently holds <code>expected</code>, replace it with <code>update</code> and return whether the swap succeeded.</p>
+<pre><code>CAS(addr, expected, update):
+  if *addr == expected:
+    *addr = update
+    return true
+  return false</code></pre>
+<p>AtomicInteger&#x27;s <code>incrementAndGet</code> in pseudo-code:</p>
+<pre><code>loop:
+  old = read(counter)
+  new = old + 1
+  if CAS(counter, old, new): return new
+  // else: another thread modified counter, retry</code></pre>
+<p>This is an optimistic spin loop. Under low contention it is faster than a mutex. Under very high contention the spin loops waste CPU — prefer <code>LongAdder</code>.</p>
+<p>The ABA problem is worth knowing: CAS only checks value equality, so if a value changes from A to B and back to A, CAS cannot detect the round trip. The solution is <code>AtomicStampedReference</code> or <code>AtomicMarkableReference</code>, both of which include a version stamp alongside the value.</p>
+<h3 id="decision-matrix">Decision Matrix</h3>
+<table border="1" cellpadding="6" cellspacing="0">
+<thead><tr>
+<th>Scenario</th>
+<th>Use</th>
+</tr></thead><tbody>
+<tr><td>Read/write single flag (1 writer)</td><td><code>@Volatile var</code></td></tr>
+<tr><td>Increment counter from many threads</td><td><code>AtomicInteger</code></td></tr>
+<tr><td>High-contention counter (stats)</td><td><code>LongAdder</code></td></tr>
+<tr><td>CAS-based conditional reference swap</td><td><code>AtomicReference</code></td></tr>
+<tr><td>Multiple related fields must be consistent</td><td><code>synchronized</code> or <code>ReentrantLock</code></td></tr>
+</tbody></table>
+<hr>
+<h2 id="34-waitnotify-and-producer-consumer">3.4 Wait/Notify and Producer-Consumer</h2>
+<h3 id="the-monitor-wait-set">The Monitor Wait Set</h3>
+<p>Every Java object has a wait set. Calling <code>wait()</code> on an object requires holding that object&#x27;s intrinsic lock. When called, there are four steps: the current thread releases the lock; the thread is placed in the object&#x27;s wait set and suspended; when another thread calls <code>notify()</code> or <code>notifyAll()</code>, the thread moves from the wait set back to the blocked state, competing for the lock again; and when the lock is re-acquired, <code>wait()</code> returns.</p>
+<p>The important contrast is with <code>sleep()</code>, which does NOT release any lock. A sleeping thread holds all its locks.</p>
+<h3 id="spurious-wakeups">Spurious Wakeups</h3>
+<p>The JVM specification allows <code>wait()</code> to return even if no <code>notify()</code> was called — that is a spurious wakeup. Always check the condition in a loop:</p>
+<pre><code>// WRONG
+synchronized (lock) {
+    if (!conditionMet()) lock.wait();
+    // proceed — might be spurious
+}
+
+// CORRECT
+synchronized (lock) {
+    while (!conditionMet()) lock.wait();
+    // condition is definitely true now
+}</code></pre>
+<h3 id="guarded-block">Guarded Block</h3>
+<p>A guarded block is a wait-in-a-loop pattern that protects a critical operation behind a condition check:</p>
+<pre><code>synchronized (queue) {
+    while (queue.isEmpty()) queue.wait();
+    Item item = queue.remove();
+    queue.notifyAll();
+}</code></pre>
+<h3 id="producer-consumer-with-waitnotify">Producer-Consumer with <code>wait</code>/<code>notify</code></h3>
+<pre><code>class BoundedBuffer&lt;T&gt;(private val capacity: Int) {
+    private val buffer = ArrayDeque&lt;T&gt;()
+
+    @Synchronized
+    fun put(item: T) {
+        while (buffer.size == capacity) (this as Object).wait()
+        buffer.addLast(item)
+        (this as Object).notifyAll()
+    }
+
+    @Synchronized
+    fun take(): T {
+        while (buffer.isEmpty()) (this as Object).wait()
+        val item = buffer.removeFirst()
+        (this as Object).notifyAll()
+        return item
+    }
+}</code></pre>
+<p>Use <code>notifyAll()</code> rather than <code>notify()</code> unless you know only one thread can act on the notification. The rule of thumb is: always use <code>notifyAll</code> to be safe, even if it is slightly less efficient.</p>
+<h3 id="blockingqueue--prefer-this-over-manual-waitnotify"><code>BlockingQueue</code> — Prefer This Over Manual Wait/Notify</h3>
+<p><code>java.util.concurrent.BlockingQueue</code> encapsulates the producer-consumer pattern correctly, and you should prefer it over rolling your own wait/notify logic:</p>
+<pre><code>val queue = LinkedBlockingQueue&lt;Work&gt;(100)  // bounded
+
+// Producer
+queue.put(work)     // blocks if full, uninterruptible
+queue.offer(work, 500, TimeUnit.MILLISECONDS)  // timeout variant
+
+// Consumer
+val work = queue.take()          // blocks if empty
+val work2 = queue.poll(500, TimeUnit.MILLISECONDS)</code></pre>
+<p>The main implementations are: <code>ArrayBlockingQueue</code> — fixed-size, backed by array, single lock; <code>LinkedBlockingQueue</code> — optionally bounded, with separate head and tail locks for higher throughput; <code>SynchronousQueue</code> — zero capacity, where each <code>put</code> must pair with a <code>take</code> (a handoff); <code>PriorityBlockingQueue</code> — unbounded, ordered by priority; and <code>DelayQueue</code> — elements only become available after a configured delay, useful for scheduled tasks.</p>
+<p><code>BlockingQueue</code> is preferred because it handles spurious wakeups, lock ordering, and condition management internally, so you cannot get those details wrong.</p>
+<hr>
+<h2 id="35-executors-and-task-execution">3.5 Executors and Task Execution</h2>
+<h3 id="why-not-new-thread-per-task">Why Not <code>new Thread()</code> Per Task?</h3>
+<p>There are four problems. First, thread creation overhead — stack allocation and an OS kernel thread. Second, there is no upper bound on concurrency, which means memory exhaustion under load. Third, there is no lifecycle management, no exception handling, and no monitoring. Fourth, there is thread teardown cost when the work is done.</p>
+<h3 id="executor-and-executorservice"><code>Executor</code> and <code>ExecutorService</code></h3>
+<pre><code>interface Executor {
+    void execute(Runnable command);
+}
+
+interface ExecutorService extends Executor {
+    Future&lt;?&gt; submit(Runnable task);
+    &lt;T&gt; Future&lt;T&gt; submit(Callable&lt;T&gt; task);
+    void shutdown();        // no new tasks; finish current
+    List&lt;Runnable&gt; shutdownNow();  // interrupt in-progress, return queued
+    boolean awaitTermination(long timeout, TimeUnit unit);
+}</code></pre>
+<h3 id="thread-pool-types">Thread Pool Types</h3>
+<pre><code>// Fixed: exactly N threads, LinkedBlockingQueue (unbounded by default)
+val fixed = Executors.newFixedThreadPool(4)
+
+// Cached: grows as needed, idle threads expire in 60s; good for many short tasks
+val cached = Executors.newCachedThreadPool()
+
+// Single: exactly 1 thread, tasks serialized
+val single = Executors.newSingleThreadExecutor()
+
+// Scheduled: delays and periodic tasks
+val scheduled = Executors.newScheduledThreadPool(2)
+scheduled.scheduleAtFixedRate(task, 0, 1, TimeUnit.SECONDS)</code></pre>
+<p>Use <code>ThreadPoolExecutor</code> directly when you need full control:</p>
+<pre><code>ThreadPoolExecutor(
+    corePoolSize = 4,          // always-alive threads
+    maximumPoolSize = 8,       // max threads when queue is full
+    keepAliveTime = 60L,       // idle thread timeout
+    unit = TimeUnit.SECONDS,
+    workQueue = LinkedBlockingQueue(100),   // bounded queue
+    threadFactory = { r -&gt; Thread(r, &quot;worker-${counter.incrementAndGet()}&quot;) },
+    handler = ThreadPoolExecutor.CallerRunsPolicy()  // backpressure policy
+)</code></pre>
+<h3 id="callable-and-future"><code>Callable</code> and <code>Future</code></h3>
+<pre><code>val executor = Executors.newFixedThreadPool(4)
+val future: Future&lt;Int&gt; = executor.submit(Callable {
+    heavyComputation()
+})
+
+// Later...
+try {
+    val result = future.get(5, TimeUnit.SECONDS)   // blocks until done or timeout
+} catch (e: TimeoutException) {
+    future.cancel(true)  // interrupt the task
+} catch (e: ExecutionException) {
+    throw e.cause!!      // unwrap the original exception
+}</code></pre>
+<p><code>isDone()</code>, <code>isCancelled()</code>, and <code>cancel(mayInterruptIfRunning)</code> are the non-blocking query methods.</p>
+<h3 id="cancellation">Cancellation</h3>
+<p><code>future.cancel(true)</code> sets the interrupt flag on the executing thread. The task must cooperate by checking <code>Thread.interrupted()</code> or by calling methods that throw <code>InterruptedException</code> — such as <code>sleep</code>, <code>wait</code>, or <code>queue.take</code>.</p>
+<pre><code>while (!Thread.currentThread().isInterrupted()) {
+    // process chunk
+}</code></pre>
+<h3 id="backpressure-and-queue-sizing">Backpressure and Queue Sizing</h3>
+<p>When producers submit tasks faster than consumers execute them, the queue grows. With an unbounded queue (<code>LinkedBlockingQueue()</code> no-arg), this eventually causes <code>OutOfMemoryError</code>. With a bounded queue, the chosen rejection policy kicks in:</p>
+<table border="1" cellpadding="6" cellspacing="0">
+<thead><tr>
+<th>Policy</th>
+<th>Behavior</th>
+</tr></thead><tbody>
+<tr><td><code>AbortPolicy</code> (default)</td><td>Throws <code>RejectedExecutionException</code></td></tr>
+<tr><td><code>CallerRunsPolicy</code></td><td>Caller thread runs the task (natural backpressure)</td></tr>
+<tr><td><code>DiscardPolicy</code></td><td>Silently drops the task</td></tr>
+<tr><td><code>DiscardOldestPolicy</code></td><td>Drops the oldest queued task, retries submit</td></tr>
+</tbody></table>
+<p>Sizing guidance:</p>
+<ul>
+<li>CPU-bound tasks: <code>N_cores + 1</code> threads (the extra 1 covers when a thread page-faults or is preempted).</li>
+<li>IO-bound tasks: <code>N_cores * (1 + wait_time / service_time)</code>. If threads spend 90% waiting, use roughly 10x cores.</li>
+<li>Mixed: profile first; start with <code>N_cores * 2</code> and tune from there.</li>
+</ul>
+<h3 id="thread-starvation">Thread Starvation</h3>
+<p>Starvation in an executor happens when a long-running task occupies a thread and shorter tasks wait indefinitely. In a single-thread executor, one hung task blocks everything. In a fixed pool, a thread that calls <code>future.get()</code> on another task submitted to the same pool can deadlock the entire pool — all threads end up waiting for tasks that have no available thread to execute them. This is thread-pool deadlock.</p>
+<hr>
+<h2 id="36-android-application-threads">3.6 Android Application Threads</h2>
+<h3 id="main-thread-ui-thread">Main Thread (UI Thread)</h3>
+<p>Android apps start with one main thread per process. The main thread does five things: it runs the <code>Looper</code>&#x27;s message loop; dispatches <code>InputEvent</code>s; drives <code>Choreographer</code> for frame rendering (calling <code>View.draw</code>, <code>View.measure</code>, <code>View.layout</code>, and <code>onDraw</code>); delivers lifecycle callbacks like <code>onCreate</code> and <code>onResume</code>; and processes <code>BroadcastReceiver.onReceive</code>.</p>
+<p>The key constraint is that the UI toolkit is not thread-safe — only the thread that created a view hierarchy can update it. Calling <code>view.setText(...)</code> from a background thread causes <code>CalledFromWrongThreadException</code>.</p>
+<h3 id="anr-application-not-responding">ANR (Application Not Responding)</h3>
+<p>ANR triggers in three situations: the main thread does not process a user input event within 5 seconds; <code>onReceive()</code> does not complete within 10 seconds for a foreground broadcast or 60 seconds for background; or <code>Service.onStartCommand()</code> does not return within 20 seconds.</p>
+<p>All of these happen because the main thread&#x27;s <code>MessageQueue</code> is blocked. The common causes are synchronous network or disk IO on the main thread, large database queries, holding a lock that another thread is waiting for, a long <code>while</code> loop, or waiting for a Binder call to a dead process.</p>
+<p>For debugging, <code>adb shell kill -3 &lt;pid&gt;</code> dumps thread stacks to logcat, and <code>StrictMode.setThreadPolicy()</code> catches disk and network violations on the main thread in debug builds.</p>
+<h3 id="binder-threads">Binder Threads</h3>
+<p>Binder is Android&#x27;s high-performance IPC mechanism. Each process has a thread pool of roughly 15 Binder threads maintained by the Binder driver. Remote calls arrive on one of these threads, not the main thread. There are three implications: <code>Service.onBind()</code> may be called on a Binder thread; AIDL interface implementations run on Binder threads so they must be thread-safe; and synchronous Binder calls from the main thread block the main thread until the remote returns.</p>
+<h3 id="background-threads">Background Threads</h3>
+<p>Background threads are all threads other than main and Binder — any thread the app creates via <code>Thread</code>, <code>Executor</code>, <code>HandlerThread</code>, coroutines, and so on. They can perform any work but cannot touch UI directly. Results must be posted back to the main thread via <code>Handler</code>, <code>runOnUiThread</code>, <code>LiveData.postValue</code>, or <code>withContext(Dispatchers.Main)</code>.</p>
+<h3 id="linux-process-and-scheduling">Linux Process and Scheduling</h3>
+<p>Android runs on Linux, where each thread is a Linux task. The Linux CFS (Completely Fair Scheduler) assigns CPU time based on virtual runtime and nice value. Android maps thread priorities to Linux nice values:</p>
+<pre><code>Process.setThreadPriority(Process.THREAD_PRIORITY_BACKGROUND)  // nice +10
+Process.setThreadPriority(Process.THREAD_PRIORITY_DEFAULT)     // nice 0
+Process.setThreadPriority(Process.THREAD_PRIORITY_URGENT_DISPLAY) // nice -8</code></pre>
+<p>Background threads should use <code>THREAD_PRIORITY_BACKGROUND</code> or lower so they do not compete with the UI thread for CPU time.</p>
+<h3 id="debugging-main-thread-freezes">Debugging Main-Thread Freezes</h3>
+<p>There are five tools. StrictMode catches disk and network violations in debug builds. Systrace and Perfetto show the frame timeline and exactly where main thread time is spent. The Android Studio Profiler CPU view gives you the thread timeline and method traces. ANR traces at <code>/data/anr/anr_*</code> contain thread dumps captured at the moment of the ANR. And <code>adb shell kill -3 &lt;pid&gt;</code> forces a thread dump without killing the process.</p>
+<hr>
+<h2 id="37-handler--looper--messagequeue">3.7 Handler / Looper / MessageQueue</h2>
+<h3 id="architecture-overview">Architecture Overview</h3>
+<pre><code>Thread A                Thread B (UI thread)
+   │                         │
+   │                     ┌───┴───┐
+   │                     │Looper │◄── loop() blocks here
+   │                     └───┬───┘
+   │                         │
+   │                     ┌───┴──────┐
+   └──── handler.post() ─►│MessageQueue│
+                          └───┬──────┘
+                              │ (next Message dequeued)
+                           Handler.handleMessage()
+                               or Runnable.run()</code></pre>
+<h3 id="looper">Looper</h3>
+<p>A <code>Looper</code> provides a message loop for a thread. There is only one Looper per thread. The main thread has one set up by the framework (<code>ActivityThread.main()</code>). Background threads do not have one by default.</p>
+<pre><code>// Manually set up a Looper on a background thread (rarely needed — use HandlerThread)
+class MyThread : Thread() {
+    lateinit var handler: Handler
+    override fun run() {
+        Looper.prepare()
+        handler = Handler(Looper.myLooper()!!) { msg -&gt;
+            // handle message
+            true
+        }
+        Looper.loop()  // blocks until quit() is called
+    }
+}</code></pre>
+<p><code>Looper.loop()</code> blocks, dispatching messages one at a time. When a <code>Message</code> is available at or after its <code>when</code> timestamp, the Looper pops it and dispatches it to the <code>Handler</code> that sent it.</p>
+<h3 id="messagequeue">MessageQueue</h3>
+<p><code>MessageQueue</code> is a priority queue ordered by delivery time (<code>Message.when</code>). Under the hood it is a singly-linked list of <code>Message</code> objects sorted by timestamp. <code>Looper.loop()</code> calls <code>MessageQueue.next()</code>, which blocks via <code>nativePollOnce()</code> — epoll on Linux — until the next message is due.</p>
+<p><code>MessageQueue.addIdleHandler()</code> lets you register callbacks that fire when the queue is empty. Libraries like Glide and Choreographer use this for work that should not delay frames.</p>
+<h3 id="handler">Handler</h3>
+<p>A <code>Handler</code> is bound to a specific thread&#x27;s Looper at construction time, so posting from any thread enqueues work on that Looper&#x27;s thread.</p>
+<pre><code>// Posting from a background thread to the main thread
+val mainHandler = Handler(Looper.getMainLooper())
+mainHandler.post { textView.text = result }          // Runnable, ASAP
+mainHandler.postDelayed({ doSomething() }, 3000L)    // Runnable, 3 seconds later
+mainHandler.postAtTime({ doSomething() }, uptimeMs)  // Runnable, at absolute uptime
+
+// Sending a Message (used for typed dispatch)
+val msg = mainHandler.obtainMessage(MSG_UPDATE, data)
+mainHandler.sendMessage(msg)
+mainHandler.sendMessageDelayed(msg, 1000L)</code></pre>
+<p><code>post(Runnable)</code> internally creates a <code>Message</code> with <code>Message.callback</code> set to the runnable. <code>sendMessage(Message)</code> sets <code>Message.target</code> to the handler and enqueues it.</p>
+<p><strong>Handler construction — Kotlin idiomatic:</strong></p>
+<pre><code>// Callback-based (avoids subclassing)
+val handler = Handler(Looper.getMainLooper()) { message -&gt;
+    when (message.what) {
+        MSG_DONE -&gt; { updateUi(message.obj as Result) ; true }
+        else -&gt; false
+    }
+}</code></pre>
+<h3 id="handlerthread"><code>HandlerThread</code></h3>
+<p><code>HandlerThread</code> is a <code>Thread</code> subclass that sets up a <code>Looper</code> for you and exposes it after <code>start()</code>. It is the idiomatic way to get a background thread with a message loop:</p>
+<pre><code>val ht = HandlerThread(&quot;network-callback&quot;)
+ht.start()
+val bgHandler = Handler(ht.looper)
+
+// When done:
+ht.quitSafely()  // drains pending messages then stops
+// ht.quit()     // stops immediately, may drop messages</code></pre>
+<p>Android uses <code>HandlerThread</code> internally for <code>CameraDevice</code>, <code>Bluetooth</code>, and <code>IntentService</code> (now deprecated).</p>
+<h3 id="memory-leaks-from-delayed-messages">Memory Leaks from Delayed Messages</h3>
+<p>A very common leak pattern:</p>
+<pre><code>class MyActivity : AppCompatActivity() {
+    // LEAK: non-static/anonymous handler holds implicit reference to Activity
+    val handler = Handler(Looper.getMainLooper())
+
+    override fun onResume() {
+        // Delayed message enqueued; activity may finish before it fires
+        handler.postDelayed({ updateUI() }, 60_000L)
+    }
+}</code></pre>
+<p>The <code>Handler</code> holds a reference to <code>this</code> via the <code>Runnable</code> closure or callback. The <code>MessageQueue</code> holds the pending <code>Message</code>, which holds the <code>Handler</code>, which holds the <code>Activity</code>. The Activity cannot be garbage collected until that message fires or is removed.</p>
+<p><strong>Fix:</strong></p>
+<pre><code>override fun onDestroy() {
+    super.onDestroy()
+    handler.removeCallbacksAndMessages(null)  // remove ALL pending messages/runnables
+}</code></pre>
+<p>Alternatively, use a <code>WeakReference&lt;Activity&gt;</code> in the callback, or switch to lifecycle-aware coroutines which handle this automatically.</p>
+<h3 id="communicating-with-the-ui-thread">Communicating with the UI Thread</h3>
+<p>There are four modern idioms, all preferred over raw <code>Handler</code>. <code>Activity.runOnUiThread { }</code> internally posts to the main handler. <code>View.post { }</code> posts once the view&#x27;s window is attached. <code>LiveData.postValue()</code> is thread-safe and deduplicates rapid updates. And <code>withContext(Dispatchers.Main) { }</code> is the coroutine-based approach.</p>
+<hr>
+<h2 id="38-kotlin-coroutines-on-android">3.8 Kotlin Coroutines on Android</h2>
+<h3 id="what-is-a-coroutine">What Is a Coroutine?</h3>
+<p>A coroutine is a suspendable computation. Unlike a thread, it does not block an OS thread when suspended — it saves its execution state (local variables, program counter) on the heap and releases the thread to do other work. When the suspension point completes, the coroutine is resumed, possibly on a different thread.</p>
+<p>Coroutines are implemented via Continuation Passing Style transformation: the compiler rewrites <code>suspend fun foo()</code> into a state machine that passes a <code>Continuation</code> callback at each suspension point.</p>
+<h3 id="suspend-functions"><code>suspend</code> Functions</h3>
+<p>A <code>suspend</code> function can be paused at suspension points — calls to other <code>suspend</code> functions or to <code>suspendCoroutine</code>/<code>suspendCancellableCoroutine</code>. It can only be called from another <code>suspend</code> function or a coroutine builder.</p>
+<pre><code>suspend fun fetchUser(id: String): User {
+    return withContext(Dispatchers.IO) {   // suspension point
+        userApi.getUser(id)
+    }
+}</code></pre>
+<p>The key rule is that <code>suspend</code> by itself does NOT make a function non-blocking. A suspend function that does synchronous CPU work blocks whatever thread it runs on. Use <code>withContext(Dispatchers.Default)</code> or <code>Dispatchers.IO</code> to actually offload the work.</p>
+<h3 id="coroutine-builders">Coroutine Builders</h3>
+<p>There are three builders. <code>launch</code> is fire-and-forget — it returns a <code>Job</code> and exceptions propagate to the scope&#x27;s exception handler. Uncaught exceptions crash the parent scope unless it is backed by a <code>SupervisorJob</code>.</p>
+<p><code>async</code> is for concurrent computation that returns a result — it returns <code>Deferred&lt;T&gt;</code>. Exceptions are stored and rethrown when you call <code>await()</code>.</p>
+<p><code>runBlocking</code> bridges blocking and suspending code by blocking the calling thread until the block completes. Use it only in <code>main()</code> or tests — never in production Android code, because it would block the calling thread.</p>
+<pre><code>// In tests:
+@Test
+fun testFetch() = runBlocking {
+    val result = repository.fetchUser(&quot;123&quot;)
+    assertEquals(&quot;Alice&quot;, result.name)
+}</code></pre>
+<h3 id="coroutinescope"><code>CoroutineScope</code></h3>
+<p>Every coroutine runs inside a <code>CoroutineScope</code>. The scope tracks all coroutines launched within it and provides cancellation propagation — when the scope is cancelled, all its children are cancelled.</p>
+<pre><code>// ViewModel provides viewModelScope
+class MyViewModel : ViewModel() {
+    fun load() {
+        viewModelScope.launch {
+            val data = repository.getData()   // suspend; non-blocking
+            _state.value = data
+        }
+    }
+    // viewModelScope is automatically cancelled in onCleared()
+}</code></pre>
+<p>There are three standard scopes on Android. <code>viewModelScope</code> is tied to the <code>ViewModel</code> lifecycle. <code>lifecycleScope</code> is tied to a <code>Lifecycle</code> owner like an Activity or Fragment. <code>GlobalScope</code> should be avoided because it is not tied to any lifecycle and will leak coroutines.</p>
+<h3 id="coroutine-context">Coroutine Context</h3>
+<p>A <code>CoroutineContext</code> is a map of context elements — <code>Job</code>, <code>CoroutineDispatcher</code>, <code>CoroutineName</code>, <code>CoroutineExceptionHandler</code>. Child coroutines inherit the parent&#x27;s context but can override individual elements:</p>
+<pre><code>launch(Dispatchers.IO + CoroutineName(&quot;fetch-user&quot;)) {
+    // runs on IO dispatcher, named for debugging
+}</code></pre>
+<h3 id="dispatchers">Dispatchers</h3>
+<table border="1" cellpadding="6" cellspacing="0">
+<thead><tr>
+<th>Dispatcher</th>
+<th>Underlying thread pool</th>
+<th>Use case</th>
+</tr></thead><tbody>
+<tr><td><code>Dispatchers.Main</code></td><td>Android main thread</td><td>UI updates, Compose, LiveData</td></tr>
+<tr><td><code>Dispatchers.IO</code></td><td>Shared pool, up to 64 threads (or N_cores if larger)</td><td>Blocking IO, network, file, database</td></tr>
+<tr><td><code>Dispatchers.Default</code></td><td>Shared pool, N_cores threads</td><td>CPU-intensive computation</td></tr>
+<tr><td><code>Dispatchers.Unconfined</code></td><td>Caller&#x27;s thread, then resumes wherever</td><td>Rarely; testing or trivial bridges</td></tr>
+<tr><td>Custom</td><td>Your <code>Executor.asCoroutineDispatcher()</code></td><td>Dedicated background thread, Binder thread</td></tr>
+</tbody></table>
+<p><strong>Dispatcher injection for testability:</strong></p>
+<pre><code>class UserRepository(
+    private val api: UserApi,
+    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
+) {
+    suspend fun getUser(id: String): User = withContext(ioDispatcher) {
+        api.fetchUser(id)
+    }
+}
+
+// In tests:
+val repo = UserRepository(mockApi, StandardTestDispatcher(testScheduler))</code></pre>
+<h3 id="structured-concurrency">Structured Concurrency</h3>
+<p>Structured concurrency is the discipline that coroutines must complete before the scope that launched them completes. There are four consequences. A parent coroutine waits for all children before completing. Cancelling a parent cancels all children. A child failure propagates to the parent unless the scope uses a <code>SupervisorJob</code>. And coroutines cannot escape their scope&#x27;s lifetime.</p>
+<p>This makes reasoning about concurrent code dramatically simpler — there is no orphaned background work to worry about.</p>
+<h3 id="job-vs-supervisorjob"><code>Job</code> vs <code>SupervisorJob</code></h3>
+<p>With a regular <code>Job</code>, when a child fails, the exception propagates to the parent, which then cancels all siblings and itself — one failure kills all siblings.</p>
+<p>With a <code>SupervisorJob</code>, a child&#x27;s failure does not propagate to the parent or siblings. Each child is independent. Use a <code>SupervisorJob</code> for top-level scopes where independent operations should not kill each other.</p>
+<pre><code>// viewModelScope uses SupervisorJob internally
+val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+
+scope.launch { operationA() }  // if this throws, operationB keeps running
+scope.launch { operationB() }</code></pre>
+<h3 id="coroutinescope-vs-supervisorscope"><code>coroutineScope</code> vs <code>supervisorScope</code></h3>
+<p>Both are suspend functions that create a new child scope and neither returns until all children complete.</p>
+<p>With <code>coroutineScope</code>, if any child throws, all siblings are cancelled and the exception propagates out. With <code>supervisorScope</code>, children are independent — one failure does not cancel siblings.</p>
+<pre><code>suspend fun loadDashboard() = coroutineScope {
+    val user = async { fetchUser() }     // if this fails, everything fails
+    val posts = async { fetchPosts() }
+    DashboardData(user.await(), posts.await())
+}
+
+suspend fun loadOptional() = supervisorScope {
+    val primary = async { fetchPrimary() }   // failure doesn&#x27;t kill secondary
+    val secondary = async { fetchSecondary() }
+    // handle each result independently
+}</code></pre>
+<h3 id="withcontext"><code>withContext</code></h3>
+<p><code>withContext(context)</code> switches the coroutine to a new context — typically a different dispatcher — for the duration of the block, then switches back:</p>
+<pre><code>suspend fun saveToDb(item: Item) {
+    withContext(Dispatchers.IO) {
+        db.insert(item)          // runs on IO thread
+    }
+    // back on the original dispatcher here
+}</code></pre>
+<p><code>withContext</code> does not start a new coroutine scope. It is semantically equivalent to <code>async { ... }.await()</code> but more efficient because it avoids the <code>Deferred</code> allocation.</p>
+<h3 id="exception-handling">Exception Handling</h3>
+<pre><code>// Option 1: try/catch at the call site
+viewModelScope.launch {
+    try {
+        val result = repository.fetch()
+        _state.value = result
+    } catch (e: IOException) {
+        _error.value = e.message
+    }
+}
+
+// Option 2: CoroutineExceptionHandler (for launch only, not async)
+val handler = CoroutineExceptionHandler { _, e -&gt;
+    Log.e(TAG, &quot;Unhandled exception&quot;, e)
+}
+viewModelScope.launch(handler) { dangerousWork() }</code></pre>
+<p>There are two important nuances. First, <code>async</code> does NOT invoke the <code>CoroutineExceptionHandler</code> — the exception is stored in the <code>Deferred</code> and rethrown when you call <code>await()</code>, so wrap <code>await()</code> in a try/catch.</p>
+<p>Second, <code>CancellationException</code> is thrown when a coroutine is cancelled and it must NOT be caught and swallowed:</p>
+<pre><code>try {
+    delay(1000)
+} catch (e: Exception) {
+    if (e is CancellationException) throw e  // re-throw!
+    handleError(e)
+}</code></pre>
+<h3 id="cancellation-cooperation">Cancellation Cooperation</h3>
+<p>Coroutines are cancelled cooperatively — the runtime sets a flag and the coroutine must check it. All <code>suspend</code> functions in <code>kotlinx.coroutines</code> check for cancellation automatically. CPU-intensive work must check manually:</p>
+<pre><code>suspend fun processLargeList(list: List&lt;Item&gt;) {
+    list.forEach { item -&gt;
+        ensureActive()        // throws CancellationException if cancelled
+        // or: yield()        // checks cancellation AND yields scheduler
+        process(item)
+    }
+}</code></pre>
+<p>The <code>isActive</code> property on <code>CoroutineScope</code> or <code>Job</code> is available for a non-throwing check.</p>
+<h3 id="main-safety">Main-Safety</h3>
+<p>A function is main-safe if it can be called from the main thread without blocking it. The pattern is that every layer — ViewModel, Repository, DataSource — wraps its own heavy work in the appropriate dispatcher using <code>withContext</code>, rather than pushing that responsibility up to the caller.</p>
+<pre><code>// Repository is responsible for its own main-safety
+class PhotoRepository(private val db: PhotoDao, private val api: PhotoApi) {
+    suspend fun getPhotos(): List&lt;Photo&gt; = withContext(Dispatchers.IO) {
+        db.getAll().ifEmpty { api.fetchAll().also { db.insertAll(it) } }
+    }
+}
+
+// ViewModel just calls and updates state — no dispatcher needed here
+class PhotoViewModel(private val repo: PhotoRepository) : ViewModel() {
+    fun load() = viewModelScope.launch {
+        _photos.value = repo.getPhotos()   // main-safe: repo handles dispatcher
+    }
+}</code></pre>
+<h3 id="testing-coroutines">Testing Coroutines</h3>
+<pre><code>@OptIn(ExperimentalCoroutinesApi::class)
+class UserViewModelTest {
+    @get:Rule val mainDispatcherRule = MainDispatcherRule()
+    // MainDispatcherRule replaces Dispatchers.Main with TestCoroutineDispatcher
+
+    @Test
+    fun `load user updates state`() = runTest {
+        val vm = UserViewModel(fakeRepository)
+        vm.loadUser(&quot;1&quot;)
+        advanceUntilIdle()   // runs all pending coroutines
+        assertEquals(expectedUser, vm.state.value)
+    }
+}
+
+// MainDispatcherRule
+class MainDispatcherRule(
+    private val dispatcher: TestDispatcher = UnconfinedTestDispatcher()
+) : TestWatcher() {
+    override fun starting(description: Description) = Dispatchers.setMain(dispatcher)
+    override fun finished(description: Description) = Dispatchers.resetMain()
+}</code></pre>
+<p>There are two test dispatchers. <code>StandardTestDispatcher</code> does not run tasks until you explicitly call <code>advanceUntilIdle()</code> or <code>advanceTimeBy()</code>, which gives you precise control over execution order. <code>UnconfinedTestDispatcher</code> runs tasks eagerly on the calling thread, which makes it simpler for tests that just need to observe state.</p>
+<hr>
+<h2 id="39-flow-stateflow-sharedflow-channel">3.9 Flow, StateFlow, SharedFlow, Channel</h2>
+<h3 id="cold-vs-hot-streams">Cold vs Hot Streams</h3>
+<p>A cold stream — <code>Flow</code> — does nothing until collected. Each collector gets its own independent execution of the producer, like calling a function fresh each time.</p>
+<p>A hot stream — <code>StateFlow</code>, <code>SharedFlow</code>, <code>Channel</code> — produces values regardless of whether there are collectors. Multiple collectors share the same stream of values.</p>
+<h3 id="flow--cold-stream"><code>Flow</code> — Cold Stream</h3>
+<pre><code>fun fetchPages(): Flow&lt;Page&gt; = flow {
+    var page = 1
+    while (true) {
+        emit(repository.getPage(page++))   // suspend, respects backpressure
+    }
+}
+
+// Collect — starts the producer
+viewModelScope.launch {
+    fetchPages().collect { page -&gt;
+        // process page
+    }
+}</code></pre>
+<p><code>Flow</code> is sequential by default — the producer and collector run in the same coroutine, and <code>emit</code> suspends until the collector processes the value.</p>
+<h3 id="flow-operators">Flow Operators</h3>
+<pre><code>flow
+    .map { transform(it) }                   // 1:1 transform
+    .filter { it.isValid }                   // conditional pass-through
+    .combine(otherFlow) { a, b -&gt; a + b }    // zip latest from both flows
+    .flatMapLatest { query -&gt;                // cancel previous, start new on each emission
+        searchApi.search(query)
+    }
+    .debounce(300)                           // suppress emissions within 300ms window
+    .distinctUntilChanged()                  // suppress if same as previous value
+    .catch { e -&gt; emit(defaultValue) }       // handle upstream exceptions
+    .retry(3) { e -&gt; e is IOException }      // retry upstream on matching exception
+    .stateIn(                                // convert to StateFlow
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = emptyList()
+    )
+    .shareIn(                                // convert to SharedFlow
+        scope = viewModelScope,
+        started = SharingStarted.Eagerly,
+        replay = 1
+    )
+    .collectLatest { value -&gt;               // cancels previous collector block on new emission
+        render(value)
+    }</code></pre>
+<p>The three <code>flatMap</code> variants differ in how they handle concurrent inner flows. <code>flatMapLatest</code> cancels the previous inner flow when a new value arrives — use this for search queries. <code>flatMapMerge</code> runs all inner flows concurrently up to the <code>concurrency</code> limit. <code>flatMapConcat</code> runs them sequentially, one at a time.</p>
+<p>For <code>stateIn</code>, there are three <code>SharingStarted</code> options. <code>Eagerly</code> starts immediately and never stops. <code>Lazily</code> starts on the first collector and never stops. <code>WhileSubscribed(stopTimeoutMillis)</code> stops N milliseconds after the last collector cancels and restarts when a new one arrives — for ViewModel-to-UI flows, 5000 ms is the recommended value because it survives a configuration change.</p>
+<h3 id="stateflow--hot-state-holder"><code>StateFlow</code> — Hot State Holder</h3>
+<p><code>StateFlow</code> is a hot flow that always holds exactly one current value. It is the replacement for <code>LiveData</code> in Kotlin codebases.</p>
+<pre><code>private val _state = MutableStateFlow&lt;UiState&gt;(UiState.Loading)
+val state: StateFlow&lt;UiState&gt; = _state.asStateFlow()
+
+// Update state
+_state.value = UiState.Success(data)         // main thread
+_state.update { current -&gt; current.copy(...) } // atomic update
+
+// Collect in Compose
+val uiState by viewModel.state.collectAsStateWithLifecycle()</code></pre>
+<p>There are four key properties: it always has a current value (initial value required at construction); it only emits when the value actually changes, so <code>distinctUntilChanged</code> is baked in; new collectors immediately receive the current value since the replay is effectively 1; and the <code>value</code> setter is thread-safe using atomic CAS.</p>
+<h3 id="sharedflow--hot-broadcast"><code>SharedFlow</code> — Hot Broadcast</h3>
+<p><code>SharedFlow</code> is for events that should reach multiple collectors, with a configurable replay cache.</p>
+<pre><code>private val _events = MutableSharedFlow&lt;UiEvent&gt;(
+    replay = 0,            // new collectors don&#x27;t get old events
+    extraBufferCapacity = 1,
+    onBufferOverflow = BufferOverflow.DROP_OLDEST
+)
+val events: SharedFlow&lt;UiEvent&gt; = _events.asSharedFlow()
+
+// Emit
+viewModelScope.launch { _events.emit(UiEvent.ShowSnackbar(&quot;Saved&quot;)) }
+// or tryEmit (non-suspending, drops if buffer full)
+_events.tryEmit(UiEvent.Navigate(Screen.Home))</code></pre>
+<p>For modeling one-time events: <code>SharedFlow(replay=0)</code> means the event fires once and only collectors active at that moment receive it. An alternative pattern is <code>consumeAsFlow()</code> via <code>Channel</code>. Avoid <code>StateFlow</code> for events because new collectors will replay the last event, which is almost never what you want for a navigation or snackbar command.</p>
+<h3 id="channel--one-to-one-communication"><code>Channel</code> — One-to-One Communication</h3>
+<p><code>Channel</code> is a non-broadcast, coroutine-based primitive for producer-consumer patterns. Each value is consumed by exactly one collector — unlike <code>SharedFlow</code>, which broadcasts to all active collectors.</p>
+<pre><code>val channel = Channel&lt;Work&gt;(capacity = Channel.BUFFERED)
+
+// Producer
+launch { channel.send(work) }   // suspends if buffer full
+
+// Consumer
+launch { for (work in channel) process(work) }  // suspends if empty
+// or
+launch { channel.consumeEach { process(it) } }
+
+channel.close()  // signals completion</code></pre>
+<p>There are four capacity modes. <code>RENDEZVOUS</code> (capacity 0) means the sender suspends until the receiver is ready — like <code>SynchronousQueue</code>. <code>BUFFERED</code> gives a small buffer of 64 by default. <code>UNLIMITED</code> never suspends on send. <code>CONFLATED</code> keeps only the last value.</p>
+<p>For the Channel versus SharedFlow decision: use <code>Channel</code> when exactly one consumer should handle each event, such as a navigation command consumed by one Fragment. Use <code>SharedFlow</code> when multiple UI components should all react, such as a toast that could be visible in two places.</p>
+<h3 id="lifecycle-aware-collection">Lifecycle-Aware Collection</h3>
+<p>The problem with collecting a Flow inside a plain <code>lifecycleScope.launch</code> block is that collection continues when the UI is in the background (STOPPED), wasting resources and potentially updating invisible UI.</p>
+<p>The solution is <code>repeatOnLifecycle</code>:</p>
+<pre><code>// In Fragment or Activity
+viewLifecycleOwner.lifecycleScope.launch {
+    repeatOnLifecycle(Lifecycle.State.STARTED) {
+        // This block starts when STARTED, cancels when STOPPED
+        // Restarts when STARTED again
+        viewModel.state.collect { render(it) }
+    }
+}</code></pre>
+<p><code>repeatOnLifecycle</code> is the correct way to collect Flows in the UI layer. It automatically cancels the inner block when the lifecycle drops below the target state and restarts it when the lifecycle rises again.</p>
+<p>In Compose:</p>
+<pre><code>@Composable
+fun MyScreen(viewModel: MyViewModel = hiltViewModel()) {
+    // Lifecycle-aware: stops collecting when composable leaves composition/goes to background
+    val uiState by viewModel.state.collectAsStateWithLifecycle()
+    // render uiState
+}</code></pre>
+<p><code>collectAsStateWithLifecycle</code> is the Compose-specific equivalent of <code>repeatOnLifecycle(STARTED)</code> and requires <code>androidx.lifecycle:lifecycle-runtime-compose</code>.</p>
+<p>For the <code>launchIn</code> versus <code>repeatOnLifecycle</code> choice: <code>lifecycleScope.launchIn(this)</code> combined with <code>flowWithLifecycle()</code> is an alternative for single flows, while <code>repeatOnLifecycle</code> is preferred for multiple flows or more complex collection logic.</p>
+<hr>
+<h2 id="310-background-work">3.10 Background Work</h2>
+<h3 id="categorizing-work">Categorizing Work</h3>
+<table border="1" cellpadding="6" cellspacing="0">
+<thead><tr>
+<th>Category</th>
+<th>Definition</th>
+<th>Appropriate API</th>
+</tr></thead><tbody>
+<tr><td>Immediate async</td><td>Must run now, result needed soon, tied to app process</td><td>Coroutines (<code>viewModelScope</code>, <code>lifecycleScope</code>)</td></tr>
+<tr><td>Deferrable</td><td>Can run later, at system&#x27;s discretion</td><td>WorkManager</td></tr>
+<tr><td>Persistent</td><td>Must complete even after process death or reboot</td><td>WorkManager (deferrable) or Foreground Service (immediate persistent)</td></tr>
+<tr><td>Exact timing</td><td>Must run at a specific time</td><td><code>AlarmManager</code> (with care)</td></tr>
+<tr><td>Ongoing user-visible</td><td>Long-running, user-visible progress</td><td>Foreground Service</td></tr>
+</tbody></table>
+<h3 id="workmanager">WorkManager</h3>
+<p>WorkManager is the recommended API for deferrable, persistent background work. It uses <code>JobScheduler</code> on API 23 and above, falling back to <code>AlarmManager</code> plus <code>BroadcastReceiver</code> on older devices. It survives process death and device restarts because constraints are re-registered at boot.</p>
+<pre><code>// Define a worker
+class SyncWorker(context: Context, params: WorkerParameters) : CoroutineWorker(context, params) {
+    override suspend fun doWork(): Result {
+        return try {
+            repository.sync()
+            Result.success()
+        } catch (e: Exception) {
+            if (runAttemptCount &lt; 3) Result.retry() else Result.failure()
+        }
+    }
+}
+
+// Build a request
+val request = OneTimeWorkRequestBuilder&lt;SyncWorker&gt;()
+    .setConstraints(
+        Constraints.Builder()
+            .setRequiredNetworkType(NetworkType.CONNECTED)
+            .setRequiresBatteryNotLow(true)
+            .build()
+    )
+    .setInputData(workDataOf(&quot;key&quot; to &quot;value&quot;))
+    .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 10, TimeUnit.SECONDS)
+    .addTag(&quot;sync&quot;)
+    .build()
+
+// Enqueue
+WorkManager.getInstance(context).enqueue(request)
+
+// Unique work — only one sync at a time
+WorkManager.getInstance(context)
+    .enqueueUniqueWork(&quot;sync&quot;, ExistingWorkPolicy.REPLACE, request)
+
+// Observe
+WorkManager.getInstance(context)
+    .getWorkInfoByIdLiveData(request.id)
+    .observe(lifecycleOwner) { info -&gt;
+        if (info?.state == WorkInfo.State.SUCCEEDED) { /* done */ }
+    }</code></pre>
+<h3 id="periodic-work">Periodic Work</h3>
+<pre><code>val periodicRequest = PeriodicWorkRequestBuilder&lt;SyncWorker&gt;(15, TimeUnit.MINUTES)
+    .setConstraints(networkConstraint)
+    .build()
+
+WorkManager.getInstance(context)
+    .enqueueUniquePeriodicWork(
+        &quot;periodic-sync&quot;,
+        ExistingPeriodicWorkPolicy.KEEP,  // or REPLACE, UPDATE
+        periodicRequest
+    )</code></pre>
+<p>The minimum period is 15 minutes, OS-enforced. <code>KEEP</code> means the existing scheduled work is left alone and no new request is enqueued.</p>
+<h3 id="chained-work">Chained Work</h3>
+<pre><code>WorkManager.getInstance(context)
+    .beginWith(listOf(cleanupRequest, prepareRequest))  // parallel first step
+    .then(uploadRequest)                                // sequential second step
+    .then(notifyRequest)                                // sequential third step
+    .enqueue()</code></pre>
+<p>Output of one worker flows to the input of the next via <code>Data</code>. If any worker returns <code>Result.failure()</code>, the chain stops unless subsequent workers are configured to handle failure input.</p>
+<h3 id="expedited-work">Expedited Work</h3>
+<p>For time-sensitive tasks that must start immediately but still need to survive process death:</p>
+<pre><code>val expeditedRequest = OneTimeWorkRequestBuilder&lt;CriticalWorker&gt;()
+    .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
+    .build()</code></pre>
+<p>On Android 12 and above, the worker runs with expedited job quota. On older versions it falls back to running as a foreground service.</p>
+<h3 id="cancellation-1">Cancellation</h3>
+<pre><code>WorkManager.getInstance(context).cancelWorkById(request.id)
+WorkManager.getInstance(context).cancelAllWorkByTag(&quot;sync&quot;)
+WorkManager.getInstance(context).cancelUniqueWork(&quot;periodic-sync&quot;)</code></pre>
+<p>Workers receive cancellation through <code>CoroutineWorker</code>&#x27;s coroutine scope — the scope is cancelled, so all cooperative suspension points exit via <code>CancellationException</code>.</p>
+<h3 id="jobscheduler"><code>JobScheduler</code></h3>
+<p><code>JobScheduler</code> is the Android framework API that WorkManager is built on. You would interact with it directly only when you need platform-specific features not exposed by WorkManager, which is rare. Jobs survive process death because they are registered with the system server.</p>
+<pre><code>val jobScheduler = getSystemService(JobScheduler::class.java)
+val jobInfo = JobInfo.Builder(JOB_ID, ComponentName(this, SyncJobService::class.java))
+    .setRequiredNetworkType(JobInfo.NETWORK_TYPE_ANY)
+    .setPersisted(true)   // survives reboot
+    .build()
+jobScheduler.schedule(jobInfo)</code></pre>
+<p>One gotcha: <code>JobService.onStartJob()</code> runs on the main thread, so you must offload work to a background thread manually.</p>
+<h3 id="foreground-services">Foreground Services</h3>
+<p>Use a Foreground Service for long-running work that must continue while the app is in the background and where the user must be aware it is running via a persistent notification:</p>
+<pre><code>class MusicService : Service() {
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        val notification = buildNotification()
+        startForeground(NOTIFICATION_ID, notification)
+        playMusic()
+        return START_STICKY   // restart if killed
+    }
+}
+
+// Start (Android 9+)
+ContextCompat.startForegroundService(context, Intent(context, MusicService::class.java))</code></pre>
+<p>Android 12 and above require declaring <code>foregroundServiceType</code> in the manifest — for example <code>mediaPlayback</code>, <code>location</code>, or <code>camera</code>. Android 14 enforces type-specific runtime permissions on top of that.</p>
+<p>For the WorkManager versus Foreground Service decision: use WorkManager when the work is deferrable and the result can be delivered later or is network-triggered. Use a Foreground Service when the work is immediate and ongoing and the user is actively engaged — music playback, navigation, or an upload in progress.</p>
+<h3 id="alarmmanager"><code>AlarmManager</code></h3>
+<p>Use <code>AlarmManager</code> for work that must run at a precise time, even if the device is in Doze mode — use <code>setExactAndAllowWhileIdle</code> or <code>setAlarmClock</code>. It is not for deferrable work because the system cannot batch it.</p>
+<pre><code>val alarmManager = getSystemService(AlarmManager::class.java)
+val pendingIntent = PendingIntent.getBroadcast(
+    context, requestCode, Intent(context, AlarmReceiver::class.java),
+    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+)
+alarmManager.setExactAndAllowWhileIdle(
+    AlarmManager.ELAPSED_REALTIME_WAKEUP,
+    SystemClock.elapsedRealtime() + delayMs,
+    pendingIntent
+)</code></pre>
+<p>Android 12 and above require the <code>SCHEDULE_EXACT_ALARM</code> permission. Android 13 changes it to a user-grantable permission. Use exact alarms sparingly — they drain battery.</p>
+<h3 id="broadcastreceiver-limitations"><code>BroadcastReceiver</code> Limitations</h3>
+<p>Statically registered receivers in the manifest are subject to background execution limits from Android 8 onward. Most implicit broadcasts are no longer delivered to them. Runtime-registered receivers do receive broadcasts while the app is running.</p>
+<p><code>onReceive()</code> runs on the main thread and must complete in roughly 10 seconds or an ANR will fire. Never start long-running work directly from <code>onReceive</code> — instead kick off a WorkManager job. <code>JobIntentService</code> is deprecated; WorkManager is the correct replacement.</p>
+<h3 id="doze-mode-and-app-standby">Doze Mode and App Standby</h3>
+<p>Doze mode activates when the device is off the charger, stationary, and screen off for a period. Android then restricts network access, <code>JobScheduler</code> jobs, alarms (except <code>setAlarmClock</code>), and sync adapters. Only <code>setExactAndAllowWhileIdle</code> alarms fire during Doze.</p>
+<p>App Standby Buckets bucket apps by usage frequency — Active, Working Set, Frequent, Rare, Restricted. Apps in the Rare bucket may have their jobs deferred significantly. WorkManager respects these buckets automatically.</p>
+<h3 id="retry-and-backoff">Retry and Backoff</h3>
+<p>Returning <code>Result.retry()</code> from a <code>Worker</code> schedules a retry using the configured backoff policy:</p>
+<pre><code>OneTimeWorkRequestBuilder&lt;MyWorker&gt;()
+    .setBackoffCriteria(
+        BackoffPolicy.EXPONENTIAL,   // or LINEAR
+        WorkRequest.MIN_BACKOFF_MILLIS,  // minimum 10 seconds
+        TimeUnit.MILLISECONDS
+    )
+    .build()</code></pre>
+<p><code>BackoffPolicy.EXPONENTIAL</code> doubles the delay each attempt, capped at 5 hours. <code>LINEAR</code> adds a fixed increment each time.</p>
+<h3 id="workmanager-vs-coroutine-decision">WorkManager vs Coroutine Decision</h3>
+<p>The core decision rule is: if the work must survive process death or a device reboot, use WorkManager. If it can die with the process, a coroutine in the appropriate scope is simpler.</p>
+<table border="1" cellpadding="6" cellspacing="0">
+<thead><tr>
+<th>Criterion</th>
+<th>Coroutine</th>
+<th>WorkManager</th>
+</tr></thead><tbody>
+<tr><td>Must survive process death?</td><td>No</td><td>Yes</td></tr>
+<tr><td>Must survive device reboot?</td><td>No</td><td>Yes (with <code>setPersisted</code> equivalent)</td></tr>
+<tr><td>Can be deferred by system?</td><td>No</td><td>Yes</td></tr>
+<tr><td>Tied to user-visible work?</td><td>No</td><td>No (unless expedited)</td></tr>
+<tr><td>One-shot network request in ViewModel</td><td>Yes</td><td>No</td></tr>
+<tr><td>Upload file, retry if network drops</td><td>No</td><td>Yes</td></tr>
+<tr><td>Sync data in background periodically</td><td>No</td><td>Yes</td></tr>
+</tbody></table>
+<h3 id="debugging-background-work">Debugging Background Work</h3>
+<p>There are four useful <code>adb</code> commands:</p>
+<pre><code># Inspect WorkManager database
+adb shell content query --uri content://androidx.work.diagnostics.WorkDiagnosticsProvider
+
+# Dump job scheduler state
+adb shell dumpsys jobscheduler
+
+# Trigger Doze mode manually
+adb shell dumpsys deviceidle force-idle
+
+# Trigger app standby bucket
+adb shell am set-standby-bucket &lt;package&gt; rare</code></pre>
+<p>WorkManager also exposes a built-in diagnostic tool accessible at runtime:</p>
+<pre><code>WorkManager.getInstance(context).getWorkInfosByTagLiveData(&quot;sync&quot;)
+// or observe all work:
+WorkManager.getInstance(context).getWorkInfosLiveData(WorkQuery.fromStates(WorkInfo.State.RUNNING))</code></pre>
+<hr>
+<h2 id="quick-reference-interview-cheat-sheet">Quick-Reference: Interview Cheat Sheet</h2>
+<h3 id="race-condition">Race Condition</h3>
+<blockquote>Two threads read-modify-write a shared variable without synchronization, so one update is lost.</blockquote>
+<h3 id="thread-safe">Thread-Safe</h3>
+<blockquote>A class is thread-safe if its invariants hold under concurrent access without external synchronization by the caller.</blockquote>
+<h3 id="intrinsic-lock">Intrinsic Lock</h3>
+<blockquote>Every Java object has one. <code>synchronized</code> on that object acquires it and provides both mutual exclusion and visibility.</blockquote>
+<h3 id="deadlock-prevention">Deadlock Prevention</h3>
+<blockquote>Lock ordering: always acquire multiple locks in the same canonical order across all threads.</blockquote>
+<h3 id="volatile-vs-atomicinteger"><code>volatile</code> vs <code>AtomicInteger</code></h3>
+<blockquote><code>volatile</code> gives visibility only — <code>count++</code> is still a race. <code>AtomicInteger.incrementAndGet()</code> is a single CAS, so it is atomic and visible.</blockquote>
+<h3 id="wait-vs-sleep"><code>wait()</code> vs <code>sleep()</code></h3>
+<blockquote><code>wait()</code> releases the monitor and parks the thread in the wait set. <code>sleep()</code> does not release any lock.</blockquote>
+<h3 id="why-not-globalscope">Why Not <code>GlobalScope</code>?</h3>
+<blockquote>It is not bound to any lifecycle, so coroutines survive ViewModel and Activity destruction, causing leaks and unexpected behavior.</blockquote>
+<h3 id="structured-concurrency-1">Structured Concurrency</h3>
+<blockquote>A parent scope cannot complete until all children complete. Cancellation and exceptions propagate through the parent-child hierarchy automatically.</blockquote>
+<h3 id="job-vs-supervisorjob-1"><code>Job</code> vs <code>SupervisorJob</code></h3>
+<blockquote>With a <code>Job</code>, one child failing cancels all siblings. With a <code>SupervisorJob</code>, each child is independent.</blockquote>
+<h3 id="stateflow-vs-sharedflow"><code>StateFlow</code> vs <code>SharedFlow</code></h3>
+<blockquote><code>StateFlow</code> always has a current value, replays it to new collectors, and has <code>distinctUntilChanged</code> built in — use it for state. <code>SharedFlow</code> has configurable replay and no built-in dedup — use it for events and broadcasts.</blockquote>
+<h3 id="repeatonlifecycle-vs-launchwhenstarted"><code>repeatOnLifecycle</code> vs <code>launchWhenStarted</code></h3>
+<blockquote><code>launchWhenStarted</code> is deprecated: it suspends collection but the coroutine stays alive, leaking resources. <code>repeatOnLifecycle(STARTED)</code> completely cancels and restarts the inner block, actually freeing resources when the UI goes to background.</blockquote>
+<h3 id="workmanager-vs-coroutine">WorkManager vs Coroutine</h3>
+<blockquote>If the work must survive process death or device reboot, use WorkManager. Otherwise, a coroutine in the appropriate scope is simpler.</blockquote>
+<h3 id="workmanager-vs-foreground-service">WorkManager vs Foreground Service</h3>
+<blockquote>WorkManager is deferrable, battery-optimized, and system-scheduled. A Foreground Service is for immediate, ongoing, user-visible work that requires a persistent notification. When you need both persistence and immediacy, use WorkManager&#x27;s expedited API, which runs as a Foreground Service under the hood on older API levels.</blockquote>
+<div class="pager">
+<a class="prev" href="kotlin-java-fundamentals.html"><span class="lbl">‹ Previous</span>2. Kotlin &amp; Java Fundamentals</a>
+<a class="next" href="thread-communication.html"><span class="lbl">Next ›</span>4. Thread Communication</a>
+</div>
+</div></div>
+<script src="../site.js"></script>
+</body></html>

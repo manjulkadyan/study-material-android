@@ -1,0 +1,2314 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>15. Senior/Staff System Design</title>
+<link rel="stylesheet" href="../style.css"></head>
+<body class="has-toc" data-prev="performance-beyond-rendering.html" data-next="interview-q-a-cheatsheet.html">
+<nav class="sidebar"><a class="brand" href="../index.html">📱 Android Study Guide — Home</a><details class="topic"><summary><span class="caret">▶</span><a href="data-structures-big-o.html">1. Data Structures &amp; Big O</a></summary><ul class="subtopics"><li><a class="" href="data-structures-big-o.html#11-data-structures--collections--12-big-o-notation">1.1 Data Structures &amp; Collections · 1.2 Big O Notation</a></li><li><a class="" href="data-structures-big-o.html#table-of-contents">Table of Contents</a></li><li><a class="" href="data-structures-big-o.html#1-arrays">1. Arrays</a></li><li><a class="" href="data-structures-big-o.html#2-arraylist--mutablelist">2. ArrayList / MutableList</a></li><li><a class="" href="data-structures-big-o.html#3-linkedlist">3. LinkedList</a></li><li><a class="" href="data-structures-big-o.html#4-stack">4. Stack</a></li><li><a class="" href="data-structures-big-o.html#5-queue">5. Queue</a></li><li><a class="" href="data-structures-big-o.html#6-deque">6. Deque</a></li><li><a class="" href="data-structures-big-o.html#7-hashmap--mutablemap">7. HashMap / MutableMap</a></li><li><a class="" href="data-structures-big-o.html#8-hashset--mutableset">8. HashSet / MutableSet</a></li><li><a class="" href="data-structures-big-o.html#9-linkedhashmap">9. LinkedHashMap</a></li><li><a class="" href="data-structures-big-o.html#10-treemap--sortedmap">10. TreeMap / SortedMap</a></li><li><a class="" href="data-structures-big-o.html#11-priorityqueue--heap">11. PriorityQueue / Heap</a></li><li><a class="" href="data-structures-big-o.html#12-trie">12. Trie</a></li><li><a class="" href="data-structures-big-o.html#13-graphs">13. Graphs</a></li><li><a class="" href="data-structures-big-o.html#14-android-specific-collections">14. Android-Specific Collections</a></li><li><a class="" href="data-structures-big-o.html#15-big-o-notation">15. Big O Notation</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="kotlin-java-fundamentals.html">2. Kotlin &amp; Java Fundamentals</a></summary><ul class="subtopics"><li><a class="" href="kotlin-java-fundamentals.html#table-of-contents">Table of Contents</a></li><li><a class="" href="kotlin-java-fundamentals.html#21-kotlin-fundamentals">2.1 Kotlin Fundamentals</a></li><li><a class="" href="kotlin-java-fundamentals.html#22-kotlin-generics">2.2 Kotlin Generics</a></li><li><a class="" href="kotlin-java-fundamentals.html#23-java-fundamentals">2.3 Java Fundamentals</a></li><li><a class="" href="kotlin-java-fundamentals.html#24-kotlin-java-interop">2.4 Kotlin-Java Interop</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="concurrency-android-threading.html">3. Concurrency &amp; Android Threading</a></summary><ul class="subtopics"><li><a class="" href="concurrency-android-threading.html#table-of-contents">Table of Contents</a></li><li><a class="" href="concurrency-android-threading.html#31-java-thread-basics">3.1 Java Thread Basics</a></li><li><a class="" href="concurrency-android-threading.html#32-locks-and-synchronization">3.2 Locks and Synchronization</a></li><li><a class="" href="concurrency-android-threading.html#33-volatile-and-atomic-classes">3.3 Volatile and Atomic Classes</a></li><li><a class="" href="concurrency-android-threading.html#34-waitnotify-and-producer-consumer">3.4 Wait/Notify and Producer-Consumer</a></li><li><a class="" href="concurrency-android-threading.html#35-executors-and-task-execution">3.5 Executors and Task Execution</a></li><li><a class="" href="concurrency-android-threading.html#36-android-application-threads">3.6 Android Application Threads</a></li><li><a class="" href="concurrency-android-threading.html#37-handler--looper--messagequeue">3.7 Handler / Looper / MessageQueue</a></li><li><a class="" href="concurrency-android-threading.html#38-kotlin-coroutines-on-android">3.8 Kotlin Coroutines on Android</a></li><li><a class="" href="concurrency-android-threading.html#39-flow-stateflow-sharedflow-channel">3.9 Flow, StateFlow, SharedFlow, Channel</a></li><li><a class="" href="concurrency-android-threading.html#310-background-work">3.10 Background Work</a></li><li><a class="" href="concurrency-android-threading.html#quick-reference-interview-cheat-sheet">Quick-Reference: Interview Cheat Sheet</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="thread-communication.html">4. Thread Communication</a></summary><ul class="subtopics"><li><a class="" href="thread-communication.html#table-of-contents">Table of Contents</a></li><li><a class="" href="thread-communication.html#41-pipes">4.1 Pipes</a></li><li><a class="" href="thread-communication.html#42-shared-memory">4.2 Shared Memory</a></li><li><a class="" href="thread-communication.html#43-signaling">4.3 Signaling</a></li><li><a class="" href="thread-communication.html#44-blockingqueue">4.4 BlockingQueue</a></li><li><a class="" href="thread-communication.html#45-message-passing--android-handlerloopermessagequeue">4.5 Message Passing — Android Handler/Looper/MessageQueue</a></li><li><a class="" href="thread-communication.html#cross-cutting-shared-memory-vs-message-passing">Cross-cutting: Shared Memory vs Message Passing</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="ipc-binder-aidl-messenger.html">5. IPC: Binder, AIDL, Messenger</a></summary><ul class="subtopics"><li><a class="" href="ipc-binder-aidl-messenger.html#table-of-contents">Table of Contents</a></li><li><a class="" href="ipc-binder-aidl-messenger.html#51-android-process-model">5.1 Android Process Model</a></li><li><a class="" href="ipc-binder-aidl-messenger.html#52-binder">5.2 Binder</a></li><li><a class="" href="ipc-binder-aidl-messenger.html#53-aidl">5.3 AIDL</a></li><li><a class="" href="ipc-binder-aidl-messenger.html#54-messenger">5.4 Messenger</a></li><li><a class="" href="ipc-binder-aidl-messenger.html#parcelable-vs-serializable">Parcelable vs Serializable</a></li><li><a class="" href="ipc-binder-aidl-messenger.html#aidl-vs-messenger-decision-guide">AIDL vs Messenger Decision Guide</a></li><li><a class="" href="ipc-binder-aidl-messenger.html#interview-quick-reference">Interview Quick-Reference</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="android-memory-management.html">6. Android Memory Management</a></summary><ul class="subtopics"><li><a class="" href="android-memory-management.html#table-of-contents">Table of Contents</a></li><li><a class="" href="android-memory-management.html#61-jvmart-memory-basics">6.1 JVM/ART Memory Basics</a></li><li><a class="" href="android-memory-management.html#62-android-memory-leaks">6.2 Android Memory Leaks</a></li><li><a class="" href="android-memory-management.html#63-context-leaks">6.3 Context Leaks</a></li><li><a class="" href="android-memory-management.html#64-bitmap-and-image-memory">6.4 Bitmap and Image Memory</a></li><li><a class="" href="android-memory-management.html#65-leak-detection-and-profiling">6.5 Leak Detection and Profiling</a></li><li><a class="" href="android-memory-management.html#interview-quick-reference">Interview Quick-Reference</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="architecture-patterns.html">7. Architecture Patterns</a></summary><ul class="subtopics"><li><a class="" href="architecture-patterns.html#table-of-contents">Table of Contents</a></li><li><a class="" href="architecture-patterns.html#71-mvc-mvp-mvvm-mvi">7.1 MVC, MVP, MVVM, MVI</a></li><li><a class="" href="architecture-patterns.html#72-clean-architecture">7.2 Clean Architecture</a></li><li><a class="" href="architecture-patterns.html#73-repository-pattern">7.3 Repository Pattern</a></li><li><a class="" href="architecture-patterns.html#74-dependency-injection">7.4 Dependency Injection</a></li><li><a class="" href="architecture-patterns.html#75-modularization">7.5 Modularization</a></li><li><a class="" href="architecture-patterns.html#quick-reference-cheat-sheet">Quick-Reference Cheat Sheet</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="view-rendering.html">8. View Rendering</a></summary><ul class="subtopics"><li><a class="" href="view-rendering.html#table-of-contents">Table of Contents</a></li><li><a class="" href="view-rendering.html#81-traditional-view-system-rendering">8.1 Traditional View System Rendering</a></li><li><a class="" href="view-rendering.html#82-choreographer-vsync-and-frame-rendering">8.2 Choreographer, VSync, and Frame Rendering</a></li><li><a class="" href="view-rendering.html#83-recyclerview-performance">8.3 RecyclerView Performance</a></li><li><a class="" href="view-rendering.html#84-jetpack-compose-rendering">8.4 Jetpack Compose Rendering</a></li><li><a class="" href="view-rendering.html#85-performance-tools">8.5 Performance Tools</a></li><li><a class="" href="view-rendering.html#interview-cheat-sheet">Interview Cheat Sheet</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="lifecycle-platform-components.html">9. Lifecycle &amp; Platform Components</a></summary><ul class="subtopics"><li><a class="" href="lifecycle-platform-components.html#table-of-contents">Table of Contents</a></li><li><a class="" href="lifecycle-platform-components.html#91-activity">9.1 Activity</a></li><li><a class="" href="lifecycle-platform-components.html#92-fragment">9.2 Fragment</a></li><li><a class="" href="lifecycle-platform-components.html#93-services">9.3 Services</a></li><li><a class="" href="lifecycle-platform-components.html#94-broadcastreceiver">9.4 BroadcastReceiver</a></li><li><a class="" href="lifecycle-platform-components.html#95-contentprovider">9.5 ContentProvider</a></li><li><a class="" href="lifecycle-platform-components.html#96-intents-and-pendingintents">9.6 Intents and PendingIntents</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="android-data-layer.html">10. Android Data Layer</a></summary><ul class="subtopics"><li><a class="" href="android-data-layer.html#table-of-contents">Table of Contents</a></li><li><a class="" href="android-data-layer.html#101-networking">10.1 Networking</a></li><li><a class="" href="android-data-layer.html#102-persistence">10.2 Persistence</a></li><li><a class="" href="android-data-layer.html#103-offline-first-design">10.3 Offline-First Design</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="testing.html">11. Testing</a></summary><ul class="subtopics"><li><a class="" href="testing.html#table-of-contents">Table of Contents</a></li><li><a class="" href="testing.html#111-unit-testing">11.1 Unit Testing</a></li><li><a class="" href="testing.html#112-ui-testing">11.2 UI Testing</a></li><li><a class="" href="testing.html#113-integration-and-end-to-end-testing">11.3 Integration and End-to-End Testing</a></li><li><a class="" href="testing.html#quick-reference-interview-cheat-sheet">Quick-Reference Interview Cheat Sheet</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="build-gradle-release.html">12. Build, Gradle &amp; Release</a></summary><ul class="subtopics"><li><a class="" href="build-gradle-release.html#table-of-contents">Table of Contents</a></li><li><a class="" href="build-gradle-release.html#121-gradle-basics">12.1 Gradle Basics</a></li><li><a class="" href="build-gradle-release.html#122-build-performance">12.2 Build Performance</a></li><li><a class="" href="build-gradle-release.html#123-release">12.3 Release</a></li><li><a class="" href="build-gradle-release.html#summary-table-quick-reference">Summary Table: Quick Reference</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="security-privacy.html">13. Security &amp; Privacy</a></summary><ul class="subtopics"><li><a class="" href="security-privacy.html#table-of-contents">Table of Contents</a></li><li><a class="" href="security-privacy.html#131-android-security-basics">13.1 Android Security Basics</a></li><li><a class="" href="security-privacy.html#132-data-security">13.2 Data Security</a></li><li><a class="" href="security-privacy.html#interview-qa-master-list">Interview Q&amp;A Master List</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="performance-beyond-rendering.html">14. Performance Beyond Rendering</a></summary><ul class="subtopics"><li><a class="" href="performance-beyond-rendering.html#table-of-contents">Table of Contents</a></li><li><a class="" href="performance-beyond-rendering.html#141-startup-performance">14.1 Startup Performance</a></li><li><a class="" href="performance-beyond-rendering.html#142-battery-and-resource-usage">14.2 Battery and Resource Usage</a></li><li><a class="" href="performance-beyond-rendering.html#143-anr-and-crash-debugging">14.3 ANR and Crash Debugging</a></li></ul></details><details class="topic active" open><summary><span class="caret">▶</span><a href="senior-staff-system-design.html">15. Senior/Staff System Design</a></summary><ul class="subtopics"><li><a class="spy" href="#table-of-contents">Table of Contents</a></li><li><a class="spy" href="#151-android-app-architecture-design">15.1 Android App Architecture Design</a></li><li><a class="spy" href="#152-trade-off-thinking">15.2 Trade-Off Thinking</a></li><li><a class="spy" href="#153-legacy-code-and-migration">15.3 Legacy Code and Migration</a></li><li><a class="spy" href="#154-engineering-leadership">15.4 Engineering Leadership</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="interview-q-a-cheatsheet.html">16. Interview Q&amp;A &amp; Cheatsheet</a></summary><ul class="subtopics"><li><a class="" href="interview-q-a-cheatsheet.html#table-of-contents">Table of Contents</a></li><li><a class="" href="interview-q-a-cheatsheet.html#section-16--model-answers-by-category">Section 16 — Model Answers by Category</a></li><li><a class="" href="interview-q-a-cheatsheet.html#section-17--must-revise-checklist">Section 17 — Must-Revise Checklist</a></li><li><a class="" href="interview-q-a-cheatsheet.html#section-18--senior-answer-framework-with-worked-examples">Section 18 — Senior Answer Framework with Worked Examples</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="references.html">References</a></summary><ul class="subtopics"><li><a class="" href="references.html#table-of-contents">Table of Contents</a></li><li><a class="" href="references.html#section-1--data-structures--big-o">Section 1 — Data Structures &amp; Big O</a></li><li><a class="" href="references.html#section-2--kotlin--java-fundamentals">Section 2 — Kotlin &amp; Java Fundamentals</a></li><li><a class="" href="references.html#section-3--concurrency--threading">Section 3 — Concurrency &amp; Threading</a></li><li><a class="" href="references.html#section-4--thread-communication">Section 4 — Thread Communication</a></li><li><a class="" href="references.html#section-5--ipc-binder-aidl-messenger">Section 5 — IPC: Binder, AIDL, Messenger</a></li><li><a class="" href="references.html#section-6--memory-management">Section 6 — Memory Management</a></li><li><a class="" href="references.html#section-7--architecture-patterns">Section 7 — Architecture Patterns</a></li><li><a class="" href="references.html#section-8--view-rendering">Section 8 — View Rendering</a></li><li><a class="" href="references.html#section-9--lifecycle--platform-components">Section 9 — Lifecycle &amp; Platform Components</a></li><li><a class="" href="references.html#section-10--data-layer">Section 10 — Data Layer</a></li><li><a class="" href="references.html#section-11--testing">Section 11 — Testing</a></li><li><a class="" href="references.html#section-12--build-gradle--release">Section 12 — Build, Gradle &amp; Release</a></li><li><a class="" href="references.html#section-13--security--privacy">Section 13 — Security &amp; Privacy</a></li><li><a class="" href="references.html#section-14--performance-beyond-rendering">Section 14 — Performance (Beyond Rendering)</a></li><li><a class="" href="references.html#section-15--system-design">Section 15 — System Design</a></li><li><a class="" href="references.html#section-16--interview-qa-cheatsheet">Section 16 — Interview Q&amp;A Cheatsheet</a></li><li><a class="" href="references.html#section-17--must-revise-checklist">Section 17 — Must-Revise Checklist</a></li><li><a class="" href="references.html#section-18--seniorstaff-answer-framework">Section 18 — Senior/Staff Answer Framework</a></li><li><a class="" href="references.html#books">Books</a></li></ul></details></nav>
+<aside class="toc-right"><div class="toc-h">On this page</div><ul class="toc-tree"><li class="toc-grp"><a class="toc-2" href="#table-of-contents"><span class="tcaret tcaret-none"></span>Table of Contents</a></li><li class="toc-grp"><a class="toc-2" href="#151-android-app-architecture-design"><span class="tcaret">▶</span>15.1 Android App Architecture Design</a><ul class="toc-subs"><li><a class="toc-3" href="#worked-designs">Worked Designs</a></li><li><a class="toc-3" href="#interview-angles--architecture">Interview Angles — Architecture</a></li></ul></li><li class="toc-grp"><a class="toc-2" href="#152-trade-off-thinking"><span class="tcaret">▶</span>15.2 Trade-Off Thinking</a><ul class="toc-subs"><li><a class="toc-3" href="#mvvm-vs-mvi">MVVM vs MVI</a></li><li><a class="toc-3" href="#compose-vs-xml-views">Compose vs XML Views</a></li><li><a class="toc-3" href="#room-vs-raw-sqlite">Room vs Raw SQLite</a></li><li><a class="toc-3" href="#workmanager-vs-foreground-service">WorkManager vs Foreground Service</a></li><li><a class="toc-3" href="#coroutines-vs-rxjava">Coroutines vs RxJava</a></li><li><a class="toc-3" href="#flow-vs-livedata">Flow vs LiveData</a></li><li><a class="toc-3" href="#hilt-vs-manual-di">Hilt vs Manual DI</a></li><li><a class="toc-3" href="#monolith-vs-modular-architecture">Monolith vs Modular Architecture</a></li><li><a class="toc-3" href="#single-activity-vs-multiple-activities">Single Activity vs Multiple Activities</a></li><li><a class="toc-3" href="#repository-per-feature-vs-shared-repository">Repository per Feature vs Shared Repository</a></li><li><a class="toc-3" href="#domain-layer-vs-no-domain-layer">Domain Layer vs No Domain Layer</a></li><li><a class="toc-3" href="#local-first-vs-network-first">Local-First vs Network-First</a></li><li><a class="toc-3" href="#synchronous-vs-asynchronous-ipc">Synchronous vs Asynchronous IPC</a></li><li><a class="toc-3" href="#hashmap-vs-treemap">HashMap vs TreeMap</a></li><li><a class="toc-3" href="#arraylist-vs-linkedlist">ArrayList vs LinkedList</a></li></ul></li><li class="toc-grp"><a class="toc-2" href="#153-legacy-code-and-migration"><span class="tcaret">▶</span>15.3 Legacy Code and Migration</a><ul class="toc-subs"><li><a class="toc-3" href="#java-to-kotlin">Java to Kotlin</a></li><li><a class="toc-3" href="#xml-to-compose">XML to Compose</a></li><li><a class="toc-3" href="#mvp-to-mvvmmvi">MVP to MVVM/MVI</a></li><li><a class="toc-3" href="#asynctaskrxjava-to-coroutines">AsyncTask/RxJava to Coroutines</a></li><li><a class="toc-3" href="#introducing-dependency-injection">Introducing Dependency Injection</a></li><li><a class="toc-3" href="#introducing-modularization">Introducing Modularization</a></li><li><a class="toc-3" href="#reducing-build-time">Reducing Build Time</a></li><li><a class="toc-3" href="#removing-memory-leaks">Removing Memory Leaks</a></li><li><a class="toc-3" href="#improving-test-coverage">Improving Test Coverage</a></li><li><a class="toc-3" href="#stabilizing-crashy-features">Stabilizing Crashy Features</a></li><li><a class="toc-3" href="#incremental-refactoring">Incremental Refactoring</a></li><li><a class="toc-3" href="#interview-angles--migration">Interview Angles — Migration</a></li></ul></li><li class="toc-grp"><a class="toc-2" href="#154-engineering-leadership"><span class="tcaret">▶</span>15.4 Engineering Leadership</a><ul class="toc-subs"><li><a class="toc-3" href="#star-templates">STAR Templates</a></li><li><a class="toc-3" href="#interview-angles--leadership">Interview Angles — Leadership</a></li></ul></li></ul></aside>
+<div class="backdrop"></div>
+<div class="content">
+<div class="mtop"><button onclick="toggleNav()" aria-label="Menu">☰</button><a class="home" href="../index.html">🏠</a><span class="t">15. Senior/Staff System Design</span></div>
+<a class="arrow left" href="performance-beyond-rendering.html" title="Previous (14. Performance Beyond Rendering)">‹</a>
+<a class="arrow right" href="interview-q-a-cheatsheet.html" title="Next (16. Interview Q&amp;A &amp; Cheatsheet)">›</a>
+<div class="wrap">
+<h1 id="15-seniorstaff-system-design">15. Senior/Staff System Design</h1>
+<blockquote>Study material for senior/staff Android interviews. This section covers everything that<br>differentiates a senior/staff candidate from a mid-level one: end-to-end system design,<br>principled trade-off reasoning, legacy migration strategy, and engineering leadership.</blockquote>
+<hr>
+<h2 id="table-of-contents">Table of Contents</h2>
+<ul>
+<li><a href="#151-android-app-architecture-design">15.1 Android App Architecture Design</a></li>
+<ul>
+<li><a href="#worked-designs">Worked Designs</a></li>
+<ul>
+<li><a href="#chat-app">Chat App</a></li>
+<li><a href="#offline-first-feed">Offline-First Feed</a></li>
+<li><a href="#video-streaming-app">Video Streaming App</a></li>
+<li><a href="#payments-flow">Payments Flow</a></li>
+<li><a href="#ride-tracking-app">Ride Tracking App</a></li>
+<li><a href="#large-e-commerce-app">Large E-Commerce App</a></li>
+<li><a href="#modular-super-app">Modular Super-App</a></li>
+<li><a href="#real-time-collaborative-app">Real-Time Collaborative App</a></li>
+<li><a href="#sdk-used-by-many-apps">SDK Used by Many Apps</a></li>
+<li><a href="#multi-process-app">Multi-Process App</a></li>
+</ul>
+<li><a href="#interview-angles--architecture">Interview Angles — Architecture</a></li>
+</ul>
+<li><a href="#152-trade-off-thinking">15.2 Trade-Off Thinking</a></li>
+<ul>
+<li><a href="#mvvm-vs-mvi">MVVM vs MVI</a></li>
+<li><a href="#compose-vs-xml-views">Compose vs XML Views</a></li>
+<li><a href="#room-vs-raw-sqlite">Room vs Raw SQLite</a></li>
+<li><a href="#workmanager-vs-foreground-service">WorkManager vs Foreground Service</a></li>
+<li><a href="#coroutines-vs-rxjava">Coroutines vs RxJava</a></li>
+<li><a href="#flow-vs-livedata">Flow vs LiveData</a></li>
+<li><a href="#hilt-vs-manual-di">Hilt vs Manual DI</a></li>
+<li><a href="#monolith-vs-modular-architecture">Monolith vs Modular Architecture</a></li>
+<li><a href="#single-activity-vs-multiple-activities">Single Activity vs Multiple Activities</a></li>
+<li><a href="#repository-per-feature-vs-shared-repository">Repository per Feature vs Shared Repository</a></li>
+<li><a href="#domain-layer-vs-no-domain-layer">Domain Layer vs No Domain Layer</a></li>
+<li><a href="#local-first-vs-network-first">Local-First vs Network-First</a></li>
+<li><a href="#synchronous-vs-asynchronous-ipc">Synchronous vs Asynchronous IPC</a></li>
+<li><a href="#hashmap-vs-treemap">HashMap vs TreeMap</a></li>
+<li><a href="#arraylist-vs-linkedlist">ArrayList vs LinkedList</a></li>
+</ul>
+<li><a href="#153-legacy-code-and-migration">15.3 Legacy Code and Migration</a></li>
+<ul>
+<li><a href="#java-to-kotlin">Java to Kotlin</a></li>
+<li><a href="#xml-to-compose">XML to Compose</a></li>
+<li><a href="#mvp-to-mvvmmvi">MVP to MVVM/MVI</a></li>
+<li><a href="#asynctaskrxjava-to-coroutines">AsyncTask/RxJava to Coroutines</a></li>
+<li><a href="#introducing-dependency-injection">Introducing Dependency Injection</a></li>
+<li><a href="#introducing-modularization">Introducing Modularization</a></li>
+<li><a href="#reducing-build-time">Reducing Build Time</a></li>
+<li><a href="#removing-memory-leaks">Removing Memory Leaks</a></li>
+<li><a href="#improving-test-coverage">Improving Test Coverage</a></li>
+<li><a href="#stabilizing-crashy-features">Stabilizing Crashy Features</a></li>
+<li><a href="#incremental-refactoring">Incremental Refactoring</a></li>
+<li><a href="#interview-angles--migration">Interview Angles — Migration</a></li>
+</ul>
+<li><a href="#154-engineering-leadership">15.4 Engineering Leadership</a></li>
+<ul>
+<li><a href="#star-templates">STAR Templates</a></li>
+<li><a href="#interview-angles--leadership">Interview Angles — Leadership</a></li>
+</ul>
+</ul>
+<hr>
+<h2 id="151-android-app-architecture-design">15.1 Android App Architecture Design</h2>
+<p>Senior and staff design interviews are not about memorizing a pattern. They are about showing that you can drive decisions across the full stack of a feature — from network protocol to UI rendering, from data persistence to security model, from rollout strategy to monitoring.</p>
+<p>Use this framework for every design:</p>
+<pre><code>Architecture → Modules → State Management → Data Flow → Offline Strategy →
+Error Handling → Threading → Caching → Security → Performance → Testing →
+Monitoring → Rollout</code></pre>
+<hr>
+<h3 id="worked-designs">Worked Designs</h3>
+<hr>
+<h4 id="chat-app">Chat App</h4>
+<p><strong>Scenario:</strong> Design the Android client for a consumer chat application (think WhatsApp/Signal scale). Real-time messaging, media sharing, read receipts, message status, group chats.</p>
+<hr>
+<p><strong>Architecture</strong></p>
+<p>MVVM with a single-direction data flow per conversation screen. Each open conversation has its own <code>ConversationViewModel</code>. A global <code>ChatSessionManager</code> (singleton, process-scoped) owns the WebSocket lifecycle. Repository layer mediates between the remote (WebSocket/REST) and local (Room) sources.</p>
+<pre><code>UI (Compose ConversationScreen)
+   ↑ UiState
+   ViewModel (ConversationViewModel)
+   ↑ Flow&lt;List&lt;Message&gt;&gt;
+   Repository (MessageRepository)
+   ↑                   ↑
+Room (MessageDao)   WebSocket / REST</code></pre>
+<p><strong>Modules</strong></p>
+<pre><code>:app                          — entry, DI wiring
+:feature:chat                 — conversation list + open chat screens
+:feature:media                — media picker, upload, preview
+:data:chat                    — MessageRepository, ConversationRepository
+:data:network                 — WebSocketClient, ChatApiService
+:data:db                      — Room DB, DAOs
+:domain:chat                  — Message, Conversation domain models, use cases
+:core:crypto                  — end-to-end encryption utilities
+:core:push                    — FCM token registration, notification routing
+:core:ui                      — shared Compose components (Bubble, Avatar, etc.)</code></pre>
+<p><strong>State Management</strong></p>
+<p><code>ConversationViewModel</code> exposes a single <code>StateFlow&lt;ConversationUiState&gt;</code>. That state includes:</p>
+<ul>
+<li><code>messages: List&lt;MessageUiModel&gt;</code> (paginated, sorted by timestamp)</li>
+<li><code>typingIndicators: Set&lt;UserId&gt;</code></li>
+<li><code>sendStatus: SendStatus</code> (idle / sending / failed)</li>
+<li><code>scrollToPosition: Int?</code></li>
+</ul>
+<p>Side-effects (scroll triggers, attachment picker opening) use <code>SharedFlow&lt;ConversationEvent&gt;</code>.</p>
+<p><strong>Data Flow</strong></p>
+<ol>
+<li>App opens → <code>ChatSessionManager.connect()</code> opens a persistent WebSocket.</li>
+<li>Incoming frame decoded → <code>MessageRepository.handleIncoming(frame)</code> → persisted to Room → Room</li>
+</ol>
+<p>emits new <code>Flow&lt;List&lt;Message&gt;&gt;</code> → ViewModel picks up → UI re-renders.</p>
+<ol>
+<li>User sends message → ViewModel calls <code>SendMessageUseCase</code> → message inserted into Room with</li>
+</ol>
+<p><code>status=PENDING</code> → Room emission updates UI immediately (optimistic) → background coroutine sends over WebSocket → on ACK update <code>status=SENT</code> → on server push update <code>status=DELIVERED</code> / <code>status=READ</code>.</p>
+<ol>
+<li>Pagination: ViewModel uses <code>Pager</code> + <code>PagingSource</code> backed by `MessageDao.getMessages(threadId,</li>
+</ol>
+<p>limit, offset)`. Load older messages on scroll-to-top.</p>
+<p><strong>Offline Strategy</strong></p>
+<ul>
+<li>Messages typed while offline are inserted into Room with <code>status=PENDING</code>.</li>
+<li>A <code>WorkManager</code> <code>PeriodicWorkRequest</code> (<code>PendingMessageSyncWorker</code>) processes the queue when</li>
+</ul>
+<p>connectivity is restored.</p>
+<ul>
+<li>Conversation list and last messages are always served from Room; staleness is acceptable</li>
+</ul>
+<p>because the WebSocket reconciles on reconnect.</p>
+<ul>
+<li>Media uploads are queued via <code>WorkManager</code> with <code>NetworkType.CONNECTED</code> constraint.</li>
+</ul>
+<p><strong>Error Handling</strong></p>
+<ul>
+<li>WebSocket disconnection: exponential back-off reconnect (1s, 2s, 4s, 8s, cap at 60s).</li>
+</ul>
+<p><code>ChatSessionManager</code> emits <code>ConnectionState</code> (CONNECTED / RECONNECTING / OFFLINE) into a <code>StateFlow</code>; the UI shows a subtle banner.</p>
+<ul>
+<li>Send failure: the <code>PENDING</code> message stays in the local DB. UI shows a retry icon. User can</li>
+</ul>
+<p>tap to retry or swipe to cancel.</p>
+<ul>
+<li>Media upload failure: WorkManager retries up to 3 times; on final failure emit an event toast.</li>
+<li>Decryption failure: show a placeholder &quot;This message could not be decrypted&quot; rather than</li>
+</ul>
+<p>crashing.</p>
+<p><strong>Threading</strong></p>
+<ul>
+<li>WebSocket callbacks arrive on an IO dispatcher thread. Parsing and DB writes are on</li>
+</ul>
+<p><code>Dispatchers.IO</code>. ViewModel collects on <code>Dispatchers.Main</code>.</p>
+<ul>
+<li>Media compression is on <code>Dispatchers.Default</code> (CPU-bound).</li>
+<li>Never block the main thread; use <code>launch(Dispatchers.IO)</code> for all persistence.</li>
+<li>Use structured concurrency: <code>ConversationViewModel</code> creates its own `CoroutineScope(</li>
+</ul>
+<p>SupervisorJob() + Dispatchers.Main)<code> cancelled in </code>onCleared()`.</p>
+<p><strong>Caching</strong></p>
+<ul>
+<li>Room is the single source of truth. No in-memory cache for messages — paging handles this.</li>
+<li>Avatar/profile images: Coil&#x27;s disk cache (LRU, 50 MB limit). HTTP <code>Cache-Control</code> headers</li>
+</ul>
+<p>drive eviction. Coil uses an in-memory LRU for recently seen avatars.</p>
+<ul>
+<li>Attachments (images, videos): cached on disk under <code>getCacheDir()/attachments/</code>, max 200 MB</li>
+</ul>
+<p>with LRU eviction managed by a custom <code>AttachmentCacheManager</code>.</p>
+<p><strong>Security</strong></p>
+<ul>
+<li>End-to-end encryption: Signal Protocol (libsignal-client). Keys stored in Android Keystore.</li>
+<li>Message DB encrypted via SQLCipher; the SQLCipher key is stored in Keystore and only accessible</li>
+</ul>
+<p>with user auth (biometric/pin).</p>
+<ul>
+<li>TLS pinning on the WebSocket and REST endpoints.</li>
+<li>No message content in notifications on locked screen (show &quot;New message&quot; only); configurable</li>
+</ul>
+<p>per user setting.</p>
+<ul>
+<li>Media sent to S3 via pre-signed URLs; the URL is only valid for 24 hours.</li>
+<li>Prevent screenshots in sensitive screens using <code>FLAG_SECURE</code>.</li>
+</ul>
+<p><strong>Performance</strong></p>
+<ul>
+<li><code>LazyColumn</code> for message list; use <code>key { message.id }</code> for stable recomposition.</li>
+<li>Avatar Composables use <code>remember { painter }</code> to avoid re-loading on every recompose.</li>
+<li>Diff in <code>PagingData</code> uses <code>DiffUtil</code> keyed on message ID; only changed items re-render.</li>
+<li>Use <code>stateIn(SharingStarted.WhileSubscribed(5000))</code> to avoid re-fetching from DB during</li>
+</ul>
+<p>screen rotation.</p>
+<ul>
+<li>Incoming WebSocket frames are batched (100ms debounce) before triggering DB writes to avoid</li>
+</ul>
+<p>thrashing.</p>
+<p><strong>Testing</strong></p>
+<ul>
+<li><code>MessageRepository</code> unit tested with <code>FakeMessageDao</code> (in-memory) and <code>FakeWebSocketClient</code>.</li>
+<li><code>ConversationViewModel</code> tested with <code>MainCoroutineTestRule</code> and fake repository.</li>
+<li><code>SendMessageUseCase</code> unit tested independently with mocked repository.</li>
+<li>UI tests with Espresso/Compose test: verify message appears in list after <code>sendMessage()</code>,</li>
+</ul>
+<p>verify retry button appears on simulated network failure.</p>
+<ul>
+<li>WorkManager tested with <code>TestWorkerBuilder</code>.</li>
+</ul>
+<p><strong>Monitoring</strong></p>
+<ul>
+<li>Sentry: capture <code>ConversationCrash</code> events; tag with <code>conversationId</code> (not participant names).</li>
+<li>Custom metric: <code>message_send_latency_ms</code> from user tap to <code>status=SENT</code>; tracked via DataDog.</li>
+<li><code>connection_drop_rate</code> = drops per session, alerted if &gt; 2%.</li>
+<li>Media upload success rate (target &gt; 99%).</li>
+<li><code>pending_message_count</code> gauge: rising queue means sync worker is broken.</li>
+</ul>
+<p><strong>Rollout</strong></p>
+<ol>
+<li>Ship behind AB flag <code>chat_v2_enabled</code>.</li>
+<li>1% → 5% → 20% → 100% rollout over two weeks.</li>
+<li>Monitor crash-free rate, message delivery rate, latency p95.</li>
+<li>Kill-switch: flag off returns users to previous chat implementation.</li>
+</ol>
+<hr>
+<h4 id="offline-first-feed">Offline-First Feed</h4>
+<p><strong>Scenario:</strong> Design a social/news feed that works fully offline. Think Twitter timeline, Reddit feed, or an internal news app with periodic content.</p>
+<hr>
+<p><strong>Architecture</strong></p>
+<p>Repository pattern with Room as the single source of truth. The UI always reads from local DB. A <code>FeedSyncManager</code> (tied to <code>WorkManager</code>) is the only component that writes from network to DB. This is a strict local-first pattern.</p>
+<pre><code>UI (Compose FeedScreen)
+   ↑ PagingData&lt;FeedItemUiModel&gt;
+   FeedViewModel
+   ↑ PagingSource (Room)
+   FeedRepository
+          ↑ write only
+   FeedSyncManager (WorkManager PeriodicWork)
+          ↑
+   FeedApiService (Retrofit)</code></pre>
+<p><strong>Modules</strong></p>
+<pre><code>:feature:feed          — FeedScreen, FeedViewModel
+:data:feed             — FeedRepository, FeedSyncManager
+:data:db               — FeedItemEntity, FeedDao
+:data:network          — FeedApiService, NetworkMonitor
+:domain:feed           — FeedItem domain model, GetFeedUseCase
+:core:sync             — BaseSyncWorker, SyncResult, retry policy</code></pre>
+<p><strong>State Management</strong></p>
+<p>ViewModel exposes:</p>
+<ul>
+<li><code>PagingData&lt;FeedItemUiModel&gt;</code> via <code>Pager</code> backed by <code>FeedDao.getFeedItems()</code>.</li>
+<li><code>feedStatus: StateFlow&lt;FeedStatus&gt;</code> (SYNCED / SYNCING / STALE / ERROR) — this comes from a</li>
+</ul>
+<p>metadata table <code>feed_sync_meta</code> (last sync timestamp, sync result).</p>
+<ul>
+<li>Pull-to-refresh triggers <code>FeedRepository.requestSync()</code> which starts an expedited WorkManager</li>
+</ul>
+<p>request.</p>
+<p><strong>Data Flow</strong></p>
+<p>Read path: <code>FeedDao</code> → <code>PagingSource</code> → <code>PagingData</code> → <code>ViewModel</code> → Compose <code>LazyColumn</code>. Write path: <code>FeedSyncWorker.doWork()</code> calls <code>FeedApiService.getFeed(cursor)</code>, maps to entities, calls <code>FeedDao.upsertAll(entities)</code>, updates <code>feed_sync_meta</code>. The DB write wakes up the <code>PagingSource</code> observer automatically.</p>
+<p><strong>Offline Strategy</strong></p>
+<ul>
+<li>Feed is always readable — Room has all previously fetched items.</li>
+<li><code>NetworkMonitor</code> (wraps <code>ConnectivityManager.NetworkCallback</code>) emits <code>isOnline: StateFlow&lt;Bool&gt;</code>.</li>
+<li>When offline: show a banner &quot;Showing cached content from X minutes ago&quot;. Use</li>
+</ul>
+<p><code>feed_sync_meta.lastSyncTimestamp</code> for the time.</p>
+<ul>
+<li>WorkManager constraint <code>NetworkType.CONNECTED</code> — sync only happens with connectivity.</li>
+<li>Pagination cursor stored in <code>feed_sync_meta</code> so sync resumes from last known position after</li>
+</ul>
+<p>re-connect.</p>
+<ul>
+<li>Read articles are stored; user can explicitly save articles for permanent offline.</li>
+</ul>
+<p><strong>Error Handling</strong></p>
+<ul>
+<li>Network error during sync: WorkManager returns <code>Result.retry()</code> with exponential back-off.</li>
+</ul>
+<p>After 3 retries, <code>Result.failure()</code> updates <code>feed_sync_meta.lastSyncStatus = ERROR</code>. UI shows &quot;Could not refresh&quot; with a retry button.</p>
+<ul>
+<li>Partial sync: if the API returns 50 items but fails mid-write, use a DB transaction</li>
+</ul>
+<p>(<code>@Transaction</code>) to ensure atomicity — all or nothing.</p>
+<ul>
+<li>Parse error for a single item: skip that item, log to Sentry, continue.</li>
+</ul>
+<p><strong>Threading</strong></p>
+<ul>
+<li>All DB reads via <code>Dispatchers.IO</code> (Room automatically uses IO dispatcher for suspending</li>
+</ul>
+<p>functions).</p>
+<ul>
+<li>WorkManager <code>doWork()</code> is called on a background thread pool; no extra dispatchers needed.</li>
+<li>ViewModel collects <code>PagingData</code> on <code>Dispatchers.Main</code>.</li>
+</ul>
+<p><strong>Caching</strong></p>
+<ul>
+<li>Room IS the cache. No additional in-memory layer.</li>
+<li>Image caching: Coil with disk cache; <code>staleWhileRevalidate</code> header support.</li>
+<li>Cache eviction: a nightly <code>CleanupWorker</code> deletes <code>FeedItemEntity</code> rows older than 7 days,</li>
+</ul>
+<p>except those marked <code>saved = true</code>.</p>
+<ul>
+<li>Article body (HTML/markdown): stored in a separate <code>article_body</code> table with its own 24-hour</li>
+</ul>
+<p>TTL.</p>
+<p><strong>Security</strong></p>
+<ul>
+<li>API auth via bearer token (stored in EncryptedSharedPreferences).</li>
+<li>HTTPS-only; certificate pinning in OkHttp interceptor.</li>
+<li>Saved articles: no PII in local DB (user IDs stored as hashed tokens).</li>
+</ul>
+<p><strong>Performance</strong></p>
+<ul>
+<li><code>PagingSource</code> with <code>pageSize = 20</code>, <code>prefetchDistance = 5</code>.</li>
+<li><code>Pager</code> cached in ViewModel with <code>cachedIn(viewModelScope)</code> so rotation does not re-fetch.</li>
+<li>Images: use <code>AsyncImage</code> with <code>crossfade</code>, avoid loading full-res in feed (request thumbnail</li>
+</ul>
+<p>variant from CDN with <code>?w=400</code>).</p>
+<ul>
+<li>DB indices on <code>FeedItemEntity</code>: index on <code>(timestamp DESC)</code> for the main sort, index on</li>
+</ul>
+<p><code>(saved, timestamp)</code> for saved filter.</p>
+<p><strong>Testing</strong></p>
+<ul>
+<li><code>FeedSyncWorker</code> tested with <code>TestWorkerBuilder</code> and a <code>FakeFeedApiService</code>.</li>
+<li><code>FeedRepository</code> tested with an in-memory Room DB.</li>
+<li><code>FeedViewModel</code> tested with <code>TestCoroutineDispatcher</code> and fake repository.</li>
+<li>UI: screenshot tests of feed in CACHED state vs SYNCING state.</li>
+</ul>
+<p><strong>Monitoring</strong></p>
+<ul>
+<li><code>feed_sync_success_rate</code> per WorkManager run.</li>
+<li><code>feed_load_time_ms</code> from screen open to first item visible.</li>
+<li><code>stale_content_shown_rate</code> — how often users see cached content older than 1 hour.</li>
+</ul>
+<p><strong>Rollout</strong></p>
+<ul>
+<li>Feature flag <code>offline_first_feed_enabled</code>.</li>
+<li>Shadow mode: new sync path runs alongside old network-then-cache path; compare outputs.</li>
+<li>Gradual rollout; watch <code>stale_content_shown_rate</code> and crash rate.</li>
+</ul>
+<hr>
+<h4 id="video-streaming-app">Video Streaming App</h4>
+<p><strong>Scenario:</strong> Design an Android client for a video streaming service (Netflix/YouTube scale). Browse catalog, search, play video, download for offline.</p>
+<hr>
+<p><strong>Architecture</strong></p>
+<p>Feature-modular MVVM. <code>ExoPlayer</code> is the media engine, wrapped in a <code>VideoPlayerController</code> singleton. Download management via <code>DownloadManager</code> (ExoPlayer&#x27;s download module) backed by WorkManager.</p>
+<p><strong>Modules</strong></p>
+<pre><code>:feature:home          — catalog browse
+:feature:player        — playback screen + mini-player
+:feature:downloads     — download list, download management
+:feature:search        — search screen
+:data:catalog          — CatalogRepository (GraphQL + Room)
+:data:playback         — PlaybackSessionRepository, DRM license fetching
+:data:download         — DownloadRepository (ExoPlayer DownloadManager + Room)
+:core:player           — VideoPlayerController, ExoPlayer factory, DRM
+:core:analytics        — playback telemetry (QoE events)</code></pre>
+<p><strong>State Management</strong></p>
+<p><code>PlayerViewModel</code> exposes:</p>
+<ul>
+<li><code>playbackState: StateFlow&lt;PlaybackState&gt;</code> (IDLE / BUFFERING / PLAYING / PAUSED / ENDED / ERROR)</li>
+<li><code>currentPosition: StateFlow&lt;Long&gt;</code> (updated every 500ms via <code>ExoPlayer.addListener</code>)</li>
+<li><code>videoMetadata: StateFlow&lt;VideoMetadata&gt;</code></li>
+<li><code>qualityLevel: StateFlow&lt;Quality&gt;</code> (for adaptive bitrate display)</li>
+</ul>
+<p><strong>Data Flow</strong></p>
+<ol>
+<li>User taps video → <code>PlayerViewModel.loadVideo(videoId)</code> → <code>PlaybackSessionRepository</code></li>
+</ol>
+<p>fetches manifest URL + DRM license URL → construct <code>MediaItem</code> with DRM config → hand to <code>ExoPlayer</code>.</p>
+<ol>
+<li>ExoPlayer handles HLS/DASH ABR internally.</li>
+<li>Player listener events → <code>StateFlow</code> updates → UI reacts.</li>
+<li>Resume position: on pause/stop, persist <code>(videoId, position)</code> to Room → on next open, seek</li>
+</ol>
+<p>to that position.</p>
+<p><strong>Offline Strategy</strong></p>
+<ul>
+<li>ExoPlayer <code>DownloadManager</code> with <code>SegmentDownloader</code> for HLS/DASH.</li>
+<li>Download request added via <code>DownloadService</code> (foreground service required by ExoPlayer).</li>
+<li>DRM offline license fetched and stored alongside segments.</li>
+<li><code>DownloadRepository</code> exposes <code>Flow&lt;List&lt;DownloadState&gt;&gt;</code> backed by ExoPlayer&#x27;s <code>DownloadIndex</code></li>
+</ul>
+<p>(SQLite-backed).</p>
+<ul>
+<li>Expired downloads: check license expiry on app open; prompt user to re-download if needed.</li>
+</ul>
+<p><strong>Error Handling</strong></p>
+<ul>
+<li>Playback error → <code>PlaybackException</code> from ExoPlayer → map to user-friendly error + retry button.</li>
+<li>DRM license fetch failure: surface &quot;Content not available in your region / retry&quot;.</li>
+<li>Download failure: WorkManager retry; notify user with <code>NotificationCompat</code> progress notification.</li>
+<li>Network interruption mid-playback: ExoPlayer buffers 30s; auto-resumes when connectivity</li>
+</ul>
+<p>returns; show &quot;Reconnecting...&quot; indicator after 5s buffer exhausted.</p>
+<p><strong>Threading</strong></p>
+<ul>
+<li>ExoPlayer must run on main thread. All <code>ExoPlayer</code> calls from <code>Dispatchers.Main</code>.</li>
+<li>Manifest/license fetches: OkHttp on IO dispatcher.</li>
+<li>Download: ExoPlayer <code>DownloadService</code> runs in its own process with foreground service</li>
+</ul>
+<p>notification.</p>
+<p><strong>Caching</strong></p>
+<ul>
+<li><code>SimpleCache</code> (ExoPlayer) for in-memory HLS segment cache (100 MB default).</li>
+<li><code>LeastRecentlyUsedCacheEvictor</code> with configurable max size.</li>
+<li>Catalog metadata: Room with 24-hour TTL via <code>catalog_meta.fetchedAt</code> column.</li>
+<li>Thumbnails: Coil disk cache.</li>
+</ul>
+<p><strong>Security</strong></p>
+<ul>
+<li>Widevine DRM (L1 on supported hardware, L3 fallback).</li>
+<li><code>FLAG_SECURE</code> on player Activity to prevent screen recording.</li>
+<li>Offline DRM licenses: keystore-backed encrypted storage via ExoPlayer&#x27;s <code>DefaultDrmSessionManager</code>.</li>
+<li>API tokens in EncryptedSharedPreferences.</li>
+<li>Certificate pinning for CDN and license server endpoints.</li>
+</ul>
+<p><strong>Performance</strong></p>
+<ul>
+<li>Thumbnail loading: use low-resolution variants from CDN; full-res only on detail screen.</li>
+<li>Pre-fetch next episode: when 80% through current episode, start buffering next episode&#x27;s first</li>
+</ul>
+<p>30s in background (<code>ConcatenatingMediaSource</code>).</p>
+<ul>
+<li>ABR: ExoPlayer <code>AdaptiveTrackSelection</code> with custom <code>DefaultBandwidthMeter</code> calibrated to</li>
+</ul>
+<p>streaming profile.</p>
+<ul>
+<li>Reduce startup latency: pre-warm <code>ExoPlayer</code> instance on app cold start.</li>
+</ul>
+<p><strong>Testing</strong></p>
+<ul>
+<li><code>VideoPlayerController</code> unit tested with <code>FakeExoPlayer</code> (ExoPlayer test utilities).</li>
+<li><code>PlaybackSessionRepository</code> mocked with MockK; test DRM license fetch path.</li>
+<li>Integration test: mock API server + ExoPlayer playing test HLS stream.</li>
+<li>Manual QA checklist: seek behavior, background playback, download flow, resume after kill.</li>
+</ul>
+<p><strong>Monitoring</strong></p>
+<ul>
+<li>QoE metrics: startup time, buffering ratio, average bitrate, error rate per stream.</li>
+<li><code>video_start_failure_rate</code> alerted if &gt; 0.5%.</li>
+<li><code>rebuffering_ratio</code> alerted if &gt; 2%.</li>
+<li>Download success rate (target &gt; 98%).</li>
+<li>Crash-free rate on Player Activity (target &gt; 99.9%).</li>
+</ul>
+<p><strong>Rollout</strong></p>
+<ul>
+<li>ExoPlayer version upgrades: shadow A/B, compare QoE metrics before full rollout.</li>
+<li>New DRM configuration: 1% → 5% → 20% with crash rate monitoring at each step.</li>
+</ul>
+<hr>
+<h4 id="payments-flow">Payments Flow</h4>
+<p><strong>Scenario:</strong> Design a payments flow in an Android app — add card, select payment method, confirm purchase. Security and reliability are paramount.</p>
+<hr>
+<p><strong>Architecture</strong></p>
+<p>A dedicated <code>PaymentsActivity</code> hosts a single-flow NavHost. Each step is a Compose screen. <code>PaymentViewModel</code> is scoped to the Activity (not individual screens) to maintain state across steps. All payment data handling is strictly in the <code>data:payments</code> module behind an interface.</p>
+<pre><code>PaymentsActivity (NavHost)
+  ├── SelectPaymentMethodScreen
+  ├── AddCardScreen (delegates to PCI-compliant SDK)
+  ├── ConfirmPurchaseScreen
+  └── PaymentResultScreen
+
+PaymentViewModel (Activity-scoped)
+   ↑ PaymentUiState
+   PaymentRepository
+   ↑
+   PaymentApiService (Retrofit)
+   StripeSDK / BraintreeSDK (PCI-compliant card tokenization)</code></pre>
+<p><strong>Modules</strong></p>
+<pre><code>:feature:payments       — UI screens, PaymentViewModel, navigation
+:data:payments          — PaymentRepository, PaymentApiService
+:domain:payments        — PaymentMethod, Order, PaymentResult domain models
+:core:security          — BiometricHelper, EncryptedPreferences</code></pre>
+<p><strong>State Management</strong></p>
+<p><code>PaymentUiState</code> is a sealed class:</p>
+<ul>
+<li><code>SelectingMethod(methods: List&lt;PaymentMethod&gt;)</code></li>
+<li><code>AddingCard</code></li>
+<li><code>Confirming(orderSummary: OrderSummary, selectedMethod: PaymentMethod)</code></li>
+<li><code>Processing</code></li>
+<li><code>Success(receipt: Receipt)</code></li>
+<li><code>Failure(error: PaymentError)</code></li>
+</ul>
+<p>One-way flow: state emitted from ViewModel → UI renders. User action → ViewModel event → new state. No state stored in individual screen Composables.</p>
+<p><strong>Data Flow</strong></p>
+<ol>
+<li>Screen opens → <code>PaymentViewModel.loadPaymentMethods()</code> → REST call → <code>StateFlow</code> updated.</li>
+<li>User selects saved card → proceed to Confirm step.</li>
+<li>User adds new card → Stripe SDK tokenizes (card number never leaves the SDK) → token returned</li>
+</ol>
+<p>to app → sent to backend for association with account.</p>
+<ol>
+<li>User taps &quot;Pay&quot; → <code>PaymentViewModel.confirmPayment(orderId, methodToken)</code> → REST call →</li>
+</ol>
+<p>idempotency key sent with request → result updates state.</p>
+<p><strong>Offline Strategy</strong></p>
+<p>Payments must NOT proceed offline. If <code>NetworkMonitor.isOnline == false</code>:</p>
+<ul>
+<li>Disable &quot;Pay&quot; button.</li>
+<li>Show &quot;No internet connection — payment not processed.&quot;</li>
+<li>Queue no payment attempts offline (risk of double-charge).</li>
+</ul>
+<p><strong>Error Handling</strong></p>
+<ul>
+<li>Network timeout: show &quot;Something went wrong&quot; + retry. Do NOT assume payment succeeded.</li>
+<li>Idempotency keys: every payment request includes a UUID generated client-side and stored in</li>
+</ul>
+<p>Room. If the same request is retried, the same key is sent — backend deduplicates.</p>
+<ul>
+<li>Card declined: show specific error from backend (insufficient funds, expired card, etc.).</li>
+<li>3DS challenge: launch a Chrome Custom Tab for the challenge URL; handle redirect back to app</li>
+</ul>
+<p>via deep link.</p>
+<ul>
+<li>Crash during payment: on next app open, query backend with the idempotency key to determine</li>
+</ul>
+<p>payment status. Never assume a crash means failure.</p>
+<p><strong>Threading</strong></p>
+<ul>
+<li>All payment API calls on <code>Dispatchers.IO</code>.</li>
+<li>Stripe SDK operations on the thread Stripe requires (usually main thread for their UI components).</li>
+<li>Never make payment calls on main thread.</li>
+</ul>
+<p><strong>Caching</strong></p>
+<ul>
+<li>Payment methods list: cached in Room for 15 minutes. Show stale data with &quot;Refresh&quot; button.</li>
+<li>Never cache raw card data.</li>
+<li>Order summary: not cached — always fresh from backend to prevent stale price display.</li>
+</ul>
+<p><strong>Security</strong></p>
+<ul>
+<li>PCI DSS: card data never touches app servers — Stripe/Braintree SDK handles tokenization.</li>
+<li>Biometric confirmation before payment: <code>BiometricPrompt</code> required for purchases &gt; threshold.</li>
+<li><code>FLAG_SECURE</code> on payment Activity — no screenshots, no recents thumbnail.</li>
+<li>No card numbers in logs, analytics, crash reports.</li>
+<li>Token storage: payment method tokens in EncryptedSharedPreferences.</li>
+<li>Jailbreak/root detection: warn user, optionally block (policy decision).</li>
+<li>Certificate pinning on payment API endpoints.</li>
+<li>Tamper detection: use SafetyNet/Play Integrity API before confirming payment.</li>
+</ul>
+<p><strong>Performance</strong></p>
+<ul>
+<li>Payment method list pre-fetched when user enters checkout funnel (not just when they tap the</li>
+</ul>
+<p>payment button).</p>
+<ul>
+<li>Optimistic UI only for non-payment steps; never for the actual charge (wait for server ACK).</li>
+</ul>
+<p><strong>Testing</strong></p>
+<ul>
+<li><code>PaymentRepository</code> tested with mock Retrofit + idempotency key verification.</li>
+<li><code>PaymentViewModel</code> state machine tested exhaustively: every transition.</li>
+<li>Stripe SDK integration: use Stripe test mode with test card numbers.</li>
+<li>Test double-submit prevention by rapid-tapping the Pay button.</li>
+<li>Test network drop at the exact moment of payment confirmation.</li>
+</ul>
+<p><strong>Monitoring</strong></p>
+<ul>
+<li>Payment success rate (target &gt; 99.5%).</li>
+<li><code>payment_start_to_success_latency_ms</code> p95.</li>
+<li>Idempotency key collision rate (should be ~0).</li>
+<li>3DS challenge completion rate.</li>
+<li>Alert on any payment error spike (&gt; 1% error rate triggers page).</li>
+</ul>
+<p><strong>Rollout</strong></p>
+<ul>
+<li>Never ship payment changes without QA sign-off on test mode + staging environment.</li>
+<li>Shadow mode: run new payment path alongside old for 24 hours, compare success rates.</li>
+<li>Feature flag with instant kill-switch.</li>
+<li>Gradual rollout: 1% for 48 hours minimum, watching payment error rate.</li>
+</ul>
+<hr>
+<h4 id="ride-tracking-app">Ride Tracking App</h4>
+<p><strong>Scenario:</strong> Design the Android client for a ride-hailing app. Real-time driver location, ETA, fare calculation, trip state machine.</p>
+<hr>
+<p><strong>Architecture</strong></p>
+<p>Feature-modular MVVM. Real-time location updates via WebSocket (or MQTT). Google Maps SDK for rendering. <code>TripViewModel</code> is the single owner of trip state throughout the trip lifecycle.</p>
+<p><strong>Modules</strong></p>
+<pre><code>:feature:booking        — search, request ride
+:feature:tracking       — in-trip screen, driver location, ETA
+:feature:history        — past trips
+:data:trip              — TripRepository, TripApiService, WebSocketClient
+:data:location          — UserLocationManager (FusedLocationProvider)
+:core:maps              — MapRenderer, RouteDrawer, MarkerManager
+:core:realtime          — WebSocket/MQTT client abstraction</code></pre>
+<p><strong>State Management</strong></p>
+<p><code>TripViewModel</code> exposes <code>TripUiState</code>:</p>
+<pre><code>sealed class TripUiState {
+    object Idle : TripUiState()
+    data class Searching(val params: RideParams) : TripUiState()
+    data class DriverAssigned(val driver: DriverInfo, val eta: Duration) : TripUiState()
+    data class DriverEnRoute(val driverLocation: LatLng, val eta: Duration) : TripUiState()
+    data class InTrip(val driverLocation: LatLng, val route: Route) : TripUiState()
+    data class Completed(val receipt: Receipt) : TripUiState()
+    data class Cancelled(val reason: String) : TripUiState()
+}</code></pre>
+<p>Trip state transitions are strict (no direct <code>Idle → InTrip</code> skip). Any unrecognized transition is logged and treated as an error.</p>
+<p><strong>Data Flow</strong></p>
+<ol>
+<li>User requests ride → REST call → returns <code>tripId</code>.</li>
+<li>WebSocket subscribe to <code>trip/{tripId}/updates</code> channel.</li>
+<li>Server pushes <code>DriverLocationUpdate</code>, <code>EtaUpdate</code>, <code>TripStatusChange</code> events.</li>
+<li><code>TripRepository.handleTripEvent(event)</code> → updates <code>StateFlow&lt;TripState&gt;</code> → ViewModel</li>
+</ol>
+<p>observes → UI re-renders map marker + ETA.</p>
+<ol>
+<li>Driver location: smooth marker animation using <code>ObjectAnimator</code> on <code>LatLng</code> (ValueAnimator</li>
+</ol>
+<p>interpolating between last position and new position over 1s).</p>
+<p><strong>Offline Strategy</strong></p>
+<ul>
+<li>Active trip: if connection drops, display last known driver location with &quot;Reconnecting...&quot;</li>
+</ul>
+<p>overlay. Reconnect loop with back-off.</p>
+<ul>
+<li>On reconnect: REST poll for current trip state to reconcile with missed WebSocket events.</li>
+<li>App backgrounded during trip: use a <code>ForegroundService</code> with a persistent notification</li>
+</ul>
+<p>showing driver ETA. The service keeps the WebSocket alive.</p>
+<ul>
+<li>Historical trips: fully cached in Room; always available offline.</li>
+</ul>
+<p><strong>Error Handling</strong></p>
+<ul>
+<li>Trip match timeout: &quot;No drivers available. Try again?&quot; after 120s.</li>
+<li>WebSocket disconnect: automatic reconnect with exponential back-off; foreground service</li>
+</ul>
+<p>prevents process death.</p>
+<ul>
+<li>GPS unavailability: fall back to network location; show &quot;Low accuracy&quot; indicator.</li>
+<li>Fare dispute: local trip data (start time, route, distance) stored in Room for reference.</li>
+</ul>
+<p><strong>Threading</strong></p>
+<ul>
+<li>WebSocket messages on IO dispatcher.</li>
+<li>Map rendering happens on main thread (Google Maps SDK requirement).</li>
+<li>FusedLocationProviderClient callbacks on main thread → post to IO for processing.</li>
+<li>Marker animation: <code>ObjectAnimator</code> on main thread (required).</li>
+</ul>
+<p><strong>Caching</strong></p>
+<ul>
+<li>Current trip state persisted to Room (in case of process death + restore).</li>
+<li>Map tiles: Google Maps SDK handles tile caching internally.</li>
+<li>Driver profile/photo: Coil disk cache.</li>
+<li>Route polyline: stored in Room as encoded polyline string for process restore.</li>
+</ul>
+<p><strong>Security</strong></p>
+<ul>
+<li>Trip ID is a server-generated UUID; not guessable.</li>
+<li>Location data sent to server only when user has an active trip (not background always-on).</li>
+<li>Driver/passenger location shared only with each other during active trip.</li>
+<li>Payment: same PCI approach as payments flow.</li>
+</ul>
+<p><strong>Performance</strong></p>
+<ul>
+<li>Driver location updates at 1Hz; map marker animation fills in the gap between updates.</li>
+<li>Reduce map re-renders: only call <code>marker.position = newLatLng</code> when distance &gt; 10m.</li>
+<li>Route polyline: use encoded polyline format; decode on device.</li>
+<li>Minimize WebSocket frame size: use binary encoding (protobuf) for location updates.</li>
+</ul>
+<p><strong>Testing</strong></p>
+<ul>
+<li><code>TripRepository</code> unit tested with fake WebSocket client, verify state transitions.</li>
+<li><code>TripViewModel</code> unit tested: every state transition scenario.</li>
+<li>Location smoothing algorithm unit tested with known coordinate sequences.</li>
+<li>Integration test: mock WebSocket server, simulate trip from request to completion.</li>
+</ul>
+<p><strong>Monitoring</strong></p>
+<ul>
+<li>WebSocket connection uptime per active trip (target &gt; 99%).</li>
+<li>Location update latency (time from driver device to rider screen).</li>
+<li>Trip state consistency (detect cases where UI state diverges from server state).</li>
+<li>Foreground service kill rate (canary for battery optimization issues).</li>
+</ul>
+<p><strong>Rollout</strong></p>
+<ul>
+<li>Test on diverse device set (budget Android, Android 8-14) — foreground service behavior</li>
+</ul>
+<p>varies by OEM.</p>
+<ul>
+<li>Battery impact monitoring via device profiling in beta.</li>
+</ul>
+<hr>
+<h4 id="large-e-commerce-app">Large E-Commerce App</h4>
+<p><strong>Scenario:</strong> Design an Android app for a large e-commerce platform (Amazon/eBay scale). Catalog browsing, search, product detail, cart, checkout, order tracking.</p>
+<hr>
+<p><strong>Architecture</strong></p>
+<p>Multi-module, feature-first. Each feature is a Gradle module with its own ViewModel, Repository, and UI. Shared infrastructure (network, DB, auth, analytics) in <code>:core</code> modules. App module wires DI. Bottom navigation drives top-level feature switching.</p>
+<p><strong>Modules</strong></p>
+<pre><code>:app                    — Activity, NavGraph, DI component
+:feature:home           — personalized home feed
+:feature:search         — search, filters, SERP
+:feature:pdp            — product detail page
+:feature:cart           — cart management
+:feature:checkout       — checkout flow (address, payment, confirmation)
+:feature:orders         — order list + tracking
+:feature:account        — profile, saved addresses, payment methods
+:data:catalog           — CatalogRepository (REST + Room)
+:data:cart              — CartRepository (Room only, server-synced on session start)
+:data:orders            — OrderRepository
+:data:user              — UserRepository, AuthManager
+:core:network           — OkHttp, Retrofit, interceptors, token refresh
+:core:db                — Room DB, type converters
+:core:analytics         — FEM/analytics event tracking
+:core:ui                — MezzanineTheme, shared composables
+:core:ab                — A/B flag wrapper</code></pre>
+<p><strong>State Management</strong></p>
+<ul>
+<li>Cart: <code>CartViewModel</code> is a process-scoped singleton (via <code>@ActivityRetainedScoped</code> or a</li>
+</ul>
+<p><code>Application</code>-level singleton) — the cart badge must be consistent across all features.</p>
+<ul>
+<li>Each feature screen has its own scoped ViewModel.</li>
+<li><code>UiState</code> sealed classes per screen. <code>SharedFlow&lt;UiEvent&gt;</code> for one-time effects (navigation,</li>
+</ul>
+<p>toasts).</p>
+<p><strong>Data Flow</strong></p>
+<ul>
+<li>Catalog: REST → Room cache → ViewModel. TTL-based invalidation.</li>
+<li>Cart: local Room as source of truth. Server sync on session open and on checkout. Conflict</li>
+</ul>
+<p>resolution: last-write-wins for quantity changes.</p>
+<ul>
+<li>Checkout: no local state — each step calls REST (address validate, payment tokenize, order</li>
+</ul>
+<p>submit). Idempotency keys for order submission.</p>
+<ul>
+<li>Order tracking: WebSocket for live status; REST for history.</li>
+</ul>
+<p><strong>Offline Strategy</strong></p>
+<ul>
+<li>Browse catalog: served from Room if freshness window allows.</li>
+<li>Cart: always readable offline (Room). Sync queued for connectivity restore.</li>
+<li>Checkout: requires connectivity (no offline checkout).</li>
+<li>Search: no offline (always live).</li>
+<li>Saved items / wishlist: Room-backed, fully offline.</li>
+</ul>
+<p><strong>Error Handling</strong></p>
+<ul>
+<li>Add to cart failure: optimistic local insert, server sync in background; rollback on server</li>
+</ul>
+<p>reject (e.g., item out of stock).</p>
+<ul>
+<li>Checkout failure: show specific error (address invalid, card declined, out of stock at time</li>
+</ul>
+<p>of checkout). Never double-submit (idempotency key).</p>
+<ul>
+<li>Product unavailable: redirect from PDP to &quot;Item no longer available&quot; screen.</li>
+<li>Search failure: show last cached results with staleness indicator.</li>
+</ul>
+<p><strong>Threading</strong></p>
+<ul>
+<li>All network and DB on <code>Dispatchers.IO</code>.</li>
+<li>Image decoding on <code>Dispatchers.Default</code>.</li>
+<li>Main thread only for UI.</li>
+<li>Use <code>supervisorScope</code> in ViewModel so one parallel fetch failing doesn&#x27;t cancel siblings.</li>
+</ul>
+<p><strong>Caching</strong></p>
+<ul>
+<li>Product images: CDN-served, Coil disk cache (100 MB).</li>
+<li>Product metadata: Room with TTL (price changes frequently — 15-min TTL; description — 24 hours).</li>
+<li>Search results: in-memory cache (last 5 queries, 5-min TTL).</li>
+<li>Cart: Room, always fresh locally.</li>
+<li>Home feed: Room with TTL-based refresh.</li>
+</ul>
+<p><strong>Security</strong></p>
+<ul>
+<li>Auth: OAuth2 + token refresh via Authenticator interceptor. Tokens in EncryptedSharedPreferences.</li>
+<li>Payment data: never stored, handled via PCI-compliant tokenization SDK.</li>
+<li>Deep link validation: all incoming deep links validated against known URL patterns before</li>
+</ul>
+<p>navigation.</p>
+<ul>
+<li>Certificate pinning on all first-party API endpoints.</li>
+</ul>
+<p><strong>Performance</strong></p>
+<ul>
+<li>PDP images: lazy-load below fold; preload primary image.</li>
+<li>SERP: <code>LazyColumn</code> + <code>Pager</code>; 20 items per page.</li>
+<li>Price and inventory freshness: poll on PDP appear (not on navigate, use <code>ON_RESUME</code> check).</li>
+<li>App startup: defer non-critical initializations (analytics, AB config) behind <code>App.onCreate()</code></li>
+</ul>
+<p>via <code>Initializer</code> with dependency ordering.</p>
+<ul>
+<li>Baseline profile for critical flows (home, SERP, PDP, checkout).</li>
+</ul>
+<p><strong>Testing</strong></p>
+<ul>
+<li>Each module tested in isolation (feature module does not depend on other feature modules).</li>
+<li>Integration: full checkout flow tested with mock API server.</li>
+<li>Performance: Macrobenchmark for startup and SERP scroll.</li>
+<li>Visual regression: screenshot tests for PDP and cart with Percy.</li>
+</ul>
+<p><strong>Monitoring</strong></p>
+<ul>
+<li>Add-to-cart success rate.</li>
+<li>Checkout funnel drop-off per step.</li>
+<li>Search latency p95.</li>
+<li>Home feed load time.</li>
+<li>Crash-free sessions (target &gt; 99.9%).</li>
+<li>ANR rate (target &lt; 0.1%).</li>
+</ul>
+<p><strong>Rollout</strong></p>
+<ul>
+<li>Feature flags on every major new feature.</li>
+<li>Checkout changes: dark launch with shadow traffic; compare order success rates.</li>
+<li>Performance changes: Macrobenchmark CI gate; reject PRs that regress startup by &gt; 5%.</li>
+</ul>
+<hr>
+<h4 id="modular-super-app">Modular Super-App</h4>
+<p><strong>Scenario:</strong> Design an Android super-app (WeChat/Grab style) where multiple mini-apps or feature verticals live in one host app. Multiple teams, independent deployment where possible.</p>
+<hr>
+<p><strong>Architecture</strong></p>
+<p>Dynamic Feature Modules (DFMs) for feature verticals. A central <code>:core:navigation</code> module defines the navigation contract (<code>DeepLinkHandler</code>, <code>FeatureLauncher</code>). Features communicate only through this contract, never by direct dependency.</p>
+<pre><code>:app (host)
+   ├── :feature:payments (DFM)
+   ├── :feature:food-delivery (DFM)
+   ├── :feature:ride (DFM)
+   ├── :feature:health (DFM)
+   ├── :core:navigation          — NavRouter, FeatureLauncher interface
+   ├── :core:auth                — shared session, login
+   ├── :core:analytics           — shared analytics
+   ├── :core:network             — shared OkHttp, token handling
+   ├── :core:db                  — shared Room DB (multi-module entities)
+   ├── :core:design              — shared Compose design system
+   └── :core:di                  — DI entry points per feature</code></pre>
+<p><strong>Module Communication</strong></p>
+<ul>
+<li>Features do NOT import each other. Communication through:</li>
+<ol>
+<li><strong>Navigation:</strong> <code>FeatureLauncher.launch(FeatureRoute.Food.Menu)</code> — registered at runtime.</li>
+<li><strong>Shared data:</strong> via shared <code>:core:data</code> repositories (user, session, cart).</li>
+<li><strong>Events:</strong> <code>AppEventBus</code> (in <code>:core:events</code>) for loose coupling (e.g., user logged out →</li>
+</ol>
+</ul>
+<p>all features clear local state).</p>
+<ul>
+<li>No circular dependencies enforced by Gradle build rules (+ Dependency Guard plugin).</li>
+</ul>
+<p><strong>State Management</strong></p>
+<ul>
+<li>Per-feature: each DFM has its own ViewModel graph.</li>
+<li>Cross-feature: <code>AppSessionState</code> in <code>:core:auth</code> holds user identity, accessible by all.</li>
+<li>Cart: <code>CrossFeatureCartRepository</code> in <code>:core:data</code> (e.g., food + grocery share a cart concept).</li>
+</ul>
+<p><strong>Multi-Team Workflow</strong></p>
+<ul>
+<li>Each team owns one or more DFMs.</li>
+<li>Shared modules (<code>:core:*</code>) have a designated platform team as owners; changes require review</li>
+</ul>
+<p>from that team.</p>
+<ul>
+<li>API contracts between modules defined as interfaces in <code>:api:*</code> modules; implementations in</li>
+</ul>
+<p><code>:impl:*</code> modules. Teams program to interfaces.</p>
+<ul>
+<li>Dependency Guard enforces that <code>:feature:A</code> cannot depend on <code>:feature:B</code> transitively.</li>
+</ul>
+<p><strong>Offline Strategy</strong></p>
+<p>Each DFM defines its own offline policy. Platform team provides:</p>
+<ul>
+<li><code>NetworkMonitor</code> in <code>:core:network</code>.</li>
+<li>Standard <code>BaseSyncWorker</code> in <code>:core:sync</code>.</li>
+<li>Room DB scaffolding in <code>:core:db</code>.</li>
+</ul>
+<p>Teams adopt the standard or document their deviation.</p>
+<p><strong>Error Handling</strong></p>
+<ul>
+<li>DFM install failure: show &quot;Feature unavailable, please update the app&quot; dialog; fall back</li>
+</ul>
+<p>gracefully.</p>
+<ul>
+<li>Cross-feature navigation failure: <code>FeatureLauncher</code> returns an error; host shows error screen.</li>
+<li>Auth expiry: <code>AppEventBus.emit(Event.AuthExpired)</code> → all features clear state → host launches</li>
+</ul>
+<p>login flow.</p>
+<p><strong>Threading</strong></p>
+<ul>
+<li>Shared <code>CoroutineDispatchers</code> instance provided by <code>:core:di</code> — ensures consistent dispatcher</li>
+</ul>
+<p>configuration and easy swapping in tests.</p>
+<p><strong>Security</strong></p>
+<ul>
+<li>Each DFM declares permissions it needs; host enforces at install time.</li>
+<li>Feature isolation: each DFM&#x27;s sensitive data lives in its own namespace within the shared Room DB</li>
+</ul>
+<p>(table prefix, separate encrypted keys per feature if needed).</p>
+<ul>
+<li>DFM signature verification before install (Play DFM handles this; for sideloaded builds, verify</li>
+</ul>
+<p>manually).</p>
+<p><strong>Performance</strong></p>
+<ul>
+<li>DFM download on demand: only when user first navigates to that feature.</li>
+<li>Baseline profile covers the host shell + most common feature (e.g., ride, food).</li>
+<li>Startup: only <code>:core:*</code> initialized at startup; feature-specific init deferred to first use.</li>
+</ul>
+<p><strong>Testing</strong></p>
+<ul>
+<li>Each DFM tested in isolation via its own test module.</li>
+<li>Contract tests: <code>:api:*</code> interfaces tested with a standard compliance suite all implementations</li>
+</ul>
+<p>must pass.</p>
+<ul>
+<li>Integration: test harness <code>FakeFeatureLauncher</code> for host-feature integration tests.</li>
+<li>Lint checks for cross-module import violations.</li>
+</ul>
+<p><strong>Monitoring</strong></p>
+<ul>
+<li>DFM install success rate per feature.</li>
+<li>Cross-feature navigation latency.</li>
+<li>Per-feature crash-free session rate (segmented by DFM version).</li>
+</ul>
+<p><strong>Rollout</strong></p>
+<ul>
+<li>Each DFM has its own version code. Teams can ship DFM updates via Play without full app release.</li>
+<li>Feature flags in <code>:core:ab</code> enable/disable features in the host&#x27;s navigation registry without</li>
+</ul>
+<p>a code change.</p>
+<hr>
+<h4 id="real-time-collaborative-app">Real-Time Collaborative App</h4>
+<p><strong>Scenario:</strong> Design a real-time collaborative editing app (Google Docs/Figma style). Multiple users editing a shared document simultaneously on Android.</p>
+<hr>
+<p><strong>Architecture</strong></p>
+<p>MVVM + event sourcing. The document is represented as a sequence of operations (OT or CRDT). Local operations are applied immediately (optimistic), sent to server, and server broadcasts merged operations to all clients.</p>
+<p><strong>Modules</strong></p>
+<pre><code>:feature:editor         — EditorScreen, EditorViewModel, Compose rich text editor
+:data:document          — DocumentRepository, OperationQueue, WebSocket channel
+:domain:collab          — Operation, Document, ConflictResolver (OT/CRDT logic)
+:core:realtime          — WebSocketClient, ReconnectManager
+:core:presence          — CollaboratorPresence (cursors, selection state)</code></pre>
+<p><strong>State Management</strong></p>
+<p><code>EditorViewModel</code> exposes:</p>
+<ul>
+<li><code>documentState: StateFlow&lt;DocumentContent&gt;</code> — the current rendered content.</li>
+<li><code>collaborators: StateFlow&lt;List&lt;CollaboratorPresence&gt;&gt;</code> — other users&#x27; cursors.</li>
+<li><code>syncState: StateFlow&lt;SyncState&gt;</code> (SYNCED / PENDING / CONFLICTED / OFFLINE).</li>
+</ul>
+<p><strong>Data Flow</strong></p>
+<ol>
+<li>User makes edit → <code>LocalOperation</code> created → applied to local document immediately (optimistic</li>
+</ol>
+<p>→ <code>documentState</code> updates) → enqueued in <code>OperationQueue</code>.</p>
+<ol>
+<li><code>OperationQueue.flush()</code> sends operations over WebSocket.</li>
+<li>Server applies OT/CRDT, broadcasts merged operation to all clients.</li>
+<li>Remote operation received → <code>ConflictResolver.transform(localPending, remoteOp)</code> → apply to</li>
+</ol>
+<p>local document → update state.</p>
+<ol>
+<li>On full sync (reconnect): fetch full document snapshot from REST; replay pending local ops on top.</li>
+</ol>
+<p><strong>Offline Strategy</strong></p>
+<ul>
+<li>Continue editing offline; operations buffered in <code>OperationQueue</code> (Room-backed for persistence</li>
+</ul>
+<p>across process death).</p>
+<ul>
+<li>On reconnect: send buffered operations in order with version vector for server-side OT.</li>
+<li>Show &quot;Editing offline&quot; badge; other collaborators&#x27; changes not visible until reconnect.</li>
+</ul>
+<p><strong>Error Handling</strong></p>
+<ul>
+<li>Conflict resolution failure: fall back to &quot;last write wins&quot; at field granularity with a toast</li>
+</ul>
+<p>&quot;Some of your changes may have been overridden.&quot;</p>
+<ul>
+<li>Persistent sync failure: prompt user to save a local copy and try again.</li>
+<li>WebSocket disconnect: foreground service keeps connection alive while editing; app background</li>
+</ul>
+<p>pauses collaboration session after 30s.</p>
+<p><strong>Threading</strong></p>
+<ul>
+<li>WebSocket on IO dispatcher.</li>
+<li>OT/CRDT conflict resolution on <code>Dispatchers.Default</code> (CPU-bound).</li>
+<li>UI updates on <code>Dispatchers.Main</code>.</li>
+<li>Operations are sequential (use <code>Channel</code> with <code>UNLIMITED</code> capacity to serialize them).</li>
+</ul>
+<p><strong>Caching</strong></p>
+<ul>
+<li>Document snapshots: Room. Fetch on first open; subsequent opens use local + delta sync.</li>
+<li>Collaborator presence: in-memory only (ephemeral).</li>
+</ul>
+<p><strong>Security</strong></p>
+<ul>
+<li>Document access control enforced server-side; client trusts server&#x27;s rejection.</li>
+<li>Operations signed with session token to prevent forgery.</li>
+<li>End-to-end encryption option for private documents (keys exchanged out-of-band).</li>
+</ul>
+<p><strong>Performance</strong></p>
+<ul>
+<li>Rich text rendering: avoid re-rendering unchanged paragraphs. Use Compose <code>key {}</code> at paragraph</li>
+</ul>
+<p>level.</p>
+<ul>
+<li>Presence cursors: debounce cursor position sends (50ms) to reduce WebSocket traffic.</li>
+<li>Operation batch: batch up to 10 ops or 100ms into one WebSocket frame.</li>
+</ul>
+<p><strong>Testing</strong></p>
+<ul>
+<li><code>ConflictResolver</code> unit tested extensively with known OT scenarios (concurrent inserts, deletes,</li>
+</ul>
+<p>reorders).</p>
+<ul>
+<li><code>OperationQueue</code> tested for correct ordering and replay behavior.</li>
+<li>Integration test: two <code>DocumentRepository</code> instances on a fake WebSocket server, verify eventual</li>
+</ul>
+<p>consistency.</p>
+<p><strong>Monitoring</strong></p>
+<ul>
+<li>Operation round-trip time (client send → server broadcast → client receive).</li>
+<li>Conflict resolution rate.</li>
+<li>Sync failure rate.</li>
+<li>Presence latency (cursor position latency).</li>
+</ul>
+<p><strong>Rollout</strong></p>
+<ul>
+<li>Beta with controlled set of collaborative documents.</li>
+<li>Monitor conflict rate; high conflict rate may indicate OT implementation bugs.</li>
+</ul>
+<hr>
+<h4 id="sdk-used-by-many-apps">SDK Used by Many Apps</h4>
+<p><strong>Scenario:</strong> You are designing an Android SDK that will be embedded in dozens of third-party apps. The SDK provides analytics, identity, or feature-flag capabilities.</p>
+<hr>
+<p><strong>Architecture</strong></p>
+<p>The SDK is a library module (AAR). It must have zero opinion about the host app&#x27;s architecture. No forced DI framework. Minimal transitive dependencies. Exposes a simple public API surface.</p>
+<p><strong>Design Principles</strong></p>
+<ol>
+<li><strong>No forced dependencies:</strong> Do not pull in Hilt, Dagger, or large libraries. Use manual DI</li>
+</ol>
+<p>internally. If using OkHttp, shade it (jarjar) or make it optional.</p>
+<ol>
+<li><strong>Single entry point:</strong> <code>MySDK.init(context, config)</code> — one call to start.</li>
+<li><strong>Thread-safe:</strong> All public methods safe to call from any thread. Internally uses a</li>
+</ol>
+<p>dedicated <code>CoroutineScope(SupervisorJob() + Dispatchers.IO)</code> that the host can optionally replace.</p>
+<ol>
+<li><strong>No crash propagation:</strong> Catch all exceptions internally; never let SDK bugs crash the host app.</li>
+</ol>
+<p>Log internally, report to own backend silently.</p>
+<ol>
+<li><strong>Minimal permissions:</strong> Only request permissions the SDK absolutely needs; document them.</li>
+<li><strong>ProGuard-friendly:</strong> Ship a <code>proguard-rules.pro</code> file. Annotate public API with <code>@Keep</code>.</li>
+<li><strong>Small binary size:</strong> Every KB counts when embedding in a host app. Use R8 full-mode.</li>
+</ol>
+<p><strong>Modules (internal)</strong></p>
+<pre><code>sdk-api/          — public interfaces + data classes (no implementation)
+sdk-core/         — SdkCore, initialization, config
+sdk-network/      — SdkHttpClient (shaded OkHttp or HttpURLConnection)
+sdk-storage/      — SdkPreferences, SdkDatabase (scoped, named with SDK prefix)
+sdk-analytics/    — event batching, flush scheduler</code></pre>
+<p><strong>Public API Surface</strong></p>
+<pre><code>// Keep it minimal. Every method added is API debt.
+object MySDK {
+    fun init(context: Context, apiKey: String, config: SdkConfig = SdkConfig())
+    fun logEvent(name: String, properties: Map&lt;String, Any&gt; = emptyMap())
+    fun identify(userId: String)
+    fun reset()
+    fun setLogLevel(level: SdkLogLevel) // debug only
+}</code></pre>
+<p><strong>State Management</strong></p>
+<p>SDK maintains internal state in a thread-safe <code>AtomicReference&lt;SdkState&gt;</code>. Public state is exposed via a simple callback interface (not Kotlin Flow — host apps may be Java or non-coroutine).</p>
+<p><strong>Data Flow</strong></p>
+<ol>
+<li>Host calls <code>logEvent()</code> → event queued in in-memory <code>CircularBuffer</code>.</li>
+<li>Flush triggered by: buffer full (100 events), time interval (30s), app going to background.</li>
+<li>Flush sends batched events to SDK backend via HTTP POST with retry.</li>
+<li>On failure: events persisted to <code>SdkDatabase</code> (Room, SDK-namespaced); retried next flush.</li>
+</ol>
+<p><strong>Offline Strategy</strong></p>
+<p>All events queued in Room until connectivity available. <code>WorkManager</code> optional (do not force it). SDK can use <code>ConnectivityManager</code> and schedule its own flush on network available via <code>ConnectivityManager.registerNetworkCallback</code>.</p>
+<p><strong>Error Handling</strong></p>
+<ul>
+<li>Wrap every public method in try/catch; log internally; never throw to caller.</li>
+<li>If initialization fails (e.g., invalid API key), put SDK in NO-OP mode — all calls are safe</li>
+</ul>
+<p>no-ops. Never crash.</p>
+<ul>
+<li>If backend rejects events (400): drop them (don&#x27;t fill up disk). If 500: retry.</li>
+</ul>
+<p><strong>Security</strong></p>
+<ul>
+<li>API key validated on backend; not embedded in SDK binary.</li>
+<li>Event data: no PII by default; document clearly what the SDK collects.</li>
+<li>Certificate pinning: opt-in only (host apps may have their own pinning; forcing SDK pinning</li>
+</ul>
+<p>causes conflicts).</p>
+<ul>
+<li>No reflection access into host app.</li>
+</ul>
+<p><strong>Performance</strong></p>
+<ul>
+<li>SDK startup: &lt; 10ms in <code>init()</code>. No network calls in <code>init()</code>. Defer all I/O.</li>
+<li>Event logging: &lt; 1ms per call (just a queue append).</li>
+<li>Flush on IO thread; never block the calling thread.</li>
+<li>SDK memory: &lt; 5 MB RSS overhead.</li>
+<li>No <code>StrictMode</code> violations in <code>init()</code>.</li>
+</ul>
+<p><strong>Testing</strong></p>
+<ul>
+<li>SDK tested as a standalone module (no host app in tests).</li>
+<li>Unit tests for event queuing, batching, flush logic.</li>
+<li>Integration tests against a mock HTTP server.</li>
+<li>Compatibility test matrix: API 21–34, AGP versions, Kotlin/Java host apps.</li>
+<li>Binary size test: fail build if AAR exceeds size budget.</li>
+</ul>
+<p><strong>Monitoring (SDK&#x27;s own telemetry)</strong></p>
+<ul>
+<li>SDK health endpoint: reports SDK version, init success rate, event delivery rate.</li>
+<li>SDK crash reporting: SDK-internal Sentry project (separate from host&#x27;s Sentry).</li>
+</ul>
+<p><strong>Rollout</strong></p>
+<ul>
+<li>Semantic versioning. MAJOR version for breaking public API changes.</li>
+<li>Changelog for every release.</li>
+<li>Minimum 30-day deprecation notice before removing public API.</li>
+<li>Ship beta releases (<code>1.2.0-beta01</code>) for host app partners to validate before stable release.</li>
+<li>Provide a migration guide for every MAJOR version bump.</li>
+</ul>
+<hr>
+<h4 id="multi-process-app">Multi-Process App</h4>
+<p><strong>Scenario:</strong> Design an Android app that uses multiple processes — e.g., an app with a persistent background service (music player, VPN, location tracker) that must survive the main process being killed.</p>
+<hr>
+<p><strong>Architecture</strong></p>
+<p>Main process: UI + ViewModel + normal app logic. Service process (<code>:remote</code>): foreground service owning the long-running operation. Communication via AIDL (for structured IPC) or Messenger (for simple message passing). Alternatively, broadcast intents for fire-and-forget signaling.</p>
+<p><strong>When Multi-Process is Warranted</strong></p>
+<ul>
+<li>The background operation must outlive the UI process.</li>
+<li>The operation uses significant memory and you want the OS to manage its lifecycle separately</li>
+</ul>
+<p>(lower OOM priority for the service process).</p>
+<ul>
+<li>You are implementing an accessibility service, input method, or VPN — which Android mandates</li>
+</ul>
+<p>run in separate processes.</p>
+<p><strong>Modules</strong></p>
+<pre><code>:app                    — UI, main process
+:service                — MusicPlayerService (separate process), foreground notification
+:ipc-api                — AIDL interfaces, Parcelable data classes (shared by both processes)
+:core:notification      — NotificationBuilder (used by service process)</code></pre>
+<p><strong>State Management</strong></p>
+<ul>
+<li>Service process owns the authoritative state (e.g., <code>PlaybackState</code>).</li>
+<li>UI process subscribes to state changes via AIDL callback interface.</li>
+<li><code>PlaybackServiceConnection</code> in the UI process wraps <code>ServiceConnection</code> and exposes a</li>
+</ul>
+<p><code>StateFlow&lt;PlaybackState&gt;</code> by bridging AIDL callbacks to coroutine channels.</p>
+<p><strong>IPC Data Flow</strong></p>
+<pre><code>UI Process                     Service Process
+PlaybackControls               MusicPlayerService
+   │ AIDL call (play/pause)         │
+   └──────────────────────────────► │
+                                    │ updates state
+   ◄────────────────────────────────┘
+   AIDL callback (PlaybackStateChanged)</code></pre>
+<p><strong>Offline Strategy</strong></p>
+<p>The service process does not depend on network for playback of downloaded content. Network for streaming handled within the service process independently.</p>
+<p><strong>Error Handling</strong></p>
+<ul>
+<li>Service process crash: <code>ServiceConnection.onServiceDisconnected()</code> fires → UI shows</li>
+</ul>
+<p>&quot;Service disconnected, reconnecting...&quot; → rebind with exponential back-off.</p>
+<ul>
+<li>AIDL <code>RemoteException</code>: wrap all AIDL calls in try/catch. <code>RemoteException</code> = binder dead.</li>
+</ul>
+<p>Trigger reconnect.</p>
+<ul>
+<li>Process OOM kill of UI while service alive: service continues playing; notification controls</li>
+</ul>
+<p>remain functional.</p>
+<p><strong>Threading</strong></p>
+<ul>
+<li>AIDL binder callbacks arrive on a binder thread pool (not main thread). Marshal to main thread</li>
+</ul>
+<p>or appropriate dispatcher before UI updates.</p>
+<ul>
+<li>Service process: <code>Dispatchers.IO</code> for all I/O, <code>Dispatchers.Main</code> for <code>Service</code> lifecycle</li>
+</ul>
+<p>methods.</p>
+<p><strong>Caching</strong></p>
+<ul>
+<li>Shared data between processes: do NOT use in-memory cache (separate heap). Use:</li>
+<ul>
+<li><code>ContentProvider</code> for structured data.</li>
+<li><code>SharedPreferences</code> (multi-process mode is deprecated; prefer a DB-backed ContentProvider</li>
+</ul>
+</ul>
+<p>or AIDL for live state).</p>
+<ul>
+<li>Room with <code>WRITE_AHEAD_LOGGING</code> mode (WAL) is safe for multi-process read (one writer, many</li>
+</ul>
+<p>readers).</p>
+<p><strong>Security</strong></p>
+<ul>
+<li>AIDL service should check caller&#x27;s UID (<code>Binder.getCallingUid()</code>) to reject unauthorized clients.</li>
+<li>Use <code>android:process</code> to set a custom process name; the process has the same UID as the app</li>
+</ul>
+<p>(unless using <code>sharedUserId</code> which is deprecated).</p>
+<ul>
+<li>Parcelable data: validate all incoming Parcelable data in the service process (treat as</li>
+</ul>
+<p>untrusted if the IPC is exposed to other apps).</p>
+<p><strong>Performance</strong></p>
+<ul>
+<li>Minimize IPC frequency: batch state updates rather than calling AIDL per frame.</li>
+<li>Large data (e.g., album art bitmap): do NOT pass through Binder (1 MB Binder transaction limit).</li>
+</ul>
+<p>Pass a URI; UI process loads separately.</p>
+<ul>
+<li>Service process memory: profile separately; it has its own heap.</li>
+</ul>
+<p><strong>Testing</strong></p>
+<ul>
+<li>AIDL interfaces tested with a mock binder in unit tests.</li>
+<li>Integration: instrumented test that binds to the service, sends commands, verifies state</li>
+</ul>
+<p>callbacks.</p>
+<ul>
+<li>Simulate UI process death while service is running; verify graceful recovery.</li>
+</ul>
+<p><strong>Monitoring</strong></p>
+<ul>
+<li>Binder transaction failure rate.</li>
+<li>Service crash rate (separate from UI crash rate).</li>
+<li><code>RemoteException</code> frequency.</li>
+<li>Service foreground notification persistence (OEM-specific issues).</li>
+</ul>
+<p><strong>Rollout</strong></p>
+<ul>
+<li>Foreground service behavior varies dramatically by OEM (Samsung, Xiaomi, Huawei kill services</li>
+</ul>
+<p>aggressively). Test on top 10 OEM device configurations before release.</p>
+<ul>
+<li>Gradual rollout; monitor service crash rate per device brand.</li>
+</ul>
+<hr>
+<h3 id="interview-angles--architecture">Interview Angles — Architecture</h3>
+<p><strong>&quot;Design a scalable Android app architecture&quot;</strong></p>
+<p>&quot;I&#x27;d anchor the whole thing on eight principles. First, feature modules with clear ownership boundaries — each team owns its module and you enforce that with Dependency Guard. Second, unidirectional data flow with MVVM or MVI, so the UI is purely a function of state and there are no hidden side-channel updates. Third, the Repository pattern as the single gatekeeper between data sources and business logic — the ViewModel never talks directly to the network or the database. Fourth, define contracts as interfaces between layers and depend on abstractions, not concretions, so you can swap implementations and test in isolation. Fifth, Compose with StateFlow for the UI layer — reactive and lifecycle-safe. Sixth, WorkManager for any background work that must complete reliably, even if the process is killed. Seventh, Baseline Profiles measured with Macrobenchmark so performance is a tracked metric, not a guess. And eighth, monitoring from day one: crash-free session rate, ANR rate, and the business metrics that actually matter for your feature.&quot;</p>
+<p><strong>&quot;How would you migrate legacy MVP to MVVM/Compose?&quot;</strong></p>
+<p>&quot;The approach is incremental, feature by feature — never rewrite everything at once. There are six steps. First, identify a small, well-tested screen as the pilot so you have a contained blast radius. Second, add a ViewModel alongside the existing Presenter and move the state there, keeping the Presenter delegating to the ViewModel temporarily so nothing breaks. Third, replace the Fragment&#x27;s XML with a Compose screen inside an <code>AndroidViewBinding</code> stub, then remove the stub once it&#x27;s stable. Fourth, retire the Presenter once the screen is fully ViewModel-driven — at that point it&#x27;s dead code. Fifth, measure code coverage, crash rate, and rendering frame times before and after per screen so you can prove the migration is paying off. And sixth, get team buy-in early with a concrete before/after comparison on the pilot screen — once they see the difference, the rest of the migration is much easier to drive.&quot;</p>
+<p><strong>&quot;How would you introduce modularization gradually?&quot;</strong></p>
+<p>&quot;I&#x27;d do it in six steps, ordered by risk and impact. First, extract the <code>:core</code> modules — networking, database, and UI tokens — because they have no upward dependencies and immediately unlock parallel builds for everything that depends on them. Second, start writing all new features as <code>:feature:X</code> modules from day one; no rework of existing code yet. Third, introduce Dependency Guard and module ownership rules so the new model is enforced automatically, not just by convention. Fourth, extract existing features one at a time, starting with the most isolated ones that touch the fewest shared files. Fifth, be deliberate about <code>api</code> versus <code>implementation</code> dependencies to prevent transitive leakage from bleeding your module boundaries. And sixth, measure build time at every step with Gradle build scans — if a module extraction doesn&#x27;t move the needle on compile scope, question whether it was worth the overhead.&quot;</p>
+<p><strong>&quot;How do you handle offline mode?&quot;</strong></p>
+<p>&quot;My framework has five pieces. First, Room as the single source of truth — the UI always reads from the local database, never directly from the network. Second, the Repository decides whether to serve local or remote data based on a freshness policy, so that decision is centralized and not scattered across the codebase. Third, a <code>NetworkMonitor</code> wrapping <code>ConnectivityManager</code> that exposes an <code>isOnline: StateFlow&lt;Boolean&gt;</code> in <code>:core:network</code>, so any component can react to connectivity changes. Fourth, WorkManager for background sync with a <code>NetworkType.CONNECTED</code> constraint, so writes queue up and flush automatically when connectivity returns. Fifth, the UI reflects sync state explicitly — SYNCED, STALE, or OFFLINE — so users always know what they&#x27;re looking at. And the one thing I always call out separately is conflict resolution, because the right strategy varies: for most data it&#x27;s last-write-wins, for collaborative data you need a merge strategy, and for some things you have to prompt the user.&quot;</p>
+<p><strong>&quot;How do you support multiple teams in the same codebase?&quot;</strong></p>
+<p>&quot;There are seven things I&#x27;d put in place. First, module ownership with <code>CODEOWNERS</code> so every module has a designated team responsible for it. Second, <code>:api</code> modules that define public contracts and <code>:impl</code> modules that are private to the owning team, so teams program to interfaces and never depend on each other&#x27;s internals. Third, no cross-feature direct dependencies — all cross-feature navigation goes through <code>:core:navigation</code>, which keeps features genuinely isolated. Fourth, shared infrastructure in <code>:core:*</code> owned by a platform team, with any changes requiring a platform team review. Fifth, the Dependency Guard plugin to automatically enforce that no circular or cross-feature imports sneak in. Sixth, module-level lint rules so each team can have their own code-style preferences without polluting the whole codebase. And seventh, parallel builds per feature module so teams aren&#x27;t blocking each other on the critical path at compile time.&quot;</p>
+<hr>
+<h2 id="152-trade-off-thinking">15.2 Trade-Off Thinking</h2>
+<p>For every comparison, run through the same five questions: what problem does it solve, what are the benefits, what are the costs, when would I use it, and when would I avoid it.</p>
+<hr>
+<h3 id="mvvm-vs-mvi">MVVM vs MVI</h3>
+<p><strong>MVVM (Model-View-ViewModel)</strong></p>
+<ol>
+<li><strong>Problem it solves:</strong> Separates UI rendering from business logic; ViewModel survives config changes.</li>
+<li><strong>Benefits:</strong></li>
+<ul>
+<li>Simpler mental model; most Android developers familiar with it.</li>
+<li>Less boilerplate for straightforward screens.</li>
+<li><code>StateFlow</code> + <code>SharedFlow</code> maps naturally to Compose.</li>
+<li>Well supported by Android Jetpack; <code>viewModels()</code> delegation, SavedStateHandle.</li>
+</ul>
+<li><strong>Costs:</strong></li>
+<ul>
+<li>Multiple state fields (separate <code>StateFlow</code>s) can get out of sync if not careful.</li>
+<li>Side effects (navigation, toasts) require extra <code>SharedFlow&lt;Event&gt;</code> pattern.</li>
+<li>Bidirectional data binding (if used with XML) causes hidden coupling.</li>
+</ul>
+<li><strong>When to use:</strong> Most CRUD screens, standard forms, list-detail flows. When team is familiar with MVVM and the feature complexity is low-to-medium.</li>
+<li><strong>When to avoid:</strong> Screens with complex, interdependent state where multiple events must be processed in strict order. Large screens where state fields proliferate and become hard to track.</li>
+</ol>
+<hr>
+<p><strong>MVI (Model-View-Intent)</strong></p>
+<ol>
+<li><strong>Problem it solves:</strong> Strict unidirectional data flow; all state changes are explicit and testable; time-travel debugging possible.</li>
+<li><strong>Benefits:</strong></li>
+<ul>
+<li>Single sealed <code>UiState</code> class — state is always consistent (no partial updates).</li>
+<li>All events are explicit <code>Intent</code>/<code>Action</code> objects — easy to log, replay, test.</li>
+<li>Reducer function is pure: <code>reduce(currentState, action) → newState</code>. Easy to unit test.</li>
+<li>Easier to reason about complex state machines (payments, multi-step flows).</li>
+</ul>
+<li><strong>Costs:</strong></li>
+<ul>
+<li>More boilerplate: <code>Intent</code> sealed class, <code>Reducer</code>, <code>Effect</code> channel.</li>
+<li>Slight learning curve for teams unfamiliar with the pattern.</li>
+<li>Can be over-engineering for simple screens.</li>
+</ul>
+<li><strong>When to use:</strong> Complex screens with many interdependent state fields; payment flows; multi-step wizards; collaborative editors; any feature that benefits from action logging/replay.</li>
+<li><strong>When to avoid:</strong> Simple screens (a list with a loading state). When team has no MVI experience and delivery timeline is short.</li>
+</ol>
+<p>The rule of thumb is: start with MVVM, and upgrade to MVI when the ViewModel becomes hard to reason about because multiple state fields are interacting with each other.</p>
+<hr>
+<h3 id="compose-vs-xml-views">Compose vs XML Views</h3>
+<p><strong>Compose</strong></p>
+<ol>
+<li><strong>Problem it solves:</strong> Declarative UI — UI is a function of state; no manual view synchronization.</li>
+<li><strong>Benefits:</strong></li>
+<ul>
+<li>Less boilerplate: no <code>ViewBinding</code>, no <code>notifyDataSetChanged()</code>.</li>
+<li>Animations and theming are first-class.</li>
+<li>Easier testing via Compose test APIs (<code>onNodeWithText</code>, <code>performClick</code>).</li>
+<li>Strong recomposition model — Compose only re-renders what changed.</li>
+<li>Single language (Kotlin) for both logic and UI.</li>
+</ul>
+<li><strong>Costs:</strong></li>
+<ul>
+<li>Learning curve for teams trained in XML.</li>
+<li>Compose compiler adds to build time.</li>
+<li>Some edge cases in performance require understanding recomposition (stability, <code>remember</code>, <code>derivedStateOf</code>).</li>
+<li>Interop with existing XML views adds complexity (but works via <code>AndroidView</code>/<code>ComposeView</code>).</li>
+</ul>
+<li><strong>When to use:</strong> All new screens. Teams building greenfield apps or migrating screen by screen.</li>
+<li><strong>When to avoid:</strong> Screens that use complex custom <code>View</code> subclasses not yet Compose-compatible; teams under tight deadline with no Compose experience; <code>SurfaceView</code>-based features (maps, cameras, video — use <code>AndroidView</code>).</li>
+</ol>
+<p><strong>XML Views</strong></p>
+<ol>
+<li><strong>Problem it solves:</strong> Standard declarative UI layout with view hierarchy inflated at runtime.</li>
+<li><strong>Benefits:</strong> Large existing ecosystem; every Android developer knows it. Mature tooling (Layout Inspector, Layout Editor).</li>
+<li><strong>Costs:</strong> Manual synchronization between UI and data model; boilerplate <code>ViewBinding</code>; adapter pattern required for lists; poor animation ergonomics.</li>
+<li><strong>When to use:</strong> Only when maintaining existing XML code or when a specific custom view is not yet Compose-portable.</li>
+<li><strong>When to avoid:</strong> Any new screen or feature.</li>
+</ol>
+<hr>
+<h3 id="room-vs-raw-sqlite">Room vs Raw SQLite</h3>
+<p><strong>Room</strong></p>
+<ol>
+<li><strong>Problem it solves:</strong> Type-safe compile-time verified SQL on Android without boilerplate.</li>
+<li><strong>Benefits:</strong></li>
+<ul>
+<li><code>@Entity</code>, <code>@Dao</code>, <code>@Query</code> — SQL verified at compile time, not runtime.</li>
+<li>Built-in coroutine and Flow support.</li>
+<li>Database migrations with <code>Migration</code> objects; version checked at open.</li>
+<li><code>@TypeConverter</code> for custom types.</li>
+<li>Easy to test with <code>in-memory Room DB</code>.</li>
+</ul>
+<li><strong>Costs:</strong></li>
+<ul>
+<li>Kapt/KSP annotation processing adds build time.</li>
+<li>Some complex SQL (window functions, CTEs) requires raw query workarounds.</li>
+<li>Adds ~200 KB to APK.</li>
+</ul>
+<li><strong>When to use:</strong> Almost always. Any structured local data storage in an Android app.</li>
+<li><strong>When to avoid:</strong> Extremely simple key-value storage (use <code>DataStore</code> instead). Embedding a database in an SDK where you want to minimize transitive dependencies. Apps that require complex SQL features Room doesn&#x27;t cleanly support (rare).</li>
+</ol>
+<p><strong>Raw SQLite</strong></p>
+<ol>
+<li><strong>Problem it solves:</strong> Direct low-level database access.</li>
+<li><strong>Benefits:</strong> No dependencies, no annotation processing.</li>
+<li><strong>Costs:</strong> No type safety, no compile-time query verification, manual cursor management, no built-in migration system, no reactive support.</li>
+<li><strong>When to use:</strong> SDK where pulling Room is unacceptable. Very simple use case (one table, five columns).</li>
+<li><strong>When to avoid:</strong> Any app with non-trivial data model.</li>
+</ol>
+<hr>
+<h3 id="workmanager-vs-foreground-service">WorkManager vs Foreground Service</h3>
+<p><strong>WorkManager</strong></p>
+<ol>
+<li><strong>Problem it solves:</strong> Guaranteed deferred background work that survives process death and device reboots.</li>
+<li><strong>Benefits:</strong></li>
+<ul>
+<li>Constraint-based scheduling (network, battery, storage).</li>
+<li>Chaining, parallelism, backoff built-in.</li>
+<li>Works across all Android versions (no doze/battery optimization issues).</li>
+<li>Progress observation via <code>WorkInfo</code> LiveData/Flow.</li>
+<li>Expedited work requests for near-immediate execution.</li>
+</ul>
+<li><strong>Costs:</strong></li>
+<ul>
+<li>Not for real-time or low-latency work (15-minute minimum interval for periodic).</li>
+<li>No user-visible progress notification built-in (you add it manually).</li>
+<li>Debugging scheduled work is harder (use <code>WorkManager.getWorkInfosForUniqueWork()</code>).</li>
+</ul>
+<li><strong>When to use:</strong> Uploads, syncs, cleanup jobs, notification scheduling, any work that must complete &quot;eventually&quot; but not immediately.</li>
+<li><strong>When to avoid:</strong> Work that needs to run immediately and continuously (use foreground service). Work where sub-second latency matters.</li>
+</ol>
+<p><strong>Foreground Service</strong></p>
+<ol>
+<li><strong>Problem it solves:</strong> Long-running operations that the user is aware of and that must not be interrupted.</li>
+<li><strong>Benefits:</strong></li>
+<ul>
+<li>Runs indefinitely while foregrounded (persistent notification).</li>
+<li>User-visible progress.</li>
+<li>Required for real-time operations (location, media playback, calls, downloads).</li>
+</ul>
+<li><strong>Costs:</strong></li>
+<ul>
+<li>Must show a persistent notification (Android 8+).</li>
+<li>Foreground service types required (Android 14+) — must declare type in manifest.</li>
+<li>OEM battery optimizations can kill even foreground services on some devices.</li>
+<li>More complex lifecycle management.</li>
+</ul>
+<li><strong>When to use:</strong> Music/podcast playback, navigation, ongoing call, real-time location tracking, file download/upload requiring user progress.</li>
+<li><strong>When to avoid:</strong> Short background tasks (use WorkManager or coroutines). Anything that doesn&#x27;t need to be running while the user is actively watching.</li>
+</ol>
+<hr>
+<h3 id="coroutines-vs-rxjava">Coroutines vs RxJava</h3>
+<p><strong>Coroutines</strong></p>
+<ol>
+<li><strong>Problem it solves:</strong> Asynchronous and concurrent programming without callback hell; structured concurrency.</li>
+<li><strong>Benefits:</strong></li>
+<ul>
+<li>Sequential-looking code for async operations (no nesting).</li>
+<li>Structured concurrency: <code>CoroutineScope</code> ties coroutine lifetime to component lifecycle.</li>
+<li>Cancellation propagates automatically.</li>
+<li>First-class Kotlin support: <code>suspend</code>, <code>async/await</code>, <code>Flow</code>.</li>
+<li>Smaller runtime overhead than RxJava.</li>
+<li>Official Google/Jetpack recommendation.</li>
+</ul>
+<li><strong>Costs:</strong></li>
+<ul>
+<li>Requires Kotlin. Java code cannot call <code>suspend</code> functions directly.</li>
+<li><code>Flow</code> is less feature-rich than RxJava Observable for exotic operators.</li>
+<li>Debugging: coroutine stack traces less readable (use <code>-Dkotlinx.coroutines.debug</code>).</li>
+</ul>
+<li><strong>When to use:</strong> All new async code. Any Kotlin codebase.</li>
+<li><strong>When to avoid:</strong> When the codebase is Java-only (use RxJava). When complex reactive pipelines use operators not in Flow (rarely true).</li>
+</ol>
+<p><strong>RxJava</strong></p>
+<ol>
+<li><strong>Problem it solves:</strong> Reactive programming model: compose streams of events with rich operators.</li>
+<li><strong>Benefits:</strong></li>
+<ul>
+<li>Rich operator set (<code>flatMap</code>, <code>zip</code>, <code>combineLatest</code>, <code>throttle</code>, etc.).</li>
+<li>Works in Java codebases.</li>
+<li>Mature ecosystem, large community.</li>
+</ul>
+<li><strong>Costs:</strong></li>
+<ul>
+<li>Steep learning curve.</li>
+<li>Verbose code.</li>
+<li>Easy to forget to dispose subscriptions → memory leaks.</li>
+<li>Heavier runtime than coroutines.</li>
+<li>No longer the Android-recommended approach.</li>
+</ul>
+<li><strong>When to use:</strong> Maintaining existing RxJava code. Java-only modules. Complex observable pipelines with operators that have no good coroutine equivalent.</li>
+<li><strong>When to avoid:</strong> All new Kotlin code. Any greenfield feature.</li>
+</ol>
+<hr>
+<h3 id="flow-vs-livedata">Flow vs LiveData</h3>
+<p><strong>Flow (StateFlow/SharedFlow)</strong></p>
+<ol>
+<li><strong>Problem it solves:</strong> Reactive data streams that integrate with coroutines and support backpressure.</li>
+<li><strong>Benefits:</strong></li>
+<ul>
+<li>Works outside Android (ViewModel, Repository, even pure Kotlin modules can use Flow).</li>
+<li>Richer operator set than LiveData (<code>map</code>, <code>filter</code>, <code>combine</code>, <code>flatMapLatest</code>, etc.).</li>
+<li><code>StateFlow</code> is always consistent (no &quot;missed emissions&quot; on config change).</li>
+<li>Better for UI layer with Compose (<code>collectAsStateWithLifecycle</code>).</li>
+<li>Testable with <code>turbine</code> library.</li>
+</ul>
+<li><strong>Costs:</strong></li>
+<ul>
+<li>Requires explicit lifecycle-aware collection (<code>repeatOnLifecycle</code> or <code>collectAsStateWithLifecycle</code>) — forgetting this leaks.</li>
+<li>No built-in null-value semantics for initial state (use a nullable or wrapper type).</li>
+</ul>
+<li><strong>When to use:</strong> All new code. Repository → ViewModel → UI data flow. Any stream that needs operators.</li>
+<li><strong>When to avoid:</strong> Very simple one-shot data that doesn&#x27;t change. Cases where LiveData lifecycle integration is already well-tested and working.</li>
+</ol>
+<p><strong>LiveData</strong></p>
+<ol>
+<li><strong>Problem it solves:</strong> Lifecycle-aware observable that automatically stops/resumes with the lifecycle owner.</li>
+<li><strong>Benefits:</strong></li>
+<ul>
+<li>Automatic lifecycle handling (no <code>repeatOnLifecycle</code> needed).</li>
+<li>Simple API.</li>
+</ul>
+<li><strong>Costs:</strong></li>
+<ul>
+<li>Main thread only (value is always posted to main thread).</li>
+<li>Weak operator set.</li>
+<li>Tied to Android framework (not usable in non-Android modules like <code>:domain:</code>).</li>
+<li><code>MediatorLiveData</code> is verbose compared to Flow operators.</li>
+</ul>
+<li><strong>When to use:</strong> Maintaining existing LiveData code.</li>
+<li><strong>When to avoid:</strong> All new code. Any code in domain/data layers (non-Android modules).</li>
+</ol>
+<hr>
+<h3 id="hilt-vs-manual-di">Hilt vs Manual DI</h3>
+<p><strong>Hilt</strong></p>
+<ol>
+<li><strong>Problem it solves:</strong> Boilerplate-free DI on Android using annotation-based code generation on top of Dagger 2.</li>
+<li><strong>Benefits:</strong></li>
+<ul>
+<li>Standard component hierarchy tied to Android lifecycle (Application, Activity, ViewModel, etc.).</li>
+<li>Less boilerplate than raw Dagger 2.</li>
+<li><code>@HiltViewModel</code> integrates ViewModel injection seamlessly.</li>
+<li>Good documentation and tooling.</li>
+<li>Testing support: <code>@HiltAndroidTest</code>, <code>@UninstallModules</code>.</li>
+</ul>
+<li><strong>Costs:</strong></li>
+<ul>
+<li>Build time: Hilt/Dagger annotation processing (KAPT/KSP) is the single largest build time contributor.</li>
+<li>Hard to use outside Android (not suitable for pure Kotlin SDK).</li>
+<li>Opaque compile errors when DI graph is incomplete.</li>
+</ul>
+<li><strong>When to use:</strong> All standard Android apps. Greenfield apps. When team is willing to invest in DI setup upfront.</li>
+<li><strong>When to avoid:</strong> SDKs (no framework dependency). Apps where build time is critical and team is small (consider Koin or manual DI). Apps targeting very low API levels where Hilt adds unexpected overhead.</li>
+</ol>
+<p><strong>Manual DI (Pure Kotlin)</strong></p>
+<ol>
+<li><strong>Problem it solves:</strong> Dependency injection without annotation processing — create factories and pass dependencies by hand.</li>
+<li><strong>Benefits:</strong></li>
+<ul>
+<li>Zero build time overhead.</li>
+<li>Works in any Kotlin/Java code (SDK, non-Android modules).</li>
+<li>No magic; easier to reason about.</li>
+</ul>
+<li><strong>Costs:</strong></li>
+<ul>
+<li>Boilerplate: factories, constructor call sites.</li>
+<li>Scope management is manual (you manage singleton vs scoped vs transient).</li>
+<li>Hard to maintain at scale (100+ classes).</li>
+</ul>
+<li><strong>When to use:</strong> SDKs. Small apps. Non-Android modules in a larger project.</li>
+<li><strong>When to avoid:</strong> Large apps with many injection points — the boilerplate becomes unmanageable.</li>
+</ol>
+<hr>
+<h3 id="monolith-vs-modular-architecture">Monolith vs Modular Architecture</h3>
+<p><strong>Monolith (Single App Module)</strong></p>
+<ol>
+<li><strong>Problem it solves:</strong> Simple app structure where all code lives in <code>:app</code>.</li>
+<li><strong>Benefits:</strong></li>
+<ul>
+<li>Simple setup; fast to get started.</li>
+<li>No inter-module dependency management.</li>
+<li>Single DI component graph.</li>
+</ul>
+<li><strong>Costs:</strong></li>
+<ul>
+<li>Build time: any change recompiles everything.</li>
+<li>No ownership boundaries — any team can modify any code.</li>
+<li>Harder to enforce clean architecture.</li>
+<li>Difficult to extract to modular later (becomes a big bang rewrite risk).</li>
+</ul>
+<li><strong>When to use:</strong> Small apps (1 team, &lt;5 engineers). Prototype/MVP. Short-lived apps.</li>
+<li><strong>When to avoid:</strong> Multi-team codebases. Apps that plan to grow. Apps where build time is already a concern.</li>
+</ol>
+<p><strong>Modular Architecture</strong></p>
+<ol>
+<li><strong>Problem it solves:</strong> Parallel builds, clean ownership boundaries, faster incremental compilation.</li>
+<li><strong>Benefits:</strong></li>
+<ul>
+<li>Build: only changed modules recompile.</li>
+<li>Ownership: teams own specific modules.</li>
+<li>Testability: modules tested in isolation.</li>
+<li>Enables dynamic feature modules.</li>
+<li>Enforces clean architecture (import rules).</li>
+</ul>
+<li><strong>Costs:</strong></li>
+<ul>
+<li>Complex Gradle setup.</li>
+<li>Inter-module communication needs explicit contracts (<code>:api</code> modules).</li>
+<li>Easy to make circular dependencies if not managed.</li>
+<li>Higher ramp-up for new engineers.</li>
+</ul>
+<li><strong>When to use:</strong> Any app with &gt; 2 teams. Any app targeting aggressive build time reduction. Any app planning DFMs.</li>
+<li><strong>When to avoid:</strong> Small teams where the overhead exceeds the benefit.</li>
+</ol>
+<hr>
+<h3 id="single-activity-vs-multiple-activities">Single Activity vs Multiple Activities</h3>
+<p><strong>Single Activity</strong></p>
+<ol>
+<li><strong>Problem it solves:</strong> One <code>Activity</code> hosts all screens; <code>NavController</code>/<code>NavHost</code> handles navigation within.</li>
+<li><strong>Benefits:</strong></li>
+<ul>
+<li>Shared ViewModel scope across the navigation graph.</li>
+<li>Smooth transitions (shared element, slide) across all screens.</li>
+<li>Single back stack managed by NavController.</li>
+<li>Less <code>Intent</code> boilerplate.</li>
+</ul>
+<li><strong>Costs:</strong></li>
+<ul>
+<li>Complex flows may need navigation sub-graphs.</li>
+<li>Shared ViewModels can become large if not decomposed.</li>
+<li>Screen state from deep in the graph may be complex to save/restore.</li>
+</ul>
+<li><strong>When to use:</strong> Linear, single-flow apps. Apps where cross-screen animation is important. Greenfield apps.</li>
+<li><strong>When to avoid:</strong> Super-apps where features are completely independent and should have separate task stacks. When entry points from external intents require different Activities for proper Android back-stack behavior.</li>
+</ol>
+<p><strong>Multiple Activities</strong></p>
+<ol>
+<li><strong>Problem it solves:</strong> Each flow or feature has its own Activity with its own task stack and lifecycle.</li>
+<li><strong>Benefits:</strong></li>
+<ul>
+<li>Proper Android task management (each Activity can be a task root).</li>
+<li>Clear isolation between features.</li>
+<li>Easier to support multiple deep-link entry points.</li>
+</ul>
+<li><strong>Costs:</strong></li>
+<ul>
+<li>More <code>Intent</code>/<code>Parcelable</code> boilerplate.</li>
+<li>Harder to share state across Activities.</li>
+<li>Activity transitions are heavier than Compose navigation transitions.</li>
+</ul>
+<li><strong>When to use:</strong> Flows with independent entry points. Multi-process apps. Feature modules that should be isolated.</li>
+<li><strong>When to avoid:</strong> Within a single linear flow (use NavController for that).</li>
+</ol>
+<hr>
+<h3 id="repository-per-feature-vs-shared-repository">Repository per Feature vs Shared Repository</h3>
+<p><strong>Repository per Feature</strong></p>
+<ol>
+<li><strong>Problem it solves:</strong> Each feature owns its data access layer; no shared state.</li>
+<li><strong>Benefits:</strong></li>
+<ul>
+<li>Clear ownership.</li>
+<li>Feature modules have no cross-module data dependencies.</li>
+<li>Easier to mock in tests.</li>
+</ul>
+<li><strong>Costs:</strong></li>
+<ul>
+<li>Data duplication: two features may have their own copy of <code>UserProfile</code> data.</li>
+<li>Cache coherence: two repositories caching the same entity may get out of sync.</li>
+</ul>
+<li><strong>When to use:</strong> Features with truly independent data (e.g., health feature and food feature in a super-app).</li>
+<li><strong>When to avoid:</strong> When multiple features display the same data (user profile, cart, session) — you want a single source of truth.</li>
+</ol>
+<p><strong>Shared Repository</strong></p>
+<ol>
+<li><strong>Problem it solves:</strong> Single source of truth for data shared across features (e.g., <code>UserRepository</code>, <code>CartRepository</code>).</li>
+<li><strong>Benefits:</strong></li>
+<ul>
+<li>Cache coherence: all readers see the same state.</li>
+<li>One network call for shared data.</li>
+</ul>
+<li><strong>Costs:</strong></li>
+<ul>
+<li>Creates a dependency from feature modules to <code>:data:shared</code> — careful with ownership.</li>
+</ul>
+<li><strong>When to use:</strong> User identity, session, cart — anything that must be consistent across features.</li>
+<li><strong>When to avoid:</strong> Feature-specific data that no other feature needs.</li>
+</ol>
+<hr>
+<h3 id="domain-layer-vs-no-domain-layer">Domain Layer vs No Domain Layer</h3>
+<p><strong>Domain Layer</strong></p>
+<ol>
+<li><strong>Problem it solves:</strong> Business logic in pure Kotlin use-case classes, independent of Android framework and UI.</li>
+<li><strong>Benefits:</strong></li>
+<ul>
+<li>Pure Kotlin: no Android imports → fast unit tests, reusable across platforms (KMP).</li>
+<li>Single responsibility: each use case does one thing.</li>
+<li>ViewModel is thin: delegates to use cases.</li>
+<li>Logic testable without mocking Android framework.</li>
+</ul>
+<li><strong>Costs:</strong></li>
+<ul>
+<li>Extra layer → more files, more indirection.</li>
+<li>For simple screens, use cases are trivial pass-throughs (wasted abstraction).</li>
+</ul>
+<li><strong>When to use:</strong> Complex business logic (payment rules, eligibility checks, booking constraints). Multi-step transformations. Code shared across multiple ViewModels. KMP targeting.</li>
+<li><strong>When to avoid:</strong> Simple CRUD screens where the &quot;use case&quot; would just call one repository method.</li>
+</ol>
+<p><strong>No Domain Layer</strong></p>
+<ol>
+<li><strong>Problem it solves:</strong> Simplify architecture for straightforward screens.</li>
+<li><strong>Benefits:</strong> Less boilerplate; faster to write.</li>
+<li><strong>Costs:</strong> Business logic bleeds into ViewModel or Repository. Hard to test complex logic in isolation.</li>
+<li><strong>When to use:</strong> Simple screens. Prototype code.</li>
+<li><strong>When to avoid:</strong> Any non-trivial business logic. Multi-team codebases where logic ownership matters.</li>
+</ol>
+<hr>
+<h3 id="local-first-vs-network-first">Local-First vs Network-First</h3>
+<p><strong>Local-First</strong></p>
+<ol>
+<li><strong>Problem it solves:</strong> App works offline; UI always responsive (reads from local DB first).</li>
+<li><strong>Benefits:</strong></li>
+<ul>
+<li>Zero latency reads.</li>
+<li>Works offline by default.</li>
+<li>User experience consistent regardless of network quality.</li>
+</ul>
+<li><strong>Costs:</strong></li>
+<ul>
+<li>Stale data risk: local data may be outdated.</li>
+<li>Complex sync and conflict resolution needed.</li>
+<li>More implementation effort (Room + sync logic).</li>
+</ul>
+<li><strong>When to use:</strong> Feed apps, todo/note apps, offline-capable enterprise apps. Any feature where showing stale data is better than showing nothing.</li>
+<li><strong>When to avoid:</strong> Real-time critical data (stock prices, live seat availability). Data that must be fresh for correctness (payment confirmation, order status).</li>
+</ol>
+<p><strong>Network-First</strong></p>
+<ol>
+<li><strong>Problem it solves:</strong> Always show the latest data from the server.</li>
+<li><strong>Benefits:</strong></li>
+<ul>
+<li>Always fresh.</li>
+<li>No conflict resolution needed.</li>
+<li>Simpler implementation.</li>
+</ul>
+<li><strong>Costs:</strong></li>
+<ul>
+<li>Fails offline.</li>
+<li>Higher latency (must wait for network).</li>
+</ul>
+<li><strong>When to use:</strong> Real-time data (prices, inventory, live scores). Data that is wrong if stale.</li>
+<li><strong>When to avoid:</strong> Data that changes infrequently. Poor network conditions.</li>
+</ol>
+<hr>
+<h3 id="synchronous-vs-asynchronous-ipc">Synchronous vs Asynchronous IPC</h3>
+<p><strong>Synchronous IPC (AIDL blocking call)</strong></p>
+<ol>
+<li><strong>Problem it solves:</strong> Caller waits for the result from another process; simpler sequential code.</li>
+<li><strong>Benefits:</strong></li>
+<ul>
+<li>Simple to reason about: call returns result.</li>
+<li>No callback management.</li>
+</ul>
+<li><strong>Costs:</strong></li>
+<ul>
+<li>Blocks the calling thread (which is a binder thread, not main thread — but still counts).</li>
+<li>Risk of ANR if the callee is slow.</li>
+<li>Deadlock risk if callee calls back into the caller synchronously.</li>
+</ul>
+<li><strong>When to use:</strong> Quick IPC calls with guaranteed low latency (&lt; 1ms). Status queries where the caller NEEDS the answer immediately.</li>
+<li><strong>When to avoid:</strong> Any call that involves I/O or computation in the remote process. Any call from a UI-critical context.</li>
+</ol>
+<p><strong>Asynchronous IPC (Messenger, callbacks, AIDL with callback)</strong></p>
+<ol>
+<li><strong>Problem it solves:</strong> Non-blocking IPC; caller continues while waiting for result.</li>
+<li><strong>Benefits:</strong></li>
+<ul>
+<li>Non-blocking; no ANR risk.</li>
+<li>Callback arrives on binder thread (can be marshalled to main).</li>
+</ul>
+<li><strong>Costs:</strong></li>
+<ul>
+<li>More complex code (callbacks/channels).</li>
+<li>State management more complex.</li>
+</ul>
+<li><strong>When to use:</strong> All IPC involving I/O or computation. State subscription (register callback, receive updates over time).</li>
+<li><strong>When to avoid:</strong> When synchronous result is required and the call is guaranteed fast.</li>
+</ol>
+<hr>
+<h3 id="hashmap-vs-treemap">HashMap vs TreeMap</h3>
+<p><strong>HashMap</strong></p>
+<ol>
+<li><strong>Problem it solves:</strong> O(1) average-case key lookup, insertion, deletion.</li>
+<li><strong>Benefits:</strong> Fastest for most lookups; no ordering overhead.</li>
+<li><strong>Costs:</strong> No ordering; iteration order not guaranteed; worst-case O(n) with hash collisions.</li>
+<li><strong>When to use:</strong> Lookup/cache tables where insertion order or sorted order is not needed. The default choice for most Maps.</li>
+<li><strong>When to avoid:</strong> When you need sorted iteration (e.g., range queries, sorted display of entries). When key ordering matters for correctness.</li>
+</ol>
+<p><strong>TreeMap</strong></p>
+<ol>
+<li><strong>Problem it solves:</strong> Sorted key ordering with O(log n) operations.</li>
+<li><strong>Benefits:</strong> Keys always sorted; supports <code>headMap</code>, <code>tailMap</code>, <code>subMap</code>, <code>firstKey</code>, <code>lastKey</code>.</li>
+<li><strong>Costs:</strong> O(log n) for all operations vs O(1) for HashMap.</li>
+<li><strong>When to use:</strong> Range queries. Ordered iteration. Implementing a priority queue-like structure where keys have natural ordering.</li>
+<li><strong>When to avoid:</strong> Simple lookup where ordering is irrelevant. Hot paths where O(log n) is slower than O(1).</li>
+</ol>
+<p>One Android-specific point worth adding: also consider <code>ArrayMap</code> for small maps with fewer than about 100 entries (lower memory than HashMap), and <code>SparseArray</code> when your keys are <code>Int</code> values (avoids boxing entirely).</p>
+<hr>
+<h3 id="arraylist-vs-linkedlist">ArrayList vs LinkedList</h3>
+<p><strong>ArrayList</strong></p>
+<ol>
+<li><strong>Problem it solves:</strong> Ordered, indexed, random-access list backed by an array.</li>
+<li><strong>Benefits:</strong></li>
+<ul>
+<li>O(1) random access by index.</li>
+<li>Good cache locality (contiguous memory).</li>
+<li>Efficient iteration.</li>
+</ul>
+<li><strong>Costs:</strong></li>
+<ul>
+<li>O(n) insertion/deletion in the middle (array shift).</li>
+<li>Amortized O(1) add-at-end; occasional resize copies.</li>
+</ul>
+<li><strong>When to use:</strong> The default choice for lists. Any list where you read by index or iterate often. Compose <code>LazyColumn</code> data model.</li>
+<li><strong>When to avoid:</strong> Frequent insertion/deletion in the middle of large lists.</li>
+</ol>
+<p><strong>LinkedList</strong></p>
+<ol>
+<li><strong>Problem it solves:</strong> O(1) insertion/deletion at head/tail without array resizing.</li>
+<li><strong>Benefits:</strong> O(1) add/remove at head or tail (as a <code>Deque</code>).</li>
+<li><strong>Costs:</strong></li>
+<ul>
+<li>O(n) random access.</li>
+<li>High memory overhead: each node has two pointers.</li>
+<li>Poor cache locality.</li>
+</ul>
+<li><strong>When to use:</strong> Implementing a queue or deque. Frequent insertion at head (e.g., prepend to a list repeatedly). Producer-consumer buffers where you add to one end and remove from the other.</li>
+<li><strong>When to avoid:</strong> Any list where you access by index. Any list that will be iterated many times. Any list that will be displayed in a UI (use ArrayList).</li>
+</ol>
+<p>In practice, <code>LinkedList</code> is rarely the right answer on Android. <code>ArrayDeque</code> is almost always preferable for queue and deque use cases because of its better cache locality and lower per-element overhead.</p>
+<hr>
+<h2 id="153-legacy-code-and-migration">15.3 Legacy Code and Migration</h2>
+<p>When an interviewer asks about migration, what they are really asking is: can you drive a complex multi-month engineering project without stopping feature work, without breaking production, and while bringing the whole team along? Every answer here needs to demonstrate three things — discipline, incrementalism, and measurement.</p>
+<hr>
+<h3 id="java-to-kotlin">Java to Kotlin</h3>
+<p><strong>Goal:</strong> Incrementally replace Java files with idiomatic Kotlin without breaking existing tests or callers.</p>
+<p><strong>Approach:</strong></p>
+<ol>
+<li><strong>Interop first:</strong> Kotlin and Java interop seamlessly. Start calling Kotlin from Java and vice</li>
+</ol>
+<p>versa. No big-bang needed.</p>
+<ol>
+<li><strong>IntelliJ auto-conversion:</strong> Use IntelliJ&#x27;s &quot;Convert Java file to Kotlin&quot; as a starting point,</li>
+</ol>
+<p>then review for idiomatic improvements (null safety, data classes, extension functions).</p>
+<ol>
+<li><strong>Prioritize new code:</strong> All new files are written in Kotlin. Legacy Java is converted</li>
+</ol>
+<p>opportunistically when touching a file for other reasons.</p>
+<ol>
+<li><strong>Nullability contracts:</strong> Add <code>@NonNull</code>/<code>@Nullable</code> annotations to Java before converting.</li>
+</ol>
+<p>Kotlin will respect them and emit correct null-safety checks.</p>
+<ol>
+<li><strong>Platform types:</strong> Eliminate all <code>!</code> (platform types) in converted code. Make nullability</li>
+</ol>
+<p>explicit.</p>
+<ol>
+<li><strong>Kotlin idioms:</strong> Replace <code>if (x != null) x.foo()</code> with <code>x?.foo()</code>. Replace getters with</li>
+</ol>
+<p>properties. Use data classes where appropriate.</p>
+<ol>
+<li><strong>Test coverage before and after:</strong> Run existing tests after conversion. Conversion should be</li>
+</ol>
+<p>behavior-neutral.</p>
+<p><strong>Metrics to prove success:</strong></p>
+<ul>
+<li><code>% of files in Kotlin</code> tracked over time.</li>
+<li>NullPointerException rate in Sentry (should decrease as null safety improves).</li>
+<li>Code review time per PR (should decrease as Kotlin is more concise).</li>
+</ul>
+<p><strong>Common pitfalls:</strong></p>
+<ul>
+<li><code>companion object</code> vs top-level functions — prefer top-level unless the function is tied to</li>
+</ul>
+<p>a class.</p>
+<ul>
+<li><code>@JvmStatic</code>, <code>@JvmOverloads</code>, <code>@JvmField</code> needed when Kotlin code is called from Java.</li>
+<li><code>data class</code> <code>copy()</code> misuse — the copy is shallow; mutable references inside are shared.</li>
+</ul>
+<hr>
+<h3 id="xml-to-compose">XML to Compose</h3>
+<p><strong>Goal:</strong> Migrate screens from XML layouts to Jetpack Compose incrementally.</p>
+<p><strong>Approach:</strong></p>
+<ol>
+<li><strong>Interop layer:</strong> Use <code>ComposeView</code> inside an existing XML layout to embed Compose in a</li>
+</ol>
+<p>Fragment. Use <code>AndroidView</code> inside Compose to embed XML views in Compose. Either direction works.</p>
+<ol>
+<li><strong>Start with new screens:</strong> All new screens written in Compose.</li>
+<li><strong>Pilot an existing screen:</strong> Choose a simple, well-covered screen. Replace its XML with</li>
+</ol>
+<p>Compose. Keep the Fragment temporarily; it becomes a thin wrapper hosting <code>ComposeView</code>.</p>
+<ol>
+<li><strong>Migrate Fragment to Composable function:</strong> Once the screen is Compose, the Fragment is</li>
+</ol>
+<p>just a one-liner (<code>setContent { ScreenComposable() }</code>). Eventually the Fragment can be removed if navigation is migrated to NavController.</p>
+<ol>
+<li><strong>Theme migration:</strong> Ensure <code>MezzanineTheme</code> (or the app&#x27;s design system) is properly</li>
+</ol>
+<p>integrated before migration (colors, typography, shapes).</p>
+<ol>
+<li><strong>Remove XML files</strong> only after the Compose equivalent is shipped and stable.</li>
+</ol>
+<p><strong>Metrics:</strong></p>
+<ul>
+<li><code>% of screens in Compose</code> tracked in a migration tracker.</li>
+<li>Rendering frame times per screen (Compose should improve jank on complex screens).</li>
+<li>Screenshot test parity (before/after visual comparison).</li>
+<li>APK size delta (Compose adds ~1.5 MB to APK; acceptable for most apps).</li>
+</ul>
+<p><strong>Common pitfalls:</strong></p>
+<ul>
+<li>Missing <code>LocalLifecycleOwner</code> in Compose-in-Fragment setups (use <code>ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed</code>).</li>
+<li><code>remember</code> used incorrectly when <code>rememberSaveable</code> is needed for config change survival.</li>
+<li>Recomposition storms from unstable lambdas (use <code>remember</code> for callbacks, stable data classes).</li>
+</ul>
+<hr>
+<h3 id="mvp-to-mvvmmvi">MVP to MVVM/MVI</h3>
+<p><strong>Goal:</strong> Replace Presenter + View interface pattern with ViewModel + StateFlow, without stopping feature work.</p>
+<p><strong>Approach:</strong></p>
+<ol>
+<li><strong>Identify the Presenter contract:</strong> The <code>View</code> interface is already a contract. The Presenter</li>
+</ol>
+<p>updates the View. Map each <code>View.showX()</code> call to a corresponding state field.</p>
+<ol>
+<li><strong>Create a parallel ViewModel:</strong> The ViewModel replicates the Presenter&#x27;s state logic in a</li>
+</ol>
+<p><code>StateFlow&lt;ScreenUiState&gt;</code>. Both Presenter and ViewModel exist simultaneously.</p>
+<ol>
+<li><strong>Thin Presenter → ViewModel delegation:</strong> Gradually move logic from Presenter to ViewModel.</li>
+</ol>
+<p>Presenter becomes a thin bridge that just calls ViewModel.</p>
+<ol>
+<li><strong>Replace View interface with Compose:</strong> Once ViewModel has all logic, replace the XML</li>
+</ol>
+<p>Fragment with a Compose screen observing <code>ViewModel.uiState</code>.</p>
+<ol>
+<li><strong>Delete the Presenter and View interface.</strong></li>
+</ol>
+<p><strong>Key challenge — RxJava in Presenter:</strong> Presenters often use RxJava. Migrate RxJava subscriptions to coroutines using <code>rxObservable.asFlow()</code> or <code>Single.await()</code> from <code>kotlinx-coroutines-rx2</code>. This lets you migrate incrementally — the interop layer translates.</p>
+<p><strong>Metrics:</strong></p>
+<ul>
+<li>Presenter files remaining (tracked in migration backlog).</li>
+<li>Test coverage before and after (ViewModel tests should cover same paths as Presenter tests).</li>
+</ul>
+<hr>
+<h3 id="asynctaskrxjava-to-coroutines">AsyncTask/RxJava to Coroutines</h3>
+<p><strong>AsyncTask Migration:</strong></p>
+<p><code>AsyncTask</code> is deprecated in API 30 and removed in API 33. Migration is straightforward:</p>
+<pre><code>// Before: AsyncTask
+class FetchDataTask : AsyncTask&lt;Void, Void, Result&gt;() {
+    override fun doInBackground(vararg p0: Void?) = fetchFromNetwork()
+    override fun onPostExecute(result: Result) { updateUI(result) }
+}
+
+// After: coroutine in lifecycleScope
+lifecycleScope.launch {
+    val result = withContext(Dispatchers.IO) { fetchFromNetwork() }
+    updateUI(result) // back on Main
+}</code></pre>
+<p>The mental model is one-to-one: each <code>AsyncTask</code> becomes one <code>launch { withContext(IO) { } }</code> block.</p>
+<p><strong>RxJava Migration:</strong></p>
+<p>Use <code>kotlinx-coroutines-rx2</code> bridge:</p>
+<ul>
+<li><code>Single&lt;T&gt;.await()</code> → <code>suspend fun T</code>.</li>
+<li><code>Observable&lt;T&gt;.asFlow()</code> → <code>Flow&lt;T&gt;</code>.</li>
+<li><code>Completable.await()</code> → <code>suspend fun Unit</code>.</li>
+</ul>
+<p>Migrate one subscription at a time. Start with leaf-level utilities that have no callers depending on Observable return types. Work inward.</p>
+<p><strong>Disposing subscriptions — moving to structured cancellation:</strong> Replace <code>CompositeDisposable.clear()</code> in <code>onDestroy</code> with simply letting the <code>CoroutineScope</code> cancel in <code>onCleared()</code>. Cancellation propagates automatically to all child coroutines.</p>
+<hr>
+<h3 id="introducing-dependency-injection">Introducing Dependency Injection</h3>
+<p><strong>Goal:</strong> Add Hilt (or Dagger) to a codebase that uses manual construction (e.g., <code>MyClass(MyDep())</code>).</p>
+<p><strong>Approach:</strong></p>
+<ol>
+<li><strong>Identify construction sites:</strong> Every <code>new MyClass(...)</code> or <code>MyClass(...)</code> in Activities,</li>
+</ol>
+<p>Fragments, or ViewModels is a construction site to migrate.</p>
+<ol>
+<li><strong>Extract constructor injection:</strong> Change classes to receive their dependencies via constructor</li>
+</ol>
+<p>rather than constructing them internally. This is the key step and can be done without Hilt.</p>
+<ol>
+<li><strong>Add Hilt incrementally:</strong></li>
+<ul>
+<li>Add <code>@HiltAndroidApp</code> to Application.</li>
+<li>Add <code>@AndroidEntryPoint</code> to Activities and Fragments one by one.</li>
+<li>Add <code>@Inject constructor()</code> to classes being injected.</li>
+<li>Add <code>@Module</code> / <code>@Provides</code> for third-party classes.</li>
+</ul>
+<li><strong>Migrate ViewModel injection:</strong> Add <code>@HiltViewModel</code> + <code>@Inject constructor()</code>. Remove</li>
+</ol>
+<p><code>ViewModelFactory</code> boilerplate.</p>
+<ol>
+<li><strong>Test modules:</strong> Add <code>@UninstallModules</code> + fake <code>@TestInstallIn</code> modules for testing.</li>
+</ol>
+<p><strong>Risk:</strong> Adding <code>@HiltAndroidApp</code> changes Application initialization. Test thoroughly.</p>
+<hr>
+<h3 id="introducing-modularization">Introducing Modularization</h3>
+<p><strong>See also 15.1 Interview Angles — &quot;How would you introduce modularization gradually?&quot;</strong></p>
+<p><strong>Step-by-step:</strong></p>
+<ol>
+<li><strong>Create <code>:core:network</code>, <code>:core:db</code>, <code>:core:ui</code></strong> — pure infrastructure, no circular deps.</li>
+<li><strong>Run a build scan</strong> (<code>./gradlew build --scan</code>) before and after each extraction to measure</li>
+</ol>
+<p>improvement.</p>
+<ol>
+<li><strong>Extract <code>:feature:X</code> for new features</strong> — no rework of existing code.</li>
+<li><strong>Add Dependency Guard</strong> (<code>com.dropbox.dependency-guard</code>) — enforce no circular dependencies.</li>
+<li><strong>Extract existing features one at a time</strong>, starting with the most isolated.</li>
+<li><strong>Define <code>:api:X</code> interfaces</strong> for cross-feature contracts.</li>
+</ol>
+<p><strong>Common mistake:</strong> Extracting too many modules too fast. Each extracted module that doesn&#x27;t reduce compile scope is just overhead. Measure before and after.</p>
+<hr>
+<h3 id="reducing-build-time">Reducing Build Time</h3>
+<p><strong>Diagnosis first:</strong></p>
+<pre><code>./gradlew assembleDebug --scan   # Gradle build scan
+./gradlew assembleDebug --profile  # HTML profile report</code></pre>
+<p>The three metrics to look for are annotation processing time, configuration time, and the number of tasks that were not up-to-date — those last ones tell you exactly how much incremental caching is being wasted.</p>
+<p><strong>Strategies (roughly ordered by impact):</strong></p>
+<ol>
+<li><strong>Migrate KAPT → KSP:</strong> KSP is 2x faster for most annotation processors (Room, Moshi, Hilt). </li>
+<li><strong>Modularization:</strong> Parallel builds; only changed modules recompile.</li>
+<li><strong>Avoid transitive <code>api</code> dependencies:</strong> Use <code>implementation</code> unless the type is in the public API.</li>
+<li><strong>Build caching:</strong> <code>org.gradle.caching=true</code> in <code>gradle.properties</code>. Use remote build cache</li>
+</ol>
+<p>(Gradle Enterprise or custom) in CI.</p>
+<ol>
+<li><strong>Configuration cache:</strong> <code>org.gradle.configuration-cache=true</code> (Gradle 8+).</li>
+<li><strong>Incremental annotation processing:</strong> Ensure all annotation processors support incremental mode.</li>
+<li><strong>Avoid <code>@JvmStatic</code> + <code>@JvmOverloads</code> overuse</strong> — generates extra methods.</li>
+<li><strong>Reduce unused dependencies:</strong> Run Dependency Analysis Gradle Plugin to find unused deps.</li>
+<li><strong>R8 full mode in debug:</strong> Speeds up debug build dex step (trade-off: slower first build, faster incremental).</li>
+<li><strong>Avoid resource merging overhead:</strong> Keep resources in the correct module; do not put all resources in <code>:app</code>.</li>
+</ol>
+<p><strong>Measurement:</strong> Track <code>./gradlew assembleDebug</code> time in CI over time. Set a regression budget (e.g., max 10% increase per PR).</p>
+<hr>
+<h3 id="removing-memory-leaks">Removing Memory Leaks</h3>
+<p><strong>Detection:</strong></p>
+<ul>
+<li>LeakCanary: mandatory in debug builds. Every new leak generates a LeakCanary notification.</li>
+<li>Sentry: track <code>OutOfMemoryError</code> events.</li>
+<li>Android Studio Profiler: heap dumps to find retained objects.</li>
+</ul>
+<p><strong>Common sources and fixes:</strong></p>
+<table border="1" cellpadding="6" cellspacing="0">
+<thead><tr>
+<th>Source</th>
+<th>Fix</th>
+</tr></thead><tbody>
+<tr><td>Activity/Fragment in a static field</td><td>Never store <code>Context</code> in static fields. Use <code>WeakReference</code> if unavoidable.</td></tr>
+<tr><td>Registered listener not unregistered</td><td>Register in <code>onStart</code>, unregister in <code>onStop</code>.</td></tr>
+<tr><td>Handler with anonymous Runnable</td><td>Use <code>Handler(Looper.getMainLooper())</code> + remove callbacks in <code>onDestroy</code>.</td></tr>
+<tr><td>Anonymous class/lambda capturing outer class</td><td>Use a named class or WeakReference.</td></tr>
+<tr><td>ViewModel holding View/Context reference</td><td>ViewModels must not hold <code>View</code> or <code>Activity</code> references. Use <code>Application</code> context if needed.</td></tr>
+<tr><td>Bitmap not recycled (pre-API 26)</td><td>Use Glide/Coil which manage bitmap lifecycle.</td></tr>
+<tr><td>Subscription not disposed</td><td>Use <code>CoroutineScope.cancel()</code> or <code>CompositeDisposable.clear()</code>.</td></tr>
+<tr><td><code>registerReceiver</code> without <code>unregisterReceiver</code></td><td>Register in <code>onResume</code>/<code>onStart</code>, unregister in matching lifecycle method.</td></tr>
+</tbody></table>
+<p><strong>Process:</strong></p>
+<ol>
+<li>Fix leak identified by LeakCanary.</li>
+<li>Write a test that detects the leak (using LeakCanary&#x27;s <code>LeakAssert</code>).</li>
+<li>Run the test in CI to prevent regression.</li>
+</ol>
+<hr>
+<h3 id="improving-test-coverage">Improving Test Coverage</h3>
+<p><strong>Approach:</strong></p>
+<ol>
+<li><strong>Measure current state:</strong> Run <code>./gradlew testWithCoverage</code>. Generate JaCoCo report. Find</li>
+</ol>
+<p>the bottom 20% (files with &lt; 20% coverage).</p>
+<ol>
+<li><strong>Prioritize by risk:</strong> Focus on high-churn, high-complexity classes with low coverage first.</li>
+</ol>
+<p>Use <code>git log --numstat</code> to identify high-churn files.</p>
+<ol>
+<li><strong>Add tests when fixing bugs:</strong> Every bug fix must include a failing test that proves the bug.</li>
+<li><strong>Add tests when refactoring:</strong> Refactoring without tests is dangerous. Write tests first,</li>
+</ol>
+<p>then refactor.</p>
+<ol>
+<li><strong>Coverage gates:</strong> Add a JaCoCo coverage gate in CI (<code>jacocoTestCoverageVerification</code>).</li>
+</ol>
+<p>Set minimum coverage (e.g., 70%) per module. Ratchet it up over time.</p>
+<ol>
+<li><strong>Testing pyramid:</strong></li>
+<ul>
+<li>70% unit tests (fast, cheap)</li>
+<li>20% integration tests (medium)</li>
+<li>10% UI/E2E tests (slow, fragile)</li>
+</ul>
+<li><strong>Mock at boundaries:</strong> MockK for external dependencies. Fake implementations for internal</li>
+</ol>
+<p>boundaries.</p>
+<p><strong>Common coverage antipatterns:</strong></p>
+<ul>
+<li>Testing implementation details (test behavior, not internals).</li>
+<li>Testing only the happy path (add error and edge cases).</li>
+<li>Brittle tests that test too much at once.</li>
+</ul>
+<hr>
+<h3 id="stabilizing-crashy-features">Stabilizing Crashy Features</h3>
+<p><strong>Framework for investigating and fixing crashes:</strong></p>
+<ol>
+<li><strong>Triage:</strong> Group Sentry events by root cause, not by crash type. Sort by volume × user impact.</li>
+<li><strong>Reproduce:</strong> Every crash must be reproducible before fixing. If you can&#x27;t reproduce, you</li>
+</ol>
+<p>can&#x27;t verify the fix.</p>
+<ol>
+<li><strong>Add logging:</strong> Add <code>ZLog.logErrorWithTeamTag()</code> breadcrumbs before the crash site to capture</li>
+</ol>
+<p>context.</p>
+<ol>
+<li><strong>Fix conservatively:</strong> Add null checks, default values, and fallback states rather than</li>
+</ol>
+<p>aggressive refactors. The goal is stability, not elegance.</p>
+<ol>
+<li><strong>Feature flag:</strong> If a feature is causing 1%+ crash rate, flag it off immediately.</li>
+<li><strong>Test the fix:</strong> Unit test the specific crash scenario. Integration test the flow.</li>
+<li><strong>Monitor after fix:</strong> Set a Sentry alert for the specific crash grouping. Verify crash rate</li>
+</ol>
+<p>drops in the next 24-48 hours after rollout.</p>
+<p><strong>Common crash types:</strong></p>
+<table border="1" cellpadding="6" cellspacing="0">
+<thead><tr>
+<th>Type</th>
+<th>Fix</th>
+</tr></thead><tbody>
+<tr><td>NPE on API response field</td><td>Add null-safety; use nullable types; default values for missing fields.</td></tr>
+<tr><td>ArrayIndexOutOfBoundsException</td><td>Bounds check before access; guard adapter positions.</td></tr>
+<tr><td>IllegalStateException in Fragment</td><td>Check <code>isAdded()</code> before using <code>requireContext()</code>.</td></tr>
+<tr><td>ClassCastException in RecyclerView</td><td>Verify <code>viewType</code> in <code>onCreateViewHolder</code>/<code>onBindViewHolder</code>.</td></tr>
+<tr><td>SQLiteException</td><td>Validate SQL migrations; test DB upgrade paths in unit tests.</td></tr>
+<tr><td>ANR</td><td>Move I/O off main thread; use <code>StrictMode</code> in debug to catch violations early.</td></tr>
+</tbody></table>
+<hr>
+<h3 id="incremental-refactoring">Incremental Refactoring</h3>
+<p><strong>Principles:</strong></p>
+<ol>
+<li><strong>Boy scout rule:</strong> Leave code slightly cleaner than you found it in every PR. Accumulates</li>
+</ol>
+<p>without a big-bang refactor.</p>
+<ol>
+<li><strong>Strangler fig pattern:</strong> Build the new implementation alongside the old. Gradually route</li>
+</ol>
+<p>callers to the new one. Once all callers are migrated, delete the old one.</p>
+<ol>
+<li><strong>Wrap then replace:</strong> Wrap the legacy class in an interface. New code uses the interface.</li>
+</ol>
+<p>Replace the implementation later without touching new code.</p>
+<ol>
+<li><strong>Never mix refactoring and feature work in the same PR.</strong> Reviewers can&#x27;t tell what is</li>
+</ol>
+<p>behavior change vs refactoring. Keep them separate.</p>
+<ol>
+<li><strong>Test coverage as a prerequisite:</strong> Do not refactor code without a test baseline. Tests</li>
+</ol>
+<p>are the safety net. If coverage is low, write tests first.</p>
+<ol>
+<li><strong>Measure impact:</strong> Refactoring should improve measurable metrics (build time, test time,</li>
+</ol>
+<p>crash rate, code complexity score). If no metric improves, question the value.</p>
+<hr>
+<h3 id="interview-angles--migration">Interview Angles — Migration</h3>
+<p><strong>&quot;How do you migrate without stopping feature development?&quot;</strong></p>
+<p>&quot;There are four things I rely on. First, feature flags — the new code runs alongside the old code and you switch at runtime, so nothing is ever all-or-nothing. Second, parallel implementation — you build the new system, wire it in incrementally, and delete the old one only after all callers are migrated. Third, module boundaries — by migrating one module at a time you completely avoid touching other teams&#x27; code in the same PR. And fourth, the practical time allocation: I dedicate 20% of every sprint to migration, never zero and never a hundred percent. The anti-pattern I always call out explicitly is &#x27;we&#x27;ll freeze features for three months and do a full rewrite&#x27; — that always fails because scope grows, the team loses context, and you end up integrating everything at once right at the deadline.&quot;</p>
+<p><strong>&quot;How do you avoid big-bang rewrites?&quot;</strong></p>
+<p>&quot;Big-bang rewrites fail for four interconnected reasons. First, scope always grows — the new system needs to match every edge case of the old one, most of which are undocumented and only discovered mid-rewrite. Second, the team loses context halfway through because the rewrite takes months. Third, integration happens all at once at the very end, which is when you&#x27;re most exhausted and least able to absorb surprises. And fourth, there&#x27;s no working app to ship if the deadline moves. The alternative I use is incremental, verifiable steps — the app must be in a deployable state at every commit. The pattern for this is the strangler fig: the old and new systems coexist, you gradually route callers to the new one, and the migration is reversible at any point. And critically, I define &#x27;done&#x27; per unit — per screen, per module, per class — not for the migration as a whole.&quot;</p>
+<p><strong>&quot;How do you prove migration success?&quot;</strong></p>
+<p>&quot;I use six categories of metrics. Crash rate before and after — if migration introduced regressions you need to know immediately. Build time before and after — this is often the primary driver of modularization migrations and you need hard numbers. Test coverage before and after — migration should never reduce coverage. Code complexity metrics like cyclomatic complexity and file length — these confirm the code is actually getting simpler, not just different. PR review time as a proxy for code readability — if reviews are faster, the code is easier to understand. And finally a developer survey: self-reported confidence and onboarding time, because if engineers feel less confident after the migration than before, something went wrong even if the hard metrics look fine.&quot;</p>
+<p><strong>&quot;How do you get team adoption?&quot;</strong></p>
+<p>&quot;There are six things that actually move the needle. First, lead by example — write the first idiomatic implementation yourself, because people will copy the pattern they see in the codebase more than anything they read in a doc. Second, make the right way the easy way by adding Live Templates in IntelliJ so the correct pattern takes less keystrokes than the old way. Third, in code review, point people to the pattern without blocking PRs on style — block only when it&#x27;s a correctness or production issue. Fourth, document it, link the guide in every relevant PR description, and present it at a tech talk so there&#x27;s a shared canonical reference. Fifth, pair on the first migration of each new type — doing it together once is worth ten documentation pages. And sixth, never mandate, always persuade: show the concrete benefits in terms engineers care about — minutes shaved off the build, tests that no longer need a full emulator. When people see the benefit themselves, adoption follows.&quot;</p>
+<hr>
+<h2 id="154-engineering-leadership">15.4 Engineering Leadership</h2>
+<p>Staff-level interviews assess not just technical knowledge but how you use it to influence teams and organizations. Every answer here needs to demonstrate three things: judgment — knowing when to apply a technique and when not to; scale — impact that extends beyond yourself; and craft — the quality of execution once you decide to act.</p>
+<p>Use the <strong>STAR framework</strong> to structure every answer: Situation, Task, Action, Result.</p>
+<hr>
+<h3 id="star-templates">STAR Templates</h3>
+<p>Each template below gives you the structure to follow. Fill in the specifics from your own experience — the brackets mark what you need to replace.</p>
+<hr>
+<p><strong>Leading Architecture Decisions</strong></p>
+<p><strong>Situation:</strong> [The codebase had grown to X engineers on a single <code>:app</code> module. Build times were N minutes. Different teams had conflicting patterns in the same files. There was no clear owner for shared components.]</p>
+<p><strong>Task:</strong> [I was asked to lead the architectural modernization effort: define a module structure, migration plan, and team ownership model.]</p>
+<p><strong>Action:</strong></p>
+<ul>
+<li>Surveyed the codebase (dependency graph, build scan) to understand current state.</li>
+<li>Interviewed tech leads from each team to understand pain points.</li>
+<li>Drafted a design doc with three options (monolith, feature modules, full clean architecture</li>
+</ul>
+<p>with DFMs), each with trade-offs, timelines, and risks.</p>
+<ul>
+<li>Facilitated a design review with all tech leads; incorporated feedback.</li>
+<li>Identified the lowest-risk, highest-impact first step (extract <code>:core:network</code>).</li>
+<li>Created a migration tracker with module owners and milestones.</li>
+<li>Wrote the first migration to serve as a reference implementation; held a live coding session</li>
+</ul>
+<p>to walk the team through it.</p>
+<ul>
+<li>Established Dependency Guard and CODEOWNERS to enforce the new model.</li>
+</ul>
+<p><strong>Result:</strong> [Build time reduced by X%. Teams can now work independently on feature modules. New engineers onboard faster. The pattern has been adopted by all teams without mandating.]</p>
+<hr>
+<p><strong>Mentoring Engineers</strong></p>
+<p><strong>Situation:</strong> [A junior engineer on my team was delivering code that worked but was consistently hard to review — large PRs, no tests, unclear naming.]</p>
+<p><strong>Task:</strong> [Help them grow to mid-level quality without damaging their confidence or autonomy.]</p>
+<p><strong>Action:</strong></p>
+<ul>
+<li>Set up a weekly 1:1 with a technical focus: walk through one thing to improve each week (not everything at once).</li>
+<li>Pair-programmed on their next PR: not to write it for them, but to model the thought process.</li>
+<li>Gave feedback in code review in questions (&quot;What would happen if X is null here?&quot;) not</li>
+</ul>
+<p>directives (&quot;Add null check&quot;).</p>
+<ul>
+<li>Connected them with resources: pointed to specific internal examples of well-structured code.</li>
+<li>Celebrated improvements publicly in the team channel.</li>
+</ul>
+<p><strong>Result:</strong> [Within two quarters, their PRs were consistently smaller, well-tested, and faster to review. They now mentor newer engineers the same way.]</p>
+<hr>
+<p><strong>Handling Disagreement</strong></p>
+<p><strong>Situation:</strong> [Another senior engineer and I disagreed on whether to use Flow or LiveData for our ViewModel state. They wanted to maintain LiveData for consistency; I wanted to migrate to Flow for the testability and KMP compatibility benefits.]</p>
+<p><strong>Task:</strong> [Resolve the disagreement and move forward — ideally with the better technical decision and without a fractured team.]</p>
+<p><strong>Action:</strong></p>
+<ul>
+<li>Acknowledged their concern (consistency is a real cost, not a trivial objection).</li>
+<li>Prepared a written comparison (the same 5-question framework from 15.2) shared asynchronously.</li>
+<li>Proposed a time-boxed experiment: migrate one screen to Flow, measure build time, test time,</li>
+</ul>
+<p>and code lines. Let the data drive the decision.</p>
+<ul>
+<li>Set an explicit decision deadline: we will decide by end of sprint.</li>
+<li>When the experiment favored Flow, proposed a gradual migration plan with a transitional adapter</li>
+</ul>
+<p>for existing LiveData callers.</p>
+<p><strong>Result:</strong> [We adopted Flow. The other engineer became a co-author of the migration guide because I incorporated their concerns about the transition plan. Disagreement became collaboration.]</p>
+<hr>
+<p><strong>Writing Design Docs</strong></p>
+<p>A strong design doc has nine sections. First, the problem statement — what breaks if you don&#x27;t solve this? Second, goals and non-goals — explicit boundaries are what prevent scope creep. Third, background and constraints — what decisions are already made and what is non-negotiable? Fourth, options considered — at least three, and one of them should always be &quot;do nothing.&quot; Fifth, the recommended option with its rationale. Sixth, trade-offs — what the recommended option gives up. Seventh, the migration plan — how you get from the current state to the target state. Eighth, open questions that need resolution before implementation starts. And ninth, success metrics — how will you know it worked?</p>
+<p>One practical note: a design doc that gets no comments in review was probably too safe. Good design docs should generate discussion. Invite disagreement explicitly — add a section that says &quot;I am uncertain about X, here is my current thinking, what am I missing?&quot;</p>
+<hr>
+<p><strong>Reviewing Large PRs</strong></p>
+<p><strong>Framework:</strong></p>
+<ol>
+<li>First pass: understand the intent. Read the PR description and linked ticket. Don&#x27;t read code yet.</li>
+<li>Second pass: high-level structural review. Are there missing modules? Is the design sound?</li>
+<li>Third pass: correctness review. Look for crash risks, data races, incorrect API usage.</li>
+<li>Fourth pass: code quality. Naming, simplifications, test coverage.</li>
+<li>Leave comments in priority order (P1: must-fix, P2: should-fix, P3: nit/suggestion).</li>
+</ol>
+<p>The practical rules: never approve a PR you haven&#x27;t fully read. Never block a PR on P3 nits unless the author explicitly asks for that level of feedback. And when a PR is too large to review well, tell the author what to extract first rather than trying to review an unmanageable diff.</p>
+<hr>
+<p><strong>Creating Coding Standards</strong></p>
+<p>The key principle is that a standard engineers helped write gets adopted, while one handed down from above gets ignored.</p>
+<p>The process has six steps. First, identify a recurring inconsistency — logging, error handling, null handling — something you can point to concretely. Second, survey existing code and count how many different ways it&#x27;s currently done; three or more different approaches in the same codebase is the signal it&#x27;s a real problem. Third, propose a standard with the rationale and share it as a draft, not a decree. Fourth, hold an RFC period of one to two weeks and genuinely incorporate the feedback. Fifth, codify it — write it in the team guide and add a lint rule where possible, because automated enforcement is far more reliable than code review. And sixth, apply it to new code only; backfilling is optional and tracked separately so it doesn&#x27;t become an unbounded obligation.</p>
+<hr>
+<p><strong>Driving Performance Improvements</strong></p>
+<p><strong>Framework:</strong></p>
+<ol>
+<li>Measure first: <code>Macrobenchmark</code> for startup and scroll. <code>Perfetto</code> traces for specific UI threads. Profiler for CPU and memory. Never optimize without a baseline.</li>
+<li>Identify the top bottleneck — Amdahl&#x27;s law: fix the biggest constraint first.</li>
+<li>Fix, measure, compare.</li>
+<li>Automate the measurement in CI: a performance regression is a build failure.</li>
+<li>Publish the results: post a before/after in the team channel. Performance wins motivate the team.</li>
+</ol>
+<p>Typical wins to name with concrete numbers: Baseline Profiles reduce startup by 20–30%. Lazy initialization eliminates blocking I/O from <code>Application.onCreate()</code>. Modularization reduces incremental build time (the exact number varies by codebase, so always measure yours). And removing synchronous SharedPreferences reads from the main thread eliminates a class of jank that is surprisingly common in older codebases.</p>
+<hr>
+<p><strong>Reducing Crash/ANR Rate</strong></p>
+<p><strong>Process:</strong></p>
+<ol>
+<li>Triage: open Sentry (or Crashlytics) and sort by user-affected count, not total event count — a crash that hits 10,000 users once each outranks one that hits 1 user 10,000 times.</li>
+<li>Target the top 5 issues — fixing the top 5 almost always moves the crash-free rate measurably.</li>
+<li>For each issue: reproduce it, add logging breadcrumbs, fix it, test it, and then monitor it specifically after rollout.</li>
+<li>For ANRs: use Android Vitals in Play Console, add <code>StrictMode</code> in debug builds to surface violations early, and profile with Perfetto to find exactly what is blocking the main thread.</li>
+<li>Prevent regression: add a CI gate so that <code>crashFreeSessionsTarget &gt; 99.5%</code> is a hard requirement, and set a Sentry alert to page if crash rate spikes after any release.</li>
+</ol>
+<hr>
+<p><strong>Improving Release Quality</strong></p>
+<p><strong>Strategies:</strong> A staging environment where all changes must pass before they ever touch production. Phased rollout at 1% then 5% then 20% then 100%, with explicit monitoring at each gate before advancing. Feature flags on every risky change with an instant kill-switch. A release train on a predictable weekly or bi-weekly cadence so engineers plan to the schedule and there are no emergency rushes. A 24-hour code freeze before each cut where only critical fixes are allowed in. QA sign-off on P0 flows before each release. And automated regression tests — Espresso and Compose tests — running in CI so regressions are caught before they reach QA at all.</p>
+<hr>
+<p><strong>Coordinating Across Backend, Product, Design, QA</strong></p>
+<p><strong>Practical patterns:</strong> API contracts first — before writing a line of code, agree on the API schema with the backend team, write a mock server from that schema, and let frontend and backend develop in parallel against it. Design handoff via Figma and code connect — get a design walkthrough before implementation starts, not after the first PR is opened. QA involvement early — invite QA to the design doc review, define acceptance criteria together, and have QA write test cases before implementation is done. Clear owners — every cross-functional dependency has exactly one owner with a deadline, because ambiguity in ownership is the most common cause of delays. And status visibility — post a weekly async update to Slack or Confluence so stakeholders can find status themselves; they should never need to ask.</p>
+<hr>
+<p><strong>Making Trade-Offs Under Deadlines</strong></p>
+<p><strong>Framework:</strong> There are five steps I run through. First, understand the real constraint — is it a hard business deadline like a product launch, or a soft one where someone just wants it sooner? Those require very different responses. Second, scope reduction before quality reduction — the question to ask is whether we can ship 80% of the feature that delivers 100% of the value. Third, quality gates are non-negotiable: no shipping without passing automated tests, and no crash-rate increases allowed under any deadline. Fourth, technical debt is explicit — if we take a shortcut, a ticket for the cleanup gets written immediately so it doesn&#x27;t silently become a permanent decision. Fifth, communicate early: the message is &quot;we can hit the deadline if we cut X, is that acceptable?&quot; — not &quot;we need more time&quot; delivered at the last minute.</p>
+<hr>
+<h3 id="interview-angles--leadership">Interview Angles — Leadership</h3>
+<hr>
+<p><strong>&quot;Tell me about an architecture decision you led.&quot;</strong></p>
+<p>Template:</p>
+<ul>
+<li><strong>Situation:</strong> [team size, scale, specific pain point — build time, testability, parallel team work].</li>
+<li><strong>Task:</strong> [I was asked to/I identified a need to…].</li>
+<li><strong>Action:</strong> [design doc → options analysis → team review → reference implementation → rollout plan → measurement].</li>
+<li><strong>Result:</strong> [concrete outcome: X% build time, Y fewer crashes, Z faster onboarding].</li>
+</ul>
+<p>The interviewer is listening for four signals: did you drive it through consensus rather than decree, with a clear decision-making process? Did you measure success with specific before-and-after metrics? Did you bring skeptics along by addressing their concerns explicitly? And did you document it so future engineers can understand the reasoning?</p>
+<hr>
+<p><strong>&quot;Tell me about a time you improved app performance.&quot;</strong></p>
+<p>Template:</p>
+<ul>
+<li><strong>Situation:</strong> [specific metric that was bad: startup time X ms, scroll frame drops at Y%, crash rate Z%].</li>
+<li><strong>Task:</strong> [improve it by N%].</li>
+<li><strong>Action:</strong> [profiling tool used → root cause found → fix applied → measurement → CI gate added].</li>
+<li><strong>Result:</strong> [specific improvement with numbers].</li>
+</ul>
+<p>Three things you must hit: name the profiling tool — Macrobenchmark, Perfetto, the Android Profiler, or Systrace — because it shows you actually know how to find a performance problem, not just that you fixed one. Give a specific number, something like &quot;reduced startup from 2.1 seconds to 1.4 seconds, a 33% improvement.&quot; And mention that you added a CI gate to automate the measurement and prevent regression, because that&#x27;s what separates a one-time fix from a lasting improvement.</p>
+<hr>
+<p><strong>&quot;Tell me about a production incident.&quot;</strong></p>
+<p>Template:</p>
+<ul>
+<li><strong>Situation:</strong> [what broke, how you found out, scale of impact (X% of users)].</li>
+<li><strong>Task:</strong> [mitigate impact, identify root cause, fix].</li>
+<li><strong>Action:</strong></li>
+<ol>
+<li>Immediate mitigation (feature flag off / rollback).</li>
+<li>Impact assessment (how many users affected, for how long).</li>
+<li>Root cause analysis (reproduce, identify the specific code path).</li>
+<li>Fix (minimal, surgical, tested).</li>
+<li>Post-mortem (written, blameless, with action items).</li>
+</ol>
+<li><strong>Result:</strong> [incident resolved in X hours. Post-mortem produced Y action items. None of the action items recurred].</li>
+</ul>
+<p>Four signals the interviewer is looking for: you mitigated impact first and root-caused second — speed of mitigation is the most important thing in the first hour. You ran a blameless post-mortem, because blaming individuals prevents the real systemic causes from being surfaced. You improved the system to prevent recurrence, not just patched the specific bug. And you communicated clearly with stakeholders throughout, so they always knew the status without having to chase you.</p>
+<hr>
+<p><strong>&quot;Tell me about a time you disagreed with another senior engineer.&quot;</strong></p>
+<p>Template:</p>
+<ul>
+<li><strong>Situation:</strong> [specific technical decision — architecture, pattern, toolchain].</li>
+<li><strong>Task:</strong> [reach a decision that is good for the product and doesn&#x27;t damage the team].</li>
+<li><strong>Action:</strong></li>
+<ol>
+<li>Understood their position fully before arguing against it.</li>
+<li>Documented both positions with rationale (written, async).</li>
+<li>Proposed an objective way to resolve (experiment, prototype, data).</li>
+<li>Committed fully to the agreed decision.</li>
+</ol>
+<li><strong>Result:</strong> [decision made; relationship intact; team moved forward].</li>
+</ul>
+<p>Three signals the interviewer is most focused on: were you willing to change your mind with new information — this is the single most important signal, because it shows intellectual honesty. Did you avoid bypassing or escalating unnecessarily — escalation is a last resort, not a first move. And was the decision based on data and reasoning rather than seniority or persistence?</p>
+<hr>
+<p><strong>&quot;How do you maintain code quality across teams?&quot;</strong></p>
+<p>&quot;There are seven things I rely on. First, automated gates — lint, detekt, coverage thresholds, Dependency Guard. Computers enforce standards; humans provide judgment. The key insight is that if it can be automated, automate it, because code review is too inconsistent and too expensive to be the only mechanism. Second, a code review culture where PRs are about knowledge sharing and finding bugs, not gatekeeping, with a 24-hour response time SLA so reviews don&#x27;t become a bottleneck. Third, a shared standards document that is a living doc, version-controlled, and updated via an RFC process so engineers own it rather than feel subjected to it. Fourth, rotation on shared infrastructure — engineers rotating ownership of <code>:core</code> modules spreads knowledge and prevents single points of failure. Fifth, blameless quality metrics: track crash rate, ANR rate, and coverage per team not to blame anyone but to identify where a team needs support or resources. Sixth, an explicit prioritized tech debt backlog with 20% of sprint capacity reserved for it, because debt that isn&#x27;t tracked and scheduled never gets paid down. And seventh, lead by example — the quality of your own PRs sets the actual bar, regardless of any written standard. If your PRs have thorough tests and clear descriptions, others will match that.&quot;</p>
+<hr>
+<p><em>End of Section 15 — Senior/Staff-Level System Design</em></p>
+<div class="pager">
+<a class="prev" href="performance-beyond-rendering.html"><span class="lbl">‹ Previous</span>14. Performance Beyond Rendering</a>
+<a class="next" href="interview-q-a-cheatsheet.html"><span class="lbl">Next ›</span>16. Interview Q&amp;A &amp; Cheatsheet</a>
+</div>
+</div></div>
+<script src="../site.js"></script>
+</body></html>

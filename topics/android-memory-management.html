@@ -1,0 +1,999 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>6. Android Memory Management</title>
+<link rel="stylesheet" href="../style.css"></head>
+<body class="has-toc" data-prev="ipc-binder-aidl-messenger.html" data-next="architecture-patterns.html">
+<nav class="sidebar"><a class="brand" href="../index.html">📱 Android Study Guide — Home</a><details class="topic"><summary><span class="caret">▶</span><a href="data-structures-big-o.html">1. Data Structures &amp; Big O</a></summary><ul class="subtopics"><li><a class="" href="data-structures-big-o.html#11-data-structures--collections--12-big-o-notation">1.1 Data Structures &amp; Collections · 1.2 Big O Notation</a></li><li><a class="" href="data-structures-big-o.html#table-of-contents">Table of Contents</a></li><li><a class="" href="data-structures-big-o.html#1-arrays">1. Arrays</a></li><li><a class="" href="data-structures-big-o.html#2-arraylist--mutablelist">2. ArrayList / MutableList</a></li><li><a class="" href="data-structures-big-o.html#3-linkedlist">3. LinkedList</a></li><li><a class="" href="data-structures-big-o.html#4-stack">4. Stack</a></li><li><a class="" href="data-structures-big-o.html#5-queue">5. Queue</a></li><li><a class="" href="data-structures-big-o.html#6-deque">6. Deque</a></li><li><a class="" href="data-structures-big-o.html#7-hashmap--mutablemap">7. HashMap / MutableMap</a></li><li><a class="" href="data-structures-big-o.html#8-hashset--mutableset">8. HashSet / MutableSet</a></li><li><a class="" href="data-structures-big-o.html#9-linkedhashmap">9. LinkedHashMap</a></li><li><a class="" href="data-structures-big-o.html#10-treemap--sortedmap">10. TreeMap / SortedMap</a></li><li><a class="" href="data-structures-big-o.html#11-priorityqueue--heap">11. PriorityQueue / Heap</a></li><li><a class="" href="data-structures-big-o.html#12-trie">12. Trie</a></li><li><a class="" href="data-structures-big-o.html#13-graphs">13. Graphs</a></li><li><a class="" href="data-structures-big-o.html#14-android-specific-collections">14. Android-Specific Collections</a></li><li><a class="" href="data-structures-big-o.html#15-big-o-notation">15. Big O Notation</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="kotlin-java-fundamentals.html">2. Kotlin &amp; Java Fundamentals</a></summary><ul class="subtopics"><li><a class="" href="kotlin-java-fundamentals.html#table-of-contents">Table of Contents</a></li><li><a class="" href="kotlin-java-fundamentals.html#21-kotlin-fundamentals">2.1 Kotlin Fundamentals</a></li><li><a class="" href="kotlin-java-fundamentals.html#22-kotlin-generics">2.2 Kotlin Generics</a></li><li><a class="" href="kotlin-java-fundamentals.html#23-java-fundamentals">2.3 Java Fundamentals</a></li><li><a class="" href="kotlin-java-fundamentals.html#24-kotlin-java-interop">2.4 Kotlin-Java Interop</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="concurrency-android-threading.html">3. Concurrency &amp; Android Threading</a></summary><ul class="subtopics"><li><a class="" href="concurrency-android-threading.html#table-of-contents">Table of Contents</a></li><li><a class="" href="concurrency-android-threading.html#31-java-thread-basics">3.1 Java Thread Basics</a></li><li><a class="" href="concurrency-android-threading.html#32-locks-and-synchronization">3.2 Locks and Synchronization</a></li><li><a class="" href="concurrency-android-threading.html#33-volatile-and-atomic-classes">3.3 Volatile and Atomic Classes</a></li><li><a class="" href="concurrency-android-threading.html#34-waitnotify-and-producer-consumer">3.4 Wait/Notify and Producer-Consumer</a></li><li><a class="" href="concurrency-android-threading.html#35-executors-and-task-execution">3.5 Executors and Task Execution</a></li><li><a class="" href="concurrency-android-threading.html#36-android-application-threads">3.6 Android Application Threads</a></li><li><a class="" href="concurrency-android-threading.html#37-handler--looper--messagequeue">3.7 Handler / Looper / MessageQueue</a></li><li><a class="" href="concurrency-android-threading.html#38-kotlin-coroutines-on-android">3.8 Kotlin Coroutines on Android</a></li><li><a class="" href="concurrency-android-threading.html#39-flow-stateflow-sharedflow-channel">3.9 Flow, StateFlow, SharedFlow, Channel</a></li><li><a class="" href="concurrency-android-threading.html#310-background-work">3.10 Background Work</a></li><li><a class="" href="concurrency-android-threading.html#quick-reference-interview-cheat-sheet">Quick-Reference: Interview Cheat Sheet</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="thread-communication.html">4. Thread Communication</a></summary><ul class="subtopics"><li><a class="" href="thread-communication.html#table-of-contents">Table of Contents</a></li><li><a class="" href="thread-communication.html#41-pipes">4.1 Pipes</a></li><li><a class="" href="thread-communication.html#42-shared-memory">4.2 Shared Memory</a></li><li><a class="" href="thread-communication.html#43-signaling">4.3 Signaling</a></li><li><a class="" href="thread-communication.html#44-blockingqueue">4.4 BlockingQueue</a></li><li><a class="" href="thread-communication.html#45-message-passing--android-handlerloopermessagequeue">4.5 Message Passing — Android Handler/Looper/MessageQueue</a></li><li><a class="" href="thread-communication.html#cross-cutting-shared-memory-vs-message-passing">Cross-cutting: Shared Memory vs Message Passing</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="ipc-binder-aidl-messenger.html">5. IPC: Binder, AIDL, Messenger</a></summary><ul class="subtopics"><li><a class="" href="ipc-binder-aidl-messenger.html#table-of-contents">Table of Contents</a></li><li><a class="" href="ipc-binder-aidl-messenger.html#51-android-process-model">5.1 Android Process Model</a></li><li><a class="" href="ipc-binder-aidl-messenger.html#52-binder">5.2 Binder</a></li><li><a class="" href="ipc-binder-aidl-messenger.html#53-aidl">5.3 AIDL</a></li><li><a class="" href="ipc-binder-aidl-messenger.html#54-messenger">5.4 Messenger</a></li><li><a class="" href="ipc-binder-aidl-messenger.html#parcelable-vs-serializable">Parcelable vs Serializable</a></li><li><a class="" href="ipc-binder-aidl-messenger.html#aidl-vs-messenger-decision-guide">AIDL vs Messenger Decision Guide</a></li><li><a class="" href="ipc-binder-aidl-messenger.html#interview-quick-reference">Interview Quick-Reference</a></li></ul></details><details class="topic active" open><summary><span class="caret">▶</span><a href="android-memory-management.html">6. Android Memory Management</a></summary><ul class="subtopics"><li><a class="spy" href="#table-of-contents">Table of Contents</a></li><li><a class="spy" href="#61-jvmart-memory-basics">6.1 JVM/ART Memory Basics</a></li><li><a class="spy" href="#62-android-memory-leaks">6.2 Android Memory Leaks</a></li><li><a class="spy" href="#63-context-leaks">6.3 Context Leaks</a></li><li><a class="spy" href="#64-bitmap-and-image-memory">6.4 Bitmap and Image Memory</a></li><li><a class="spy" href="#65-leak-detection-and-profiling">6.5 Leak Detection and Profiling</a></li><li><a class="spy" href="#interview-quick-reference">Interview Quick-Reference</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="architecture-patterns.html">7. Architecture Patterns</a></summary><ul class="subtopics"><li><a class="" href="architecture-patterns.html#table-of-contents">Table of Contents</a></li><li><a class="" href="architecture-patterns.html#71-mvc-mvp-mvvm-mvi">7.1 MVC, MVP, MVVM, MVI</a></li><li><a class="" href="architecture-patterns.html#72-clean-architecture">7.2 Clean Architecture</a></li><li><a class="" href="architecture-patterns.html#73-repository-pattern">7.3 Repository Pattern</a></li><li><a class="" href="architecture-patterns.html#74-dependency-injection">7.4 Dependency Injection</a></li><li><a class="" href="architecture-patterns.html#75-modularization">7.5 Modularization</a></li><li><a class="" href="architecture-patterns.html#quick-reference-cheat-sheet">Quick-Reference Cheat Sheet</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="view-rendering.html">8. View Rendering</a></summary><ul class="subtopics"><li><a class="" href="view-rendering.html#table-of-contents">Table of Contents</a></li><li><a class="" href="view-rendering.html#81-traditional-view-system-rendering">8.1 Traditional View System Rendering</a></li><li><a class="" href="view-rendering.html#82-choreographer-vsync-and-frame-rendering">8.2 Choreographer, VSync, and Frame Rendering</a></li><li><a class="" href="view-rendering.html#83-recyclerview-performance">8.3 RecyclerView Performance</a></li><li><a class="" href="view-rendering.html#84-jetpack-compose-rendering">8.4 Jetpack Compose Rendering</a></li><li><a class="" href="view-rendering.html#85-performance-tools">8.5 Performance Tools</a></li><li><a class="" href="view-rendering.html#interview-cheat-sheet">Interview Cheat Sheet</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="lifecycle-platform-components.html">9. Lifecycle &amp; Platform Components</a></summary><ul class="subtopics"><li><a class="" href="lifecycle-platform-components.html#table-of-contents">Table of Contents</a></li><li><a class="" href="lifecycle-platform-components.html#91-activity">9.1 Activity</a></li><li><a class="" href="lifecycle-platform-components.html#92-fragment">9.2 Fragment</a></li><li><a class="" href="lifecycle-platform-components.html#93-services">9.3 Services</a></li><li><a class="" href="lifecycle-platform-components.html#94-broadcastreceiver">9.4 BroadcastReceiver</a></li><li><a class="" href="lifecycle-platform-components.html#95-contentprovider">9.5 ContentProvider</a></li><li><a class="" href="lifecycle-platform-components.html#96-intents-and-pendingintents">9.6 Intents and PendingIntents</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="android-data-layer.html">10. Android Data Layer</a></summary><ul class="subtopics"><li><a class="" href="android-data-layer.html#table-of-contents">Table of Contents</a></li><li><a class="" href="android-data-layer.html#101-networking">10.1 Networking</a></li><li><a class="" href="android-data-layer.html#102-persistence">10.2 Persistence</a></li><li><a class="" href="android-data-layer.html#103-offline-first-design">10.3 Offline-First Design</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="testing.html">11. Testing</a></summary><ul class="subtopics"><li><a class="" href="testing.html#table-of-contents">Table of Contents</a></li><li><a class="" href="testing.html#111-unit-testing">11.1 Unit Testing</a></li><li><a class="" href="testing.html#112-ui-testing">11.2 UI Testing</a></li><li><a class="" href="testing.html#113-integration-and-end-to-end-testing">11.3 Integration and End-to-End Testing</a></li><li><a class="" href="testing.html#quick-reference-interview-cheat-sheet">Quick-Reference Interview Cheat Sheet</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="build-gradle-release.html">12. Build, Gradle &amp; Release</a></summary><ul class="subtopics"><li><a class="" href="build-gradle-release.html#table-of-contents">Table of Contents</a></li><li><a class="" href="build-gradle-release.html#121-gradle-basics">12.1 Gradle Basics</a></li><li><a class="" href="build-gradle-release.html#122-build-performance">12.2 Build Performance</a></li><li><a class="" href="build-gradle-release.html#123-release">12.3 Release</a></li><li><a class="" href="build-gradle-release.html#summary-table-quick-reference">Summary Table: Quick Reference</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="security-privacy.html">13. Security &amp; Privacy</a></summary><ul class="subtopics"><li><a class="" href="security-privacy.html#table-of-contents">Table of Contents</a></li><li><a class="" href="security-privacy.html#131-android-security-basics">13.1 Android Security Basics</a></li><li><a class="" href="security-privacy.html#132-data-security">13.2 Data Security</a></li><li><a class="" href="security-privacy.html#interview-qa-master-list">Interview Q&amp;A Master List</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="performance-beyond-rendering.html">14. Performance Beyond Rendering</a></summary><ul class="subtopics"><li><a class="" href="performance-beyond-rendering.html#table-of-contents">Table of Contents</a></li><li><a class="" href="performance-beyond-rendering.html#141-startup-performance">14.1 Startup Performance</a></li><li><a class="" href="performance-beyond-rendering.html#142-battery-and-resource-usage">14.2 Battery and Resource Usage</a></li><li><a class="" href="performance-beyond-rendering.html#143-anr-and-crash-debugging">14.3 ANR and Crash Debugging</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="senior-staff-system-design.html">15. Senior/Staff System Design</a></summary><ul class="subtopics"><li><a class="" href="senior-staff-system-design.html#table-of-contents">Table of Contents</a></li><li><a class="" href="senior-staff-system-design.html#151-android-app-architecture-design">15.1 Android App Architecture Design</a></li><li><a class="" href="senior-staff-system-design.html#152-trade-off-thinking">15.2 Trade-Off Thinking</a></li><li><a class="" href="senior-staff-system-design.html#153-legacy-code-and-migration">15.3 Legacy Code and Migration</a></li><li><a class="" href="senior-staff-system-design.html#154-engineering-leadership">15.4 Engineering Leadership</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="interview-q-a-cheatsheet.html">16. Interview Q&amp;A &amp; Cheatsheet</a></summary><ul class="subtopics"><li><a class="" href="interview-q-a-cheatsheet.html#table-of-contents">Table of Contents</a></li><li><a class="" href="interview-q-a-cheatsheet.html#section-16--model-answers-by-category">Section 16 — Model Answers by Category</a></li><li><a class="" href="interview-q-a-cheatsheet.html#section-17--must-revise-checklist">Section 17 — Must-Revise Checklist</a></li><li><a class="" href="interview-q-a-cheatsheet.html#section-18--senior-answer-framework-with-worked-examples">Section 18 — Senior Answer Framework with Worked Examples</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="references.html">References</a></summary><ul class="subtopics"><li><a class="" href="references.html#table-of-contents">Table of Contents</a></li><li><a class="" href="references.html#section-1--data-structures--big-o">Section 1 — Data Structures &amp; Big O</a></li><li><a class="" href="references.html#section-2--kotlin--java-fundamentals">Section 2 — Kotlin &amp; Java Fundamentals</a></li><li><a class="" href="references.html#section-3--concurrency--threading">Section 3 — Concurrency &amp; Threading</a></li><li><a class="" href="references.html#section-4--thread-communication">Section 4 — Thread Communication</a></li><li><a class="" href="references.html#section-5--ipc-binder-aidl-messenger">Section 5 — IPC: Binder, AIDL, Messenger</a></li><li><a class="" href="references.html#section-6--memory-management">Section 6 — Memory Management</a></li><li><a class="" href="references.html#section-7--architecture-patterns">Section 7 — Architecture Patterns</a></li><li><a class="" href="references.html#section-8--view-rendering">Section 8 — View Rendering</a></li><li><a class="" href="references.html#section-9--lifecycle--platform-components">Section 9 — Lifecycle &amp; Platform Components</a></li><li><a class="" href="references.html#section-10--data-layer">Section 10 — Data Layer</a></li><li><a class="" href="references.html#section-11--testing">Section 11 — Testing</a></li><li><a class="" href="references.html#section-12--build-gradle--release">Section 12 — Build, Gradle &amp; Release</a></li><li><a class="" href="references.html#section-13--security--privacy">Section 13 — Security &amp; Privacy</a></li><li><a class="" href="references.html#section-14--performance-beyond-rendering">Section 14 — Performance (Beyond Rendering)</a></li><li><a class="" href="references.html#section-15--system-design">Section 15 — System Design</a></li><li><a class="" href="references.html#section-16--interview-qa-cheatsheet">Section 16 — Interview Q&amp;A Cheatsheet</a></li><li><a class="" href="references.html#section-17--must-revise-checklist">Section 17 — Must-Revise Checklist</a></li><li><a class="" href="references.html#section-18--seniorstaff-answer-framework">Section 18 — Senior/Staff Answer Framework</a></li><li><a class="" href="references.html#books">Books</a></li></ul></details></nav>
+<aside class="toc-right"><div class="toc-h">On this page</div><ul class="toc-tree"><li class="toc-grp"><a class="toc-2" href="#table-of-contents"><span class="tcaret tcaret-none"></span>Table of Contents</a></li><li class="toc-grp"><a class="toc-2" href="#61-jvmart-memory-basics"><span class="tcaret">▶</span>6.1 JVM/ART Memory Basics</a><ul class="toc-subs"><li><a class="toc-3" href="#stack-vs-heap">Stack vs Heap</a></li><li><a class="toc-3" href="#object-allocation">Object Allocation</a></li><li><a class="toc-3" href="#references-and-reachability">References and Reachability</a></li><li><a class="toc-3" href="#garbage-collection">Garbage Collection</a></li><li><a class="toc-3" href="#reference-strengths-strong--weak--soft--phantom">Reference Strengths: Strong / Weak / Soft / Phantom</a></li><li><a class="toc-3" href="#finalizers-are-problematic">Finalizers Are Problematic</a></li><li><a class="toc-3" href="#allocation-pressure-gc-pauses-and-object-churn">Allocation Pressure, GC Pauses, and Object Churn</a></li><li><a class="toc-3" href="#ontrimmemory">onTrimMemory</a></li></ul></li><li class="toc-grp"><a class="toc-2" href="#62-android-memory-leaks"><span class="tcaret">▶</span>6.2 Android Memory Leaks</a><ul class="toc-subs"><li><a class="toc-3" href="#activity-referenced-by-singleton">Activity Referenced by Singleton</a></li><li><a class="toc-3" href="#static-reference-to-context">Static Reference to Context</a></li><li><a class="toc-3" href="#non-static-inner-class-holding-outer-activity">Non-Static Inner Class Holding Outer Activity</a></li><li><a class="toc-3" href="#handler-and-delayed-messages">Handler and Delayed Messages</a></li><li><a class="toc-3" href="#coroutine-running-beyond-lifecycle">Coroutine Running Beyond Lifecycle</a></li><li><a class="toc-3" href="#callbacklistener-not-unregistered">Callback/Listener Not Unregistered</a></li><li><a class="toc-3" href="#broadcastreceiver-not-unregistered">BroadcastReceiver Not Unregistered</a></li><li><a class="toc-3" href="#adapter--viewholder-leaks">Adapter / ViewHolder Leaks</a></li><li><a class="toc-3" href="#dialog--window-leaks">Dialog / Window Leaks</a></li><li><a class="toc-3" href="#bitmap--cache-leaks">Bitmap / Cache Leaks</a></li><li><a class="toc-3" href="#webview-leaks">WebView Leaks</a></li><li><a class="toc-3" href="#fragment-view-binding-leaks">Fragment View Binding Leaks</a></li><li><a class="toc-3" href="#long-running-thread-holding-activity">Long-Running Thread Holding Activity</a></li><li><a class="toc-3" href="#book-deep-dive">Book Deep-Dive</a></li></ul></li><li class="toc-grp"><a class="toc-2" href="#63-context-leaks"><span class="tcaret">▶</span>6.3 Context Leaks</a><ul class="toc-subs"><li><a class="toc-3" href="#activity-context-vs-application-context">Activity Context vs Application Context</a></li><li><a class="toc-3" href="#when-application-context-is-safe">When Application Context Is Safe</a></li><li><a class="toc-3" href="#when-activity-context-is-required">When Activity Context Is Required</a></li><li><a class="toc-3" href="#singleton-must-not-hold-activity">Singleton Must Not Hold Activity</a></li><li><a class="toc-3" href="#views-must-not-outlive-activity">Views Must Not Outlive Activity</a></li></ul></li><li class="toc-grp"><a class="toc-2" href="#64-bitmap-and-image-memory"><span class="tcaret">▶</span>6.4 Bitmap and Image Memory</a><ul class="toc-subs"><li><a class="toc-3" href="#bitmap-memory-size">Bitmap Memory Size</a></li><li><a class="toc-3" href="#downsampling">Downsampling</a></li><li><a class="toc-3" href="#image-caching-and-lrucache">Image Caching and LruCache</a></li><li><a class="toc-3" href="#glide--coil--picasso">Glide / Coil / Picasso</a></li><li><a class="toc-3" href="#hardware-bitmaps">Hardware Bitmaps</a></li><li><a class="toc-3" href="#recyclerview-image-cancellation">RecyclerView Image Cancellation</a></li><li><a class="toc-3" href="#avoiding-oom">Avoiding OOM</a></li></ul></li><li class="toc-grp"><a class="toc-2" href="#65-leak-detection-and-profiling"><span class="tcaret">▶</span>6.5 Leak Detection and Profiling</a><ul class="toc-subs"><li><a class="toc-3" href="#android-studio-memory-profiler">Android Studio Memory Profiler</a></li><li><a class="toc-3" href="#heap-dump">Heap Dump</a></li><li><a class="toc-3" href="#allocation-tracking">Allocation Tracking</a></li><li><a class="toc-3" href="#leakcanary">LeakCanary</a></li><li><a class="toc-3" href="#android-vitals">Android Vitals</a></li><li><a class="toc-3" href="#dumpsys-meminfo">dumpsys meminfo</a></li><li><a class="toc-3" href="#perfetto">Perfetto</a></li></ul></li><li class="toc-grp"><a class="toc-2" href="#interview-quick-reference"><span class="tcaret">▶</span>Interview Quick-Reference</a><ul class="toc-subs"><li><a class="toc-3" href="#61--jvmart-memory-basics">6.1 — JVM/ART Memory Basics</a></li><li><a class="toc-3" href="#62--android-memory-leaks">6.2 — Android Memory Leaks</a></li><li><a class="toc-3" href="#63--context-leaks">6.3 — Context Leaks</a></li><li><a class="toc-3" href="#64--bitmap-and-image-memory">6.4 — Bitmap and Image Memory</a></li><li><a class="toc-3" href="#65--detection-and-profiling">6.5 — Detection and Profiling</a></li></ul></li></ul></aside>
+<div class="backdrop"></div>
+<div class="content">
+<div class="mtop"><button onclick="toggleNav()" aria-label="Menu">☰</button><a class="home" href="../index.html">🏠</a><span class="t">6. Android Memory Management</span></div>
+<a class="arrow left" href="ipc-binder-aidl-messenger.html" title="Previous (5. IPC: Binder, AIDL, Messenger)">‹</a>
+<a class="arrow right" href="architecture-patterns.html" title="Next (7. Architecture Patterns)">›</a>
+<div class="wrap">
+<h1 id="6-android-memory-management">6. Android Memory Management</h1>
+<p>Comprehensive senior/staff-level study material covering JVM/ART memory fundamentals, Android-specific leak patterns, Context lifecycle safety, bitmap memory, and profiling tools.</p>
+<hr>
+<h2 id="table-of-contents">Table of Contents</h2>
+<ul>
+<li><a href="#61-jvmart-memory-basics">6.1 JVM/ART Memory Basics</a></li>
+<ul>
+<li><a href="#stack-vs-heap">Stack vs Heap</a></li>
+<li><a href="#object-allocation">Object Allocation</a></li>
+<li><a href="#references-and-reachability">References and Reachability</a></li>
+<li><a href="#garbage-collection">Garbage Collection</a></li>
+<li><a href="#reference-strengths-strong--weak--soft--phantom">Reference Strengths: Strong / Weak / Soft / Phantom</a></li>
+<li><a href="#finalizers-are-problematic">Finalizers Are Problematic</a></li>
+<li><a href="#allocation-pressure-gc-pauses-and-object-churn">Allocation Pressure, GC Pauses, and Object Churn</a></li>
+<li><a href="#ontrimmemory">onTrimMemory</a></li>
+</ul>
+<li><a href="#62-android-memory-leaks">6.2 Android Memory Leaks</a></li>
+<ul>
+<li><a href="#activity-referenced-by-singleton">Activity Referenced by Singleton</a></li>
+<li><a href="#static-reference-to-context">Static Reference to Context</a></li>
+<li><a href="#non-static-inner-class-holding-outer-activity">Non-Static Inner Class Holding Outer Activity</a></li>
+<li><a href="#handler-and-delayed-messages">Handler and Delayed Messages</a></li>
+<li><a href="#coroutine-running-beyond-lifecycle">Coroutine Running Beyond Lifecycle</a></li>
+<li><a href="#callbacklistener-not-unregistered">Callback/Listener Not Unregistered</a></li>
+<li><a href="#broadcastreceiver-not-unregistered">BroadcastReceiver Not Unregistered</a></li>
+<li><a href="#adapter--viewholder-leaks">Adapter / ViewHolder Leaks</a></li>
+<li><a href="#dialog--window-leaks">Dialog / Window Leaks</a></li>
+<li><a href="#bitmap--cache-leaks">Bitmap / Cache Leaks</a></li>
+<li><a href="#webview-leaks">WebView Leaks</a></li>
+<li><a href="#fragment-view-binding-leaks">Fragment View Binding Leaks</a></li>
+<li><a href="#long-running-thread-holding-activity">Long-Running Thread Holding Activity</a></li>
+<li><a href="#book-deep-dive">Book Deep-Dive: Thread Leaks, Static Inner Classes, Weak References, Worker Thread Lifecycle, Message Queue Cleanup</a></li>
+</ul>
+<li><a href="#63-context-leaks">6.3 Context Leaks</a></li>
+<ul>
+<li><a href="#activity-context-vs-application-context">Activity Context vs Application Context</a></li>
+<li><a href="#when-application-context-is-safe">When Application Context Is Safe</a></li>
+<li><a href="#when-activity-context-is-required">When Activity Context Is Required</a></li>
+<li><a href="#singleton-must-not-hold-activity">Singleton Must Not Hold Activity</a></li>
+<li><a href="#views-must-not-outlive-activity">Views Must Not Outlive Activity</a></li>
+</ul>
+<li><a href="#64-bitmap-and-image-memory">6.4 Bitmap and Image Memory</a></li>
+<ul>
+<li><a href="#bitmap-memory-size">Bitmap Memory Size</a></li>
+<li><a href="#downsampling">Downsampling</a></li>
+<li><a href="#image-caching-and-lrucache">Image Caching and LruCache</a></li>
+<li><a href="#glide--coil--picasso">Glide / Coil / Picasso</a></li>
+<li><a href="#hardware-bitmaps">Hardware Bitmaps</a></li>
+<li><a href="#recyclerview-image-cancellation">RecyclerView Image Cancellation</a></li>
+<li><a href="#avoiding-oom">Avoiding OOM</a></li>
+</ul>
+<li><a href="#65-leak-detection-and-profiling">6.5 Leak Detection and Profiling</a></li>
+<ul>
+<li><a href="#android-studio-memory-profiler">Android Studio Memory Profiler</a></li>
+<li><a href="#heap-dump">Heap Dump</a></li>
+<li><a href="#allocation-tracking">Allocation Tracking</a></li>
+<li><a href="#leakcanary">LeakCanary</a></li>
+<li><a href="#android-vitals">Android Vitals</a></li>
+<li><a href="#dumpsys-meminfo">dumpsys meminfo</a></li>
+<li><a href="#perfetto">Perfetto</a></li>
+</ul>
+<li><a href="#interview-quick-reference">Interview Quick-Reference</a></li>
+</ul>
+<hr>
+<h2 id="61-jvmart-memory-basics">6.1 JVM/ART Memory Basics</h2>
+<h3 id="stack-vs-heap">Stack vs Heap</h3>
+<h4 id="definition">Definition</h4>
+<p>The stack and heap are the two distinct memory regions the JVM uses, and understanding the difference matters a lot for Android because it determines both lifetime and thread safety.</p>
+<table border="1" cellpadding="6" cellspacing="0">
+<thead><tr>
+<th>Dimension</th>
+<th>Stack</th>
+<th>Heap</th>
+</tr></thead><tbody>
+<tr><td>What lives there</td><td>Primitive local variables, method frames, object references</td><td>All object instances and arrays</td></tr>
+<tr><td>Allocation</td><td>Automatic, LIFO, at method entry</td><td>Explicit <code>new</code> (or Kotlin object literals), GC-managed</td></tr>
+<tr><td>Lifetime</td><td>Exactly the enclosing method call</td><td>Until no live reference remains</td></tr>
+<tr><td>Size</td><td>Small, fixed per thread (Android default ~8 KB–1 MB per thread)</td><td>Large, expandable up to the process memory limit</td></tr>
+<tr><td>Thread safety</td><td>Each thread has its own stack — no sharing</td><td>Shared across all threads — concurrency required</td></tr>
+<tr><td>Speed</td><td>Very fast (just SP register increment)</td><td>Slower (allocation, possible GC)</td></tr>
+</tbody></table>
+<h4 id="android--art-internals">Android / ART internals</h4>
+<ul>
+<li>ART uses a generational heap split into <strong>Young</strong> (allocation), <strong>Old</strong> (long-lived), and <strong>Large Object Space</strong> (objects &gt; ~12 KB).</li>
+<li>Stack frames for Dalvik bytecode methods are laid out by the ART interpreter or JIT/AOT-compiled native frames.</li>
+<li>Stack overflow (deep recursion) throws <code>StackOverflowError</code>, not <code>OutOfMemoryError</code>.</li>
+</ul>
+<h4 id="interview-angles">Interview angles</h4>
+<p><strong>Q: &quot;If I declare <code>val x = 5</code> inside a function, where does it live?&quot;</strong></p>
+<p>&quot;The value <code>5</code> lives in the current thread&#x27;s stack frame — the stack is just the scratch space for whatever method is currently executing. Now if instead I write <code>val obj = MyClass()</code>, the reference <code>obj</code> is still on the stack, but the actual <code>MyClass</code> instance is allocated on the heap. The stack holds the pointer; the heap holds the object.&quot;</p>
+<p><strong>Q: &quot;Can two threads share a stack variable?&quot;</strong></p>
+<p>&quot;No. Each thread has its own independent stack, so stack variables are private to the thread running that method. Threads can only share state through the heap — which is exactly why you need synchronization any time two threads read and write the same mutable heap object.&quot;</p>
+<hr>
+<h3 id="object-allocation">Object Allocation</h3>
+<h4 id="internals">Internals</h4>
+<p>ART allocates new objects in the <strong>Thread-Local Allocation Buffer (TLAB)</strong> — a small region carved out of Young space for each thread. TLAB allocation is near-free because it is just a pointer bump. When the TLAB fills, ART does a minor GC (Young collection), which is fast — roughly 2 to 5 ms — but still causes a brief pause.</p>
+<p>When an object survives enough minor GCs it is <strong>promoted</strong> to Old generation, where it lives until a major GC.</p>
+<h4 id="kotlin-allocation-pitfalls">Kotlin allocation pitfalls</h4>
+<pre><code>// BAD: creates a lambda object on every call
+list.forEach { it.process() }
+
+// BETTER: if called in a tight loop, extract to a named function reference
+val fn: (Item) -&gt; Unit = { it.process() }
+list.forEach(fn)</code></pre>
+<p>Boxing: Kotlin&#x27;s <code>Int</code>, <code>Long</code>, etc. compile to primitive JVM types when possible, but generics always box — <code>List&lt;Int&gt;</code> stores <code>Integer</code> objects. Prefer <code>IntArray</code> / <code>LongArray</code> / <code>SparseArray</code> in performance-critical paths.</p>
+<hr>
+<h3 id="references-and-reachability">References and Reachability</h3>
+<h4 id="reachability-gc-root-tracing">Reachability (GC root tracing)</h4>
+<p>The key concept here is reachability. The GC starts from <strong>GC roots</strong> — currently-executing stack frames, static fields, JNI global references, and synchronization monitors — and traces every reference chain outward. Any object reachable by following references from a root is <strong>live</strong> and will not be collected. Anything the GC cannot reach from any root is <strong>eligible for collection</strong>.</p>
+<pre><code>GC Roots
+  ├── Thread stack frames
+  ├── Static fields (dangerous — they live until ClassLoader unload)
+  ├── JNI global refs
+  └── System classes
+        └── → object A → object B → object C   (all live)</code></pre>
+<p>The important implication is that if you cut the reference chain — for example, by setting a static field to <code>null</code> — the entire sub-graph below it becomes eligible for collection.</p>
+<hr>
+<h3 id="garbage-collection">Garbage Collection</h3>
+<h4 id="art-gc-algorithms">ART GC algorithms</h4>
+<p>ART ships multiple collectors selectable at runtime:</p>
+<table border="1" cellpadding="6" cellspacing="0">
+<thead><tr>
+<th>Collector</th>
+<th>Pauses</th>
+<th>Use case</th>
+</tr></thead><tbody>
+<tr><td>CMS (Concurrent Mark-Sweep)</td><td>Short stop-the-world pauses</td><td>Default for most allocation</td></tr>
+<tr><td>Generational CC (Concurrent Copying)</td><td>Very short</td><td>Background/foreground switching</td></tr>
+<tr><td>Semi-space</td><td>Compacting, longer pause</td><td>After transition to background</td></tr>
+</tbody></table>
+<p>The Android lifecycle integration matters here: when an app moves to background at <code>onStop</code>, ART may trigger a <strong>compacting GC</strong> using the semi-space collector. That is expensive — roughly 50 to 100 ms — but acceptable because the user is not watching the screen at that point.</p>
+<h4 id="gc-phases-simplified">GC phases (simplified)</h4>
+<p>There are essentially three phases. First, <strong>Mark</strong> — the GC traces from GC roots and marks all reachable objects. Second, <strong>Sweep</strong> — it reclaims the memory of everything that was not marked. Third, in the Concurrent Mark-Sweep variant, most of that marking and sweeping runs concurrently alongside your app threads, but brief <strong>stop-the-world</strong> pauses still occur at the start of the mark phase and at the end for a final remark pass.</p>
+<hr>
+<h3 id="reference-strengths-strong--weak--soft--phantom">Reference Strengths: Strong / Weak / Soft / Phantom</h3>
+<h4 id="strong-reference-default">Strong reference (default)</h4>
+<pre><code>val activity: Activity = this  // strong — Activity will NOT be GC&#x27;d while this lives</code></pre>
+<p>A strong reference is the default — the GC will never collect an object as long as a strong reference to it exists.</p>
+<h4 id="weak-reference">Weak reference</h4>
+<pre><code>import java.lang.ref.WeakReference
+
+class MyCache {
+    private val ref = WeakReference(someExpensiveObject)
+
+    fun get() = ref.get()  // returns null if GC collected it
+}</code></pre>
+<p>A weak reference tells the GC: &quot;collect this at the next GC cycle once no strong references remain.&quot; There are two main uses in Android. First, caches and listener registrations where you don&#x27;t want the cache to prevent GC. Second, holding a <code>WeakReference&lt;Activity&gt;</code> inside a <code>Handler</code> or background thread so that finishing the Activity does not keep it alive just because the handler still has a reference.</p>
+<h4 id="soft-reference">Soft reference</h4>
+<pre><code>import java.lang.ref.SoftReference
+
+val cached = SoftReference(loadBitmap())
+val bmp = cached.get() ?: loadBitmap()  // reload if GC&#x27;d</code></pre>
+<p>A soft reference means &quot;keep this alive as long as there&#x27;s memory to spare, but collect it before throwing OOM.&quot; The GC will only collect the referent when memory is actually tight. The trade-off is that <code>LruCache</code> with explicit eviction is usually better, because soft references hand too much control to the GC — you cannot predict what gets evicted when.</p>
+<h4 id="phantom-reference">Phantom reference</h4>
+<pre><code>val queue = ReferenceQueue&lt;MyObject&gt;()
+val ref = PhantomReference(obj, queue)
+// obj = null  (must explicitly clear strong ref)
+
+// In a cleanup thread:
+val enqueued = queue.poll()  // non-null after GC finalizes obj</code></pre>
+<p>Phantom references are enqueued after the referent&#x27;s finalizer runs (or would have run) and its memory is about to be reclaimed. Calling <code>get()</code> always returns <code>null</code> — you can never resurrect the object. The use case is deterministic resource cleanup as an alternative to <code>finalize()</code>. ART&#x27;s internal <code>Cleaner</code>, used for native memory bookkeeping, is built on phantom references. You rarely need this in app code, but mentioning it shows depth.</p>
+<h4 id="reference-summary-table">Reference summary table</h4>
+<table border="1" cellpadding="6" cellspacing="0">
+<thead><tr>
+<th>Type</th>
+<th>GC collects when?</th>
+<th><code>get()</code> returns null?</th>
+<th>Main use</th>
+</tr></thead><tbody>
+<tr><td>Strong</td><td>Never (while reference exists)</td><td>No</td><td>Normal object ownership</td></tr>
+<tr><td>Soft</td><td>Low memory</td><td>After GC</td><td>Memory-sensitive caches</td></tr>
+<tr><td>Weak</td><td>Next GC cycle</td><td>After GC</td><td>Non-owning associations</td></tr>
+<tr><td>Phantom</td><td>After finalization</td><td>Always</td><td>Pre-reclaim cleanup hooks</td></tr>
+</tbody></table>
+<hr>
+<h3 id="finalizers-are-problematic">Finalizers Are Problematic</h3>
+<h4 id="what-a-finalizer-is">What a finalizer is</h4>
+<pre><code>// Java-style; Kotlin discourages this
+class Broken {
+    protected fun finalize() {
+        closeResource()  // DON&#x27;T do this
+    }
+}</code></pre>
+<h4 id="why-finalizers-are-dangerous">Why finalizers are dangerous</h4>
+<p>There are five reasons to avoid them. First, <strong>non-deterministic timing</strong> — the GC decides when to call <code>finalize()</code>, so resources may be held for unpredictable durations. Second, <strong>resurrection risk</strong> — a finalizer can make the object reachable again by storing <code>this</code> in a static field, which forces a second GC cycle before actual collection. Third, the <strong>FinalizerDaemon bottleneck</strong> — ART runs all finalizers on a single background thread. A slow or blocking finalizer stalls finalization of every other object, growing the finalization queue indefinitely. Fourth, <strong>OOM under finalizer pressure</strong> — if objects are created faster than <code>FinalizerDaemon</code> can finalize them, the heap fills up and throws <code>OutOfMemoryError</code>. And fifth, there is <strong>no guarantee of execution</strong> — the JVM spec says finalizers are not guaranteed to run before process exit.</p>
+<h4 id="correct-alternative">Correct alternative</h4>
+<p>Use <code>Closeable</code> / <code>AutoCloseable</code> with the <code>use { }</code> extension — it calls <code>close()</code> automatically on exit, even when an exception is thrown:</p>
+<pre><code>FileInputStream(&quot;file.txt&quot;).use { stream -&gt;
+    // stream.close() called automatically on exit, even on exception
+}</code></pre>
+<p>Or Kotlin&#x27;s <code>kotlin.io.use</code> / <code>Closeable.use</code> extension.</p>
+<hr>
+<h3 id="allocation-pressure-gc-pauses-and-object-churn">Allocation Pressure, GC Pauses, and Object Churn</h3>
+<h4 id="definitions">Definitions</h4>
+<p><strong>Allocation pressure</strong> means creating objects faster than the GC can reclaim them, which forces frequent GC cycles. <strong>GC pauses</strong> are brief stop-the-world pauses where all app threads halt so the GC can safely walk the heap — even a 5 ms pause can drop a frame at 60 fps given a 16 ms budget. <strong>Object churn</strong> is creating many short-lived objects rapidly — they fill Young gen and trigger frequent minor GCs.</p>
+<h4 id="why-this-causes-jank">Why this causes jank</h4>
+<pre><code>Frame budget (60 fps) = 16 ms
+GC minor pause       = 2–5 ms
+GC major pause       = 10–50 ms (semi-space / compacting)</code></pre>
+<p>A major GC during a frame guarantees a dropped frame. Minor GCs are shorter but they add up, and the key insight is that the allocation pattern is entirely within your control — the GC is not.</p>
+<h4 id="common-causes-in-android">Common causes in Android</h4>
+<pre><code>// BAD: creates a new String on every bind call in RecyclerView
+fun bind(item: Item) {
+    label.text = &quot;Item: &quot; + item.id  // String concatenation → new objects
+}
+
+// BETTER:
+fun bind(item: Item) {
+    label.text = itemLabel(item.id)  // pre-computed or formatted lazily
+}</code></pre>
+<p>Other churn sources:</p>
+<ul>
+<li>Lambda captures inside <code>onDraw()</code> or <code>onBindViewHolder()</code></li>
+<li><code>ArrayList</code> resizing (each resize copies the backing array)</li>
+<li>Autoboxing <code>Int</code> → <code>Integer</code> in <code>HashMap&lt;Int, V&gt;</code> (use <code>SparseArray&lt;V&gt;</code> instead)</li>
+<li>Creating <code>Paint</code> or <code>Rect</code> objects inside <code>onDraw()</code> (allocate once as class fields)</li>
+</ul>
+<h4 id="mitigation">Mitigation</h4>
+<ul>
+<li>Object pools (<code>Pools.SimplePool</code>)</li>
+<li>Pre-allocated scratch buffers</li>
+<li><code>@Reusable</code> Dagger scopes for stateless helpers</li>
+<li>Avoid allocation inside tight loops and rendering code</li>
+</ul>
+<hr>
+<h3 id="ontrimmemory">onTrimMemory</h3>
+<h4 id="definition-1">Definition</h4>
+<p><code>ComponentCallbacks2.onTrimMemory(level: Int)</code> is the system&#x27;s way of asking your process to reduce its memory footprint. It is available in <code>Activity</code>, <code>Fragment</code>, <code>Service</code>, <code>Application</code>, and <code>ViewModel</code>, and the level argument tells you how urgently the system needs memory back.</p>
+<h4 id="levels">Levels</h4>
+<table border="1" cellpadding="6" cellspacing="0">
+<thead><tr>
+<th>Level constant</th>
+<th>Value</th>
+<th>Meaning</th>
+</tr></thead><tbody>
+<tr><td><code>TRIM_MEMORY_UI_HIDDEN</code></td><td>20</td><td>App moved to background; release UI resources</td></tr>
+<tr><td><code>TRIM_MEMORY_RUNNING_MODERATE</code></td><td>5</td><td>System is under moderate memory pressure; app is running</td></tr>
+<tr><td><code>TRIM_MEMORY_RUNNING_LOW</code></td><td>10</td><td>System is low on memory; app is running</td></tr>
+<tr><td><code>TRIM_MEMORY_RUNNING_CRITICAL</code></td><td>15</td><td>System is critically low; process may be killed soon</td></tr>
+<tr><td><code>TRIM_MEMORY_BACKGROUND</code></td><td>40</td><td>Process is in LRU cache; release as much as possible</td></tr>
+<tr><td><code>TRIM_MEMORY_MODERATE</code></td><td>60</td><td>Process in middle of LRU; system wants memory</td></tr>
+<tr><td><code>TRIM_MEMORY_COMPLETE</code></td><td>80</td><td>Process is near top of LRU kill list; release everything possible</td></tr>
+</tbody></table>
+<h4 id="correct-usage">Correct usage</h4>
+<pre><code>class MyApplication : Application() {
+    override fun onTrimMemory(level: Int) {
+        super.onTrimMemory(level)
+        when {
+            level &gt;= ComponentCallbacks2.TRIM_MEMORY_COMPLETE -&gt; {
+                // Release all caches
+                imageCache.evictAll()
+                dataCache.clear()
+            }
+            level &gt;= ComponentCallbacks2.TRIM_MEMORY_BACKGROUND -&gt; {
+                // Release UI caches
+                imageCache.trimToSize(imageCache.size() / 2)
+            }
+            level &gt;= ComponentCallbacks2.TRIM_MEMORY_UI_HIDDEN -&gt; {
+                // App moved to background — release thumbnail caches, etc.
+                thumbnailCache.evictAll()
+            }
+        }
+    }
+}</code></pre>
+<p>The trade-off is that releasing too aggressively slows re-entry because cold data must reload, whereas releasing too conservatively risks process kill. The rule of thumb is: target <code>UI_HIDDEN</code> for transient UI caches, and <code>COMPLETE</code> for everything else.</p>
+<hr>
+<h2 id="62-android-memory-leaks">6.2 Android Memory Leaks</h2>
+<p>A memory leak is what happens when an object that should be eligible for GC is kept alive by an unintended reference chain rooted at a GC root. The object&#x27;s memory is never reclaimed, and over time the heap grows until you hit OOM or the process gets killed.</p>
+<p>The distinction between a leak and high memory usage is worth being precise about. High memory usage means the app legitimately holds a lot of data — caches, large datasets. A leak means memory that should have been freed is still held. Both can cause OOM, but leaks grow monotonically whereas high memory usage is bounded.</p>
+<hr>
+<h3 id="activity-referenced-by-singleton">Activity Referenced by Singleton</h3>
+<h4 id="the-problem">The problem</h4>
+<pre><code>// WRONG
+object NetworkManager {
+    var activityContext: Activity? = null  // Activity lives forever
+}
+
+class MainActivity : Activity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        NetworkManager.activityContext = this  // leak!
+    }
+}</code></pre>
+<p><code>NetworkManager</code> is a GC root because it is reachable via a static field of its companion object. That means the <code>Activity</code> instance — with all its Views, Drawables, bitmaps, and the entire View hierarchy — can never be collected as long as the process lives.</p>
+<h4 id="fix">Fix</h4>
+<p>Use <code>Application</code> context for singletons. If <code>Activity</code> is truly needed — for example, to show a dialog — hold only a <code>WeakReference</code> and null it on <code>onDestroy</code>.</p>
+<pre><code>object NetworkManager {
+    private var _context: Context? = null
+    // Or: accept Context.applicationContext at init
+    fun init(appContext: Context) { _context = appContext }
+}</code></pre>
+<hr>
+<h3 id="static-reference-to-context">Static Reference to Context</h3>
+<pre><code>// WRONG
+companion object {
+    lateinit var appContext: Context   // fine if app context
+    lateinit var activity: Activity    // LEAK if Activity
+}</code></pre>
+<p>Static fields in Kotlin compile to fields on the companion object&#x27;s backing class, which is loaded by the application <code>ClassLoader</code> — itself a GC root. Assigning an <code>Activity</code> to a static field creates a strong reference chain straight from a GC root to the Activity, so the Activity can never be collected.</p>
+<p>The safe alternative is <code>application.applicationContext</code> — it lives for the entire process lifetime anyway, so holding it statically is not a leak.</p>
+<hr>
+<h3 id="non-static-inner-class-holding-outer-activity">Non-Static Inner Class Holding Outer Activity</h3>
+<pre><code>// WRONG — Kotlin nested class is non-static by default
+class MyActivity : Activity() {
+
+    inner class MyTask : AsyncTask&lt;Void, Void, String&gt;() {  // holds implicit ref to MyActivity
+        override fun doInBackground(vararg params: Void?) = heavyWork()
+        override fun onPostExecute(result: String) {
+            this@MyActivity.updateUI(result)  // implicit capture
+        }
+    }
+}</code></pre>
+<p>An inner class — <code>inner class</code> in Kotlin, non-static nested in Java — holds an implicit reference to the enclosing instance. If <code>MyTask</code> outlives <code>MyActivity</code>, for example because the task is still running after the user presses Back, the Activity is leaked.</p>
+<h4 id="fix-use-a-static-nested-class-with-a-weakreference">Fix: use a static nested class with a WeakReference</h4>
+<pre><code>class MyActivity : Activity() {
+
+    private var task: MyTask? = null
+
+    override fun onDestroy() {
+        super.onDestroy()
+        task?.cancel(true)
+        task = null
+    }
+
+    // Static nested — no implicit outer reference
+    private class MyTask(activity: MyActivity) : AsyncTask&lt;Void, Void, String&gt;() {
+        private val ref = WeakReference(activity)
+
+        override fun doInBackground(vararg params: Void?) = heavyWork()
+
+        override fun onPostExecute(result: String) {
+            ref.get()?.updateUI(result)  // safe — Activity may be null
+        }
+    }
+}</code></pre>
+<p>In modern Kotlin, the right answer is to use coroutines tied to <code>lifecycleScope</code> rather than <code>AsyncTask</code> entirely.</p>
+<hr>
+<h3 id="handler-and-delayed-messages">Handler and Delayed Messages</h3>
+<h4 id="the-problem-1">The problem</h4>
+<pre><code>// WRONG
+class MainActivity : AppCompatActivity() {
+    private val handler = Handler(Looper.getMainLooper())
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        // Lambda captures `this` (MainActivity)
+        handler.postDelayed({
+            doSomething()  // implicit capture of MainActivity
+        }, 30_000L)
+    }
+}</code></pre>
+<p>The reference chain here is what traps the Activity. <code>handler.postDelayed</code> enqueues a <code>Message</code> in the main <code>MessageQueue</code>. That <code>Message</code> holds a reference to its <code>Runnable</code>. The <code>Runnable</code> lambda captures <code>this</code> (the Activity). The <code>MessageQueue</code> is attached to the main <code>Looper</code>, which is a GC root. So the full chain is: <code>MessageQueue → Message → Runnable → Activity</code>. Even after <code>onDestroy</code>, the Activity is kept alive for the full 30-second delay.</p>
+<h4 id="fix-weakreference-pattern">Fix: WeakReference pattern</h4>
+<pre><code>class MainActivity : AppCompatActivity() {
+    private val handler = Handler(Looper.getMainLooper())
+    private val activityRef = WeakReference(this)
+
+    private val delayedTask = Runnable {
+        activityRef.get()?.doSomething()  // no-op if Activity is gone
+    }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        handler.postDelayed(delayedTask, 30_000L)
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        handler.removeCallbacks(delayedTask)  // CRITICAL: remove pending messages
+    }
+}</code></pre>
+<p>The key rule is: always call <code>handler.removeCallbacksAndMessages(null)</code> — or remove specific callbacks — in <code>onDestroy</code>.</p>
+<hr>
+<h3 id="coroutine-running-beyond-lifecycle">Coroutine Running Beyond Lifecycle</h3>
+<pre><code>// WRONG — GlobalScope coroutine captures Activity
+class MyActivity : AppCompatActivity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        GlobalScope.launch {  // never cancelled
+            val data = fetchData()
+            runOnUiThread { updateUI(data) }  // MainActivity captured; Activity leaked
+        }
+    }
+}</code></pre>
+<p><code>GlobalScope</code> lives for the entire process lifetime. The coroutine&#x27;s continuation captures the surrounding object — <code>this@MyActivity</code> — and after <code>onDestroy</code>, the coroutine is still suspended waiting for <code>fetchData()</code>, holding the Activity alive the whole time.</p>
+<h4 id="fix-use-lifecyclescope">Fix: use <code>lifecycleScope</code></h4>
+<pre><code>class MyActivity : AppCompatActivity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        lifecycleScope.launch {  // cancelled automatically on onDestroy
+            val data = fetchData()
+            updateUI(data)
+        }
+    }
+}</code></pre>
+<p><code>lifecycleScope</code> is a <code>CoroutineScope</code> tied to the Activity&#x27;s <code>Lifecycle</code>. When the Activity is destroyed, all launched coroutines are cancelled automatically. For ViewModels, use <code>viewModelScope</code>.</p>
+<p>One subtlety worth knowing: even with <code>lifecycleScope</code>, a coroutine running during <code>onStop</code> that is expected to finish quickly is fine. The issue is long-running or indefinitely-suspended work that holds a reference to the Activity across destruction.</p>
+<hr>
+<h3 id="callbacklistener-not-unregistered">Callback/Listener Not Unregistered</h3>
+<pre><code>// WRONG
+class MyFragment : Fragment() {
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+        locationManager.requestLocationUpdates(provider, 0, 0f, locationListener)
+        // locationListener holds a reference to this Fragment
+    }
+    // Never removed → Fragment and its entire view hierarchy are leaked
+}</code></pre>
+<p>The general principle is that any external object — a system service, a singleton, a third-party library — that holds a listener reference keeps the containing class alive. The fix is always symmetric registration and unregistration.</p>
+<h4 id="fix-symmetric-registerunregister">Fix: symmetric register/unregister</h4>
+<pre><code>override fun onStart() {
+    super.onStart()
+    locationManager.requestLocationUpdates(provider, 0, 0f, locationListener)
+}
+
+override fun onStop() {
+    super.onStop()
+    locationManager.removeUpdates(locationListener)
+}</code></pre>
+<p>The rule is to pair registration with the matching lifecycle callback: <code>onStart</code>/<code>onStop</code> for things only needed in the foreground, <code>onResume</code>/<code>onPause</code> for things only needed when visible, and <code>onCreate</code>/<code>onDestroy</code> for process-wide resources.</p>
+<hr>
+<h3 id="broadcastreceiver-not-unregistered">BroadcastReceiver Not Unregistered</h3>
+<pre><code>// WRONG
+class MyActivity : AppCompatActivity() {
+    private val receiver = MyBroadcastReceiver()
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        registerReceiver(receiver, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
+        // Activity destroyed but receiver still registered → Activity leaked via Context
+    }
+}</code></pre>
+<h4 id="fix-1">Fix</h4>
+<pre><code>override fun onStart() { registerReceiver(receiver, filter) }
+override fun onStop()  { unregisterReceiver(receiver) }</code></pre>
+<p>Alternatively, use a <code>LifecycleObserver</code> to auto-unregister when the lifecycle reaches the appropriate state.</p>
+<hr>
+<h3 id="adapter--viewholder-leaks">Adapter / ViewHolder Leaks</h3>
+<h4 id="recyclerviewadapter-holding-stale-data">RecyclerView.Adapter holding stale data</h4>
+<pre><code>class MyAdapter(private val items: MutableList&lt;Item&gt;) : RecyclerView.Adapter&lt;MyViewHolder&gt;() {
+    // &#x27;items&#x27; may be a list from a ViewModel or repository.
+    // If the Adapter lives longer than the Fragment (e.g., stored in a singleton),
+    // &#x27;items&#x27; (and transitively any Context captured in ViewHolder) is leaked.
+}</code></pre>
+<p>The pattern to follow is that adapters should be owned by the Fragment or Activity, not by ViewModels or singletons. Use <code>DiffUtil</code> and <code>ListAdapter</code> so the adapter holds only the diffed snapshot, not a live mutable reference into the data layer.</p>
+<h4 id="viewholder-holding-view-context">ViewHolder holding View context</h4>
+<p>Every <code>View</code> holds a reference to the <code>Context</code> that created it — the Activity. If a <code>ViewHolder</code> is stored somewhere beyond the RecyclerView&#x27;s lifecycle, the entire Activity is reachable through that View.</p>
+<hr>
+<h3 id="dialog--window-leaks">Dialog / Window Leaks</h3>
+<pre><code>// WRONG — dialog holds Activity window token
+class MyActivity : AppCompatActivity() {
+    private var dialog: AlertDialog? = null
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        dialog = AlertDialog.Builder(this)  // &#x27;this&#x27; is Activity
+            .setMessage(&quot;Loading...&quot;)
+            .create()
+        dialog?.show()
+        // If dialog is not dismissed before Activity finishes,
+        // Android WindowManager throws (or leaks the window).
+    }
+}</code></pre>
+<h4 id="fix-2">Fix</h4>
+<pre><code>override fun onDestroy() {
+    super.onDestroy()
+    dialog?.dismiss()
+    dialog = null
+}</code></pre>
+<p>Use <code>DialogFragment</code> for dialogs that need to survive configuration changes — it handles the show/dismiss lifecycle correctly so the window token situation is managed for you.</p>
+<hr>
+<h3 id="bitmap--cache-leaks">Bitmap / Cache Leaks</h3>
+<p>Before API 26, bitmaps were backed by native memory with a small Java header. Since API 26, both the header and pixel data live in native memory, but the <code>Bitmap</code> object itself is still tracked by the Java GC. The trap is that if you accumulate bitmaps in a static cache without bounds, native memory grows unbounded while the Java heap looks perfectly healthy.</p>
+<p>Always use a bounded <code>LruCache</code> or delegate to Glide/Coil — see §6.4 for details.</p>
+<hr>
+<h3 id="webview-leaks">WebView Leaks</h3>
+<p><code>WebView</code> is notoriously hard to clean up, and the order of operations matters:</p>
+<pre><code>// Pattern to minimize WebView leaks
+override fun onDestroy() {
+    webViewContainer.removeAllViews()  // detach from hierarchy first
+    webView.destroy()                  // release native resources
+    webView = null
+    super.onDestroy()
+}</code></pre>
+<p>There are three additional mitigations worth knowing. First, inflate <code>WebView</code> with <code>applicationContext</code> rather than the Activity, to avoid keeping Activity context inside WebView&#x27;s internal state. Second, if the leak is severe, run WebView in a separate process. Third, never store <code>WebView</code> in a static field.</p>
+<hr>
+<h3 id="fragment-view-binding-leaks">Fragment View Binding Leaks</h3>
+<h4 id="the-problem-2">The problem</h4>
+<p>The root of this leak is that a Fragment has two distinct lifecycles: the <strong>Fragment lifecycle</strong> and the <strong>Fragment View lifecycle</strong>. The view is destroyed at <code>onDestroyView</code> while the Fragment itself may remain alive on the back stack. If you hold a <code>ViewBinding</code> reference in a Fragment instance variable, the binding keeps the entire View hierarchy alive after <code>onDestroyView</code>.</p>
+<pre><code>// WRONG
+class MyFragment : Fragment() {
+    private var binding: MyFragmentBinding? = null  // nullable but never nulled
+
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
+        binding = MyFragmentBinding.inflate(inflater, container, false)
+        return binding!!.root
+    }
+    // binding retains all Views after onDestroyView → leak
+}</code></pre>
+<h4 id="correct-fix-null-the-binding-in-ondestroyview">Correct fix: null the binding in onDestroyView</h4>
+<pre><code>class MyFragment : Fragment(R.layout.my_fragment) {
+    private var _binding: MyFragmentBinding? = null
+    private val binding get() = _binding!!
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+        _binding = MyFragmentBinding.bind(view)
+        binding.button.setOnClickListener { /* ... */ }
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        _binding = null  // CRITICAL: break reference to View hierarchy
+    }
+}</code></pre>
+<p>After <code>_binding = null</code>, no strong reference from the Fragment instance to the View hierarchy remains, so the Views can now be GC&#x27;d.</p>
+<hr>
+<h3 id="long-running-thread-holding-activity">Long-Running Thread Holding Activity</h3>
+<pre><code>// WRONG
+class MyActivity : AppCompatActivity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        Thread {                        // captures &#x27;this&#x27; via lambda
+            val result = longWork()
+            runOnUiThread { show(result) }  // still holds Activity ref
+        }.start()
+    }
+}</code></pre>
+<p>A <code>Thread</code> object is a GC root while it is alive — running or blocked. Its <code>Runnable</code> lambda captures the Activity. Even if the user navigates away, the thread and the Activity both stay alive until <code>longWork()</code> finishes.</p>
+<h4 id="fix-3">Fix</h4>
+<p>Use <code>lifecycleScope.launch(Dispatchers.IO)</code> so the coroutine is cancelled automatically on <code>onDestroy</code>. If you must use raw threads:</p>
+<pre><code>private var workerThread: Thread? = null
+
+override fun onDestroy() {
+    workerThread?.interrupt()  // signal thread to stop
+    workerThread = null
+    super.onDestroy()
+}</code></pre>
+<hr>
+<h3 id="book-deep-dive">Book Deep-Dive</h3>
+<h4 id="thread-related-memory-leaks">Thread-Related Memory Leaks</h4>
+<p>A <code>Thread</code> is a GC root until it terminates, so any object captured in the thread&#x27;s <code>Runnable</code> — directly or indirectly — is kept alive for the thread&#x27;s entire lifetime. There are three strategies for dealing with this. First, prefer <code>lifecycleScope</code> or <code>viewModelScope</code> where cancellation is automatic. Second, use an interrupt flag — call <code>thread.interrupt()</code> and check <code>Thread.currentThread().isInterrupted</code> in long loops. Third, pass a <code>WeakReference&lt;Activity&gt;</code> instead of the <code>Activity</code> directly.</p>
+<h4 id="static-inner-classes">Static Inner Classes</h4>
+<p>In Java, every non-<code>static</code> inner class holds a hidden <code>this$0</code> reference to its enclosing instance. In Kotlin, <code>inner class</code> has exactly the same behavior. Declaring the class as <code>private class</code> without the <code>inner</code> keyword in Kotlin — or as <code>static class</code> in Java — removes that hidden reference entirely.</p>
+<pre><code>// Kotlin: static nested (no outer reference)
+class Outer {
+    private class Worker : Runnable {
+        // No access to Outer members unless passed explicitly
+        override fun run() { /* ... */ }
+    }
+}
+
+// Kotlin: inner class (has outer reference)
+class Outer {
+    inner class Worker : Runnable {
+        override fun run() { this@Outer.someMethod() }  // can access Outer
+    }
+}</code></pre>
+<h4 id="weak-references-pattern">Weak References Pattern</h4>
+<p>The canonical leak-safe pattern for cases where an inner object — a Handler, an AsyncTask, a Thread — needs to call back to an outer Activity is to pass a <code>WeakReference</code> and check for null before using it:</p>
+<pre><code>class WeakHandler(activity: Activity) : Handler(Looper.getMainLooper()) {
+    private val ref = WeakReference(activity)
+
+    override fun handleMessage(msg: Message) {
+        val act = ref.get() ?: return  // Activity gone — ignore
+        when (msg.what) {
+            MSG_UPDATE -&gt; act.updateUI(msg.obj as String)
+        }
+    }
+}
+
+class MainActivity : AppCompatActivity() {
+    private lateinit var handler: WeakHandler
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        handler = WeakHandler(this)
+    }
+
+    override fun onDestroy() {
+        handler.removeCallbacksAndMessages(null)  // drain queue
+        super.onDestroy()
+    }
+}</code></pre>
+<h4 id="stopping-worker-threads">Stopping Worker Threads</h4>
+<p>There are three options, listed here in order of preference:</p>
+<ol>
+<li><strong>Cooperative cancellation via flag</strong>:</li>
+</ol>
+<pre><code>   @Volatile private var running = true
+
+   val thread = Thread {
+       while (running) {
+           processNextItem()
+       }
+   }
+
+   fun stopWorker() { running = false }</code></pre>
+<ol>
+<li><strong>Interrupt</strong>:</li>
+</ol>
+<pre><code>   thread.interrupt()
+   // In worker:
+   while (!Thread.currentThread().isInterrupted) { ... }</code></pre>
+<ol>
+<li><strong><code>HandlerThread.quit()</code> / <code>quitSafely()</code></strong>:</li>
+</ol>
+<pre><code>   val handlerThread = HandlerThread(&quot;worker&quot;).also { it.start() }
+   val workerHandler = Handler(handlerThread.looper)
+
+   fun cleanup() {
+       handlerThread.quitSafely()  // processes pending messages, then stops
+   }</code></pre>
+<p>Never use <code>Thread.stop()</code> — it is deprecated and unsafe because it can leave shared state in a corrupt condition.</p>
+<h4 id="retaining-worker-threads-across-config-changes">Retaining Worker Threads (across config changes)</h4>
+<p>The right approach here is to let a <code>ViewModel</code> own the thread or coroutine scope, because ViewModel survives configuration changes:</p>
+<pre><code>class MyViewModel : ViewModel() {
+    private val workerJob = SupervisorJob()
+    val scope = CoroutineScope(Dispatchers.IO + workerJob)
+
+    override fun onCleared() {
+        workerJob.cancel()  // cancels all children
+    }
+}</code></pre>
+<p>Never store a worker thread in <code>onRetainNonConfigurationInstance</code> or <code>setRetainInstance(true)</code> — both are deprecated.</p>
+<h4 id="cleaning-up-message-queues">Cleaning Up Message Queues</h4>
+<p>Before destroying any component that owns a <code>Handler</code>, drain its queue:</p>
+<pre><code>// Remove all pending callbacks and messages
+handler.removeCallbacksAndMessages(null)
+
+// Or remove specific Runnable:
+handler.removeCallbacks(myRunnable)
+
+// Or remove by message.what code:
+handler.removeMessages(MSG_CODE)</code></pre>
+<p>Failing to drain the queue means pending messages can fire after the Activity is destroyed, causing <code>NullPointerException</code> or silently wasting work.</p>
+<hr>
+<h2 id="63-context-leaks">6.3 Context Leaks</h2>
+<h3 id="activity-context-vs-application-context">Activity Context vs Application Context</h3>
+<p><code>Context</code> is an abstract class. The two concrete subclasses that matter most for leaks are <code>Activity</code> — including the host Activity referenced by a <code>Fragment</code> — and <code>Application</code>. Understanding which one to use in a given situation is one of the most common Android interview topics.</p>
+<table border="1" cellpadding="6" cellspacing="0">
+<thead><tr>
+<th>Property</th>
+<th>Activity Context</th>
+<th>Application Context</th>
+</tr></thead><tbody>
+<tr><td>Lifetime</td><td>From <code>onCreate</code> to <code>onDestroy</code></td><td>Entire process lifetime</td></tr>
+<tr><td>Theme/style access</td><td>Full access (Activity theme)</td><td>Application theme only (may be wrong theme)</td></tr>
+<tr><td>UI operations</td><td>Required for dialogs, window tokens, some Views</td><td>Not suitable</td></tr>
+<tr><td>Safe for singletons</td><td><strong>No</strong> — singleton outlives Activity</td><td><strong>Yes</strong> — same lifetime as process</td></tr>
+<tr><td>GC risk</td><td>High if held beyond <code>onDestroy</code></td><td>None (lives as long as process)</td></tr>
+</tbody></table>
+<hr>
+<h3 id="when-application-context-is-safe">When Application Context Is Safe</h3>
+<p>Use <code>applicationContext</code> for any of the following: initializing singletons such as Retrofit, Room, OkHttp, or image loaders; accessing system services where no UI is involved like <code>getSystemService(CONNECTIVITY_SERVICE)</code> or <code>getSystemService(NOTIFICATION_SERVICE)</code>; string and resource access in non-UI code; starting <code>Service</code> or <code>BroadcastReceiver</code> intents; and <code>SharedPreferences</code> access in a repository or data layer.</p>
+<pre><code>class MyRepository @Inject constructor(
+    @ApplicationContext private val context: Context  // Dagger qualifier
+) {
+    fun prefs() = context.getSharedPreferences(&quot;prefs&quot;, Context.MODE_PRIVATE)
+}</code></pre>
+<p>Dagger&#x27;s <code>@ApplicationContext</code> qualifier ensures the repository always receives <code>application.applicationContext</code> and never accidentally an Activity.</p>
+<hr>
+<h3 id="when-activity-context-is-required">When Activity Context Is Required</h3>
+<p>Activity context is required in five situations. First, <strong>inflating layouts</strong> — the View needs the Activity context to pick up the correct theme and display metrics. Second, <strong>creating dialogs</strong> with <code>AlertDialog.Builder(activityContext)</code> — dialogs need the Activity&#x27;s window token. Third, <strong>starting Activities</strong> when <code>FLAG_ACTIVITY_NEW_TASK</code> is absent — using application context requires that flag. Fourth, <strong>some system services</strong> where <code>LayoutInflater.from(context)</code> uses the context theme, and using application context gives the wrong theme. Fifth, <strong><code>registerForActivityResult</code> and permission requests</strong> — these are bound to the Activity lifecycle.</p>
+<p>The rule of thumb is simple: if it touches the screen or a window, use Activity context.</p>
+<hr>
+<h3 id="singleton-must-not-hold-activity">Singleton Must Not Hold Activity</h3>
+<p>This is the most common source of large memory leaks. A single Activity instance contains its full View hierarchy — potentially hundreds of View objects, Drawables, Bitmaps, and text layouts — so leaking one Activity can mean tens of megabytes of memory that never comes back.</p>
+<pre><code>// WRONG
+class AnalyticsManager private constructor() {
+    var currentActivity: Activity? = null  // LEAK
+    companion object { val instance = AnalyticsManager() }
+}
+
+// RIGHT — use WeakReference if you truly need the Activity temporarily
+class AnalyticsManager private constructor() {
+    private var activityRef: WeakReference&lt;Activity&gt;? = null
+
+    fun attachActivity(activity: Activity) {
+        activityRef = WeakReference(activity)
+    }
+
+    fun detachActivity() {
+        activityRef = null
+    }
+
+    fun currentActivity(): Activity? = activityRef?.get()
+}</code></pre>
+<p>The even better answer is to redesign so the singleton never needs an Activity reference at all. Use event buses, callbacks, or <code>LiveData</code>/<code>Flow</code> to communicate back to the UI layer.</p>
+<hr>
+<h3 id="views-must-not-outlive-activity">Views Must Not Outlive Activity</h3>
+<pre><code>// WRONG — View stored in a static or longer-lived object
+object ViewCache {
+    var cachedHeader: View? = null
+}</code></pre>
+<p>Every <code>View</code> holds a reference to the <code>Context</code> — specifically the Activity — through which it was created, accessible as <code>view.context</code>. Storing a View in a singleton or any object that outlives the Activity leaks the entire Activity through that reference.</p>
+<p>If you need to preserve layout state across recreation, store the <strong>data</strong> — Parcelable or serializable state — in a <code>ViewModel</code>, not the Views themselves.</p>
+<hr>
+<h2 id="64-bitmap-and-image-memory">6.4 Bitmap and Image Memory</h2>
+<h3 id="bitmap-memory-size">Bitmap Memory Size</h3>
+<h4 id="formula">Formula</h4>
+<pre><code>bytes = width × height × bytes_per_pixel</code></pre>
+<table border="1" cellpadding="6" cellspacing="0">
+<thead><tr>
+<th>Config</th>
+<th>Bytes per pixel</th>
+<th>Notes</th>
+</tr></thead><tbody>
+<tr><td><code>ARGB_8888</code></td><td>4</td><td>Default; best quality</td></tr>
+<tr><td><code>RGB_565</code></td><td>2</td><td>No alpha; acceptable for photos</td></tr>
+<tr><td><code>ARGB_4444</code></td><td>2</td><td>Deprecated, poor quality</td></tr>
+<tr><td><code>ALPHA_8</code></td><td>1</td><td>Masks only</td></tr>
+<tr><td><code>HARDWARE</code></td><td>0 (GPU memory)</td><td>API 26+; not CPU-accessible</td></tr>
+</tbody></table>
+<p>The numbers add up fast. A 4000×3000 photo at <code>ARGB_8888</code> uses 4000 × 3000 × 4 = <strong>48 MB</strong> per image. Loading even a few full-resolution phone camera shots can OOM most devices.</p>
+<h4 id="historical-note">Historical note</h4>
+<p>Before API 26 (Oreo), bitmap pixel data was stored in a special native heap separate from both the Java heap and the regular native heap. That meant the Java <code>OutOfMemoryError</code> would not trigger even as you allocated hundreds of megabytes of bitmap data — the OOM came from the native allocator with confusing stack traces. Since API 26, pixel data lives in the normal native heap tracked by <code>malloc</code>, and ART applies back-pressure correctly.</p>
+<hr>
+<h3 id="downsampling">Downsampling</h3>
+<p>Downsampling is the technique of loading a smaller version of an image before decoding it, which reduces memory proportionally to the sample size.</p>
+<pre><code>fun decodeSampledBitmap(res: Resources, resId: Int, reqWidth: Int, reqHeight: Int): Bitmap {
+    // First pass: decode with inJustDecodeBounds = true to get dimensions
+    val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+    BitmapFactory.decodeResource(res, resId, options)
+
+    // Calculate inSampleSize
+    options.inSampleSize = calculateInSampleSize(options, reqWidth, reqHeight)
+    options.inJustDecodeBounds = false
+
+    return BitmapFactory.decodeResource(res, resId, options)
+}
+
+fun calculateInSampleSize(options: BitmapFactory.Options, reqWidth: Int, reqHeight: Int): Int {
+    val (height, width) = options.run { outHeight to outWidth }
+    var inSampleSize = 1
+    if (height &gt; reqHeight || width &gt; reqWidth) {
+        val halfHeight = height / 2
+        val halfWidth = width / 2
+        while (halfHeight / inSampleSize &gt;= reqHeight &amp;&amp; halfWidth / inSampleSize &gt;= reqWidth) {
+            inSampleSize *= 2
+        }
+    }
+    return inSampleSize
+}</code></pre>
+<p><code>inSampleSize</code> must be a power of 2. Setting <code>inSampleSize = 4</code> means a quarter of the linear dimensions, which is 1/16 the pixels and therefore 1/16 the memory.</p>
+<p>The trade-off is that a lower <code>inSampleSize</code> gives a sharper image but uses more memory. The rule is to always match <code>inSampleSize</code> to the display size, not the source size — there is no point decoding a 4K image to show it in a 48 dp thumbnail.</p>
+<hr>
+<h3 id="image-caching-and-lrucache">Image Caching and LruCache</h3>
+<h4 id="two-level-cache-pattern">Two-level cache pattern</h4>
+<pre><code>Request → Memory cache (fast, limited) → Disk cache (slower, larger) → Network/Disk decode</code></pre>
+<h4 id="lrucache-in-memory">LruCache (in-memory)</h4>
+<p><code>LruCache</code> evicts the least-recently-used entry automatically whenever the cache exceeds its configured capacity.</p>
+<pre><code>val maxMemory = (Runtime.getRuntime().maxMemory() / 1024).toInt()
+val cacheSize = maxMemory / 8  // Use 1/8th of available memory
+
+val memoryCache = object : LruCache&lt;String, Bitmap&gt;(cacheSize) {
+    override fun sizeOf(key: String, bitmap: Bitmap): Int {
+        // Return size in kilobytes
+        return bitmap.byteCount / 1024
+    }
+}
+
+// Add
+memoryCache.put(key, bitmap)
+
+// Get
+val cached: Bitmap? = memoryCache.get(key)</code></pre>
+<p>The 1/8 fraction is a typical rule of thumb: too large and you cause memory pressure on the rest of the app; too small and you get frequent cache misses.</p>
+<h4 id="disklrucache-on-disk">DiskLruCache (on-disk)</h4>
+<p><code>DiskLruCache</code> — from the AOSP samples, also shipped internally by Glide — caches encoded images in JPEG or PNG format on disk. It survives process restarts, is size-bounded, and is slower than a memory cache but much cheaper than a network round-trip.</p>
+<hr>
+<h3 id="glide--coil--picasso">Glide / Coil / Picasso</h3>
+<p>All three of these libraries handle the same core set of concerns: URL-to-bitmap loading, downsampling to display size, memory cache, disk cache, lifecycle awareness, placeholder and error drawables, and request cancellation.</p>
+<table border="1" cellpadding="6" cellspacing="0">
+<thead><tr>
+<th>Library</th>
+<th>Language</th>
+<th>Lifecycle-aware</th>
+<th>Compose support</th>
+<th>Notes</th>
+</tr></thead><tbody>
+<tr><td>Glide</td><td>Java</td><td>Yes (custom)</td><td>Yes</td><td>Most widely used, very configurable</td></tr>
+<tr><td>Coil</td><td>Kotlin</td><td>Yes (LifecycleOwner)</td><td>Native</td><td>Coroutines-first, smaller binary</td></tr>
+<tr><td>Picasso</td><td>Java</td><td>Partial</td><td>Limited</td><td>Simpler API, less actively developed</td></tr>
+</tbody></table>
+<h4 id="coil-example-compose">Coil example (Compose)</h4>
+<pre><code>// build.gradle: implementation(&quot;io.coil-kt:coil-compose:2.x&quot;)
+AsyncImage(
+    model = ImageRequest.Builder(LocalContext.current)
+        .data(&quot;https://example.com/image.jpg&quot;)
+        .crossfade(true)
+        .size(300, 300)          // downsample to display size
+        .memoryCachePolicy(CachePolicy.ENABLED)
+        .diskCachePolicy(CachePolicy.ENABLED)
+        .build(),
+    contentDescription = &quot;Profile photo&quot;,
+    modifier = Modifier.size(48.dp)
+)</code></pre>
+<h4 id="glide-example">Glide example</h4>
+<pre><code>Glide.with(fragment)
+    .load(url)
+    .override(Target.SIZE_ORIGINAL)   // or specific px
+    .placeholder(R.drawable.loading)
+    .error(R.drawable.broken)
+    .into(imageView)</code></pre>
+<p>The reason to use a library rather than rolling your own is that manual bitmap loading in <code>RecyclerView</code> requires at least four non-trivial things: cancellation on view recycle, downsampling to the display size, two-level caching, and worker-thread management. All of those are already solved correctly by these libraries.</p>
+<hr>
+<h3 id="hardware-bitmaps">Hardware Bitmaps</h3>
+<p>API 26 introduced <code>Bitmap.Config.HARDWARE</code>. A hardware bitmap stores pixel data <strong>only in GPU memory</strong>, which means it is immutable, it cannot be read back to the CPU — calls to <code>getPixel()</code> or <code>copyPixelsToBuffer()</code> throw — and it cannot be drawn with a software <code>Canvas</code>. The upside is that it is faster to draw because it skips the CPU-to-GPU upload step on each frame.</p>
+<pre><code>val options = BitmapFactory.Options().apply {
+    inPreferredConfig = Bitmap.Config.HARDWARE
+}
+val bitmap = BitmapFactory.decodeResource(resources, R.drawable.photo, options)
+// bitmap.config == Bitmap.Config.HARDWARE</code></pre>
+<p>Avoid hardware bitmaps when you need to read pixels back — for image editing — when drawing with a software <code>Canvas</code> such as for accessibility overlays or some Drawables, or when sharing the bitmap via <code>Parcelable</code> across processes.</p>
+<p>Glide and Coil can be configured to prefer hardware bitmaps:</p>
+<pre><code>// Glide
+Glide.with(context).asBitmap().load(url)
+    .apply(RequestOptions().format(DecodeFormat.PREFER_ARGB_8888))  // or PREFER_RGB_565
+    .into(target)</code></pre>
+<hr>
+<h3 id="recyclerview-image-cancellation">RecyclerView Image Cancellation</h3>
+<p>When a ViewHolder is recycled, the previous image load must be cancelled. Otherwise a slow load started for item #3 could complete and set its image on item #27, which has since been reused — giving the user the wrong image.</p>
+<pre><code>class ImageViewHolder(val binding: ItemImageBinding) : RecyclerView.ViewHolder(binding.root) {
+
+    fun bind(url: String) {
+        // Coil: request is tagged to the ImageView;
+        // loading a new URL automatically cancels the previous one
+        binding.image.load(url) {
+            placeholder(R.drawable.placeholder)
+        }
+    }
+
+    fun recycle() {
+        // Explicitly cancel and clear (not always needed with Coil/Glide but explicit is safer)
+        binding.image.dispose()
+    }
+}</code></pre>
+<p>With Glide, call <code>Glide.with(fragment).clear(imageView)</code> to cancel and clear. With Coil, calling <code>imageView.dispose()</code> is explicit, but simply calling <code>imageView.load(newUrl)</code> handles cancellation of the previous request implicitly.</p>
+<hr>
+<h3 id="avoiding-oom">Avoiding OOM</h3>
+<p>There are eight rules to avoid bitmap OOM. First, always downsample to display size — never load a 4K image into a 48 dp thumbnail view. Second, use a library like Coil or Glide — they handle all of the above automatically. Third, set a bounded memory cache, and <code>maxMemory / 8</code> is a reasonable starting point. Fourth, use <code>Bitmap.Config.RGB_565</code> for non-transparent images where quality allows, which cuts memory in half compared to <code>ARGB_8888</code>. Fifth, recycle bitmaps when done — <code>bitmap.recycle()</code> — especially pre-API 26. Sixth, handle <code>onTrimMemory</code> in your Application or image loader to evict caches under memory pressure. Seventh, prefer hardware bitmaps on API 26 and above for display-only images. And eighth, never load images on the main thread — <code>StrictMode</code> will warn you, and an OOM blocking the main thread also triggers an ANR.</p>
+<hr>
+<h2 id="65-leak-detection-and-profiling">6.5 Leak Detection and Profiling</h2>
+<h3 id="android-studio-memory-profiler">Android Studio Memory Profiler</h3>
+<p>The Memory Profiler shows a real-time heap allocation graph broken down by Java heap, native heap, graphics, stack, code, and others. It shows total allocations per time window, lets you trigger GC manually, and supports heap dump capture and analysis.</p>
+<p>The workflow is: run the app, open the <strong>Profiler</strong> tab, select <strong>Memory</strong>, and click on the graph to start observing. A sawtooth pattern — allocation, then GC, then plateau — is normal. A <strong>growing floor</strong> after each GC cycle is the signal that something is leaking. Rotating the device or navigating back and checking whether the heap drops back to baseline is a quick first check. If it does not, capture a heap dump to confirm.</p>
+<hr>
+<h3 id="heap-dump">Heap Dump</h3>
+<p>A heap dump is a snapshot of all live objects on the heap at a specific point in time, stored in <code>.hprof</code> format. You can capture one three ways: clicking &quot;Dump Java Heap&quot; in the Memory Profiler, calling <code>Debug.dumpHprofData(filePath)</code> programmatically, or running <code>adb shell am dumpheap &lt;pid&gt; /data/local/tmp/heap.hprof</code>.</p>
+<p>When analyzing in Android Studio, the workflow has three steps. First, the <strong>class list view</strong> — sort by &quot;Retained Size&quot; descending to find the largest retained objects. Second, the <strong>instance list</strong> — click a class to see all live instances; multiple <code>Activity</code> instances of the same class with no more user interaction is a clear leak signal. Third, the <strong>references tree</strong> — for a suspicious instance, expand &quot;References&quot; to trace the reference chain back to the GC root.</p>
+<p>There are five things to look for specifically in a heap dump. First, multiple instances of a single <code>Activity</code> class — there should be at most one after pressing Back. Second, <code>Activity</code> instances reachable from static fields. Third, <code>Bitmap</code> objects with large <code>byteCount</code> accumulated in a static cache. Fourth, <code>Fragment</code> instances with a non-null <code>mView</code> field after expected destruction. Fifth, <code>Handler</code> objects that hold references back to Activities.</p>
+<hr>
+<h3 id="allocation-tracking">Allocation Tracking</h3>
+<p>Allocation tracking records each allocation event with its stack trace during a recording window. Use it when you see frequent GC events but no permanent leak — in that case you are looking for allocation <strong>pressure</strong> and churn, not retained objects.</p>
+<p>The workflow in the Memory Profiler is: click &quot;Record allocations&quot;, use the app, then click &quot;Stop&quot;. Sort by &quot;Allocations&quot; or &quot;Shallow Size&quot; and look for allocations in rendering paths — <code>onDraw</code>, <code>onBindViewHolder</code>, <code>draw</code>.</p>
+<p>Common findings include String concatenation inside <code>onBindViewHolder</code>, <code>ArrayList</code> or <code>HashMap</code> churn in data processing loops, and lambda objects created fresh inside <code>setOnClickListener</code> on every bind call.</p>
+<hr>
+<h3 id="leakcanary">LeakCanary</h3>
+<p>LeakCanary is Square&#x27;s open-source automatic leak detection library for debug builds.</p>
+<h4 id="how-it-works-internals">How it works (internals)</h4>
+<p>LeakCanary works in five steps. First, the <strong>detection trigger</strong>: LeakCanary installs an <code>ActivityLifecycleCallbacks</code> — plus Fragment and ViewModel equivalents — and when an Activity is destroyed it adds the instance to a <code>KeyedWeakReference</code> list and schedules a check. Second, the <strong>reachability check</strong>: after a roughly 5-second delay, it triggers GC and checks whether the <code>WeakReference</code> was cleared. If the reference was not cleared, the object is still alive and is likely leaked. Third, the <strong>heap dump</strong>: LeakCanary calls <code>Debug.dumpHprofData()</code> to capture a snapshot. Fourth, <strong>path analysis</strong>: it uses its internal HPROF parser, Shark, to find the shortest strong-reference path from a GC root to the leaked object. Fifth, <strong>notification</strong>: it shows a notification with the full leak trace and the exact field names at each step in the reference chain.</p>
+<h4 id="setup">Setup</h4>
+<pre><code>// build.gradle (app module) — debug only
+debugImplementation(&quot;com.squareup.leakcanary:leakcanary-android:2.x&quot;)
+// No Application code needed — LeakCanary auto-installs via ContentProvider</code></pre>
+<h4 id="reading-a-leakcanary-trace">Reading a LeakCanary trace</h4>
+<pre><code>┬───
+│ GC Root: static field
+│
+├─ com.example.MySingleton
+│    Leaking: NO (static)
+│    ↓ MySingleton.activityRef
+├─ com.example.MainActivity
+│    Leaking: YES (Activity.mDestroyed is true)
+│    ↓ MainActivity.this$0 [inner class ref]
+╰→ com.example.MainActivity$1 instance
+     Leaking: YES</code></pre>
+<p>Read it bottom-up: <code>MainActivity$1</code>, an anonymous inner class, is the retained object. It holds a reference back to <code>MainActivity</code> through <code>this$0</code>. <code>MainActivity</code> was already destroyed. And <code>MySingleton.activityRef</code> is the GC root that is keeping the entire chain alive.</p>
+<h4 id="trade-offs">Trade-offs</h4>
+<p>LeakCanary is debug-only — never ship it to production because heap dumps are expensive. False positives are rare but possible, for instance when framework code legitimately holds a reference briefly. And there is roughly a 5 to 10 second delay between Activity destruction and the notification, because the library waits to ensure the GC had a chance to run.</p>
+<hr>
+<h3 id="android-vitals">Android Vitals</h3>
+<p>Android Vitals is Google Play Console&#x27;s production crash, ANR, and memory data aggregated from opted-in real devices.</p>
+<p>The metrics most relevant to memory are ANR rate — because GC pauses blocking the main thread can trigger ANRs — crash rate from <code>OutOfMemoryError</code> and <code>NullPointerException</code> from GC&#x27;d weak references, stuck partial wake locks and excessive wakeups which are symptoms of resource leaks.</p>
+<p>For a memory investigation, the workflow is: filter crashes by <code>OutOfMemoryError</code> to see which code paths OOM in production. The crash details include a stack trace and the device model and RAM tier, which lets you correlate leaks with low-RAM devices. The <code>LowMemoryKills</code> metric — available via the Play Console API — counts how often the OS killed your process for low memory, which is an actionable signal for how well your <code>onTrimMemory</code> handling is working.</p>
+<hr>
+<h3 id="dumpsys-meminfo">dumpsys meminfo</h3>
+<p><code>adb shell dumpsys meminfo &lt;package-name&gt;</code> prints a memory summary for a running process.</p>
+<h4 id="key-columns">Key columns</h4>
+<pre><code>                   Pss(KB)  Private Dirty  Private Clean  SwapPss(KB)
+                -------  -------------  -------------  -----------
+  Native Heap     12,345         12,000              0          100
+  Dalvik Heap      8,765          8,000              0            0
+  Dalvik Other       234            200              0            0
+  Stack              156            156              0            0
+  Graphics         5,678          5,678              0            0
+  ...
+  TOTAL           32,456         29,834            200          100</code></pre>
+<table border="1" cellpadding="6" cellspacing="0">
+<thead><tr>
+<th>Term</th>
+<th>Meaning</th>
+</tr></thead><tbody>
+<tr><td><strong>PSS</strong></td><td>Proportional Set Size — memory shared with other processes counted proportionally. Best single-number comparison.</td></tr>
+<tr><td><strong>RSS</strong></td><td>Resident Set Size — all memory mapped in, including shared libs (overstates per-app usage).</td></tr>
+<tr><td><strong>Private Dirty</strong></td><td>Memory used only by this process, modified (cannot be paged out cleanly). High = bad.</td></tr>
+<tr><td><strong>Native Heap</strong></td><td><code>malloc</code> allocations from JNI / native code / bitmaps (API 26+).</td></tr>
+<tr><td><strong>Dalvik Heap</strong></td><td>Java/Kotlin object allocations.</td></tr>
+<tr><td><strong>Graphics</strong></td><td>GPU buffers allocated by SurfaceFlinger for this app.</td></tr>
+</tbody></table>
+<p>The workflow is: capture a baseline, do some work in the app, capture again, and compare <code>Private Dirty</code> on <code>Dalvik Heap</code> and <code>Native Heap</code>. A consistently growing <code>Private Dirty</code> on <code>Native Heap</code> is often a sign of bitmap leaks.</p>
+<hr>
+<h3 id="perfetto">Perfetto</h3>
+<p>Perfetto is the system-wide tracing infrastructure that replaced Systrace on API 28 and above.</p>
+<p>There are three memory-relevant probes. First, <strong><code>heapprofd</code></strong>, the heap profiler — it samples native <code>malloc</code> allocations with full stack traces at very low overhead, with a default sampling interval of 4096 bytes, and it shows you exactly where native memory grows. ``<code>bash adb shell perfetto --out /data/misc/perfetto-traces/trace \ -c - --txt &lt;&lt;EOF buffers: { size_kb: 63488 } data_sources: { config { name: &quot;android.heapprofd&quot; heapprofd_config { sampling_interval_bytes: 4096 process_cmdline: &quot;com.example.app&quot; } } } duration_ms: 15000 EOF </code>``</p>
+<p>Second, <strong><code>android.java_hprof</code></strong> — a Java heap snapshot that is like a heap dump but streamed directly into a Perfetto trace. Third, <strong><code>track_event</code></strong> — custom trace events you add to your own code with <code>Trace.beginSection</code> and <code>Trace.endSection</code>.</p>
+<p>Open the trace at <code>ui.perfetto.dev</code>. The <strong>Memory</strong> track shows RSS and PSS over time, and zooming in shows individual allocation events from <code>heapprofd</code>.</p>
+<p>Use Perfetto over the Memory Profiler for system-wide analysis — for example, to check whether GPU, media, or <code>system_server</code> is consuming memory — for production-close profiling at lower overhead, or when investigating native memory leaks that do not show up in Java heap dumps.</p>
+<hr>
+<h2 id="interview-quick-reference">Interview Quick-Reference</h2>
+<h3 id="61--jvmart-memory-basics">6.1 — JVM/ART Memory Basics</h3>
+<table border="1" cellpadding="6" cellspacing="0">
+<thead><tr>
+<th>Question</th>
+<th>Answer</th>
+</tr></thead><tbody>
+<tr><td>Stack vs heap</td><td>Stack: primitives/references in current frame, per-thread, LIFO. Heap: all objects, GC-managed, shared.</td></tr>
+<tr><td>When is object eligible for GC?</td><td>When no strong reference chain from any GC root reaches it.</td></tr>
+<tr><td>Why can frequent allocation cause jank?</td><td>Fills Young gen → frequent minor GCs → stop-the-world pauses → dropped frames.</td></tr>
+<tr><td>What is memory pressure?</td><td>Creating objects / holding memory faster than GC can reclaim, pushing toward OOM or causing <code>onTrimMemory</code>.</td></tr>
+<tr><td>Weak vs soft references</td><td>Weak: collected at next GC. Soft: collected only under memory pressure.</td></tr>
+<tr><td>Why are finalizers bad?</td><td>Non-deterministic, can cause resurrection, single-threaded bottleneck (<code>FinalizerDaemon</code>), not guaranteed to run.</td></tr>
+</tbody></table>
+<h3 id="62--android-memory-leaks">6.2 — Android Memory Leaks</h3>
+<table border="1" cellpadding="6" cellspacing="0">
+<thead><tr>
+<th>Question</th>
+<th>Answer</th>
+</tr></thead><tbody>
+<tr><td>How can Handler leak Activity?</td><td><code>postDelayed</code> lambda captures Activity; <code>MessageQueue</code> (GC root) holds the message for the delay duration. Fix: <code>WeakReference</code> + <code>removeCallbacksAndMessages</code>.</td></tr>
+<tr><td>Why can non-static inner classes leak?</td><td>Hold implicit <code>this$0</code> reference to outer class. If the inner class outlives the outer, the outer is leaked. Fix: <code>private class</code> (static nested) + explicit <code>WeakReference</code> if back-reference needed.</td></tr>
+<tr><td>How do you avoid Fragment binding leaks?</td><td>Null <code>_binding</code> in <code>onDestroyView()</code>. Never use <code>binding</code> after <code>onDestroyView</code>.</td></tr>
+<tr><td>How do you detect memory leaks?</td><td>LeakCanary (debug), Memory Profiler (heap dump + growing floor), <code>dumpsys meminfo</code>.</td></tr>
+<tr><td>Memory leak vs high memory usage</td><td>Leak: memory that should be free is not, grows monotonically. High usage: bounded, legitimate data retention.</td></tr>
+<tr><td>How to clean message queue</td><td><code>handler.removeCallbacksAndMessages(null)</code> in <code>onDestroy</code>.</td></tr>
+</tbody></table>
+<h3 id="63--context-leaks">6.3 — Context Leaks</h3>
+<table border="1" cellpadding="6" cellspacing="0">
+<thead><tr>
+<th>Question</th>
+<th>Answer</th>
+</tr></thead><tbody>
+<tr><td>Which Context should a repository use?</td><td><code>applicationContext</code> — never Activity context. Inject with <code>@ApplicationContext</code>.</td></tr>
+<tr><td>Why is storing Activity in singleton dangerous?</td><td>Singleton is a GC root; Activity (with full View hierarchy, Drawables, Bitmaps) can never be GC&#x27;d.</td></tr>
+<tr><td>When is Activity context required?</td><td>Dialog creation, layout inflation with theme, starting Activities without <code>NEW_TASK</code> flag, some window/token operations.</td></tr>
+</tbody></table>
+<h3 id="64--bitmap-and-image-memory">6.4 — Bitmap and Image Memory</h3>
+<table border="1" cellpadding="6" cellspacing="0">
+<thead><tr>
+<th>Question</th>
+<th>Answer</th>
+</tr></thead><tbody>
+<tr><td>How do you avoid OOM with images?</td><td>Downsample to display size (<code>inSampleSize</code>), use LruCache, delegate to Coil/Glide, handle <code>onTrimMemory</code>.</td></tr>
+<tr><td>Why use image loading libraries?</td><td>They handle downsample, two-level cache, lifecycle cancellation, worker threads, placeholder/error states automatically.</td></tr>
+<tr><td>How does image caching work?</td><td>Memory cache (LruCache, fast) → disk cache (DiskLruCache, slower) → network. Hit memory first, fall back to disk, then network.</td></tr>
+<tr><td>What is a hardware bitmap?</td><td><code>Bitmap.Config.HARDWARE</code> — pixel data in GPU memory. Faster to draw, immutable, cannot be read by CPU.</td></tr>
+<tr><td>How do you prevent wrong images in RecyclerView?</td><td>Cancel previous load on recycle: Coil <code>imageView.dispose()</code> / <code>imageView.load(newUrl)</code>, Glide <code>Glide.with(...).clear(imageView)</code>.</td></tr>
+</tbody></table>
+<h3 id="65--detection-and-profiling">6.5 — Detection and Profiling</h3>
+<table border="1" cellpadding="6" cellspacing="0">
+<thead><tr>
+<th>Question</th>
+<th>Answer</th>
+</tr></thead><tbody>
+<tr><td>How would you investigate OOM?</td><td>Android Vitals for production OOM crashes; Memory Profiler for live heap; heap dump to find large retained objects; LeakCanary for Activity/Fragment leaks.</td></tr>
+<tr><td>How would you find a leak?</td><td>LeakCanary (automatic); or Memory Profiler — observe growing heap floor after GC, capture heap dump, find multiple Activity instances, trace reference chain to GC root.</td></tr>
+<tr><td>What would you check in a heap dump?</td><td>Sort by Retained Size; look for multiple Activity instances, large Bitmap arrays in static caches, Fragment instances with live views, Handler instances referencing Activities.</td></tr>
+<tr><td>When to use Perfetto?</td><td>Native memory leaks (heapprofd), system-wide memory analysis, production-close profiling, or when Java heap profiler misses native allocations.</td></tr>
+<tr><td>What does <code>dumpsys meminfo</code> show?</td><td>PSS breakdown by category (Native Heap, Dalvik Heap, Graphics, Stack). Private Dirty is the most actionable number — growing private dirty = leak or unbounded cache.</td></tr>
+</tbody></table>
+<div class="pager">
+<a class="prev" href="ipc-binder-aidl-messenger.html"><span class="lbl">‹ Previous</span>5. IPC: Binder, AIDL, Messenger</a>
+<a class="next" href="architecture-patterns.html"><span class="lbl">Next ›</span>7. Architecture Patterns</a>
+</div>
+</div></div>
+<script src="../site.js"></script>
+</body></html>

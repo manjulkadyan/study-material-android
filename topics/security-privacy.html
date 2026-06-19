@@ -1,0 +1,1396 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>13. Security &amp; Privacy</title>
+<link rel="stylesheet" href="../style.css"></head>
+<body class="has-toc" data-prev="build-gradle-release.html" data-next="performance-beyond-rendering.html">
+<nav class="sidebar"><a class="brand" href="../index.html">📱 Android Study Guide — Home</a><details class="topic"><summary><span class="caret">▶</span><a href="data-structures-big-o.html">1. Data Structures &amp; Big O</a></summary><ul class="subtopics"><li><a class="" href="data-structures-big-o.html#11-data-structures--collections--12-big-o-notation">1.1 Data Structures &amp; Collections · 1.2 Big O Notation</a></li><li><a class="" href="data-structures-big-o.html#table-of-contents">Table of Contents</a></li><li><a class="" href="data-structures-big-o.html#1-arrays">1. Arrays</a></li><li><a class="" href="data-structures-big-o.html#2-arraylist--mutablelist">2. ArrayList / MutableList</a></li><li><a class="" href="data-structures-big-o.html#3-linkedlist">3. LinkedList</a></li><li><a class="" href="data-structures-big-o.html#4-stack">4. Stack</a></li><li><a class="" href="data-structures-big-o.html#5-queue">5. Queue</a></li><li><a class="" href="data-structures-big-o.html#6-deque">6. Deque</a></li><li><a class="" href="data-structures-big-o.html#7-hashmap--mutablemap">7. HashMap / MutableMap</a></li><li><a class="" href="data-structures-big-o.html#8-hashset--mutableset">8. HashSet / MutableSet</a></li><li><a class="" href="data-structures-big-o.html#9-linkedhashmap">9. LinkedHashMap</a></li><li><a class="" href="data-structures-big-o.html#10-treemap--sortedmap">10. TreeMap / SortedMap</a></li><li><a class="" href="data-structures-big-o.html#11-priorityqueue--heap">11. PriorityQueue / Heap</a></li><li><a class="" href="data-structures-big-o.html#12-trie">12. Trie</a></li><li><a class="" href="data-structures-big-o.html#13-graphs">13. Graphs</a></li><li><a class="" href="data-structures-big-o.html#14-android-specific-collections">14. Android-Specific Collections</a></li><li><a class="" href="data-structures-big-o.html#15-big-o-notation">15. Big O Notation</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="kotlin-java-fundamentals.html">2. Kotlin &amp; Java Fundamentals</a></summary><ul class="subtopics"><li><a class="" href="kotlin-java-fundamentals.html#table-of-contents">Table of Contents</a></li><li><a class="" href="kotlin-java-fundamentals.html#21-kotlin-fundamentals">2.1 Kotlin Fundamentals</a></li><li><a class="" href="kotlin-java-fundamentals.html#22-kotlin-generics">2.2 Kotlin Generics</a></li><li><a class="" href="kotlin-java-fundamentals.html#23-java-fundamentals">2.3 Java Fundamentals</a></li><li><a class="" href="kotlin-java-fundamentals.html#24-kotlin-java-interop">2.4 Kotlin-Java Interop</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="concurrency-android-threading.html">3. Concurrency &amp; Android Threading</a></summary><ul class="subtopics"><li><a class="" href="concurrency-android-threading.html#table-of-contents">Table of Contents</a></li><li><a class="" href="concurrency-android-threading.html#31-java-thread-basics">3.1 Java Thread Basics</a></li><li><a class="" href="concurrency-android-threading.html#32-locks-and-synchronization">3.2 Locks and Synchronization</a></li><li><a class="" href="concurrency-android-threading.html#33-volatile-and-atomic-classes">3.3 Volatile and Atomic Classes</a></li><li><a class="" href="concurrency-android-threading.html#34-waitnotify-and-producer-consumer">3.4 Wait/Notify and Producer-Consumer</a></li><li><a class="" href="concurrency-android-threading.html#35-executors-and-task-execution">3.5 Executors and Task Execution</a></li><li><a class="" href="concurrency-android-threading.html#36-android-application-threads">3.6 Android Application Threads</a></li><li><a class="" href="concurrency-android-threading.html#37-handler--looper--messagequeue">3.7 Handler / Looper / MessageQueue</a></li><li><a class="" href="concurrency-android-threading.html#38-kotlin-coroutines-on-android">3.8 Kotlin Coroutines on Android</a></li><li><a class="" href="concurrency-android-threading.html#39-flow-stateflow-sharedflow-channel">3.9 Flow, StateFlow, SharedFlow, Channel</a></li><li><a class="" href="concurrency-android-threading.html#310-background-work">3.10 Background Work</a></li><li><a class="" href="concurrency-android-threading.html#quick-reference-interview-cheat-sheet">Quick-Reference: Interview Cheat Sheet</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="thread-communication.html">4. Thread Communication</a></summary><ul class="subtopics"><li><a class="" href="thread-communication.html#table-of-contents">Table of Contents</a></li><li><a class="" href="thread-communication.html#41-pipes">4.1 Pipes</a></li><li><a class="" href="thread-communication.html#42-shared-memory">4.2 Shared Memory</a></li><li><a class="" href="thread-communication.html#43-signaling">4.3 Signaling</a></li><li><a class="" href="thread-communication.html#44-blockingqueue">4.4 BlockingQueue</a></li><li><a class="" href="thread-communication.html#45-message-passing--android-handlerloopermessagequeue">4.5 Message Passing — Android Handler/Looper/MessageQueue</a></li><li><a class="" href="thread-communication.html#cross-cutting-shared-memory-vs-message-passing">Cross-cutting: Shared Memory vs Message Passing</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="ipc-binder-aidl-messenger.html">5. IPC: Binder, AIDL, Messenger</a></summary><ul class="subtopics"><li><a class="" href="ipc-binder-aidl-messenger.html#table-of-contents">Table of Contents</a></li><li><a class="" href="ipc-binder-aidl-messenger.html#51-android-process-model">5.1 Android Process Model</a></li><li><a class="" href="ipc-binder-aidl-messenger.html#52-binder">5.2 Binder</a></li><li><a class="" href="ipc-binder-aidl-messenger.html#53-aidl">5.3 AIDL</a></li><li><a class="" href="ipc-binder-aidl-messenger.html#54-messenger">5.4 Messenger</a></li><li><a class="" href="ipc-binder-aidl-messenger.html#parcelable-vs-serializable">Parcelable vs Serializable</a></li><li><a class="" href="ipc-binder-aidl-messenger.html#aidl-vs-messenger-decision-guide">AIDL vs Messenger Decision Guide</a></li><li><a class="" href="ipc-binder-aidl-messenger.html#interview-quick-reference">Interview Quick-Reference</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="android-memory-management.html">6. Android Memory Management</a></summary><ul class="subtopics"><li><a class="" href="android-memory-management.html#table-of-contents">Table of Contents</a></li><li><a class="" href="android-memory-management.html#61-jvmart-memory-basics">6.1 JVM/ART Memory Basics</a></li><li><a class="" href="android-memory-management.html#62-android-memory-leaks">6.2 Android Memory Leaks</a></li><li><a class="" href="android-memory-management.html#63-context-leaks">6.3 Context Leaks</a></li><li><a class="" href="android-memory-management.html#64-bitmap-and-image-memory">6.4 Bitmap and Image Memory</a></li><li><a class="" href="android-memory-management.html#65-leak-detection-and-profiling">6.5 Leak Detection and Profiling</a></li><li><a class="" href="android-memory-management.html#interview-quick-reference">Interview Quick-Reference</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="architecture-patterns.html">7. Architecture Patterns</a></summary><ul class="subtopics"><li><a class="" href="architecture-patterns.html#table-of-contents">Table of Contents</a></li><li><a class="" href="architecture-patterns.html#71-mvc-mvp-mvvm-mvi">7.1 MVC, MVP, MVVM, MVI</a></li><li><a class="" href="architecture-patterns.html#72-clean-architecture">7.2 Clean Architecture</a></li><li><a class="" href="architecture-patterns.html#73-repository-pattern">7.3 Repository Pattern</a></li><li><a class="" href="architecture-patterns.html#74-dependency-injection">7.4 Dependency Injection</a></li><li><a class="" href="architecture-patterns.html#75-modularization">7.5 Modularization</a></li><li><a class="" href="architecture-patterns.html#quick-reference-cheat-sheet">Quick-Reference Cheat Sheet</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="view-rendering.html">8. View Rendering</a></summary><ul class="subtopics"><li><a class="" href="view-rendering.html#table-of-contents">Table of Contents</a></li><li><a class="" href="view-rendering.html#81-traditional-view-system-rendering">8.1 Traditional View System Rendering</a></li><li><a class="" href="view-rendering.html#82-choreographer-vsync-and-frame-rendering">8.2 Choreographer, VSync, and Frame Rendering</a></li><li><a class="" href="view-rendering.html#83-recyclerview-performance">8.3 RecyclerView Performance</a></li><li><a class="" href="view-rendering.html#84-jetpack-compose-rendering">8.4 Jetpack Compose Rendering</a></li><li><a class="" href="view-rendering.html#85-performance-tools">8.5 Performance Tools</a></li><li><a class="" href="view-rendering.html#interview-cheat-sheet">Interview Cheat Sheet</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="lifecycle-platform-components.html">9. Lifecycle &amp; Platform Components</a></summary><ul class="subtopics"><li><a class="" href="lifecycle-platform-components.html#table-of-contents">Table of Contents</a></li><li><a class="" href="lifecycle-platform-components.html#91-activity">9.1 Activity</a></li><li><a class="" href="lifecycle-platform-components.html#92-fragment">9.2 Fragment</a></li><li><a class="" href="lifecycle-platform-components.html#93-services">9.3 Services</a></li><li><a class="" href="lifecycle-platform-components.html#94-broadcastreceiver">9.4 BroadcastReceiver</a></li><li><a class="" href="lifecycle-platform-components.html#95-contentprovider">9.5 ContentProvider</a></li><li><a class="" href="lifecycle-platform-components.html#96-intents-and-pendingintents">9.6 Intents and PendingIntents</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="android-data-layer.html">10. Android Data Layer</a></summary><ul class="subtopics"><li><a class="" href="android-data-layer.html#table-of-contents">Table of Contents</a></li><li><a class="" href="android-data-layer.html#101-networking">10.1 Networking</a></li><li><a class="" href="android-data-layer.html#102-persistence">10.2 Persistence</a></li><li><a class="" href="android-data-layer.html#103-offline-first-design">10.3 Offline-First Design</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="testing.html">11. Testing</a></summary><ul class="subtopics"><li><a class="" href="testing.html#table-of-contents">Table of Contents</a></li><li><a class="" href="testing.html#111-unit-testing">11.1 Unit Testing</a></li><li><a class="" href="testing.html#112-ui-testing">11.2 UI Testing</a></li><li><a class="" href="testing.html#113-integration-and-end-to-end-testing">11.3 Integration and End-to-End Testing</a></li><li><a class="" href="testing.html#quick-reference-interview-cheat-sheet">Quick-Reference Interview Cheat Sheet</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="build-gradle-release.html">12. Build, Gradle &amp; Release</a></summary><ul class="subtopics"><li><a class="" href="build-gradle-release.html#table-of-contents">Table of Contents</a></li><li><a class="" href="build-gradle-release.html#121-gradle-basics">12.1 Gradle Basics</a></li><li><a class="" href="build-gradle-release.html#122-build-performance">12.2 Build Performance</a></li><li><a class="" href="build-gradle-release.html#123-release">12.3 Release</a></li><li><a class="" href="build-gradle-release.html#summary-table-quick-reference">Summary Table: Quick Reference</a></li></ul></details><details class="topic active" open><summary><span class="caret">▶</span><a href="security-privacy.html">13. Security &amp; Privacy</a></summary><ul class="subtopics"><li><a class="spy" href="#table-of-contents">Table of Contents</a></li><li><a class="spy" href="#131-android-security-basics">13.1 Android Security Basics</a></li><li><a class="spy" href="#132-data-security">13.2 Data Security</a></li><li><a class="spy" href="#interview-qa-master-list">Interview Q&amp;A Master List</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="performance-beyond-rendering.html">14. Performance Beyond Rendering</a></summary><ul class="subtopics"><li><a class="" href="performance-beyond-rendering.html#table-of-contents">Table of Contents</a></li><li><a class="" href="performance-beyond-rendering.html#141-startup-performance">14.1 Startup Performance</a></li><li><a class="" href="performance-beyond-rendering.html#142-battery-and-resource-usage">14.2 Battery and Resource Usage</a></li><li><a class="" href="performance-beyond-rendering.html#143-anr-and-crash-debugging">14.3 ANR and Crash Debugging</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="senior-staff-system-design.html">15. Senior/Staff System Design</a></summary><ul class="subtopics"><li><a class="" href="senior-staff-system-design.html#table-of-contents">Table of Contents</a></li><li><a class="" href="senior-staff-system-design.html#151-android-app-architecture-design">15.1 Android App Architecture Design</a></li><li><a class="" href="senior-staff-system-design.html#152-trade-off-thinking">15.2 Trade-Off Thinking</a></li><li><a class="" href="senior-staff-system-design.html#153-legacy-code-and-migration">15.3 Legacy Code and Migration</a></li><li><a class="" href="senior-staff-system-design.html#154-engineering-leadership">15.4 Engineering Leadership</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="interview-q-a-cheatsheet.html">16. Interview Q&amp;A &amp; Cheatsheet</a></summary><ul class="subtopics"><li><a class="" href="interview-q-a-cheatsheet.html#table-of-contents">Table of Contents</a></li><li><a class="" href="interview-q-a-cheatsheet.html#section-16--model-answers-by-category">Section 16 — Model Answers by Category</a></li><li><a class="" href="interview-q-a-cheatsheet.html#section-17--must-revise-checklist">Section 17 — Must-Revise Checklist</a></li><li><a class="" href="interview-q-a-cheatsheet.html#section-18--senior-answer-framework-with-worked-examples">Section 18 — Senior Answer Framework with Worked Examples</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="references.html">References</a></summary><ul class="subtopics"><li><a class="" href="references.html#table-of-contents">Table of Contents</a></li><li><a class="" href="references.html#section-1--data-structures--big-o">Section 1 — Data Structures &amp; Big O</a></li><li><a class="" href="references.html#section-2--kotlin--java-fundamentals">Section 2 — Kotlin &amp; Java Fundamentals</a></li><li><a class="" href="references.html#section-3--concurrency--threading">Section 3 — Concurrency &amp; Threading</a></li><li><a class="" href="references.html#section-4--thread-communication">Section 4 — Thread Communication</a></li><li><a class="" href="references.html#section-5--ipc-binder-aidl-messenger">Section 5 — IPC: Binder, AIDL, Messenger</a></li><li><a class="" href="references.html#section-6--memory-management">Section 6 — Memory Management</a></li><li><a class="" href="references.html#section-7--architecture-patterns">Section 7 — Architecture Patterns</a></li><li><a class="" href="references.html#section-8--view-rendering">Section 8 — View Rendering</a></li><li><a class="" href="references.html#section-9--lifecycle--platform-components">Section 9 — Lifecycle &amp; Platform Components</a></li><li><a class="" href="references.html#section-10--data-layer">Section 10 — Data Layer</a></li><li><a class="" href="references.html#section-11--testing">Section 11 — Testing</a></li><li><a class="" href="references.html#section-12--build-gradle--release">Section 12 — Build, Gradle &amp; Release</a></li><li><a class="" href="references.html#section-13--security--privacy">Section 13 — Security &amp; Privacy</a></li><li><a class="" href="references.html#section-14--performance-beyond-rendering">Section 14 — Performance (Beyond Rendering)</a></li><li><a class="" href="references.html#section-15--system-design">Section 15 — System Design</a></li><li><a class="" href="references.html#section-16--interview-qa-cheatsheet">Section 16 — Interview Q&amp;A Cheatsheet</a></li><li><a class="" href="references.html#section-17--must-revise-checklist">Section 17 — Must-Revise Checklist</a></li><li><a class="" href="references.html#section-18--seniorstaff-answer-framework">Section 18 — Senior/Staff Answer Framework</a></li><li><a class="" href="references.html#books">Books</a></li></ul></details></nav>
+<aside class="toc-right"><div class="toc-h">On this page</div><ul class="toc-tree"><li class="toc-grp"><a class="toc-2" href="#table-of-contents"><span class="tcaret tcaret-none"></span>Table of Contents</a></li><li class="toc-grp"><a class="toc-2" href="#131-android-security-basics"><span class="tcaret">▶</span>13.1 Android Security Basics</a><ul class="toc-subs"><li><a class="toc-3" href="#app-sandbox-and-uid-isolation">App Sandbox and UID Isolation</a></li><li><a class="toc-3" href="#permissions">Permissions</a></li><li><a class="toc-3" href="#runtime-permissions">Runtime Permissions</a></li><li><a class="toc-3" href="#least-privilege">Least Privilege</a></li><li><a class="toc-3" href="#exported-components">Exported Components</a></li><li><a class="toc-3" href="#intent-spoofing">Intent Spoofing</a></li><li><a class="toc-3" href="#pendingintent-mutability">PendingIntent Mutability</a></li><li><a class="toc-3" href="#deep-link-validation">Deep Link Validation</a></li><li><a class="toc-3" href="#fileprovider">FileProvider</a></li><li><a class="toc-3" href="#webview-security">WebView Security</a></li></ul></li><li class="toc-grp"><a class="toc-2" href="#132-data-security"><span class="tcaret">▶</span>13.2 Data Security</a><ul class="toc-subs"><li><a class="toc-3" href="#android-keystore">Android Keystore</a></li><li><a class="toc-3" href="#encryptedsharedpreferences">EncryptedSharedPreferences</a></li><li><a class="toc-3" href="#encryptedfile">EncryptedFile</a></li><li><a class="toc-3" href="#token-storage">Token Storage</a></li><li><a class="toc-3" href="#biometrics">Biometrics</a></li><li><a class="toc-3" href="#tls">TLS</a></li><li><a class="toc-3" href="#certificate-pinning">Certificate Pinning</a></li><li><a class="toc-3" href="#rooted-device-limitations">Rooted Device Limitations</a></li><li><a class="toc-3" href="#avoiding-hardcoded-secrets">Avoiding Hardcoded Secrets</a></li><li><a class="toc-3" href="#logging-sensitive-data">Logging Sensitive Data</a></li></ul></li><li class="toc-grp"><a class="toc-2" href="#interview-qa-master-list"><span class="tcaret">▶</span>Interview Q&amp;A Master List</a><ul class="toc-subs"><li><a class="toc-3" href="#131-security-basics">13.1 Security Basics</a></li><li><a class="toc-3" href="#132-data-security-1">13.2 Data Security</a></li></ul></li></ul></aside>
+<div class="backdrop"></div>
+<div class="content">
+<div class="mtop"><button onclick="toggleNav()" aria-label="Menu">☰</button><a class="home" href="../index.html">🏠</a><span class="t">13. Security &amp; Privacy</span></div>
+<a class="arrow left" href="build-gradle-release.html" title="Previous (12. Build, Gradle &amp; Release)">‹</a>
+<a class="arrow right" href="performance-beyond-rendering.html" title="Next (14. Performance Beyond Rendering)">›</a>
+<div class="wrap">
+<h1 id="13-security--privacy">13. Security &amp; Privacy</h1>
+<h2 id="table-of-contents">Table of Contents</h2>
+<ul>
+<li><a href="#131-android-security-basics">13.1 Android Security Basics</a></li>
+<ul>
+<li><a href="#app-sandbox-and-uid-isolation">App Sandbox and UID Isolation</a></li>
+<li><a href="#permissions">Permissions</a></li>
+<li><a href="#runtime-permissions">Runtime Permissions</a></li>
+<li><a href="#least-privilege">Least Privilege</a></li>
+<li><a href="#exported-components">Exported Components</a></li>
+<li><a href="#intent-spoofing">Intent Spoofing</a></li>
+<li><a href="#pendingintent-mutability">PendingIntent Mutability</a></li>
+<li><a href="#deep-link-validation">Deep Link Validation</a></li>
+<li><a href="#fileprovider">FileProvider</a></li>
+<li><a href="#webview-security">WebView Security</a></li>
+</ul>
+<li><a href="#132-data-security">13.2 Data Security</a></li>
+<ul>
+<li><a href="#android-keystore">Android Keystore</a></li>
+<li><a href="#encryptedsharedpreferences">EncryptedSharedPreferences</a></li>
+<li><a href="#encryptedfile">EncryptedFile</a></li>
+<li><a href="#token-storage">Token Storage</a></li>
+<li><a href="#biometrics">Biometrics</a></li>
+<li><a href="#tls">TLS</a></li>
+<li><a href="#certificate-pinning">Certificate Pinning</a></li>
+<li><a href="#rooted-device-limitations">Rooted Device Limitations</a></li>
+<li><a href="#avoiding-hardcoded-secrets">Avoiding Hardcoded Secrets</a></li>
+<li><a href="#logging-sensitive-data">Logging Sensitive Data</a></li>
+</ul>
+<li><a href="#interview-qa-master-list">Interview Q&amp;A Master List</a></li>
+</ul>
+<hr>
+<h2 id="131-android-security-basics">13.1 Android Security Basics</h2>
+<h3 id="app-sandbox-and-uid-isolation">App Sandbox and UID Isolation</h3>
+<p><strong>Definition</strong></p>
+<p>Every Android app runs in its own Linux process with a unique User ID assigned at install time. The key insight is that the Linux kernel enforces the boundary — one app&#x27;s process literally cannot read or write another app&#x27;s memory or files unless you go through an explicit sharing mechanism.</p>
+<p><strong>How it works</strong></p>
+<ol>
+<li>The Package Manager assigns a unique UID (e.g., <code>u0_a123</code>) per app at install time. This UID is permanent for the life of the installation.</li>
+<li>Each app process runs under that UID. The kernel denies cross-UID file access by default.</li>
+<li>App data is stored in <code>/data/data/&lt;package.name&gt;/</code> with permissions <code>rwx------</code> (owner = app&#x27;s UID). Other UIDs cannot traverse this path.</li>
+<li>Apps can share a UID by declaring <code>android:sharedUserId</code> in the manifest (deprecated since API 29; use explicit content sharing instead). Both APKs must be signed with the same key.</li>
+<li>The Dalvik/ART VM provides a second layer: each app has its own VM instance, so a crash in one app does not corrupt another app&#x27;s heap.</li>
+</ol>
+<p><strong>Android implications</strong></p>
+<ul>
+<li><strong>Storage</strong>: Internal storage is private by default. External storage (SD card, <code>getExternalFilesDir</code>) is world-readable pre-API 19 and scoped-storage-restricted from API 29+.</li>
+<li><strong>IPC</strong>: To share data across apps you must use defined IPC surfaces: <code>ContentProvider</code>, <code>BroadcastReceiver</code>, <code>Service</code>, <code>Activity</code> — all subject to permission checks.</li>
+<li><strong>Root breaks the sandbox</strong>: A rooted device grants a process UID 0 (root), which the kernel allows to bypass all UID-based checks.</li>
+</ul>
+<p><strong>Trade-offs</strong></p>
+<table border="1" cellpadding="6" cellspacing="0">
+<thead><tr>
+<th>Benefit</th>
+<th>Cost</th>
+</tr></thead><tbody>
+<tr><td>Strong default isolation — no extra code needed</td><td>Apps cannot directly read each other&#x27;s data even for legitimate use cases</td></tr>
+<tr><td>Kernel-enforced — can&#x27;t be bypassed in userspace</td><td>Sharing requires explicit APIs (ContentProvider, FileProvider) with their own complexity</td></tr>
+<tr><td>Process crash is contained</td><td>Shared UID pattern (sharedUserId) breaks isolation and is deprecated</td></tr>
+</tbody></table>
+<p><strong>Failure modes</strong></p>
+<ul>
+<li>Declaring <code>android:sharedUserId</code> with an untrusted or compromised partner app gives that partner full read/write access to your private files.</li>
+<li>World-readable files set programmatically via <code>openFileOutput(name, MODE_WORLD_READABLE)</code> break sandbox — this mode was deprecated in API 17.</li>
+<li>Leaving files in external storage without scoped storage protection allows any app with <code>READ_EXTERNAL_STORAGE</code> to read them.</li>
+</ul>
+<p><strong>Debug/test</strong></p>
+<pre><code># Verify your app&#x27;s UID
+adb shell ps | grep com.yourapp
+
+# Confirm private files are not world-readable
+adb shell ls -la /data/data/com.yourapp/</code></pre>
+<hr>
+<h3 id="permissions">Permissions</h3>
+<p><strong>Definition</strong></p>
+<p>Android permissions are a gating mechanism — every sensitive capability an app needs must be declared upfront in <code>AndroidManifest.xml</code>, and the OS or the user decides whether to grant it.</p>
+<p><strong>How it works</strong></p>
+<p>Permissions are categorized by protection level:</p>
+<table border="1" cellpadding="6" cellspacing="0">
+<thead><tr>
+<th>Level</th>
+<th>Description</th>
+<th>Example</th>
+</tr></thead><tbody>
+<tr><td><code>normal</code></td><td>Auto-granted at install; no user prompt</td><td><code>INTERNET</code>, <code>VIBRATE</code></td></tr>
+<tr><td><code>dangerous</code></td><td>Requires runtime user approval (API 23+)</td><td><code>CAMERA</code>, <code>READ_CONTACTS</code></td></tr>
+<tr><td><code>signature</code></td><td>Granted only to apps signed with the same key as the defining app</td><td>Custom permissions between your own apps</td></tr>
+<tr><td><code>signatureOrSystem</code></td><td><code>signature</code> OR pre-installed system app</td><td>Internal OEM APIs</td></tr>
+<tr><td><code>appop</code></td><td>Managed through AppOps; toggled in Settings</td><td><code>MANAGE_EXTERNAL_STORAGE</code></td></tr>
+</tbody></table>
+<p><strong>Declaring permissions in the manifest</strong></p>
+<pre><code>&lt;!-- Declaring a permission your app uses --&gt;
+&lt;uses-permission android:name=&quot;android.permission.CAMERA&quot; /&gt;
+&lt;uses-permission android:name=&quot;android.permission.READ_CONTACTS&quot; /&gt;
+
+&lt;!-- Defining a custom permission (protect your own components) --&gt;
+&lt;permission
+    android:name=&quot;com.yourapp.permission.ACCESS_DATA&quot;
+    android:protectionLevel=&quot;signature&quot; /&gt;
+
+&lt;!-- Requiring it on a component --&gt;
+&lt;activity
+    android:name=&quot;.SensitiveActivity&quot;
+    android:permission=&quot;com.yourapp.permission.ACCESS_DATA&quot; /&gt;</code></pre>
+<p><strong>Android implications</strong></p>
+<ul>
+<li>From API 23+, declaring a <code>dangerous</code> permission in the manifest is necessary but not sufficient — the user must grant it at runtime.</li>
+<li>Permissions are granted per group (e.g., <code>READ_CONTACTS</code> and <code>WRITE_CONTACTS</code> belong to the <code>CONTACTS</code> group). Granting one may implicitly grant others in the group, but this behavior changed in API 26+ — always request each permission explicitly.</li>
+<li>From Android 11 (API 30), if the user denies a permission twice, future calls to <code>requestPermissions</code> are silently ignored and you must redirect to Settings.</li>
+</ul>
+<p><strong>Failure modes</strong></p>
+<ul>
+<li>Requesting permissions you do not use: Google Play policy violation, and Play Store may flag your app.</li>
+<li>Not handling the denial path: app crashes or shows a broken state.</li>
+<li>Assuming a previously-granted permission is still granted — users can revoke permissions at any time in Settings.</li>
+</ul>
+<hr>
+<h3 id="runtime-permissions">Runtime Permissions</h3>
+<p><strong>Definition</strong></p>
+<p>Runtime permissions, introduced in API 23, require apps to explicitly ask the user for dangerous permissions while the app is running — at install time the user sees nothing; the ask happens in context, at the moment the feature actually needs it.</p>
+<p><strong>How it works</strong></p>
+<ol>
+<li>Check if permission is already granted: <code>ContextCompat.checkSelfPermission()</code>.</li>
+<li>If not granted, optionally show rationale with <code>shouldShowRequestPermissionRationale()</code>.</li>
+<li>Request it via the <code>ActivityResultContracts.RequestPermission</code> API (preferred over the older <code>requestPermissions</code>).</li>
+<li>Handle the result.</li>
+</ol>
+<pre><code>// Modern approach using Activity Result API (preferred)
+private val requestPermissionLauncher = registerForActivityResult(
+    ActivityResultContracts.RequestPermission()
+) { isGranted -&gt;
+    if (isGranted) {
+        openCamera()
+    } else {
+        // Check if we should show rationale or go straight to settings
+        if (!shouldShowRequestPermissionRationale(Manifest.permission.CAMERA)) {
+            // User selected &quot;Don&#x27;t ask again&quot; — redirect to settings
+            showGoToSettingsDialog()
+        } else {
+            showPermissionDeniedExplanation()
+        }
+    }
+}
+
+fun checkAndRequestCameraPermission() {
+    when {
+        ContextCompat.checkSelfPermission(
+            this, Manifest.permission.CAMERA
+        ) == PackageManager.PERMISSION_GRANTED -&gt; {
+            openCamera()
+        }
+        shouldShowRequestPermissionRationale(Manifest.permission.CAMERA) -&gt; {
+            // Show UI explaining why you need the permission
+            showCameraRationaleDialog {
+                requestPermissionLauncher.launch(Manifest.permission.CAMERA)
+            }
+        }
+        else -&gt; {
+            requestPermissionLauncher.launch(Manifest.permission.CAMERA)
+        }
+    }
+}</code></pre>
+<p><strong>Multiple permissions at once</strong></p>
+<pre><code>private val requestMultiplePermissions = registerForActivityResult(
+    ActivityResultContracts.RequestMultiplePermissions()
+) { permissions -&gt;
+    val allGranted = permissions.values.all { it }
+    if (allGranted) {
+        proceedWithFeature()
+    } else {
+        handlePartialDenial(permissions)
+    }
+}</code></pre>
+<p><strong>Key API 30+ changes</strong></p>
+<ul>
+<li>One-time permissions: <code>ACCESS_FINE_LOCATION</code>, <code>READ_MEDIA_*</code> can be granted just for this session.</li>
+<li>Auto-reset: permissions are auto-revoked for apps unused for months.</li>
+<li>Background location requires a separate two-step flow: foreground first, then background.</li>
+</ul>
+<p><strong>Failure modes</strong></p>
+<ul>
+<li>Calling <code>requestPermissions</code> on a non-resumed Activity — can cause silent drops.</li>
+<li>Not re-checking after returning from background — permission may have been revoked while the app was paused.</li>
+<li>Requesting permissions in <code>onCreate</code> before the user has context for why they&#x27;re needed.</li>
+</ul>
+<hr>
+<h3 id="least-privilege">Least Privilege</h3>
+<p><strong>Definition</strong></p>
+<p>Least privilege means requesting only the permissions your feature genuinely needs right now — never speculatively acquiring them &quot;in case we need them later.&quot; The trade-off is that extra permissions are pure attack surface with no benefit.</p>
+<p><strong>How it works in practice</strong></p>
+<ol>
+<li>Audit your manifest before each release: remove any <code>uses-permission</code> that no longer corresponds to an active code path.</li>
+<li>Use scoped alternatives before reaching for broad permissions:</li>
+<ul>
+<li>Instead of <code>READ_EXTERNAL_STORAGE</code>: use <code>ActivityResultContracts.GetContent()</code> (user picks file, you get a URI — no permission needed).</li>
+<li>Instead of <code>READ_CONTACTS</code>: use <code>ACTION_PICK</code> on the contacts URI.</li>
+<li>Instead of <code>CAMERA</code>: use <code>ACTION_IMAGE_CAPTURE</code> — the camera app handles it.</li>
+</ul>
+<li>Request permissions only when the user triggers the action that needs them, not upfront.</li>
+</ol>
+<p><strong>Android implications</strong></p>
+<ul>
+<li>Google Play requires a Privacy Policy and justification for sensitive permissions (location, contacts, SMS, camera).</li>
+<li><code>ACCESS_BACKGROUND_LOCATION</code>, <code>MANAGE_EXTERNAL_STORAGE</code>, <code>USE_EXACT_ALARM</code>: require additional Play Store review.</li>
+<li>Unused permissions are a security surface: a supply-chain attack on a library you ship can exploit them.</li>
+</ul>
+<p><strong>Trade-offs</strong></p>
+<p>Using intents to delegate to system apps (camera, contacts, file picker) means you lose control over the UX, but gain zero permission overhead and a narrower attack surface.</p>
+<hr>
+<h3 id="exported-components">Exported Components</h3>
+<p><strong>Definition</strong></p>
+<p>An Android component — <code>Activity</code>, <code>Service</code>, <code>BroadcastReceiver</code>, or <code>ContentProvider</code> — is exported when it can be reached by components in other apps. You control this with <code>android:exported</code> in the manifest, and getting it wrong is one of the most common Android security mistakes.</p>
+<p><strong>How it works</strong></p>
+<ul>
+<li><code>android:exported=&quot;true&quot;</code>: any app can interact with this component.</li>
+<li><code>android:exported=&quot;false&quot;</code>: only components within the same app (same UID or shared UID) can use it.</li>
+<li>Default behavior (pre-API 31): if an <code>&lt;intent-filter&gt;</code> is present, <code>exported</code> defaults to <code>true</code>. Without an intent-filter, it defaults to <code>false</code>.</li>
+<li><strong>API 31+ (Android 12) breaking change</strong>: every Activity, Service, and BroadcastReceiver that has an <code>&lt;intent-filter&gt;</code> MUST explicitly declare <code>android:exported</code>. The build will fail if you omit it.</li>
+</ul>
+<p><strong>Securing exported components</strong></p>
+<p>Three layers of defence:</p>
+<p><strong>Layer 1: Don&#x27;t export unless you have to.</strong></p>
+<pre><code>&lt;activity
+    android:name=&quot;.InternalActivity&quot;
+    android:exported=&quot;false&quot; /&gt;</code></pre>
+<p><strong>Layer 2: Require a permission for access.</strong></p>
+<pre><code>&lt;!-- Define the permission --&gt;
+&lt;permission
+    android:name=&quot;com.yourapp.permission.LAUNCH_INTERNAL&quot;
+    android:protectionLevel=&quot;signature&quot; /&gt;
+
+&lt;!-- Require it on the component --&gt;
+&lt;activity
+    android:name=&quot;.SensitiveActivity&quot;
+    android:exported=&quot;true&quot;
+    android:permission=&quot;com.yourapp.permission.LAUNCH_INTERNAL&quot; /&gt;</code></pre>
+<p><strong>Layer 3: Validate inputs inside the component.</strong></p>
+<pre><code>// In the Activity/Service — never trust incoming Intent data
+override fun onCreate(savedInstanceState: Bundle?) {
+    super.onCreate(savedInstanceState)
+    val action = intent.action ?: run {
+        finish()
+        return
+    }
+    // Whitelist allowed actions
+    if (action !in setOf(ACTION_SHOW_DETAIL, ACTION_OPEN_FROM_NOTIFICATION)) {
+        finish()
+        return
+    }
+    val id = intent.getLongExtra(EXTRA_ID, -1L)
+    if (id &lt; 0) {
+        finish()
+        return
+    }
+}</code></pre>
+<p><strong>ContentProvider specifics</strong></p>
+<pre><code>&lt;provider
+    android:name=&quot;.InternalDataProvider&quot;
+    android:authorities=&quot;com.yourapp.internal&quot;
+    android:exported=&quot;false&quot; /&gt;
+
+&lt;!-- If you need to share with specific apps, use grantUriPermissions --&gt;
+&lt;provider
+    android:name=&quot;.ShareProvider&quot;
+    android:authorities=&quot;com.yourapp.share&quot;
+    android:exported=&quot;false&quot;
+    android:grantUriPermissions=&quot;true&quot; /&gt;</code></pre>
+<p><strong>Failure modes</strong></p>
+<ul>
+<li>Exported Activity that accepts a URL extra and opens it in a WebView → open redirect / JavaScript injection.</li>
+<li>Exported Service that performs privileged operations without permission checks → privilege escalation.</li>
+<li>BroadcastReceiver exported without permission that triggers sensitive actions → any app can trigger it.</li>
+<li>ContentProvider exported with no read/write permissions → full database readable by any app.</li>
+</ul>
+<p><strong>Debug/test</strong></p>
+<pre><code># List all exported components of your app
+adb shell dumpsys package com.yourapp | grep -A 2 &quot;ActivityResolver&quot;
+
+# Drozer (security testing framework) to enumerate exported components
+dz&gt; run app.activity.info -a com.yourapp
+dz&gt; run app.service.info -a com.yourapp
+dz&gt; run app.provider.info -a com.yourapp</code></pre>
+<hr>
+<h3 id="intent-spoofing">Intent Spoofing</h3>
+<p><strong>Definition</strong></p>
+<p>Intent spoofing is when a malicious app sends a crafted <code>Intent</code> to an exported component of your app, either impersonating a legitimate caller or injecting malicious data to trigger behaviour you didn&#x27;t intend. The root cause is that Android Intents carry no built-in caller authentication.</p>
+<p><strong>How it works</strong></p>
+<p>Android Intents carry no built-in authentication. When a component is exported, any app on the device can send it an Intent — including setting arbitrary action strings, extras, and URI data. The receiving component cannot verify that the sender is who it claims to be (there is no trusted sender field that can&#x27;t be spoofed from user space).</p>
+<p><strong>Attack scenarios</strong></p>
+<ol>
+<li><strong>Fake login callback</strong>: Your app registers an exported Activity to receive OAuth redirect Intents. An attacker app sends a spoofed Intent with a stolen authorization code.</li>
+<li><strong>Data injection</strong>: Your exported Service accepts a URL extra and fetches it. An attacker passes an internal URL (<code>http://localhost/admin</code>).</li>
+<li><strong>UI spoofing</strong>: An attacker launches your exported Activity with crafted extras to display misleading UI.</li>
+</ol>
+<p><strong>How to defend</strong></p>
+<pre><code>// 1. Check the calling package (for Activities called via startActivityForResult)
+override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+    // Note: callingPackage is set by Android; not spoofable from user space
+    // but only available for startActivityForResult flows, not plain startActivity
+}
+
+// 2. Use LocalBroadcastManager for in-process broadcasts (deprecated; use Flow/LiveData instead)
+// 3. Use explicit Intents for internal communication — don&#x27;t rely on implicit Intents
+val intent = Intent(this, MyInternalService::class.java)
+startService(intent)
+
+// 4. Require a signature-level permission on your exported component
+// &lt;activity android:permission=&quot;com.yourapp.permission.INTERNAL&quot; ... /&gt;
+
+// 5. Validate all data from Intents as untrusted input
+val amount = intent.getDoubleExtra(&quot;amount&quot;, 0.0)
+require(amount &gt; 0 &amp;&amp; amount &lt;= MAX_TRANSFER_LIMIT) { &quot;Invalid amount&quot; }</code></pre>
+<p><strong>Key rules</strong></p>
+<ul>
+<li>Never trust <code>Intent.getStringExtra()</code> or any extras from exported components without validation.</li>
+<li>Prefer <code>android:exported=&quot;false&quot;</code> + explicit Intents for all internal communication.</li>
+<li>For broadcast Intents you need to receive from the system (e.g., <code>ACTION_BOOT_COMPLETED</code>), use <code>android:permission</code> to limit who else can send you broadcasts.</li>
+</ul>
+<hr>
+<h3 id="pendingintent-mutability">PendingIntent Mutability</h3>
+<p><strong>Definition</strong></p>
+<p>A <code>PendingIntent</code> is a token you hand to another app or the system so it can launch one of your components using your app&#x27;s identity. Mutability controls whether the recipient is allowed to modify the Intent that&#x27;s wrapped inside — and getting this wrong is a privilege-escalation vulnerability.</p>
+<p><strong>How it works</strong></p>
+<table border="1" cellpadding="6" cellspacing="0">
+<thead><tr>
+<th>Flag</th>
+<th>Meaning</th>
+</tr></thead><tbody>
+<tr><td><code>FLAG_IMMUTABLE</code></td><td>The PendingIntent&#x27;s Intent cannot be modified by the recipient</td></tr>
+<tr><td><code>FLAG_MUTABLE</code></td><td>The recipient can fill in unspecified fields of the Intent</td></tr>
+</tbody></table>
+<p><strong>The vulnerability</strong></p>
+<p>A mutable <code>PendingIntent</code> with empty or partially-specified wrapped Intent can be hijacked. The receiver fills in the <code>action</code>, <code>component</code>, or <code>extras</code> and your app executes the attacker&#x27;s Intent under your app&#x27;s identity (with your permissions).</p>
+<pre><code>// DANGEROUS — mutable with no action/component specified
+val badPendingIntent = PendingIntent.getActivity(
+    context, 0, Intent(), PendingIntent.FLAG_UPDATE_CURRENT
+    // Missing FLAG_IMMUTABLE — attacker can specify any Action/Component
+)
+
+// CORRECT — immutable for all cases where you don&#x27;t need the recipient to fill fields
+val safePendingIntent = PendingIntent.getActivity(
+    context,
+    requestCode,
+    Intent(context, MyActivity::class.java).apply {
+        action = ACTION_SHOW_NOTIFICATION
+        putExtra(EXTRA_ID, notificationId)
+    },
+    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+)</code></pre>
+<p><strong>When FLAG_MUTABLE is legitimate</strong></p>
+<p>The primary case is <code>AlarmManager.setAlarmClock()</code> and <code>MediaSession</code> where the system framework needs to write the <code>ClipData</code> or fill in a <code>FILL_IN_COMPONENT</code>. Even then, always specify as much of the Intent as possible.</p>
+<pre><code>// Mutable only when genuinely needed (e.g., inline reply notifications)
+val replyPendingIntent = PendingIntent.getService(
+    context,
+    requestCode,
+    Intent(context, ReplyService::class.java),
+    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE
+)</code></pre>
+<p><strong>Android 12+ enforcement</strong></p>
+<p>From API 31, creating a <code>PendingIntent</code> without explicitly setting either <code>FLAG_IMMUTABLE</code> or <code>FLAG_MUTABLE</code> throws <code>IllegalArgumentException</code> — you have to make a deliberate choice. The right default is <code>FLAG_IMMUTABLE</code>; reach for <code>FLAG_MUTABLE</code> only when you have a specific framework reason and can document it.</p>
+<p><strong>Failure modes</strong></p>
+<ul>
+<li>Mutable PendingIntent given to a notification manager → if a malicious app intercepts the notification before the system, it can modify the wrapped Intent to launch its own component with your app&#x27;s permissions.</li>
+<li>Passing a mutable PendingIntent to a third-party SDK — the SDK (or its dependencies) could be compromised.</li>
+</ul>
+<hr>
+<h3 id="deep-link-validation">Deep Link Validation</h3>
+<p><strong>Definition</strong></p>
+<p>Deep links are URIs — HTTP/HTTPS or a custom scheme — that launch your app directly to a specific screen. Without proper validation they become a vector for open redirects, parameter injection, and data theft, so treating every deep link as untrusted external input is non-negotiable.</p>
+<p><strong>Types of deep links</strong></p>
+<table border="1" cellpadding="6" cellspacing="0">
+<thead><tr>
+<th>Type</th>
+<th>Definition</th>
+<th>Security Level</th>
+</tr></thead><tbody>
+<tr><td>Custom scheme</td><td><code>myapp://path</code></td><td>Low — any app can intercept or send</td></tr>
+<tr><td>HTTP/HTTPS Intent filter</td><td><code>http://yourapp.com/path</code></td><td>Medium — multiple apps may handle the same URL</td></tr>
+<tr><td>App Links (verified)</td><td>HTTPS with <code>android:autoVerify=&quot;true&quot;</code></td><td>High — only your app handles your domain</td></tr>
+</tbody></table>
+<p><strong>How App Links work</strong></p>
+<ol>
+<li>Declare intent-filter with <code>android:autoVerify=&quot;true&quot;</code> in manifest.</li>
+<li>Host a Digital Asset Links file at <code>https://yourapp.com/.well-known/assetlinks.json</code>.</li>
+<li>Android verifies the association at install time. If verified, your app is the exclusive handler for those URLs — no disambiguation dialog, no other app can intercept.</li>
+</ol>
+<pre><code>&lt;!-- AndroidManifest.xml --&gt;
+&lt;activity
+    android:name=&quot;.DeepLinkActivity&quot;
+    android:exported=&quot;true&quot;&gt;
+    &lt;intent-filter android:autoVerify=&quot;true&quot;&gt;
+        &lt;action android:name=&quot;android.intent.action.VIEW&quot; /&gt;
+        &lt;category android:name=&quot;android.intent.category.DEFAULT&quot; /&gt;
+        &lt;category android:name=&quot;android.intent.category.BROWSABLE&quot; /&gt;
+        &lt;data
+            android:scheme=&quot;https&quot;
+            android:host=&quot;www.yourapp.com&quot;
+            android:pathPrefix=&quot;/appointments&quot; /&gt;
+    &lt;/intent-filter&gt;
+&lt;/activity&gt;</code></pre>
+<p><strong>Validating deep link parameters in code</strong></p>
+<pre><code>// In DeepLinkActivity.onCreate or handleIntent()
+private fun handleDeepLink(intent: Intent) {
+    val uri = intent.data ?: return
+
+    // 1. Validate scheme and host — never trust them blindly even with autoVerify
+    if (uri.scheme != &quot;https&quot; || uri.host != &quot;www.yourapp.com&quot;) {
+        finish()
+        return
+    }
+
+    // 2. Whitelist known paths
+    val allowedPrefixes = listOf(&quot;/appointments/&quot;, &quot;/profile/&quot;, &quot;/search&quot;)
+    val path = uri.path ?: run { finish(); return }
+    if (allowedPrefixes.none { path.startsWith(it) }) {
+        finish()
+        return
+    }
+
+    // 3. Sanitize and range-check parameters
+    val appointmentId = uri.getQueryParameter(&quot;id&quot;)?.toLongOrNull() ?: run {
+        finish()
+        return
+    }
+    if (appointmentId &lt;= 0) { finish(); return }
+
+    // 4. Never pass raw URI strings to WebView
+    navigateToAppointment(appointmentId)
+}</code></pre>
+<p><strong>Custom scheme risks</strong></p>
+<p>Custom schemes like <code>myapp://</code> have no verification step, which means any other app can declare the same scheme and intercept your links. For any sensitive flow — authentication, payment — avoid custom schemes entirely. Always prefer App Links, which are cryptographically verified at install time.</p>
+<p><strong>OAuth redirect validation</strong></p>
+<pre><code>// OAuth callback: validate state parameter to prevent CSRF
+private fun handleOAuthCallback(uri: Uri) {
+    val code = uri.getQueryParameter(&quot;code&quot;) ?: return
+    val state = uri.getQueryParameter(&quot;state&quot;) ?: return
+
+    // Compare against the state you generated and stored before launching the flow
+    val expectedState = prefs.getString(KEY_OAUTH_STATE, null) ?: return
+    if (state != expectedState) {
+        // CSRF attack — discard
+        return
+    }
+    exchangeCodeForToken(code)
+}</code></pre>
+<p><strong>Failure modes</strong></p>
+<ul>
+<li>Loading <code>uri.toString()</code> directly in a WebView → open redirect to phishing site.</li>
+<li>Not validating the <code>state</code> parameter in OAuth flows → CSRF token theft.</li>
+<li>Using custom scheme for payment redirects → any app can intercept the payment callback.</li>
+</ul>
+<hr>
+<h3 id="fileprovider">FileProvider</h3>
+<p><strong>Definition</strong></p>
+<p><code>FileProvider</code> is a <code>ContentProvider</code> subclass that lets you share files from your app&#x27;s private directories with other apps through temporary URI grants, without ever exposing the actual filesystem path.</p>
+<p><strong>Why avoid direct file paths</strong></p>
+<ul>
+<li><code>file://</code> URIs reference absolute filesystem paths. If you pass a <code>file://</code> URI to another app, that app must have filesystem access to that path — which violates the sandbox.</li>
+<li>From API 24 (Android 7), passing <code>file://</code> URIs via Intents to other apps throws <code>FileUriExposedException</code>. The OS enforces this.</li>
+<li>Even if no exception occurs (e.g., you&#x27;re targeting &lt; API 24), exposing the path lets any app that can read the intent know where your private files are stored.</li>
+</ul>
+<p><strong>How FileProvider works</strong></p>
+<ol>
+<li>Declare it in the manifest.</li>
+<li>Define accessible paths in an XML resource.</li>
+<li>Generate a <code>content://</code> URI using <code>FileProvider.getUriForFile()</code>.</li>
+<li>Grant temporary read/write permission on that URI to the receiving app.</li>
+<li>The receiving app uses <code>ContentResolver.openInputStream()</code> to access the file — it never sees the path.</li>
+</ol>
+<p><strong>Setup</strong></p>
+<pre><code>&lt;!-- AndroidManifest.xml --&gt;
+&lt;provider
+    android:name=&quot;androidx.core.content.FileProvider&quot;
+    android:authorities=&quot;${applicationId}.fileprovider&quot;
+    android:exported=&quot;false&quot;
+    android:grantUriPermissions=&quot;true&quot;&gt;
+    &lt;meta-data
+        android:name=&quot;android.support.FILE_PROVIDER_PATHS&quot;
+        android:resource=&quot;@xml/file_provider_paths&quot; /&gt;
+&lt;/provider&gt;</code></pre>
+<pre><code>&lt;!-- res/xml/file_provider_paths.xml --&gt;
+&lt;paths&gt;
+    &lt;!-- App&#x27;s private files dir: /data/data/com.yourapp/files/ --&gt;
+    &lt;files-path name=&quot;private_files&quot; path=&quot;.&quot; /&gt;
+
+    &lt;!-- App&#x27;s cache dir: /data/data/com.yourapp/cache/ --&gt;
+    &lt;cache-path name=&quot;cache&quot; path=&quot;.&quot; /&gt;
+
+    &lt;!-- External files dir: /sdcard/Android/data/com.yourapp/files/ --&gt;
+    &lt;external-files-path name=&quot;external_files&quot; path=&quot;.&quot; /&gt;
+
+    &lt;!-- Avoid &lt;external-path&gt; (maps to root of external storage) unless truly needed --&gt;
+&lt;/paths&gt;</code></pre>
+<p><strong>Sharing a file</strong></p>
+<pre><code>fun shareFile(file: File) {
+    val uri = FileProvider.getUriForFile(
+        context,
+        &quot;${context.packageName}.fileprovider&quot;,
+        file
+    )
+
+    val shareIntent = Intent(Intent.ACTION_SEND).apply {
+        type = &quot;application/pdf&quot;
+        putExtra(Intent.EXTRA_STREAM, uri)
+        // Grant read permission to whichever app the user picks
+        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+    }
+
+    context.startActivity(Intent.createChooser(shareIntent, &quot;Share file&quot;))
+}</code></pre>
+<p><strong>Camera capture example</strong></p>
+<pre><code>private var photoUri: Uri? = null
+
+private val takePictureLauncher = registerForActivityResult(
+    ActivityResultContracts.TakePicture()
+) { success -&gt;
+    if (success) {
+        photoUri?.let { processPhoto(it) }
+    }
+}
+
+fun launchCamera() {
+    val photoFile = File(context.cacheDir, &quot;photo_${System.currentTimeMillis()}.jpg&quot;)
+    val uri = FileProvider.getUriForFile(
+        context,
+        &quot;${context.packageName}.fileprovider&quot;,
+        photoFile
+    )
+    photoUri = uri
+    takePictureLauncher.launch(uri)
+}</code></pre>
+<p><strong>Failure modes</strong></p>
+<ul>
+<li>Using <code>&lt;external-path path=&quot;.&quot;&gt;</code> in file_provider_paths.xml — exposes the entire external storage root. Scope paths as tightly as possible.</li>
+<li>Not setting <code>android:exported=&quot;false&quot;</code> on the FileProvider — other apps could enumerate or access files directly.</li>
+<li>Forgetting <code>FLAG_GRANT_READ_URI_PERMISSION</code> — the receiving app gets a URI it can&#x27;t open.</li>
+<li>Retaining <code>content://</code> URIs beyond the activity lifecycle — grants expire.</li>
+</ul>
+<hr>
+<h3 id="webview-security">WebView Security</h3>
+<p><strong>Definition</strong></p>
+<p><code>WebView</code> embeds a full browser engine inside your app. The reason misconfigured WebViews show up on so many security audit reports is that they can expose your app&#x27;s Java and Kotlin interfaces directly to web content — and if that content is untrusted, that&#x27;s essentially remote code execution.</p>
+<p><strong>Key security settings</strong></p>
+<pre><code>webView.settings.apply {
+    // JavaScript: disable unless your own trusted content requires it
+    javaScriptEnabled = false // default; only enable for your own URLs
+
+    // Never allow file access — prevents file:// scheme injection
+    allowFileAccess = false          // API 29+ default; set explicitly for older targets
+    allowContentAccess = false
+
+    // Disable universal access from file URLs
+    // (prevents file:// pages from fetching http:// resources)
+    allowFileAccessFromFileURLs = false    // deprecated but set for older targets
+    allowUniversalAccessFromFileURLs = false
+
+    // Prevent mixed content (http:// loaded in https:// WebView)
+    mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
+
+    // Disable geolocation (enable only if feature requires it)
+    setGeolocationEnabled(false)
+
+    // Disable saving form data
+    saveFormData = false
+    savePassword = false
+}</code></pre>
+<p><strong>JavaScript Interface (addJavascriptInterface)</strong></p>
+<p>This is the highest-risk WebView API. It exposes Kotlin/Java methods to JavaScript running in the WebView.</p>
+<pre><code>// DANGEROUS if webView loads untrusted content
+webView.addJavascriptInterface(MyBridge(), &quot;AndroidBridge&quot;)
+
+class MyBridge {
+    @JavascriptInterface // REQUIRED annotation — without it, methods are not exposed
+    fun getUserToken(): String {
+        // If untrusted JS can call this, it can steal the token
+        return secureStore.getToken()
+    }
+}</code></pre>
+<p>Rules for safe JavaScript interfaces:</p>
+<ol>
+<li>Never add a JS interface if the WebView loads any untrusted URL.</li>
+<li>Annotate only with <code>@JavascriptInterface</code> — this is required from API 17+ for methods to be callable (pre-17 all public methods were exposed — a major attack surface).</li>
+<li>Never expose sensitive data (tokens, PII) through the bridge.</li>
+<li>Validate all parameters passed from JS as untrusted input.</li>
+</ol>
+<p><strong>URL interception — prevent open redirects</strong></p>
+<pre><code>webView.webViewClient = object : WebViewClient() {
+    override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
+        val url = request.url
+        // Whitelist: only allow navigations within your domain
+        if (url.scheme == &quot;https&quot; &amp;&amp; url.host == &quot;www.yourapp.com&quot;) {
+            return false // let WebView handle it
+        }
+        // External URLs — open in system browser, not your WebView
+        if (url.scheme == &quot;https&quot; || url.scheme == &quot;http&quot;) {
+            startActivity(Intent(Intent.ACTION_VIEW, url))
+        }
+        return true // block in WebView
+    }
+
+    override fun onReceivedSslError(view: WebView, handler: SslErrorHandler, error: SslError) {
+        // NEVER call handler.proceed() — that ignores TLS errors
+        handler.cancel()
+        showTlsErrorToUser()
+    }
+}</code></pre>
+<p><strong>Safe Browsing</strong></p>
+<pre><code>// Enable Safe Browsing (checks URLs against Google&#x27;s list of known bad URLs)
+WebView.startSafeBrowsing(context) { success -&gt;
+    // success = false means Safe Browsing is unavailable on this device
+}
+
+webView.settings.safeBrowsingEnabled = true // API 26+</code></pre>
+<p><strong>Additional hardening</strong></p>
+<ul>
+<li>Disable <code>setWebContentsDebuggingEnabled(true)</code> in production builds (it&#x27;s only valid in debug). It exposes the WebView to Chrome DevTools over ADB.</li>
+<li>Never load <code>file://</code> URLs that the user or an external source controls.</li>
+<li>Use <code>WebResourceResponse</code> to serve sensitive content from code rather than from files, when possible.</li>
+</ul>
+<pre><code>// Only enable debugging in debug builds
+if (BuildConfig.DEBUG) {
+    WebView.setWebContentsDebuggingEnabled(true)
+}</code></pre>
+<p><strong>Failure modes</strong></p>
+<ul>
+<li><code>onReceivedSslError</code> calling <code>handler.proceed()</code> → app silently accepts invalid/expired certificates → MITM possible.</li>
+<li><code>javaScriptEnabled = true</code> with untrusted content + <code>addJavascriptInterface</code> → remote code execution equivalent.</li>
+<li><code>allowFileAccess = true</code> + <code>allowUniversalAccessFromFileURLs = true</code> → XSS in a local file can exfiltrate all app files.</li>
+</ul>
+<hr>
+<h2 id="132-data-security">13.2 Data Security</h2>
+<h3 id="android-keystore">Android Keystore</h3>
+<p><strong>Definition</strong></p>
+<p>The Android Keystore System is a hardware-backed — or on older devices, OS-isolated — key storage facility. The defining property is that keys stored in the Keystore can never be extracted from the device in plaintext; all cryptographic operations happen inside the secure hardware, whether that&#x27;s a StrongBox secure element, a TEE, or the isolated Keystore daemon.</p>
+<p><strong>What it is</strong></p>
+<ul>
+<li>Not a file on disk. It is a system service backed by hardware security where available.</li>
+<li>Keys are bound to the app (via UID) — another app cannot use your Keystore keys.</li>
+<li>Supports key usage policies: require biometric authentication, time-based expiry, user presence check.</li>
+</ul>
+<p><strong>How it works</strong></p>
+<pre><code>// 1. Generate an AES key in the Keystore
+fun generateAesKey(alias: String) {
+    val keyGenerator = KeyGenerator.getInstance(
+        KeyProperties.KEY_ALGORITHM_AES,
+        &quot;AndroidKeyStore&quot; // This is the Keystore provider name
+    )
+    keyGenerator.init(
+        KeyGenParameterSpec.Builder(
+            alias,
+            KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT
+        )
+            .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
+            .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
+            .setKeySize(256)
+            .setUserAuthenticationRequired(false) // set true to require biometrics
+            .build()
+    )
+    keyGenerator.generateKey()
+}
+
+// 2. Encrypt data using the Keystore key
+fun encrypt(alias: String, plaintext: ByteArray): Pair&lt;ByteArray, ByteArray&gt; {
+    val keyStore = KeyStore.getInstance(&quot;AndroidKeyStore&quot;).apply { load(null) }
+    val secretKey = keyStore.getKey(alias, null) as SecretKey
+
+    val cipher = Cipher.getInstance(&quot;AES/GCM/NoPadding&quot;)
+    cipher.init(Cipher.ENCRYPT_MODE, secretKey)
+    val iv = cipher.iv
+    val ciphertext = cipher.doFinal(plaintext)
+    return Pair(iv, ciphertext)
+}
+
+// 3. Decrypt
+fun decrypt(alias: String, iv: ByteArray, ciphertext: ByteArray): ByteArray {
+    val keyStore = KeyStore.getInstance(&quot;AndroidKeyStore&quot;).apply { load(null) }
+    val secretKey = keyStore.getKey(alias, null) as SecretKey
+
+    val cipher = Cipher.getInstance(&quot;AES/GCM/NoPadding&quot;)
+    val spec = GCMParameterSpec(128, iv)
+    cipher.init(Cipher.DECRYPT_MODE, secretKey, spec)
+    return cipher.doFinal(ciphertext)
+}</code></pre>
+<p><strong>Key generation for asymmetric (RSA/EC)</strong></p>
+<pre><code>fun generateRsaKeyPair(alias: String) {
+    val keyPairGenerator = KeyPairGenerator.getInstance(
+        KeyProperties.KEY_ALGORITHM_RSA, &quot;AndroidKeyStore&quot;
+    )
+    keyPairGenerator.initialize(
+        KeyGenParameterSpec.Builder(
+            alias,
+            KeyProperties.PURPOSE_SIGN or KeyProperties.PURPOSE_VERIFY
+        )
+            .setDigests(KeyProperties.DIGEST_SHA256)
+            .setSignaturePaddings(KeyProperties.SIGNATURE_PADDING_RSA_PKCS1)
+            .setKeySize(2048)
+            .setUserAuthenticationRequired(true) // require biometric/PIN before signing
+            .setUserAuthenticationValidityDurationSeconds(-1) // per-use auth (not time-based)
+            .build()
+    )
+    keyPairGenerator.generateKeyPair()
+}</code></pre>
+<p><strong>StrongBox vs TEE</strong></p>
+<ul>
+<li><strong>TEE (Trusted Execution Environment)</strong>: An isolated processor within the main SoC. Keys cannot be extracted even with root, but a sophisticated hardware attack on the SoC could theoretically succeed.</li>
+<li><strong>StrongBox</strong>: A dedicated secure element (separate chip, e.g., Titan M on Pixel). Higher assurance — keys are isolated even from the main SoC.</li>
+</ul>
+<pre><code>// Request StrongBox (API 28+), fallback to TEE
+val spec = KeyGenParameterSpec.Builder(alias, ...)
+    .setIsStrongBoxBacked(true) // throws StrongBoxUnavailableException if not available
+    .build()</code></pre>
+<p><strong>When Keystore keys are invalidated</strong></p>
+<ul>
+<li><code>setInvalidatedByBiometricEnrollment(true)</code> (default): adding a new fingerprint after key creation invalidates it. The app must re-generate the key.</li>
+<li>Factory reset: Keystore is wiped.</li>
+<li>Root: Keystore may be wiped as a security measure on stock ROMs.</li>
+</ul>
+<p><strong>Android implications</strong></p>
+<ul>
+<li>Keys cannot be exported (by design). You cannot back up a Keystore key to a server.</li>
+<li>On low-end devices pre-API 18, there is no hardware-backed Keystore — the software fallback is less secure.</li>
+<li>Keystore keys survive app updates but are deleted on app uninstall.</li>
+</ul>
+<p><strong>Trade-offs</strong></p>
+<table border="1" cellpadding="6" cellspacing="0">
+<thead><tr>
+<th>Benefit</th>
+<th>Cost</th>
+</tr></thead><tbody>
+<tr><td>Key material never leaves secure hardware</td><td>Cannot back up keys; if device is wiped, keys are gone</td></tr>
+<tr><td>Per-app UID isolation</td><td>Setup is complex (Cipher/KeyStore boilerplate)</td></tr>
+<tr><td>Biometric auth binding available</td><td>StrongBox not available on all devices</td></tr>
+</tbody></table>
+<hr>
+<h3 id="encryptedsharedpreferences">EncryptedSharedPreferences</h3>
+<p><strong>Definition</strong></p>
+<p><code>EncryptedSharedPreferences</code> is a Jetpack Security wrapper around <code>SharedPreferences</code> that transparently encrypts both keys and values — AES-256-GCM for values, AES-256-SIV for keys — with the master key living in the Android Keystore. From the outside it&#x27;s a drop-in replacement; underneath, nothing touches disk in plaintext.</p>
+<p><strong>How it works</strong></p>
+<ol>
+<li>A master key is created in (or retrieved from) the Keystore.</li>
+<li>The master key wraps a data encryption key stored in the encrypted prefs file.</li>
+<li>Every key and value is encrypted before being written to the XML file.</li>
+</ol>
+<p><strong>Setup</strong></p>
+<p>Add dependency:</p>
+<pre><code>// build.gradle.kts
+implementation(&quot;androidx.security:security-crypto:1.1.0-alpha06&quot;)</code></pre>
+<pre><code>import androidx.security.crypto.EncryptedSharedPreferences
+import androidx.security.crypto.MasterKey
+
+fun createEncryptedPrefs(context: Context): SharedPreferences {
+    val masterKey = MasterKey.Builder(context)
+        .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
+        .build()
+
+    return EncryptedSharedPreferences.create(
+        context,
+        &quot;secure_prefs&quot;,                              // filename (stored in app&#x27;s data dir)
+        masterKey,
+        EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+        EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+    )
+}
+
+// Usage — exactly like regular SharedPreferences
+val prefs = createEncryptedPrefs(context)
+prefs.edit()
+    .putString(&quot;auth_token&quot;, token)
+    .putLong(&quot;token_expiry&quot;, expiryMs)
+    .apply()
+
+val token = prefs.getString(&quot;auth_token&quot;, null)</code></pre>
+<p><strong>What it protects against</strong></p>
+<ul>
+<li>ADB backup extraction of SharedPreferences XML files.</li>
+<li>Physical access to the device storage (if the device is encrypted and locked).</li>
+<li>Other apps reading your prefs (they can&#x27;t, due to UID isolation, but encryption provides defence in depth).</li>
+</ul>
+<p><strong>What it does NOT protect against</strong></p>
+<ul>
+<li>Root: a root process can extract the Keystore keys on devices without StrongBox, allowing decryption.</li>
+<li>A running process with the same UID (e.g., a malicious SDK in your own process) — it calls the same API you do.</li>
+<li>Memory scraping of a live process — plaintext values exist in memory after decryption.</li>
+</ul>
+<p><strong>Trade-offs</strong></p>
+<table border="1" cellpadding="6" cellspacing="0">
+<thead><tr>
+<th>Benefit</th>
+<th>Cost</th>
+</tr></thead><tbody>
+<tr><td>Drop-in replacement for SharedPreferences</td><td>Slower (encryption on every read/write)</td></tr>
+<tr><td>Master key in Keystore — hardware-backed</td><td>Alpha/beta API — can have migration issues between versions</td></tr>
+<tr><td>Protects against offline storage access</td><td>Does not protect a rooted live device</td></tr>
+</tbody></table>
+<p><strong>Migration from plain SharedPreferences</strong></p>
+<p>There is no automatic migration. You must read old plain prefs, write to encrypted prefs, and delete the old file. Do this once at app startup.</p>
+<hr>
+<h3 id="encryptedfile">EncryptedFile</h3>
+<p><strong>Definition</strong></p>
+<p><code>EncryptedFile</code> from Jetpack Security gives you AES-256-GCM file encryption backed by the Android Keystore. Use it whenever you need to store sensitive files — PDFs, images, large JSON blobs — that must stay unreadable even if someone extracts the device storage or pulls an ADB backup.</p>
+<p><strong>How it works</strong></p>
+<p>Internally uses Tink&#x27;s <code>StreamingAead</code> — the file is split into 4KB segments, each encrypted with AES-256-GCM. The key is derived from the master Keystore key.</p>
+<pre><code>fun writeEncryptedFile(context: Context, filename: String, data: ByteArray) {
+    val masterKey = MasterKey.Builder(context)
+        .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
+        .build()
+
+    val file = File(context.filesDir, filename)
+
+    val encryptedFile = EncryptedFile.Builder(
+        context,
+        file,
+        masterKey,
+        EncryptedFile.FileEncryptionScheme.AES256_GCM_HKDF_4KB
+    ).build()
+
+    encryptedFile.openFileOutput().use { outputStream -&gt;
+        outputStream.write(data)
+    }
+}
+
+fun readEncryptedFile(context: Context, filename: String): ByteArray {
+    val masterKey = MasterKey.Builder(context)
+        .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
+        .build()
+
+    val file = File(context.filesDir, filename)
+
+    val encryptedFile = EncryptedFile.Builder(
+        context,
+        file,
+        masterKey,
+        EncryptedFile.FileEncryptionScheme.AES256_GCM_HKDF_4KB
+    ).build()
+
+    return encryptedFile.openFileInput().use { inputStream -&gt;
+        inputStream.readBytes()
+    }
+}</code></pre>
+<p><strong>When to use EncryptedFile vs EncryptedSharedPreferences</strong></p>
+<ul>
+<li><code>EncryptedSharedPreferences</code>: key-value pairs, configuration, tokens, flags.</li>
+<li><code>EncryptedFile</code>: arbitrary binary data — PDFs, user documents, large JSON blobs, offline cache of sensitive content.</li>
+</ul>
+<p><strong>Failure modes</strong></p>
+<ul>
+<li>Passing a non-empty existing file to <code>EncryptedFile.Builder</code> where the file was NOT written by <code>EncryptedFile</code> → <code>IOException</code> on read.</li>
+<li>Creating two <code>EncryptedFile</code> instances with different master keys for the same file → decryption failure.</li>
+</ul>
+<hr>
+<h3 id="token-storage">Token Storage</h3>
+<p><strong>Definition</strong></p>
+<p>Where and how you store authentication tokens — session tokens, OAuth access and refresh tokens, JWTs — is one of the highest-impact security decisions you make in a mobile app, because a stolen token is often equivalent to a stolen identity.</p>
+<p><strong>Storage options ranked by security</strong></p>
+<table border="1" cellpadding="6" cellspacing="0">
+<thead><tr>
+<th>Option</th>
+<th>Security</th>
+<th>Notes</th>
+</tr></thead><tbody>
+<tr><td>Android Keystore (key only)</td><td>Highest</td><td>Key never leaves hardware; use to encrypt the token</td></tr>
+<tr><td>EncryptedSharedPreferences</td><td>High</td><td>AES-256-GCM, master key in Keystore</td></tr>
+<tr><td>Internal storage (plain)</td><td>Medium</td><td>UID-isolated, but readable with root or ADB backup</td></tr>
+<tr><td>SharedPreferences (plain)</td><td>Medium</td><td>Same as internal storage; XML readable with ADB backup on pre-M devices</td></tr>
+<tr><td>External storage</td><td>Low</td><td>World-readable; avoid entirely for tokens</td></tr>
+<tr><td>Hardcoded in code/resources</td><td>None</td><td>Decompilable; never do this</td></tr>
+</tbody></table>
+<p><strong>Best practice recommendation</strong></p>
+<pre><code>// Pattern: store auth token in EncryptedSharedPreferences
+class TokenRepository(context: Context) {
+
+    private val prefs: SharedPreferences by lazy {
+        val masterKey = MasterKey.Builder(context)
+            .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
+            .build()
+
+        EncryptedSharedPreferences.create(
+            context,
+            &quot;token_store&quot;,
+            masterKey,
+            EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+            EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+        )
+    }
+
+    fun saveToken(token: String) {
+        prefs.edit().putString(KEY_AUTH_TOKEN, token).apply()
+    }
+
+    fun getToken(): String? = prefs.getString(KEY_AUTH_TOKEN, null)
+
+    fun clearToken() {
+        prefs.edit().remove(KEY_AUTH_TOKEN).apply()
+    }
+
+    companion object {
+        private const val KEY_AUTH_TOKEN = &quot;auth_token&quot;
+    }
+}</code></pre>
+<p><strong>For ultra-sensitive tokens: Keystore-encrypted</strong></p>
+<pre><code>// Store the token encrypted with a Keystore key
+// The raw token never persists to disk — only ciphertext + IV do
+class KeystoreTokenRepository(context: Context) {
+    private val prefs = context.getSharedPreferences(&quot;ks_token_store&quot;, Context.MODE_PRIVATE)
+    private val keyAlias = &quot;token_key&quot;
+
+    init {
+        if (!KeyStore.getInstance(&quot;AndroidKeyStore&quot;).apply { load(null) }.containsAlias(keyAlias)) {
+            generateAesKey(keyAlias)
+        }
+    }
+
+    fun saveToken(token: String) {
+        val (iv, ciphertext) = encrypt(keyAlias, token.toByteArray(Charsets.UTF_8))
+        prefs.edit()
+            .putString(&quot;iv&quot;, Base64.encodeToString(iv, Base64.DEFAULT))
+            .putString(&quot;ct&quot;, Base64.encodeToString(ciphertext, Base64.DEFAULT))
+            .apply()
+    }
+
+    fun getToken(): String? {
+        val ivB64 = prefs.getString(&quot;iv&quot;, null) ?: return null
+        val ctB64 = prefs.getString(&quot;ct&quot;, null) ?: return null
+        val iv = Base64.decode(ivB64, Base64.DEFAULT)
+        val ct = Base64.decode(ctB64, Base64.DEFAULT)
+        return try {
+            decrypt(keyAlias, iv, ct).toString(Charsets.UTF_8)
+        } catch (e: Exception) {
+            null // Key invalidated (e.g., new biometric enrolled)
+        }
+    }
+}</code></pre>
+<p><strong>Interview answer: &quot;Where do you store auth tokens?&quot;</strong></p>
+<p>&quot;I store auth tokens in <code>EncryptedSharedPreferences</code> backed by a Keystore master key. That gives AES-256-GCM encryption at rest, with the key never leaving the secure hardware on supported devices. For extremely sensitive flows — like a private signing key — I go a level lower and use the Keystore directly, storing only the ciphertext and IV on disk. I never use plain <code>SharedPreferences</code>, external storage, or hardcoded values.&quot;</p>
+<hr>
+<h3 id="biometrics">Biometrics</h3>
+<p><strong>Definition</strong></p>
+<p>The <code>BiometricPrompt</code> API in the Jetpack Biometric library gives you a single, unified interface for fingerprint, face, and iris authentication. It is the right API to use — the older <code>FingerprintManager</code> is deprecated and broken on many Android 10+ devices.</p>
+<p><strong>Two modes</strong></p>
+<ol>
+<li><strong>Authentication only</strong> (no Keystore key): verify the user is present; you handle what happens after.</li>
+<li><strong>Crypto-bound authentication</strong>: tie a Keystore key to biometric auth — the key is only unlocked after biometric passes.</li>
+</ol>
+<p><strong>Authentication only</strong></p>
+<pre><code>val executor = ContextCompat.getMainExecutor(this)
+val biometricPrompt = BiometricPrompt(this, executor, object : BiometricPrompt.AuthenticationCallback() {
+    override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
+        // User authenticated — proceed
+        unlockFeature()
+    }
+    override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
+        // Permanent error (lockout, no hardware, etc.)
+        showError(errString.toString())
+    }
+    override fun onAuthenticationFailed() {
+        // Single attempt failed (wrong finger) — prompt stays open automatically
+    }
+})
+
+val promptInfo = BiometricPrompt.PromptInfo.Builder()
+    .setTitle(&quot;Authenticate&quot;)
+    .setSubtitle(&quot;Use your biometric to access the app&quot;)
+    .setNegativeButtonText(&quot;Use PIN instead&quot;)
+    .setAllowedAuthenticators(
+        BiometricManager.Authenticators.BIOMETRIC_STRONG or
+        BiometricManager.Authenticators.DEVICE_CREDENTIAL // API 30+
+    )
+    .build()
+
+biometricPrompt.authenticate(promptInfo)</code></pre>
+<p><strong>Crypto-bound biometric — strongest pattern</strong></p>
+<pre><code>// Step 1: Generate a key that requires per-use biometric auth
+fun generateBiometricKey(alias: String) {
+    val keyGenerator = KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, &quot;AndroidKeyStore&quot;)
+    keyGenerator.init(
+        KeyGenParameterSpec.Builder(alias, KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT)
+            .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
+            .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
+            .setUserAuthenticationRequired(true)
+            .setUserAuthenticationValidityDurationSeconds(-1) // per-use, not time-window
+            .setInvalidatedByBiometricEnrollment(true)
+            .build()
+    )
+    keyGenerator.generateKey()
+}
+
+// Step 2: Create a Cipher initialized with the key — this triggers biometric prompt
+fun getCipher(alias: String): Cipher {
+    val keyStore = KeyStore.getInstance(&quot;AndroidKeyStore&quot;).apply { load(null) }
+    val secretKey = keyStore.getKey(alias, null) as SecretKey
+    val cipher = Cipher.getInstance(&quot;AES/GCM/NoPadding&quot;)
+    cipher.init(Cipher.ENCRYPT_MODE, secretKey) // This doesn&#x27;t fail yet
+    return cipher
+}
+
+// Step 3: Show biometric prompt with the crypto object
+fun authenticateWithCrypto(cipher: Cipher) {
+    val cryptoObject = BiometricPrompt.CryptoObject(cipher)
+    biometricPrompt.authenticate(promptInfo, cryptoObject)
+    // In onAuthenticationSucceeded, result.cryptoObject?.cipher is the unlocked cipher
+}</code></pre>
+<p><strong>Checking biometric availability</strong></p>
+<pre><code>val biometricManager = BiometricManager.from(context)
+when (biometricManager.canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_STRONG)) {
+    BiometricManager.BIOMETRIC_SUCCESS -&gt; { /* available */ }
+    BiometricManager.BIOMETRIC_ERROR_NO_HARDWARE -&gt; { /* no biometric hardware */ }
+    BiometricManager.BIOMETRIC_ERROR_HW_UNAVAILABLE -&gt; { /* temporarily unavailable */ }
+    BiometricManager.BIOMETRIC_ERROR_NONE_ENROLLED -&gt; {
+        // Prompt user to enroll
+        val enrollIntent = Intent(Settings.ACTION_BIOMETRIC_ENROLL)
+        startActivity(enrollIntent)
+    }
+}</code></pre>
+<p><strong>Failure modes</strong></p>
+<ul>
+<li>Using deprecated <code>FingerprintManager</code> — broken on many Android 10+ devices.</li>
+<li>Not handling <code>BIOMETRIC_ERROR_LOCKOUT</code> and <code>BIOMETRIC_ERROR_LOCKOUT_PERMANENT</code> — user gets locked out with no path forward.</li>
+<li>Using time-based auth validity (<code>setUserAuthenticationValidityDurationSeconds(30)</code>) for sensitive operations — a compromised app could use the unlocked window.</li>
+<li>Ignoring <code>setInvalidatedByBiometricEnrollment(true)</code> — a new biometric added by an attacker (after stealing the device) would give them access.</li>
+</ul>
+<hr>
+<h3 id="tls">TLS</h3>
+<p><strong>Definition</strong></p>
+<p>Transport Layer Security (TLS) encrypts all data in transit between your app and your servers. Android enforces it by default from API 28 onwards — cleartext traffic is blocked unless you explicitly opt in, which you should almost never do in production.</p>
+<p><strong>Network Security Config</strong></p>
+<p>Android&#x27;s Network Security Config (XML) lets you declaratively configure TLS behavior without code changes.</p>
+<pre><code>&lt;!-- res/xml/network_security_config.xml --&gt;
+&lt;network-security-config&gt;
+    &lt;!-- Production: require TLS, no cleartext, no user CAs --&gt;
+    &lt;base-config cleartextTrafficPermitted=&quot;false&quot;&gt;
+        &lt;trust-anchors&gt;
+            &lt;certificates src=&quot;system&quot; /&gt;
+            &lt;!-- Do NOT include: &lt;certificates src=&quot;user&quot; /&gt; in production --&gt;
+        &lt;/trust-anchors&gt;
+    &lt;/base-config&gt;
+
+    &lt;!-- Debug-only: allow user-installed CAs for proxy tools like Charles --&gt;
+    &lt;debug-overrides&gt;
+        &lt;trust-anchors&gt;
+            &lt;certificates src=&quot;system&quot; /&gt;
+            &lt;certificates src=&quot;user&quot; /&gt;
+        &lt;/trust-anchors&gt;
+    &lt;/debug-overrides&gt;
+
+    &lt;!-- Allow cleartext for specific domains (legacy API, avoid in new code) --&gt;
+    &lt;domain-config cleartextTrafficPermitted=&quot;true&quot;&gt;
+        &lt;domain includeSubdomains=&quot;false&quot;&gt;legacy.internal.api.com&lt;/domain&gt;
+    &lt;/domain-config&gt;
+&lt;/network-security-config&gt;</code></pre>
+<pre><code>&lt;!-- AndroidManifest.xml --&gt;
+&lt;application
+    android:networkSecurityConfig=&quot;@xml/network_security_config&quot;
+    ...&gt;</code></pre>
+<p><strong>Key defaults by API level</strong></p>
+<table border="1" cellpadding="6" cellspacing="0">
+<thead><tr>
+<th>API</th>
+<th>Default cleartext</th>
+<th>User CAs trusted</th>
+</tr></thead><tbody>
+<tr><td>&lt; 24</td><td>Permitted</td><td>Yes</td></tr>
+<tr><td>24–27</td><td>Permitted</td><td>No (debug builds: yes)</td></tr>
+<tr><td>28+</td><td>Not permitted</td><td>No</td></tr>
+</tbody></table>
+<p><strong>Retrofit + OkHttp TLS</strong></p>
+<pre><code>// Retrofit respects the system TLS config automatically.
+// Override TLS version/cipher suites if you need stricter control:
+val tlsSpecs = ConnectionSpec.Builder(ConnectionSpec.MODERN_TLS)
+    .tlsVersions(TlsVersion.TLS_1_3, TlsVersion.TLS_1_2)
+    .cipherSuites(
+        CipherSuite.TLS_AES_256_GCM_SHA384,
+        CipherSuite.TLS_CHACHA20_POLY1305_SHA256,
+        CipherSuite.TLS_AES_128_GCM_SHA256,
+        CipherSuite.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
+    )
+    .build()
+
+val client = OkHttpClient.Builder()
+    .connectionSpecs(listOf(tlsSpecs))
+    .build()</code></pre>
+<p><strong>Failure modes</strong></p>
+<ul>
+<li><code>cleartextTrafficPermitted=&quot;true&quot;</code> in production Network Security Config → credentials sent in plaintext.</li>
+<li><code>&lt;certificates src=&quot;user&quot; /&gt;</code> in production config → man-in-the-middle trivially possible with a user-installed CA (the exact scenario proxy tools exploit).</li>
+<li>Calling <code>setSSLSocketFactory</code> with a trust-all <code>TrustManager</code> → completely disables certificate validation.</li>
+</ul>
+<pre><code>// NEVER DO THIS — it defeats all TLS security
+val trustAll = object : X509TrustManager {
+    override fun checkClientTrusted(chain: Array&lt;X509Certificate&gt;, authType: String) {}
+    override fun checkServerTrusted(chain: Array&lt;X509Certificate&gt;, authType: String) {}
+    override fun getAcceptedIssuers(): Array&lt;X509Certificate&gt; = emptyArray()
+}</code></pre>
+<hr>
+<h3 id="certificate-pinning">Certificate Pinning</h3>
+<p><strong>Definition</strong></p>
+<p>Certificate pinning makes your app reject any TLS certificate that doesn&#x27;t match a specific public key or certificate you&#x27;ve embedded in the app — even if that certificate was signed by a trusted CA. The key insight is that it defends against scenarios where the CA itself is compromised, rogue, or coerced: a nation-state MITM, a rogue CA issuing a fraudulent cert for your domain, or a corporate proxy intercepting traffic.</p>
+<p><strong>How it works</strong></p>
+<p>Instead of trusting the entire CA chain, you embed a hash of the server&#x27;s public key (or certificate) in your app. At connection time, you compare the server&#x27;s presented public key against your pinned hash.</p>
+<p><strong>Network Security Config pinning (recommended)</strong></p>
+<pre><code>&lt;!-- res/xml/network_security_config.xml --&gt;
+&lt;network-security-config&gt;
+    &lt;domain-config&gt;
+        &lt;domain includeSubdomains=&quot;true&quot;&gt;api.yourapp.com&lt;/domain&gt;
+        &lt;pin-set expiration=&quot;2027-01-01&quot;&gt;
+            &lt;!-- SHA-256 hash of the Subject Public Key Info (SPKI) --&gt;
+            &lt;!-- Primary pin (current certificate) --&gt;
+            &lt;pin digest=&quot;SHA-256&quot;&gt;abc123...base64hash...&lt;/pin&gt;
+            &lt;!-- Backup pin (next certificate, ready for rotation) --&gt;
+            &lt;pin digest=&quot;SHA-256&quot;&gt;def456...base64hash...&lt;/pin&gt;
+        &lt;/pin-set&gt;
+    &lt;/domain-config&gt;
+&lt;/network-security-config&gt;</code></pre>
+<p>Getting the pin value:</p>
+<pre><code># Extract SPKI hash from a certificate
+openssl x509 -in cert.pem -pubkey -noout | \
+  openssl pkey -pubin -outform DER | \
+  openssl dgst -sha256 -binary | \
+  openssl enc -base64</code></pre>
+<p><strong>OkHttp CertificatePinner (programmatic)</strong></p>
+<pre><code>val certificatePinner = CertificatePinner.Builder()
+    .add(&quot;api.yourapp.com&quot;, &quot;sha256/abc123...base64...&quot;)  // primary
+    .add(&quot;api.yourapp.com&quot;, &quot;sha256/def456...base64...&quot;)  // backup
+    .build()
+
+val client = OkHttpClient.Builder()
+    .certificatePinner(certificatePinner)
+    .build()</code></pre>
+<p><strong>Pin rotation strategy</strong></p>
+<p>Pin rotation is the hardest operational challenge with certificate pinning. If you deploy a new certificate without a backup pin already shipped in the app, users on old versions lose connectivity to your server, and you have to support the old pins until the whole userbase has updated.</p>
+<p>Best practice:</p>
+<ol>
+<li>Always include a backup pin — the next certificate&#x27;s SPKI hash — so you can rotate without a blackout window.</li>
+<li>Set an <code>expiration</code> date in Network Security Config — after expiry, pinning is disabled and the app falls back to standard CA validation, which prevents a permanent hard lockout for old app versions that can&#x27;t be updated.</li>
+<li>Pin the SPKI (the public key hash) rather than the full certificate — that way the pin survives certificate renewal as long as the same key pair is reused.</li>
+</ol>
+<p><strong>When to use certificate pinning</strong></p>
+<ul>
+<li>Financial apps, health apps, any app handling highly sensitive data where a rogue CA attack is a realistic threat.</li>
+<li>Apps that communicate with a small number of known, controlled API endpoints.</li>
+<li>Do NOT pin if: your API is behind a CDN that rotates certificates frequently, or if you can&#x27;t guarantee app updates before certificate expiry.</li>
+</ul>
+<p><strong>Trade-offs</strong></p>
+<table border="1" cellpadding="6" cellspacing="0">
+<thead><tr>
+<th>Benefit</th>
+<th>Cost</th>
+</tr></thead><tbody>
+<tr><td>Defeats rogue CA / MITM attacks</td><td>Certificate rotation can hard-break old app versions</td></tr>
+<tr><td>Visible in code review</td><td>Blocks legitimate corporate TLS inspection proxies</td></tr>
+<tr><td>Works with Network Security Config (no code)</td><td>Harder to test — requires debug bypass</td></tr>
+</tbody></table>
+<p><strong>Debug bypass for testing with Charles/mitmproxy</strong></p>
+<pre><code>&lt;debug-overrides&gt;
+    &lt;!-- In debug: disable pinning so you can inspect traffic --&gt;
+    &lt;trust-anchors&gt;
+        &lt;certificates src=&quot;system&quot; /&gt;
+        &lt;certificates src=&quot;user&quot; /&gt;
+    &lt;/trust-anchors&gt;
+&lt;/debug-overrides&gt;</code></pre>
+<p>The <code>&lt;debug-overrides&gt;</code> block only applies to <code>debuggable=&quot;true&quot;</code> builds — pinning remains enforced in production.</p>
+<p><strong>Failure modes</strong></p>
+<ul>
+<li>Pinning only the leaf certificate (not SPKI) → broken at every certificate renewal.</li>
+<li>No backup pin → any certificate rotation causes connection failures.</li>
+<li>No expiry date → old unpatchable app versions are permanently broken.</li>
+<li>Pinning in an app with a very long tail of old versions → operational nightmare.</li>
+</ul>
+<hr>
+<h3 id="rooted-device-limitations">Rooted Device Limitations</h3>
+<p><strong>Definition</strong></p>
+<p>A rooted Android device makes UID 0 (root) access available to user-space processes. Root breaks the foundational assumption of the Android security model — that the app UID boundary is inviolable — which means every defence you&#x27;ve built on top of that boundary becomes weaker or irrelevant.</p>
+<p><strong>What root access enables (threat model)</strong></p>
+<table border="1" cellpadding="6" cellspacing="0">
+<thead><tr>
+<th>Attack</th>
+<th>Mechanism</th>
+</tr></thead><tbody>
+<tr><td>Read private files</td><td>Root bypasses filesystem permissions</td></tr>
+<tr><td>Extract Keystore keys</td><td>On devices without StrongBox, root can access the Keystore daemon&#x27;s memory or storage</td></tr>
+<tr><td>Read process memory</td><td>Root can <code>ptrace</code> your app process and dump the heap</td></tr>
+<tr><td>Modify app code at runtime</td><td>Frida/JDWP hooking, method swizzling</td></tr>
+<tr><td>Bypass SSL pinning</td><td>Frida scripts to hook OkHttp&#x27;s certificate pinner</td></tr>
+<tr><td>Disable ProGuard obfuscation effect</td><td>Jadx/apktool decompile the APK</td></tr>
+</tbody></table>
+<p><strong>What you can do (and their limits)</strong></p>
+<p><strong>1. Detect root (defense in depth, not a hard barrier)</strong></p>
+<pre><code>// Using RootBeer library (or implement manually)
+val rootBeer = RootBeer(context)
+if (rootBeer.isRooted) {
+    // Warn the user or limit functionality
+    // Do NOT silently stop working — that&#x27;s a bad UX with no explanation
+}</code></pre>
+<p>Manual checks (can each be individually bypassed by a determined attacker):</p>
+<pre><code>fun isDeviceRooted(): Boolean {
+    // Check 1: su binary present
+    val suPaths = listOf(&quot;/system/bin/su&quot;, &quot;/system/xbin/su&quot;, &quot;/sbin/su&quot;)
+    if (suPaths.any { File(it).exists() }) return true
+
+    // Check 2: Test Tags (build props on production ROMs)
+    if (Build.TAGS?.contains(&quot;test-keys&quot;) == true) return true
+
+    // Check 3: Can we execute su?
+    return try {
+        Runtime.getRuntime().exec(arrayOf(&quot;/system/xbin/su&quot;, &quot;-c&quot;, &quot;id&quot;))
+        true
+    } catch (e: IOException) {
+        false
+    }
+}</code></pre>
+<p><strong>2. Use StrongBox-backed keys</strong></p>
+<p>On Pixel and other StrongBox-equipped devices, keys are in a separate secure element — root on the application processor cannot extract them.</p>
+<p><strong>3. Integrity checks: Google Play Integrity API</strong></p>
+<pre><code>val integrityManager = IntegrityManagerFactory.create(context)
+val request = StandardIntegrityManager.StandardIntegrityTokenRequest.builder()
+    .setRequestHash(requestHash)
+    .build()
+integrityManager.requestIntegrityToken(request)
+    .addOnSuccessListener { response -&gt;
+        // Send response.token() to your backend for verification
+        // Backend verifies: device integrity, app integrity, account details
+    }</code></pre>
+<p>The Play Integrity API verdict distinguishes: MEETS_DEVICE_INTEGRITY, MEETS_BASIC_INTEGRITY, NO_INTEGRITY.</p>
+<p><strong>4. SafetyNet Attestation (deprecated — prefer Play Integrity)</strong></p>
+<p>SafetyNet was deprecated in June 2023. Existing integrations continue to work until further notice, but migrate to Play Integrity.</p>
+<p><strong>Honest interview answer on the limits</strong></p>
+<p>&quot;No mobile app can be fully secured against a rooted device with physical access and unlimited time — that&#x27;s just the reality of running on hardware you don&#x27;t control. The goal of root detection isn&#x27;t to make attack impossible; it&#x27;s to raise the cost. So the right layered approach is: use Keystore keys, preferably StrongBox-backed, so the key material is hardware-isolated even from a root process; use the Play Integrity API to get a server-verifiable attestation of device and app state; and do root detection to fail gracefully — warn the user and log the event server-side — rather than pretending you can stop a determined attacker.&quot;</p>
+<hr>
+<h3 id="avoiding-hardcoded-secrets">Avoiding Hardcoded Secrets</h3>
+<p><strong>Definition</strong></p>
+<p>Hardcoded secrets are API keys, tokens, passwords, or cryptographic keys embedded directly in source code, resource files, or compiled bytecode. The problem is not theoretical — Android APKs are trivially decompilable, and any string literal in your code is recoverable in minutes.</p>
+<p><strong>Why it&#x27;s a problem</strong></p>
+<p>Android APKs are trivially decompilable with tools like <code>jadx</code>, <code>apktool</code>, or even online services. Any string in your code, <code>BuildConfig</code>, or <code>res/values/</code> is recoverable from the APK in minutes — even with ProGuard/R8 obfuscation applied, because R8 renames identifiers but does not encrypt string literals.</p>
+<p><strong>What counts as a secret</strong></p>
+<ul>
+<li>API keys for third-party services (Firebase, Maps, Stripe).</li>
+<li>Server-side credentials.</li>
+<li>Cryptographic keys (symmetric keys, private keys).</li>
+<li>Hardcoded passwords or salts that are meaningful without context.</li>
+</ul>
+<p><strong>What does NOT need protection</strong></p>
+<ul>
+<li>Public keys (by definition public).</li>
+<li>API keys for client-side-only services designed to be public (like a public Maps embed key with domain restrictions) — though even these should be restricted on the server side.</li>
+</ul>
+<p><strong>Mitigations</strong></p>
+<table border="1" cellpadding="6" cellspacing="0">
+<thead><tr>
+<th>Approach</th>
+<th>Use case</th>
+</tr></thead><tbody>
+<tr><td>Backend proxy</td><td>The mobile app calls your backend, which holds the API key and proxies to the third-party service. The mobile app never sees the key.</td></tr>
+<tr><td>Runtime key delivery</td><td>Key is fetched from your server at runtime (over TLS + authenticated) and stored in EncryptedSharedPreferences. Never in the APK.</td></tr>
+<tr><td>Firebase Remote Config / AWS SSM</td><td>Key is stored server-side and fetched at runtime.</td></tr>
+<tr><td>Android Keystore</td><td>For keys generated on-device — they never exist outside the device, so there&#x27;s nothing to hardcode.</td></tr>
+<tr><td>Restricted API keys</td><td>Some services (Google Maps) allow domain/package/certificate restrictions on the key. Even if extracted, the key is unusable from another app or server.</td></tr>
+</tbody></table>
+<p><strong>ProGuard/R8 does NOT protect secrets</strong></p>
+<p>A common misconception is that obfuscation hides secrets. R8 renames identifiers but leaves string literals intact, so <code>jadx</code> will find <code>&quot;sk_live_abc123&quot;</code> in your code regardless of how thoroughly you&#x27;ve obfuscated everything else.</p>
+<p><strong>Detecting hardcoded secrets in code review</strong></p>
+<pre><code># Search for common patterns
+grep -rn &quot;api_key\|apikey\|secret\|password\|passwd\|token&quot; app/src/ --include=&quot;*.kt&quot; --include=&quot;*.java&quot;
+
+# Tools: truffleHog, gitleaks, GitHub secret scanning</code></pre>
+<p><strong>Build-time injection (acceptable for non-sensitive config)</strong></p>
+<pre><code>// build.gradle.kts — value comes from environment variable, not committed
+android {
+    buildTypes {
+        release {
+            buildConfigField(&quot;String&quot;, &quot;API_BASE_URL&quot;, &quot;\&quot;${System.getenv(&quot;API_BASE_URL&quot;)}\&quot;&quot;)
+        }
+    }
+}</code></pre>
+<p>This is acceptable for non-secret config values (base URLs, feature flag service URLs). Still visible in the APK via <code>BuildConfig</code>, but not a secret per se. Never use this pattern for API keys or tokens.</p>
+<hr>
+<h3 id="logging-sensitive-data">Logging Sensitive Data</h3>
+<p><strong>Definition</strong></p>
+<p>Android&#x27;s <code>Logcat</code> is a system-wide, unencrypted log buffer. Any app with <code>READ_LOGS</code> permission — or root — can read every line in it, and crash-reporting SDKs routinely capture recent log output and ship it to their servers. That means sensitive data written to Logcat doesn&#x27;t just sit on the device; it can travel off it.</p>
+<p><strong>The problem</strong></p>
+<p>Before API 19, any app could read Logcat. From API 19 onwards, only apps with <code>READ_LOGS</code> — a signature-level permission granted to some system apps — or root can read other apps&#x27; logs. But that still leaves three real exposure paths. First, developer devices with ADB enabled expose the entire Logcat to anyone with USB access. Second, crash reporting SDKs like Sentry and Firebase Crashlytics may capture recent Logcat output and send it to their servers. And third, some OEM apps ship with <code>READ_LOGS</code>, so production Logcat is not private even without root.</p>
+<p><strong>Rules</strong></p>
+<pre><code>// NEVER LOG:
+Log.d(&quot;Auth&quot;, &quot;Token: $authToken&quot;)              // token in log
+Log.d(&quot;User&quot;, &quot;Password: $password&quot;)             // password
+Log.d(&quot;Profile&quot;, &quot;SSN: ${user.ssn}&quot;)             // PII
+Log.d(&quot;Payment&quot;, &quot;Card: ${card.number}&quot;)         // card number
+
+// OK IN DEBUG, NEVER IN RELEASE:
+if (BuildConfig.DEBUG) {
+    Log.d(&quot;Network&quot;, &quot;Response: $responseBody&quot;)  // may contain PII
+}
+
+// SAFE:
+Log.d(&quot;Auth&quot;, &quot;Token refreshed successfully&quot;)    // no token value
+Log.d(&quot;Network&quot;, &quot;Request failed with code: $code&quot;)
+Log.e(&quot;Payment&quot;, &quot;Payment failed: ${error.code}&quot;)</code></pre>
+<p><strong>Using ProGuard/R8 to strip debug logs</strong></p>
+<pre><code># Strip Log.d and Log.v calls in release builds
+-assumenosideeffects class android.util.Log {
+    public static int d(...);
+    public static int v(...);
+}</code></pre>
+<p><strong>Timber (logging library) pattern</strong></p>
+<pre><code>// Plant debug tree only in debug builds
+if (BuildConfig.DEBUG) {
+    Timber.plant(Timber.DebugTree())
+} else {
+    Timber.plant(CrashReportingTree()) // custom tree that filters PII
+}
+
+class CrashReportingTree : Timber.Tree() {
+    override fun log(priority: Int, tag: String?, message: String, t: Throwable?) {
+        if (priority &lt; Log.WARN) return // only warn+ in production
+        // Scrub before sending to crash reporter
+        val scrubbed = message.replace(TOKEN_REGEX, &quot;[TOKEN]&quot;)
+        Sentry.captureMessage(scrubbed)
+    }
+}</code></pre>
+<p><strong>Crash reporter configuration</strong></p>
+<p>Configure your crash reporting SDK to exclude certain fields:</p>
+<pre><code>// Sentry example — scrub sensitive breadcrumbs
+SentryAndroid.init(context) { options -&gt;
+    options.beforeBreadcrumb = BeforeBreadcrumbCallback { breadcrumb, _ -&gt;
+        if (breadcrumb.category == &quot;auth&quot;) null // drop auth breadcrumbs
+        else breadcrumb
+    }
+    options.beforeSend = BeforeSendCallback { event, _ -&gt;
+        // Strip request bodies from network events
+        event.request?.data = null
+        event
+    }
+}</code></pre>
+<p><strong>Failure modes</strong></p>
+<ul>
+<li>Debug logging left in release builds (ProGuard didn&#x27;t strip it, or ProGuard not configured).</li>
+<li>Exception messages containing sensitive data being sent to crash reporters.</li>
+<li>Using <code>toString()</code> on data classes that include token fields in the generated output.</li>
+</ul>
+<pre><code>// Data class: toString() includes all fields — be careful
+data class UserSession(
+    val userId: String,
+    val token: String // this will appear in any Log.d(&quot;Session&quot;, session.toString())
+)
+
+// Safer: override toString to exclude sensitive fields
+data class UserSession(
+    val userId: String,
+    @Transient val token: String
+) {
+    override fun toString() = &quot;UserSession(userId=$userId, token=[REDACTED])&quot;
+}</code></pre>
+<hr>
+<h2 id="interview-qa-master-list">Interview Q&amp;A Master List</h2>
+<h3 id="131-security-basics">13.1 Security Basics</h3>
+<p><strong>Q: How do you secure an exported component?</strong></p>
+<p>&quot;There are three layers. First, don&#x27;t export unless you genuinely have to — set <code>android:exported=&#x27;false&#x27;</code> or remove intent-filters from anything that&#x27;s internal to your app. Second, if it must be exported, require a <code>signature</code>-level custom permission so only apps signed with the same key as yours can call it. And third, treat every piece of Intent data that arrives as untrusted input: whitelist expected actions, sanitize extras, and reject anything with an unexpected shape. I also avoid doing any privileged work in response to externally-triggered Intents without first validating the caller&#x27;s identity.&quot;</p>
+<p><strong>Q: What is intent spoofing?</strong></p>
+<p>&quot;Intent spoofing is when a malicious app sends a crafted Intent to one of your exported components, either impersonating a legitimate caller or injecting malicious data to trigger behaviour you didn&#x27;t intend. The root of the problem is that Android Intents carry no built-in caller authentication — any app on the device can send any Intent to any exported component. So the defence has three parts: don&#x27;t export components unnecessarily, require signature-level permissions on components that must be exported, and treat every Intent extra as untrusted user input regardless of what action string it declares.&quot;</p>
+<p><strong>Q: Why avoid exposing file paths directly (file:// URIs)?</strong></p>
+<p>&quot;There are two reasons. First, from API 24 onwards, passing a <code>file://</code> URI to another app via an Intent throws <code>FileUriExposedException</code> — it literally crashes the app. And second, more fundamentally, a <code>file://</code> URI reveals the absolute filesystem path to a private file, so any app that sees that Intent now knows where your app stores its data. <code>FileProvider</code> solves both problems at once: it generates a <code>content://</code> URI that the OS routes through your <code>ContentProvider</code>, granting the receiving app temporary read access without ever exposing the underlying path. The other app calls <code>ContentResolver.openInputStream()</code> and gets the bytes — it never learns where those bytes came from on disk.&quot;</p>
+<p><strong>Q: How do you validate deep links?</strong></p>
+<p>&quot;There are four steps. First, use App Links — HTTPS with <code>android:autoVerify=&#x27;true&#x27;</code> and an <code>assetlinks.json</code> file — so only your app handles your domain&#x27;s URLs. Custom schemes are a problem because any app can register the same scheme and intercept your links. Second, even with App Links in place, validate the scheme and host in code before you act on the link, because App Links can be bypassed on some older devices. Third, whitelist known paths and reject anything unexpected. And fourth, sanitize and range-check all query parameters as untrusted input. For OAuth deep links there&#x27;s an extra step: always validate the <code>state</code> parameter against the one you generated before launching the flow, or you&#x27;re open to CSRF.&quot;</p>
+<p><strong>Q: What is PendingIntent mutability and why does it matter?</strong></p>
+<p>&quot;<code>FLAG_IMMUTABLE</code> prevents the recipient of a <code>PendingIntent</code> from modifying the wrapped Intent&#x27;s action, component, or extras. The vulnerability with a mutable <code>PendingIntent</code> is that if you leave the action or component unspecified, the receiver can fill in whatever it wants — and it executes under your app&#x27;s identity and your app&#x27;s permissions, not theirs. That&#x27;s a privilege escalation. Since API 31, omitting both flags entirely throws an <code>IllegalArgumentException</code>, so you have to be explicit. My rule is to default to <code>FLAG_IMMUTABLE</code> everywhere, and only reach for <code>FLAG_MUTABLE</code> in the specific cases where a system framework genuinely needs to fill in fields — for example, inline reply notifications.&quot;</p>
+<hr>
+<h3 id="132-data-security-1">13.2 Data Security</h3>
+<p><strong>Q: Where do you store auth tokens?</strong></p>
+<p>&quot;I store auth tokens in <code>EncryptedSharedPreferences</code>, which uses AES-256-GCM for values and AES-256-SIV for keys, with the master key living in the Android Keystore. On supported hardware that key never leaves the secure element. For extremely sensitive operations — like a private signing key — I go one level lower and use the Keystore directly: only ciphertext and the IV go to disk, and the raw key material never exists outside the Keystore. The things I never do are plain <code>SharedPreferences</code> — its XML is exposed in ADB backups on pre-Marshmallow devices — external storage, or any form of hardcoded value.&quot;</p>
+<p><strong>Q: Can you fully secure secrets in a mobile app?</strong></p>
+<p>&quot;No, not fully. A mobile app runs on hardware you don&#x27;t control, in the user&#x27;s hands. With physical access and a rooted device, an attacker with enough time can extract almost anything from user space — they can read process memory, bypass TLS pinning with Frida, and on devices without StrongBox they can potentially access Keystore key material too. So the goal is not to make attack impossible; it&#x27;s to raise the cost high enough that it&#x27;s not worth it. You do that by using hardware-backed Keystore keys — preferably StrongBox-backed — so the key material is isolated even from root, by never hardcoding secrets anywhere in the APK, by using the Play Integrity API to detect compromised device states at the server level, and by architecting your backend so that a compromised client has a limited blast radius: short-lived tokens, scope-limited keys, and server-side rate limiting.&quot;</p>
+<p><strong>Q: What is Android Keystore and how does it work?</strong></p>
+<p>&quot;Android Keystore is a system service that stores cryptographic keys in hardware-isolated storage — ideally a TEE, which is a Trusted Execution Environment within the main SoC, or a StrongBox, which is a dedicated secure element on a separate chip. Keys are bound to the app&#x27;s UID, so another app can&#x27;t use yours. The defining property is that key material never leaves the secure hardware in plaintext — every cryptographic operation happens inside the Keystore service, not in your process. From your code&#x27;s perspective you just reference a key by alias and call standard JCE APIs like <code>KeyGenerator</code> and <code>Cipher</code>; the implementation quietly routes those operations to the hardware. You can optionally bind a key to biometric authentication, a time-based validity window, or a user presence check. Keys survive app updates but are wiped on uninstall, factory reset, and — if you set <code>setInvalidatedByBiometricEnrollment(true)</code> — whenever new biometrics are enrolled.&quot;</p>
+<p><strong>Q: When should you use certificate pinning?</strong></p>
+<p>&quot;I use it in high-value apps where a rogue or compromised CA is a realistic threat — financial, health, or any app handling highly sensitive data. The conditions I need before pinning are: I control the API endpoints so I know the certificate in advance, the API doesn&#x27;t rotate certificates frequently, and I can guarantee app updates before the pin expiry date. The operational discipline around it is non-negotiable. There are three rules. First, always include a backup pin for the next certificate&#x27;s SPKI hash, so you can rotate without breaking users. Second, set an expiration date in Network Security Config so old app versions that can&#x27;t be updated fail open — back to standard CA validation — rather than being permanently broken. Third, pin the public key hash, the SPKI, rather than the full certificate, so key reuse across renewals doesn&#x27;t invalidate your pin. The cases where I wouldn&#x27;t pin: APIs behind a CDN with frequent certificate rotation, or any situation where I can&#x27;t control when the certificate changes.&quot;</p>
+<p><strong>Q: What is the difference between EncryptedSharedPreferences and using the Keystore directly?</strong></p>
+<p>&quot;<code>EncryptedSharedPreferences</code> is a high-level drop-in replacement for <code>SharedPreferences</code>. It uses the Keystore to hold a master key, which in turn wraps a data encryption key that&#x27;s stored alongside the prefs file. From your code&#x27;s perspective, all the cipher, IV, and key management is abstracted away — you just call <code>putString</code> and <code>getString</code> like normal. The ciphertext ends up in an XML file on internal storage, protected by UID isolation plus AES-256 encryption. Using the Keystore directly means generating your own AES key, calling <code>Cipher.init()</code> yourself, managing the IV, and storing the ciphertext wherever you choose. The trade-off is that you get much more control: you can require biometric authentication per encryption operation, request StrongBox backing, or use an asymmetric key pair — but you&#x27;re writing substantially more boilerplate. For most token storage scenarios, <code>EncryptedSharedPreferences</code> is the right level of abstraction. The Keystore-directly approach makes sense when you need per-operation biometric binding or you&#x27;re handling something unusually sensitive.&quot;</p>
+<div class="pager">
+<a class="prev" href="build-gradle-release.html"><span class="lbl">‹ Previous</span>12. Build, Gradle &amp; Release</a>
+<a class="next" href="performance-beyond-rendering.html"><span class="lbl">Next ›</span>14. Performance Beyond Rendering</a>
+</div>
+</div></div>
+<script src="../site.js"></script>
+</body></html>

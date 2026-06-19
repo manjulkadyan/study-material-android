@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>5. IPC: Binder, AIDL, Messenger</title>
+<link rel="stylesheet" href="../style.css"></head>
+<body class="has-toc" data-prev="thread-communication.html" data-next="android-memory-management.html">
+<nav class="sidebar"><a class="brand" href="../index.html">📱 Android Study Guide — Home</a><details class="topic"><summary><span class="caret">▶</span><a href="data-structures-big-o.html">1. Data Structures &amp; Big O</a></summary><ul class="subtopics"><li><a class="" href="data-structures-big-o.html#11-data-structures--collections--12-big-o-notation">1.1 Data Structures &amp; Collections · 1.2 Big O Notation</a></li><li><a class="" href="data-structures-big-o.html#table-of-contents">Table of Contents</a></li><li><a class="" href="data-structures-big-o.html#1-arrays">1. Arrays</a></li><li><a class="" href="data-structures-big-o.html#2-arraylist--mutablelist">2. ArrayList / MutableList</a></li><li><a class="" href="data-structures-big-o.html#3-linkedlist">3. LinkedList</a></li><li><a class="" href="data-structures-big-o.html#4-stack">4. Stack</a></li><li><a class="" href="data-structures-big-o.html#5-queue">5. Queue</a></li><li><a class="" href="data-structures-big-o.html#6-deque">6. Deque</a></li><li><a class="" href="data-structures-big-o.html#7-hashmap--mutablemap">7. HashMap / MutableMap</a></li><li><a class="" href="data-structures-big-o.html#8-hashset--mutableset">8. HashSet / MutableSet</a></li><li><a class="" href="data-structures-big-o.html#9-linkedhashmap">9. LinkedHashMap</a></li><li><a class="" href="data-structures-big-o.html#10-treemap--sortedmap">10. TreeMap / SortedMap</a></li><li><a class="" href="data-structures-big-o.html#11-priorityqueue--heap">11. PriorityQueue / Heap</a></li><li><a class="" href="data-structures-big-o.html#12-trie">12. Trie</a></li><li><a class="" href="data-structures-big-o.html#13-graphs">13. Graphs</a></li><li><a class="" href="data-structures-big-o.html#14-android-specific-collections">14. Android-Specific Collections</a></li><li><a class="" href="data-structures-big-o.html#15-big-o-notation">15. Big O Notation</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="kotlin-java-fundamentals.html">2. Kotlin &amp; Java Fundamentals</a></summary><ul class="subtopics"><li><a class="" href="kotlin-java-fundamentals.html#table-of-contents">Table of Contents</a></li><li><a class="" href="kotlin-java-fundamentals.html#21-kotlin-fundamentals">2.1 Kotlin Fundamentals</a></li><li><a class="" href="kotlin-java-fundamentals.html#22-kotlin-generics">2.2 Kotlin Generics</a></li><li><a class="" href="kotlin-java-fundamentals.html#23-java-fundamentals">2.3 Java Fundamentals</a></li><li><a class="" href="kotlin-java-fundamentals.html#24-kotlin-java-interop">2.4 Kotlin-Java Interop</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="concurrency-android-threading.html">3. Concurrency &amp; Android Threading</a></summary><ul class="subtopics"><li><a class="" href="concurrency-android-threading.html#table-of-contents">Table of Contents</a></li><li><a class="" href="concurrency-android-threading.html#31-java-thread-basics">3.1 Java Thread Basics</a></li><li><a class="" href="concurrency-android-threading.html#32-locks-and-synchronization">3.2 Locks and Synchronization</a></li><li><a class="" href="concurrency-android-threading.html#33-volatile-and-atomic-classes">3.3 Volatile and Atomic Classes</a></li><li><a class="" href="concurrency-android-threading.html#34-waitnotify-and-producer-consumer">3.4 Wait/Notify and Producer-Consumer</a></li><li><a class="" href="concurrency-android-threading.html#35-executors-and-task-execution">3.5 Executors and Task Execution</a></li><li><a class="" href="concurrency-android-threading.html#36-android-application-threads">3.6 Android Application Threads</a></li><li><a class="" href="concurrency-android-threading.html#37-handler--looper--messagequeue">3.7 Handler / Looper / MessageQueue</a></li><li><a class="" href="concurrency-android-threading.html#38-kotlin-coroutines-on-android">3.8 Kotlin Coroutines on Android</a></li><li><a class="" href="concurrency-android-threading.html#39-flow-stateflow-sharedflow-channel">3.9 Flow, StateFlow, SharedFlow, Channel</a></li><li><a class="" href="concurrency-android-threading.html#310-background-work">3.10 Background Work</a></li><li><a class="" href="concurrency-android-threading.html#quick-reference-interview-cheat-sheet">Quick-Reference: Interview Cheat Sheet</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="thread-communication.html">4. Thread Communication</a></summary><ul class="subtopics"><li><a class="" href="thread-communication.html#table-of-contents">Table of Contents</a></li><li><a class="" href="thread-communication.html#41-pipes">4.1 Pipes</a></li><li><a class="" href="thread-communication.html#42-shared-memory">4.2 Shared Memory</a></li><li><a class="" href="thread-communication.html#43-signaling">4.3 Signaling</a></li><li><a class="" href="thread-communication.html#44-blockingqueue">4.4 BlockingQueue</a></li><li><a class="" href="thread-communication.html#45-message-passing--android-handlerloopermessagequeue">4.5 Message Passing — Android Handler/Looper/MessageQueue</a></li><li><a class="" href="thread-communication.html#cross-cutting-shared-memory-vs-message-passing">Cross-cutting: Shared Memory vs Message Passing</a></li></ul></details><details class="topic active" open><summary><span class="caret">▶</span><a href="ipc-binder-aidl-messenger.html">5. IPC: Binder, AIDL, Messenger</a></summary><ul class="subtopics"><li><a class="spy" href="#table-of-contents">Table of Contents</a></li><li><a class="spy" href="#51-android-process-model">5.1 Android Process Model</a></li><li><a class="spy" href="#52-binder">5.2 Binder</a></li><li><a class="spy" href="#53-aidl">5.3 AIDL</a></li><li><a class="spy" href="#54-messenger">5.4 Messenger</a></li><li><a class="spy" href="#parcelable-vs-serializable">Parcelable vs Serializable</a></li><li><a class="spy" href="#aidl-vs-messenger-decision-guide">AIDL vs Messenger Decision Guide</a></li><li><a class="spy" href="#interview-quick-reference">Interview Quick-Reference</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="android-memory-management.html">6. Android Memory Management</a></summary><ul class="subtopics"><li><a class="" href="android-memory-management.html#table-of-contents">Table of Contents</a></li><li><a class="" href="android-memory-management.html#61-jvmart-memory-basics">6.1 JVM/ART Memory Basics</a></li><li><a class="" href="android-memory-management.html#62-android-memory-leaks">6.2 Android Memory Leaks</a></li><li><a class="" href="android-memory-management.html#63-context-leaks">6.3 Context Leaks</a></li><li><a class="" href="android-memory-management.html#64-bitmap-and-image-memory">6.4 Bitmap and Image Memory</a></li><li><a class="" href="android-memory-management.html#65-leak-detection-and-profiling">6.5 Leak Detection and Profiling</a></li><li><a class="" href="android-memory-management.html#interview-quick-reference">Interview Quick-Reference</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="architecture-patterns.html">7. Architecture Patterns</a></summary><ul class="subtopics"><li><a class="" href="architecture-patterns.html#table-of-contents">Table of Contents</a></li><li><a class="" href="architecture-patterns.html#71-mvc-mvp-mvvm-mvi">7.1 MVC, MVP, MVVM, MVI</a></li><li><a class="" href="architecture-patterns.html#72-clean-architecture">7.2 Clean Architecture</a></li><li><a class="" href="architecture-patterns.html#73-repository-pattern">7.3 Repository Pattern</a></li><li><a class="" href="architecture-patterns.html#74-dependency-injection">7.4 Dependency Injection</a></li><li><a class="" href="architecture-patterns.html#75-modularization">7.5 Modularization</a></li><li><a class="" href="architecture-patterns.html#quick-reference-cheat-sheet">Quick-Reference Cheat Sheet</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="view-rendering.html">8. View Rendering</a></summary><ul class="subtopics"><li><a class="" href="view-rendering.html#table-of-contents">Table of Contents</a></li><li><a class="" href="view-rendering.html#81-traditional-view-system-rendering">8.1 Traditional View System Rendering</a></li><li><a class="" href="view-rendering.html#82-choreographer-vsync-and-frame-rendering">8.2 Choreographer, VSync, and Frame Rendering</a></li><li><a class="" href="view-rendering.html#83-recyclerview-performance">8.3 RecyclerView Performance</a></li><li><a class="" href="view-rendering.html#84-jetpack-compose-rendering">8.4 Jetpack Compose Rendering</a></li><li><a class="" href="view-rendering.html#85-performance-tools">8.5 Performance Tools</a></li><li><a class="" href="view-rendering.html#interview-cheat-sheet">Interview Cheat Sheet</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="lifecycle-platform-components.html">9. Lifecycle &amp; Platform Components</a></summary><ul class="subtopics"><li><a class="" href="lifecycle-platform-components.html#table-of-contents">Table of Contents</a></li><li><a class="" href="lifecycle-platform-components.html#91-activity">9.1 Activity</a></li><li><a class="" href="lifecycle-platform-components.html#92-fragment">9.2 Fragment</a></li><li><a class="" href="lifecycle-platform-components.html#93-services">9.3 Services</a></li><li><a class="" href="lifecycle-platform-components.html#94-broadcastreceiver">9.4 BroadcastReceiver</a></li><li><a class="" href="lifecycle-platform-components.html#95-contentprovider">9.5 ContentProvider</a></li><li><a class="" href="lifecycle-platform-components.html#96-intents-and-pendingintents">9.6 Intents and PendingIntents</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="android-data-layer.html">10. Android Data Layer</a></summary><ul class="subtopics"><li><a class="" href="android-data-layer.html#table-of-contents">Table of Contents</a></li><li><a class="" href="android-data-layer.html#101-networking">10.1 Networking</a></li><li><a class="" href="android-data-layer.html#102-persistence">10.2 Persistence</a></li><li><a class="" href="android-data-layer.html#103-offline-first-design">10.3 Offline-First Design</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="testing.html">11. Testing</a></summary><ul class="subtopics"><li><a class="" href="testing.html#table-of-contents">Table of Contents</a></li><li><a class="" href="testing.html#111-unit-testing">11.1 Unit Testing</a></li><li><a class="" href="testing.html#112-ui-testing">11.2 UI Testing</a></li><li><a class="" href="testing.html#113-integration-and-end-to-end-testing">11.3 Integration and End-to-End Testing</a></li><li><a class="" href="testing.html#quick-reference-interview-cheat-sheet">Quick-Reference Interview Cheat Sheet</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="build-gradle-release.html">12. Build, Gradle &amp; Release</a></summary><ul class="subtopics"><li><a class="" href="build-gradle-release.html#table-of-contents">Table of Contents</a></li><li><a class="" href="build-gradle-release.html#121-gradle-basics">12.1 Gradle Basics</a></li><li><a class="" href="build-gradle-release.html#122-build-performance">12.2 Build Performance</a></li><li><a class="" href="build-gradle-release.html#123-release">12.3 Release</a></li><li><a class="" href="build-gradle-release.html#summary-table-quick-reference">Summary Table: Quick Reference</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="security-privacy.html">13. Security &amp; Privacy</a></summary><ul class="subtopics"><li><a class="" href="security-privacy.html#table-of-contents">Table of Contents</a></li><li><a class="" href="security-privacy.html#131-android-security-basics">13.1 Android Security Basics</a></li><li><a class="" href="security-privacy.html#132-data-security">13.2 Data Security</a></li><li><a class="" href="security-privacy.html#interview-qa-master-list">Interview Q&amp;A Master List</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="performance-beyond-rendering.html">14. Performance Beyond Rendering</a></summary><ul class="subtopics"><li><a class="" href="performance-beyond-rendering.html#table-of-contents">Table of Contents</a></li><li><a class="" href="performance-beyond-rendering.html#141-startup-performance">14.1 Startup Performance</a></li><li><a class="" href="performance-beyond-rendering.html#142-battery-and-resource-usage">14.2 Battery and Resource Usage</a></li><li><a class="" href="performance-beyond-rendering.html#143-anr-and-crash-debugging">14.3 ANR and Crash Debugging</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="senior-staff-system-design.html">15. Senior/Staff System Design</a></summary><ul class="subtopics"><li><a class="" href="senior-staff-system-design.html#table-of-contents">Table of Contents</a></li><li><a class="" href="senior-staff-system-design.html#151-android-app-architecture-design">15.1 Android App Architecture Design</a></li><li><a class="" href="senior-staff-system-design.html#152-trade-off-thinking">15.2 Trade-Off Thinking</a></li><li><a class="" href="senior-staff-system-design.html#153-legacy-code-and-migration">15.3 Legacy Code and Migration</a></li><li><a class="" href="senior-staff-system-design.html#154-engineering-leadership">15.4 Engineering Leadership</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="interview-q-a-cheatsheet.html">16. Interview Q&amp;A &amp; Cheatsheet</a></summary><ul class="subtopics"><li><a class="" href="interview-q-a-cheatsheet.html#table-of-contents">Table of Contents</a></li><li><a class="" href="interview-q-a-cheatsheet.html#section-16--model-answers-by-category">Section 16 — Model Answers by Category</a></li><li><a class="" href="interview-q-a-cheatsheet.html#section-17--must-revise-checklist">Section 17 — Must-Revise Checklist</a></li><li><a class="" href="interview-q-a-cheatsheet.html#section-18--senior-answer-framework-with-worked-examples">Section 18 — Senior Answer Framework with Worked Examples</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="references.html">References</a></summary><ul class="subtopics"><li><a class="" href="references.html#table-of-contents">Table of Contents</a></li><li><a class="" href="references.html#section-1--data-structures--big-o">Section 1 — Data Structures &amp; Big O</a></li><li><a class="" href="references.html#section-2--kotlin--java-fundamentals">Section 2 — Kotlin &amp; Java Fundamentals</a></li><li><a class="" href="references.html#section-3--concurrency--threading">Section 3 — Concurrency &amp; Threading</a></li><li><a class="" href="references.html#section-4--thread-communication">Section 4 — Thread Communication</a></li><li><a class="" href="references.html#section-5--ipc-binder-aidl-messenger">Section 5 — IPC: Binder, AIDL, Messenger</a></li><li><a class="" href="references.html#section-6--memory-management">Section 6 — Memory Management</a></li><li><a class="" href="references.html#section-7--architecture-patterns">Section 7 — Architecture Patterns</a></li><li><a class="" href="references.html#section-8--view-rendering">Section 8 — View Rendering</a></li><li><a class="" href="references.html#section-9--lifecycle--platform-components">Section 9 — Lifecycle &amp; Platform Components</a></li><li><a class="" href="references.html#section-10--data-layer">Section 10 — Data Layer</a></li><li><a class="" href="references.html#section-11--testing">Section 11 — Testing</a></li><li><a class="" href="references.html#section-12--build-gradle--release">Section 12 — Build, Gradle &amp; Release</a></li><li><a class="" href="references.html#section-13--security--privacy">Section 13 — Security &amp; Privacy</a></li><li><a class="" href="references.html#section-14--performance-beyond-rendering">Section 14 — Performance (Beyond Rendering)</a></li><li><a class="" href="references.html#section-15--system-design">Section 15 — System Design</a></li><li><a class="" href="references.html#section-16--interview-qa-cheatsheet">Section 16 — Interview Q&amp;A Cheatsheet</a></li><li><a class="" href="references.html#section-17--must-revise-checklist">Section 17 — Must-Revise Checklist</a></li><li><a class="" href="references.html#section-18--seniorstaff-answer-framework">Section 18 — Senior/Staff Answer Framework</a></li><li><a class="" href="references.html#books">Books</a></li></ul></details></nav>
+<aside class="toc-right"><div class="toc-h">On this page</div><ul class="toc-tree"><li class="toc-grp"><a class="toc-2" href="#table-of-contents"><span class="tcaret tcaret-none"></span>Table of Contents</a></li><li class="toc-grp"><a class="toc-2" href="#51-android-process-model"><span class="tcaret">▶</span>5.1 Android Process Model</a><ul class="toc-subs"><li><a class="toc-3" href="#definition">Definition</a></li><li><a class="toc-3" href="#how-components-map-to-processes">How components map to processes</a></li><li><a class="toc-3" href="#memory-isolation">Memory isolation</a></li><li><a class="toc-3" href="#process-lifecycle-and-death">Process lifecycle and death</a></li><li><a class="toc-3" href="#bound-vs-remote-services">Bound vs remote services</a></li><li><a class="toc-3" href="#interview-angles--process-model">Interview angles — process model</a></li></ul></li><li class="toc-grp"><a class="toc-2" href="#52-binder"><span class="tcaret">▶</span>5.2 Binder</a><ul class="toc-subs"><li><a class="toc-3" href="#definition-1">Definition</a></li><li><a class="toc-3" href="#how-it-works-internally">How it works internally</a></li><li><a class="toc-3" href="#binder-thread-pool">Binder thread pool</a></li><li><a class="toc-3" href="#synchronous-vs-asynchronous-calls">Synchronous vs asynchronous calls</a></li><li><a class="toc-3" href="#transaction-size-limits-and-transactiontoolargeexception">Transaction size limits and TransactionTooLargeException</a></li><li><a class="toc-3" href="#what-not-to-send-over-binder">What NOT to send over Binder</a></li><li><a class="toc-3" href="#remoteexception">RemoteException</a></li><li><a class="toc-3" href="#death-recipients">Death recipients</a></li><li><a class="toc-3" href="#avoid-heavy-work-in-binder-callbacks">Avoid heavy work in Binder callbacks</a></li><li><a class="toc-3" href="#interview-angles--binder">Interview angles — Binder</a></li></ul></li><li class="toc-grp"><a class="toc-2" href="#53-aidl"><span class="tcaret">▶</span>5.3 AIDL</a><ul class="toc-subs"><li><a class="toc-3" href="#definition-2">Definition</a></li><li><a class="toc-3" href="#supported-types-in-aidl">Supported types in AIDL</a></li><li><a class="toc-3" href="#directional-tags-in-out-inout">Directional tags: `in`, `out`, `inout`</a></li><li><a class="toc-3" href="#one-way-oneway-calls">One-way (`oneway`) calls</a></li><li><a class="toc-3" href="#minimal-aidl-example">Minimal AIDL example</a></li><li><a class="toc-3" href="#versioning-and-backward-compatibility">Versioning and backward compatibility</a></li><li><a class="toc-3" href="#interview-angles--aidl">Interview angles — AIDL</a></li></ul></li><li class="toc-grp"><a class="toc-2" href="#54-messenger"><span class="tcaret">▶</span>5.4 Messenger</a><ul class="toc-subs"><li><a class="toc-3" href="#definition-3">Definition</a></li><li><a class="toc-3" href="#how-it-works">How it works</a></li><li><a class="toc-3" href="#service-skeleton">Service skeleton</a></li><li><a class="toc-3" href="#client-skeleton">Client skeleton</a></li><li><a class="toc-3" href="#key-characteristics">Key characteristics</a></li><li><a class="toc-3" href="#interview-angles--messenger">Interview angles — Messenger</a></li></ul></li><li class="toc-grp"><a class="toc-2" href="#parcelable-vs-serializable"><span class="tcaret tcaret-none"></span>Parcelable vs Serializable</a></li><li class="toc-grp"><a class="toc-2" href="#aidl-vs-messenger-decision-guide"><span class="tcaret tcaret-none"></span>AIDL vs Messenger Decision Guide</a></li><li class="toc-grp"><a class="toc-2" href="#interview-quick-reference"><span class="tcaret tcaret-none"></span>Interview Quick-Reference</a></li></ul></aside>
+<div class="backdrop"></div>
+<div class="content">
+<div class="mtop"><button onclick="toggleNav()" aria-label="Menu">☰</button><a class="home" href="../index.html">🏠</a><span class="t">5. IPC: Binder, AIDL, Messenger</span></div>
+<a class="arrow left" href="thread-communication.html" title="Previous (4. Thread Communication)">‹</a>
+<a class="arrow right" href="android-memory-management.html" title="Next (6. Android Memory Management)">›</a>
+<div class="wrap">
+<h1 id="5-ipc-binder-aidl-messenger">5. IPC: Binder, AIDL, Messenger</h1>
+<blockquote>Senior/staff-level Android interview study material. Every subtopic, interview angle, failure mode, and trade-off covered.</blockquote>
+<hr>
+<h2 id="table-of-contents">Table of Contents</h2>
+<ol>
+<li><a href="#51-android-process-model">5.1 Android Process Model</a></li>
+<li><a href="#52-binder">5.2 Binder</a></li>
+<li><a href="#53-aidl">5.3 AIDL</a></li>
+<li><a href="#54-messenger">5.4 Messenger</a></li>
+<li><a href="#parcelable-vs-serializable">Cross-Cutting: Parcelable vs Serializable</a></li>
+<li><a href="#aidl-vs-messenger-decision-guide">Cross-Cutting: AIDL vs Messenger Decision Guide</a></li>
+<li><a href="#interview-quick-reference">Interview Quick-Reference</a></li>
+</ol>
+<hr>
+<h2 id="51-android-process-model">5.1 Android Process Model</h2>
+<h3 id="definition">Definition</h3>
+<p>Every Android app runs in its own Linux process by default, completely isolated from every other app at the OS kernel level. That process hosts a Dalvik/ART VM, a main thread with its own Looper, a Binder thread pool, and the app&#x27;s heap. The OS assigns each process a unique UID and PID.</p>
+<h3 id="how-components-map-to-processes">How components map to processes</h3>
+<p>By default, all four component types (Activity, Service, BroadcastReceiver, ContentProvider) declared in a single APK run in the <strong>same process</strong> — the one named after the app&#x27;s package. You opt components into a <strong>different process</strong> via the <code>android:process</code> attribute:</p>
+<pre><code>&lt;!-- AndroidManifest.xml --&gt;
+&lt;service
+    android:name=&quot;.AudioPlayerService&quot;
+    android:process=&quot;:audio&quot; /&gt;   &lt;!-- &#x27;:&#x27; prefix = private process, scoped to this app --&gt;
+
+&lt;service
+    android:name=&quot;.SyncService&quot;
+    android:process=&quot;com.example.sync&quot; /&gt;  &lt;!-- no &#x27;:&#x27; = shared process, any app with same UID --&gt;</code></pre>
+<p>When components live in different processes, they share no memory at all — not the heap, not static fields, not singletons. The JVM runs a completely separate instance for every process. That&#x27;s the fundamental reason IPC exists: you cannot pass an object reference across process boundaries.</p>
+<h3 id="memory-isolation">Memory isolation</h3>
+<table border="1" cellpadding="6" cellspacing="0">
+<thead><tr>
+<th>Scope</th>
+<th>Same process</th>
+<th>Different processes</th>
+</tr></thead><tbody>
+<tr><td>Static variables</td><td>Shared</td><td><strong>Not shared</strong> — each process has its own copy</td></tr>
+<tr><td>Singleton instances</td><td>Shared</td><td>Independent instances</td></tr>
+<tr><td>Object references</td><td>Valid pointers</td><td>Meaningless (different address space)</td></tr>
+<tr><td>Files / SharedPreferences</td><td>Shared if same UID and no <code>MODE_PRIVATE</code></td><td>Need ContentProvider or FileProvider</td></tr>
+</tbody></table>
+<p><strong>&quot;What happens to static variables across processes?&quot;</strong></p>
+<p>&quot;Each process gets its own JVM, so a <code>companion object</code> or <code>@JvmStatic</code> field is initialized independently in every process. Changing the value in process A has zero effect on process B. This is a surprisingly common source of confusion when teams introduce a <code>:remote</code> service without realizing their in-memory cache now has two stale, independent copies.&quot;</p>
+<h3 id="process-lifecycle-and-death">Process lifecycle and death</h3>
+<p>The Android OS is free to kill any background process at any time to reclaim memory. The kill order follows a priority ladder — foreground, then visible, then service, then background, then empty — but the OS makes no guarantees beyond that ordering. A service running in a separate process can die while the app&#x27;s UI is still alive, or vice versa.</p>
+<p>There are three implications worth internalizing. First, any state stored only in static or instance memory is gone on process death. Second, if you hold a reference to a remote <code>IBinder</code>, the remote can disappear under you at any moment — you must handle <code>RemoteException</code> and register a death recipient (covered in §5.2). Third, bound services get a callback when the remote process dies: <code>ServiceConnection.onServiceDisconnected</code>.</p>
+<h3 id="bound-vs-remote-services">Bound vs remote services</h3>
+<table border="1" cellpadding="6" cellspacing="0">
+<thead><tr>
+<th>Type</th>
+<th>Same process</th>
+<th>Different process</th>
+</tr></thead><tbody>
+<tr><td><strong>Started service</strong></td><td><code>startService()</code></td><td><code>startService()</code> across packages, but still same process unless <code>android:process</code> set</td></tr>
+<tr><td><strong>Bound service (local)</strong></td><td><code>IBinder</code> returned from <code>onBind()</code> is a direct object reference, no IPC overhead</td><td>N/A</td></tr>
+<tr><td><strong>Bound service (remote)</strong></td><td>—</td><td><code>onBind()</code> returns an AIDL stub or Messenger; every call crosses a Binder transaction</td></tr>
+</tbody></table>
+<p>The key insight is that binding to a service in another process is still <code>bindService()</code>, but Android transparently routes the <code>IBinder</code> through the Binder driver. The client receives a proxy object, not the real object.</p>
+<h3 id="interview-angles--process-model">Interview angles — process model</h3>
+<p><strong>Q: Process vs thread?</strong></p>
+<p>&quot;A process is an OS-level isolation unit — it has its own address space, its own PID, its own UID. A thread, by contrast, shares the address space with all the other threads in the same process. So IPC is what you need when you&#x27;re crossing process boundaries; thread synchronization handles coordination within a single process.&quot;</p>
+<p><strong>Q: How do you communicate with a service in another process?</strong></p>
+<p>&quot;You return an <code>IBinder</code> from <code>Service.onBind()</code>. The client receives a proxy object rather than the real thing, and each method call on that proxy becomes a Binder transaction that the kernel Binder driver routes over to the server process.&quot;</p>
+<p><strong>Q: How do you handle remote process death?</strong></p>
+<p>&quot;You register an <code>IBinder.DeathRecipient</code> via <code>binder.linkToDeath(recipient, 0)</code>. When the remote process dies, the <code>binderDied()</code> callback fires on a Binder thread, and from there you can attempt a rebind, surface an error to the user, or clean up any state you were holding. You should also implement <code>ServiceConnection.onServiceDisconnected</code> to cover the service binding lifecycle side of the same event.&quot;</p>
+<hr>
+<h2 id="52-binder">5.2 Binder</h2>
+<h3 id="definition-1">Definition</h3>
+<p>Binder is Android&#x27;s proprietary IPC mechanism — a Linux kernel driver at <code>/dev/binder</code> that enables lightweight, secure RPC between processes. It underpins virtually every Android API: <code>ActivityManager</code>, <code>WindowManager</code>, <code>PackageManager</code>, and every AIDL or Messenger call all go through Binder.</p>
+<h3 id="how-it-works-internally">How it works internally</h3>
+<pre><code>Client process                    Kernel (Binder driver)              Server process
+──────────────                    ──────────────────────              ──────────────
+IBinder.transact()  ─── data ───► /dev/binder                   ◄─── Binder.onTransact()
+(blocks thread)                   copies once (shared mem)           (runs on Binder thread)
+                    ◄── reply ───  wakes client thread</code></pre>
+<p>Unlike traditional UNIX IPC mechanisms like pipes, sockets, or shared memory, Binder achieves a single-copy transfer: data is written into a kernel-mapped buffer that is also mapped into the server&#x27;s address space, so the kernel only copies once (client to kernel), not twice. This makes it significantly faster than UNIX domain sockets for small-to-medium messages.</p>
+<p>There are three key properties worth knowing. First, identity: each Binder object has a unique kernel-level token, and the client holds a proxy rather than the real object (unless both sides are in the same process). Second, security: the kernel records the calling PID and UID via <code>Binder.getCallingUid()</code> and <code>Binder.getCallingPid()</code>, and these cannot be spoofed by userspace. Third, reference counting: the kernel tracks how many proxy holders exist, and when the last proxy is dropped, the Binder is garbage-collected on the server side.</p>
+<h3 id="binder-thread-pool">Binder thread pool</h3>
+<p>Every process that uses Binder has a thread pool managed by <code>ProcessState</code>. The default pool size is 15 threads. Incoming transactions are dispatched to any idle thread in the pool. The main thread is never part of this pool — it has its own Looper.</p>
+<pre><code>Server process
+├── main thread  (Looper — not in Binder pool)
+├── Binder thread 1  ← handles incoming IPC call
+├── Binder thread 2
+└── Binder thread N  (up to 15)</code></pre>
+<p>If all Binder threads are busy — say they&#x27;re all blocked waiting on a downstream service — new transactions queue up and the caller blocks until a thread becomes available. If that blocked caller happens to be the main thread, you get an ANR.</p>
+<h3 id="synchronous-vs-asynchronous-calls">Synchronous vs asynchronous calls</h3>
+<table border="1" cellpadding="6" cellspacing="0">
+<thead><tr>
+<th>Mode</th>
+<th>Behaviour</th>
+<th>Use when</th>
+</tr></thead><tbody>
+<tr><td><strong>Synchronous</strong> (default)</td><td>Caller blocks until server returns</td><td>You need a return value or confirmation</td></tr>
+<tr><td><strong>Asynchronous</strong> (<code>oneway</code> in AIDL)</td><td>Caller returns immediately; server processes later</td><td>Fire-and-forget; notifications</td></tr>
+</tbody></table>
+<p>Synchronous Binder calls from the main thread are an ANR risk if the remote is slow. Always call from a background thread or use <code>oneway</code>.</p>
+<h3 id="transaction-size-limits-and-transactiontoolargeexception">Transaction size limits and TransactionTooLargeException</h3>
+<p>The Binder kernel buffer is roughly 1 MB per process, shared across all simultaneous transactions from and to that process. Each individual transaction payload is practically limited to around 500 KB, but the smaller the better.</p>
+<pre><code>// BAD — sending a large Bitmap over Binder
+val bundle = Bundle()
+bundle.putParcelable(&quot;image&quot;, largeBitmap)   // could be several MB
+intent.putExtras(bundle)
+startActivity(intent)                         // throws TransactionTooLargeException at runtime</code></pre>
+<p><code>TransactionTooLargeException</code> is thrown in two situations: when a single transaction exceeds the 1 MB kernel buffer, or when the combined in-flight transactions to a process push past that limit. There are four ways to avoid it: pass file descriptors via <code>ParcelFileDescriptor</code> instead of raw bytes; write large data to disk or a ContentProvider and send a URI reference instead; use shared memory via <code>MemoryFile</code> or the <code>SharedMemory</code> API on API 27 and above; or chunk large payloads if you need to stream them.</p>
+<h3 id="what-not-to-send-over-binder">What NOT to send over Binder</h3>
+<ul>
+<li>Large bitmaps or byte arrays — use <code>ParcelFileDescriptor</code> or a URI instead.</li>
+<li><code>Serializable</code> objects — they&#x27;re slow and fragile; use <code>Parcelable</code>.</li>
+<li>Database cursors — use the Cursor/ContentProvider API, which wraps them in <code>BulkCursorToCursorAdaptor</code>.</li>
+<li>References to live objects — non-<code>Binder</code> Java objects simply cannot cross process boundaries.</li>
+<li>Sensitive credentials in plaintext when you haven&#x27;t yet validated the caller&#x27;s UID.</li>
+</ul>
+<h3 id="remoteexception">RemoteException</h3>
+<p>Any method call on a remote <code>IBinder</code> proxy can throw <code>RemoteException</code> if the remote process has died. The most common subclass is <code>DeadObjectException</code>, which specifically means the remote Binder object is gone. Always catch <code>RemoteException</code> rather than just <code>DeadObjectException</code>, because other transport errors exist too.</p>
+<pre><code>try {
+    remoteService.doWork()
+} catch (e: RemoteException) {
+    // Remote process is dead or unreachable
+    Log.e(TAG, &quot;Remote service died&quot;, e)
+    rebindService()
+}</code></pre>
+<h3 id="death-recipients">Death recipients</h3>
+<pre><code>class RemoteServiceClient {
+    private var binder: IMyService? = null
+
+    private val deathRecipient = IBinder.DeathRecipient {
+        // Called on a Binder thread when the remote process dies
+        binder = null
+        mainHandler.post { reconnect() }
+    }
+
+    fun onServiceConnected(name: ComponentName, service: IBinder) {
+        binder = IMyService.Stub.asInterface(service)
+        // Register BEFORE first call — the process could die any time
+        service.linkToDeath(deathRecipient, 0)
+    }
+
+    fun onServiceDisconnected(name: ComponentName) {
+        // Called on main thread — unlink to avoid double-firing
+        binder?.asBinder()?.unlinkToDeath(deathRecipient, 0)
+        binder = null
+    }
+
+    fun reconnect() {
+        bindService(intent, connection, Context.BIND_AUTO_CREATE)
+    }
+}</code></pre>
+<p>One critical detail: <code>binderDied()</code> fires on a Binder thread, not the main thread. If you need to update UI from it, post to a Handler or route through <code>LiveData</code> or <code>StateFlow</code>.</p>
+<h3 id="avoid-heavy-work-in-binder-callbacks">Avoid heavy work in Binder callbacks</h3>
+<p>Binder threads are a finite pool. If your <code>onTransact</code> implementation — or any AIDL method body — does heavy work like network I/O, database queries, or complex computation, you starve the pool and block all incoming IPC to that process, including system calls from <code>ActivityManager</code>.</p>
+<p>The best practice is to dispatch heavy work to a coroutine or a separate thread pool immediately in the Binder callback, and return from the Binder thread as fast as possible.</p>
+<pre><code>// In AIDL Stub implementation — BAD
+override fun processLargeData(data: ByteArray): Result {
+    val result = database.runSlowQuery()  // blocks Binder thread
+    return result
+}
+
+// GOOD — return a callback interface, or use oneway + callback pattern
+override fun processLargeDataAsync(data: ByteArray, callback: IResultCallback) {
+    scope.launch {
+        val result = database.runSlowQuery()
+        try { callback.onResult(result) } catch (e: RemoteException) { /* client died */ }
+    }
+}</code></pre>
+<h3 id="interview-angles--binder">Interview angles — Binder</h3>
+<p><strong>Q: What is Binder?</strong></p>
+<p>&quot;Binder is Android&#x27;s kernel-level IPC driver. It enables RPC between processes using a single-copy data transfer, it gives you built-in caller identity through UID and PID, and it manages the lifecycle of remote objects with reference counting.&quot;</p>
+<p><strong>Q: What is a Binder thread?</strong></p>
+<p>&quot;A Binder thread is a thread in the server process&#x27;s pool that sits blocked inside <code>ioctl(/dev/binder)</code>, waiting for incoming transactions. When a client calls a remote method, the kernel wakes one idle Binder thread to execute <code>onTransact</code>. Meanwhile, the calling thread on the client side stays blocked until the server returns — that&#x27;s the synchronous mode.&quot;</p>
+<p><strong>Q: What happens if a Binder transaction blocks?</strong></p>
+<p>&quot;The calling thread blocks indefinitely, or until a timeout if the kernel is using <code>SYNC_WAIT</code>. The critical case is when that blocked thread is the main thread: if the block exceeds 5 seconds for an Activity or 10 seconds for a Service, Android raises an ANR dialog. That&#x27;s exactly why all synchronous IPC calls must go on a background thread unless the method is marked <code>oneway</code>.&quot;</p>
+<p><strong>Q: How do you design safe IPC APIs?</strong></p>
+<p>&quot;There are six rules I follow. First, mark fire-and-forget calls as <code>oneway</code> in AIDL so the caller doesn&#x27;t block. Second, use a callback or listener AIDL interface for results that come back from <code>oneway</code> calls. Third, always catch <code>RemoteException</code> — every remote call can throw it. Fourth, link death recipients immediately on bind, before you make any calls. Fifth, validate caller UID with <code>Binder.getCallingUid()</code> and never trust the client&#x27;s self-reported identity. Sixth, keep transaction payloads small and use file descriptors for any bulk data.&quot;</p>
+<hr>
+<h2 id="53-aidl">5.3 AIDL</h2>
+<h3 id="definition-2">Definition</h3>
+<p>AIDL — Android Interface Definition Language — is Android&#x27;s IDL for defining IPC interfaces. The AIDL compiler, either the standalone <code>aidl</code> tool or the Gradle plugin, generates Java and Kotlin boilerplate for you: a <code>Stub</code> abstract class on the server side that extends <code>Binder</code>, and a <code>Proxy</code> class on the client side that wraps <code>IBinder.transact()</code>. You define the contract in a <code>.aidl</code> file and the generated code handles all the marshalling and unmarshalling.</p>
+<h3 id="supported-types-in-aidl">Supported types in AIDL</h3>
+<table border="1" cellpadding="6" cellspacing="0">
+<thead><tr>
+<th>Category</th>
+<th>Types</th>
+</tr></thead><tbody>
+<tr><td>Primitives</td><td><code>boolean</code>, <code>byte</code>, <code>char</code>, <code>short</code>, <code>int</code>, <code>long</code>, <code>float</code>, <code>double</code></td></tr>
+<tr><td>Strings</td><td><code>String</code>, <code>CharSequence</code></td></tr>
+<tr><td>Collections</td><td><code>List&lt;T&gt;</code> (T must be AIDL-supported), <code>Map</code> (keys/values must be supported)</td></tr>
+<tr><td>Parcelable</td><td>Any class implementing <code>Parcelable</code> (must be declared in its own <code>.aidl</code> file)</td></tr>
+<tr><td>Other interfaces</td><td>Other AIDL interfaces</td></tr>
+<tr><td>Raw</td><td><code>IBinder</code></td></tr>
+</tbody></table>
+<p>Not supported natively: <code>Serializable</code>, arbitrary objects, or file streams — for those, use <code>ParcelFileDescriptor</code>.</p>
+<h3 id="directional-tags-in-out-inout">Directional tags: <code>in</code>, <code>out</code>, <code>inout</code></h3>
+<p>Parameters in AIDL methods have a directional tag that controls marshalling direction:</p>
+<table border="1" cellpadding="6" cellspacing="0">
+<thead><tr>
+<th>Tag</th>
+<th>Client → Server</th>
+<th>Server → Client</th>
+<th>Use when</th>
+</tr></thead><tbody>
+<tr><td><code>in</code> (default for primitives)</td><td>Data copied</td><td>Not copied back</td><td>Client sends, server reads only</td></tr>
+<tr><td><code>out</code></td><td>Not copied to server</td><td>Copied back</td><td>Client provides empty container; server fills it</td></tr>
+<tr><td><code>inout</code></td><td>Copied both ways</td><td>Copied back</td><td>Bidirectional; most expensive</td></tr>
+</tbody></table>
+<p>Primitives and <code>String</code> are always implicitly <code>in</code>. Objects require an explicit directional tag.</p>
+<h3 id="one-way-oneway-calls">One-way (<code>oneway</code>) calls</h3>
+<p>Adding <code>oneway</code> to a method makes the client call non-blocking. The client returns immediately after the transaction is enqueued, and the server processes the call asynchronously on a Binder thread. The trade-offs are that <code>oneway</code> methods cannot have return values, and they cannot have <code>out</code> or <code>inout</code> parameters because there is no return path.</p>
+<pre><code>interface IEventService {
+    oneway void logEvent(String name, in Bundle params);  // fire and forget
+    int getEventCount();                                   // synchronous, blocks caller
+}</code></pre>
+<p>If you mark an entire interface <code>oneway</code>, all methods in it become non-blocking.</p>
+<h3 id="minimal-aidl-example">Minimal AIDL example</h3>
+<p><strong>File: <code>app/src/main/aidl/com/example/ICalculator.aidl</code></strong></p>
+<pre><code>// ICalculator.aidl
+package com.example;
+
+interface ICalculator {
+    /** Synchronous call — caller blocks until result is returned. */
+    int add(int a, int b);
+
+    /** Fire-and-forget — caller returns immediately. */
+    oneway void scheduleComputation(int jobId, in int[] operands);
+
+    /** Passes a Parcelable in both directions. */
+    ComputeResult compute(inout ComputeRequest request);
+}</code></pre>
+<p><strong>File: <code>app/src/main/aidl/com/example/ComputeRequest.aidl</code></strong></p>
+<pre><code>// Every Parcelable used in AIDL needs its own declaration file.
+package com.example;
+parcelable ComputeRequest;</code></pre>
+<p><strong>Server-side Stub implementation:</strong></p>
+<pre><code>class CalculatorService : Service() {
+
+    private val binder = object : ICalculator.Stub() {
+        override fun add(a: Int, b: Int): Int {
+            // Binder thread — keep it fast or dispatch to a coroutine scope
+            return a + b
+        }
+
+        override fun scheduleComputation(jobId: Int, operands: IntArray) {
+            // oneway — no return value, caller already unblocked
+            scope.launch { processJob(jobId, operands) }
+        }
+
+        override fun compute(request: ComputeRequest): ComputeResult {
+            // Validate caller — never trust the client
+            val callerUid = Binder.getCallingUid()
+            require(isAuthorized(callerUid)) { &quot;Unauthorized UID: $callerUid&quot; }
+            return performCompute(request)
+        }
+    }
+
+    override fun onBind(intent: Intent): IBinder = binder
+}</code></pre>
+<p><strong>Client-side binding and usage:</strong></p>
+<pre><code>class ClientActivity : AppCompatActivity() {
+    private var calculator: ICalculator? = null
+
+    private val connection = object : ServiceConnection {
+        override fun onServiceConnected(name: ComponentName, service: IBinder) {
+            calculator = ICalculator.Stub.asInterface(service)
+            // Stub.asInterface: returns the Stub directly if same process,
+            // or wraps it in a Proxy if cross-process.
+            service.linkToDeath(deathRecipient, 0)
+        }
+        override fun onServiceDisconnected(name: ComponentName) {
+            calculator = null
+        }
+    }
+
+    private val deathRecipient = IBinder.DeathRecipient {
+        calculator = null
+        runOnUiThread { rebind() }
+    }
+
+    fun callRemote() {
+        lifecycleScope.launch(Dispatchers.IO) {   // NEVER call from main thread
+            try {
+                val result = calculator?.add(3, 4) ?: return@launch
+                withContext(Dispatchers.Main) { updateUi(result) }
+            } catch (e: RemoteException) {
+                Log.e(TAG, &quot;Remote call failed&quot;, e)
+            }
+        }
+    }
+}</code></pre>
+<h3 id="versioning-and-backward-compatibility">Versioning and backward compatibility</h3>
+<p>Binder is the backbone of platform services across Android versions, so breaking an AIDL interface is extremely disruptive. There are five rules to follow.</p>
+<p>First, never remove or reorder methods. Method IDs are assigned by declaration order, so reordering breaks binary compatibility silently — calls dispatch to the wrong method with no compiler warning.</p>
+<p>Second, add new methods at the end only. Old clients calling <code>transact</code> with an unrecognized method code receive <code>UNKNOWN_TRANSACTION</code>, which the Stub base class returns as <code>false</code>. Handle that gracefully.</p>
+<p>Third, for stable AIDL interfaces you can provide default method bodies, which allows new methods to be added without breaking old clients that haven&#x27;t implemented them yet.</p>
+<p>Fourth, version the interface explicitly. The convention is a <code>getVersion(): Int</code> method, or the <code>@VintfStability</code> and <code>@Backing</code> annotations for HAL-level AIDL.</p>
+<p>Fifth, for Parcelable evolution: add new fields with defaults, write a version integer as the first field in <code>writeToParcel</code>, and check that version number in <code>createFromParcel</code> before reading newer fields.</p>
+<pre><code>// Robust Parcelable that handles older versions
+data class UserProfile(
+    val id: String,
+    val name: String,
+    val email: String = &quot;&quot;   // added in v2 — must default for older senders
+) : Parcelable {
+    companion object CREATOR : Parcelable.Creator&lt;UserProfile&gt; {
+        private const val VERSION = 2
+
+        override fun createFromParcel(source: Parcel): UserProfile {
+            val version = source.readInt()
+            val id = source.readString()!!
+            val name = source.readString()!!
+            val email = if (version &gt;= 2) source.readString()!! else &quot;&quot;
+            return UserProfile(id, name, email)
+        }
+        override fun newArray(size: Int) = arrayOfNulls&lt;UserProfile&gt;(size)
+    }
+
+    override fun writeToParcel(dest: Parcel, flags: Int) {
+        dest.writeInt(VERSION)
+        dest.writeString(id)
+        dest.writeString(name)
+        dest.writeString(email)
+    }
+    override fun describeContents() = 0
+}</code></pre>
+<h3 id="interview-angles--aidl">Interview angles — AIDL</h3>
+<p><strong>Q: When do you need AIDL?</strong></p>
+<p>&quot;You reach for AIDL when you need typed, multi-method RPC between processes — specifically when you need return values, when you have multiple concurrent callers, or when you&#x27;re passing complex object graphs. Concrete examples are a background processing service that returns results, an inter-app SDK, or a system service extension.&quot;</p>
+<p><strong>Q: AIDL vs Messenger?</strong></p>
+<p>See dedicated section below.</p>
+<p><strong>Q: Synchronous vs one-way AIDL?</strong></p>
+<p>&quot;Synchronous means the caller blocks until the server returns, and you can have a return value. One-way means the caller returns immediately after enqueuing the transaction, but there&#x27;s no return value possible. I use <code>oneway</code> for any event or notification call where I don&#x27;t need a result back, because it completely eliminates the ANR risk on the caller side.&quot;</p>
+<p><strong>Q: How do you version IPC contracts?</strong></p>
+<p>&quot;There are two parts to this. For the interface itself: add new methods at the end only, never remove or reorder existing ones, and add a <code>getVersion(): Int</code> method so callers can check what the server supports before calling new methods. For Parcelable types that go across the wire: write a version integer as the first field, and in <code>createFromParcel</code> check that version before reading any fields that were added after the initial version.&quot;</p>
+<hr>
+<h2 id="54-messenger">5.4 Messenger</h2>
+<h3 id="definition-3">Definition</h3>
+<p><code>Messenger</code> is a simpler IPC mechanism built on top of Binder. It wraps a <code>Handler</code> in a <code>Binder</code> object, letting the remote process send <code>Message</code> objects to that <code>Handler</code>. Under the hood it still uses AIDL — Android ships <code>IMessenger.aidl</code> in the framework — but it hides all the marshalling complexity behind the familiar <code>Message</code> API.</p>
+<h3 id="how-it-works">How it works</h3>
+<pre><code>Client process                         Server process
+──────────────                         ──────────────
+Messenger(service IBinder)             Handler handles messages sequentially
+   └─ serverMessenger.send(msg)        └─ handleMessage(msg: Message)
+        │                                       ▲
+        └─── Binder IPC ──────────────────────►─┘
+             (IMessenger.send transaction)</code></pre>
+<ol>
+<li>The Service returns a <code>Messenger</code>&#x27;s underlying <code>IBinder</code> from <code>onBind()</code>.</li>
+<li>The client wraps that <code>IBinder</code> in <code>Messenger(binder)</code>.</li>
+<li>The client calls <code>serverMessenger.send(message)</code>.</li>
+<li>The <code>Message</code> is marshalled over Binder and delivered to the server&#x27;s <code>Handler.handleMessage()</code>.</li>
+<li>For replies, the client attaches <code>replyTo = Messenger(clientHandler)</code> to the message.</li>
+</ol>
+<p>All messages are processed sequentially through the <code>Handler</code>&#x27;s <code>MessageQueue</code>. There is no parallelism — the server handles one message at a time, by design.</p>
+<h3 id="service-skeleton">Service skeleton</h3>
+<pre><code>class MessengerService : Service() {
+
+    private val incomingHandler = object : Handler(Looper.getMainLooper()) {
+        override fun handleMessage(msg: Message) {
+            when (msg.what) {
+                MSG_COMPUTE -&gt; {
+                    val input = msg.data.getInt(&quot;value&quot;)
+                    val result = input * 2
+
+                    // Reply to client if replyTo is set
+                    msg.replyTo?.let { replyMessenger -&gt;
+                        val reply = Message.obtain(null, MSG_RESULT)
+                        reply.data = Bundle().apply { putInt(&quot;result&quot;, result) }
+                        try {
+                            replyMessenger.send(reply)
+                        } catch (e: RemoteException) {
+                            // Client died — ignore or clean up
+                        }
+                    }
+                }
+                else -&gt; super.handleMessage(msg)
+            }
+        }
+    }
+
+    private val messenger = Messenger(incomingHandler)
+
+    override fun onBind(intent: Intent): IBinder = messenger.binder
+
+    companion object {
+        const val MSG_COMPUTE = 1
+        const val MSG_RESULT = 2
+    }
+}</code></pre>
+<h3 id="client-skeleton">Client skeleton</h3>
+<pre><code>class MessengerClient : AppCompatActivity() {
+    private var serverMessenger: Messenger? = null
+
+    private val replyHandler = object : Handler(Looper.getMainLooper()) {
+        override fun handleMessage(msg: Message) {
+            if (msg.what == MessengerService.MSG_RESULT) {
+                val result = msg.data.getInt(&quot;result&quot;)
+                updateUi(result)
+            }
+        }
+    }
+    private val replyMessenger = Messenger(replyHandler)
+
+    private val connection = object : ServiceConnection {
+        override fun onServiceConnected(name: ComponentName, service: IBinder) {
+            serverMessenger = Messenger(service)
+        }
+        override fun onServiceDisconnected(name: ComponentName) {
+            serverMessenger = null
+        }
+    }
+
+    fun sendRequest(value: Int) {
+        val msg = Message.obtain(null, MessengerService.MSG_COMPUTE)
+        msg.data = Bundle().apply { putInt(&quot;value&quot;, value) }
+        msg.replyTo = replyMessenger   // attach reply channel
+        try {
+            serverMessenger?.send(msg)
+        } catch (e: RemoteException) {
+            Log.e(TAG, &quot;Service not available&quot;, e)
+        }
+    }
+}</code></pre>
+<h3 id="key-characteristics">Key characteristics</h3>
+<ul>
+<li><strong>Sequential delivery</strong>: All messages queue through a single <code>Handler</code>, so there&#x27;s no concurrent message processing. That&#x27;s good for ordered operations but bad for high-throughput parallel work.</li>
+<li><strong>Message payload</strong>: <code>Message.obj</code> can hold any <code>Parcelable</code>. <code>Message.data</code> is a <code>Bundle</code>. <code>Message.arg1</code> and <code>arg2</code> are <code>int</code> fields for cheap primitives.</li>
+<li><strong><code>msg.what</code></strong>: An integer discriminator for the message type. You must define constants for all message types — there is no type safety here, unlike AIDL interfaces.</li>
+<li><strong>No return values</strong>: <code>send()</code> is always fire-and-forget. Replies require the client to attach a separate <code>replyTo</code> Messenger to the message.</li>
+<li><strong>Thread context</strong>: The <code>Handler</code> executes on whatever thread its <code>Looper</code> belongs to — usually the main thread. If message handling is heavy, back it with a <code>HandlerThread</code> instead.</li>
+</ul>
+<pre><code>// Using HandlerThread for background message processing
+class HeavyMessengerService : Service() {
+    private lateinit var handlerThread: HandlerThread
+
+    override fun onCreate() {
+        super.onCreate()
+        handlerThread = HandlerThread(&quot;MessengerWorker&quot;).also { it.start() }
+    }
+
+    private val incomingHandler by lazy {
+        object : Handler(handlerThread.looper) {
+            override fun handleMessage(msg: Message) { /* heavy work ok here */ }
+        }
+    }
+
+    private val messenger by lazy { Messenger(incomingHandler) }
+    override fun onBind(intent: Intent): IBinder = messenger.binder
+
+    override fun onDestroy() {
+        handlerThread.quitSafely()
+        super.onDestroy()
+    }
+}</code></pre>
+<h3 id="interview-angles--messenger">Interview angles — Messenger</h3>
+<p><strong>Q: Messenger vs AIDL?</strong></p>
+<p>See detailed table in the next section.</p>
+<p><strong>Q: When is Messenger enough?</strong></p>
+<p>&quot;Messenger is the right call when your IPC is simple, sequential, and fire-and-forget — for example, a background download service where you just send it commands and don&#x27;t need typed responses back. It&#x27;s also good for prototyping or when you need cross-process event delivery but don&#x27;t want to deal with generating and maintaining AIDL stubs.&quot;</p>
+<p><strong>Q: Why is Messenger simpler but less flexible?</strong></p>
+<p>&quot;Because everything goes through a single <code>Handler</code> and <code>MessageQueue</code>. There are no return values, no parallel processing, and no typed method signatures — every message is an integer code in <code>msg.what</code>, which is untyped and error-prone. And it fundamentally can&#x27;t express &#x27;give me back a result synchronously.&#x27; If you need a reply, you have to attach a <code>replyTo</code> Messenger to every message and handle the response asynchronously on the other end. That overhead is fine for simple command-style patterns, but the moment you need a real typed API with return values, you&#x27;ve outgrown Messenger.&quot;</p>
+<hr>
+<h2 id="parcelable-vs-serializable">Parcelable vs Serializable</h2>
+<p>Parcelable versus Serializable comes up in almost every Binder or IPC interview question, so it&#x27;s worth having a crisp answer ready.</p>
+<table border="1" cellpadding="6" cellspacing="0">
+<thead><tr>
+<th>Dimension</th>
+<th><code>Parcelable</code></th>
+<th><code>Serializable</code></th>
+</tr></thead><tbody>
+<tr><td><strong>Location</strong></td><td><code>android.os.Parcelable</code></td><td><code>java.io.Serializable</code></td></tr>
+<tr><td><strong>Mechanism</strong></td><td>Manual implementation — you control every field written/read</td><td>Java reflection + serialization protocol</td></tr>
+<tr><td><strong>Performance</strong></td><td><strong>~10x faster</strong> for IPC; minimal allocations</td><td>Slow — creates many temporary objects; reflection overhead</td></tr>
+<tr><td><strong>Memory</strong></td><td>Writes to <code>Parcel</code> (shared memory / kernel buffer)</td><td>Writes to <code>ObjectOutputStream</code> byte stream</td></tr>
+<tr><td><strong>Suitable for IPC</strong></td><td>Yes — designed for Binder</td><td>No — not designed for Binder; technically works but discouraged</td></tr>
+<tr><td><strong>Boilerplate</strong></td><td>Medium (mitigated with <code>@Parcelize</code> plugin)</td><td>None — just <code>implements Serializable</code></td></tr>
+<tr><td><strong>Versioning</strong></td><td>Manual — must handle evolution explicitly</td><td><code>serialVersionUID</code> — fragile</td></tr>
+<tr><td><strong>Persistence</strong></td><td>Not intended for disk persistence (Parcel format is not stable across Android versions)</td><td>Intended for disk/network persistence</td></tr>
+<tr><td><strong>@Parcelize</strong></td><td><code>@Parcelize</code> annotation + kotlin-parcelize plugin generates implementation</td><td>N/A</td></tr>
+</tbody></table>
+<pre><code>// Parcelable with @Parcelize — no boilerplate
+@Parcelize
+data class Doctor(
+    val id: String,
+    val name: String,
+    val specialty: String,
+    val rating: Float
+) : Parcelable</code></pre>
+<p>The recommendation is straightforward: always use <code>Parcelable</code> for anything passed over Binder — Intent extras, Bundle contents, AIDL parameters. Use <code>Serializable</code> only when you need cross-JVM disk persistence and performance is not critical.</p>
+<p>One thing worth calling out specifically: <code>Parcelable</code> is not safe for disk persistence. The <code>Parcel</code> binary format is internal to Android and can change between OS versions — a <code>Parcel</code> written on Android 12 might be unreadable on Android 14. For persistence, use <code>Room</code>, <code>DataStore</code>, or JSON/Protobuf.</p>
+<hr>
+<h2 id="aidl-vs-messenger-decision-guide">AIDL vs Messenger Decision Guide</h2>
+<table border="1" cellpadding="6" cellspacing="0">
+<thead><tr>
+<th>Criterion</th>
+<th>Use AIDL</th>
+<th>Use Messenger</th>
+</tr></thead><tbody>
+<tr><td>Need <strong>typed method calls</strong></td><td>Yes</td><td>No — only <code>msg.what</code> integers</td></tr>
+<tr><td>Need <strong>return values</strong></td><td>Yes</td><td>No — always async via <code>replyTo</code></td></tr>
+<tr><td>Need <strong>concurrent/parallel</strong> processing</td><td>Yes — Binder thread pool handles concurrent calls</td><td>No — single <code>Handler</code> serializes all</td></tr>
+<tr><td>Complexity</td><td>Higher — generate stubs, handle exceptions</td><td>Lower — familiar <code>Handler</code>/<code>Message</code> API</td></tr>
+<tr><td>Type safety</td><td>Yes — compiler enforces method signatures</td><td>No — integer codes, unchecked <code>Bundle</code></td></tr>
+<tr><td>Performance (high throughput)</td><td>Better</td><td>Worse — sequential queue</td></tr>
+<tr><td>Callback interfaces</td><td>Native — define callback AIDL</td><td>Awkward — need a separate reply Messenger</td></tr>
+<tr><td>Best for</td><td>SDK-style service API, system services, complex bidirectional IPC</td><td>Simple command service, ordered event delivery, quick prototyping</td></tr>
+</tbody></table>
+<p>The rule of thumb is: start with <code>Messenger</code> if you just need to send commands to a background service. Upgrade to AIDL when you need return values, typed interfaces, or concurrent call handling.</p>
+<hr>
+<h2 id="interview-quick-reference">Interview Quick-Reference</h2>
+<table border="1" cellpadding="6" cellspacing="0">
+<thead><tr>
+<th>Question</th>
+<th>One-line answer</th>
+</tr></thead><tbody>
+<tr><td>What is Binder?</td><td>Android&#x27;s kernel IPC driver enabling single-copy RPC with caller identity verification</td></tr>
+<tr><td>What is a Binder thread?</td><td>A thread in the Binder pool blocked on <code>/dev/binder</code>, awakened to handle incoming transactions</td></tr>
+<tr><td>What causes TransactionTooLargeException?</td><td>Transaction payload exceeds ~1 MB kernel buffer; use file descriptors or URIs for large data</td></tr>
+<tr><td>What is <code>oneway</code> in AIDL?</td><td>Makes a method non-blocking — caller returns immediately, no return value allowed</td></tr>
+<tr><td>What is a death recipient?</td><td><code>IBinder.DeathRecipient</code> callback fired on a Binder thread when the remote process dies</td></tr>
+<tr><td>Parcelable vs Serializable?</td><td>Parcelable is ~10x faster, designed for Binder; Serializable is reflection-based, not safe for IPC</td></tr>
+<tr><td>AIDL vs Messenger?</td><td>AIDL = typed, concurrent, return values; Messenger = simple, sequential, fire-and-forget</td></tr>
+<tr><td>Static variables across processes?</td><td>Not shared — each process has an independent JVM instance</td></tr>
+<tr><td>Can you call AIDL from main thread?</td><td>Only <code>oneway</code> methods are safe; synchronous calls risk ANR — use background threads</td></tr>
+<tr><td>How do you secure a Binder interface?</td><td>Call <code>Binder.getCallingUid()</code> and validate against expected UID / permission check</td></tr>
+<tr><td>What data should NOT cross Binder?</td><td>Large bitmaps, <code>Serializable</code> objects, raw file streams, arbitrary object references</td></tr>
+<tr><td>How do you version AIDL?</td><td>Add methods at the end only, never remove/reorder; add <code>getVersion()</code> method</td></tr>
+</tbody></table>
+<div class="pager">
+<a class="prev" href="thread-communication.html"><span class="lbl">‹ Previous</span>4. Thread Communication</a>
+<a class="next" href="android-memory-management.html"><span class="lbl">Next ›</span>6. Android Memory Management</a>
+</div>
+</div></div>
+<script src="../site.js"></script>
+</body></html>

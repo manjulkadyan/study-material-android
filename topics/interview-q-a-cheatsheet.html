@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>16. Interview Q&amp;A &amp; Cheatsheet</title>
+<link rel="stylesheet" href="../style.css"></head>
+<body class="has-toc" data-prev="senior-staff-system-design.html" data-next="references.html">
+<nav class="sidebar"><a class="brand" href="../index.html">📱 Android Study Guide — Home</a><details class="topic"><summary><span class="caret">▶</span><a href="data-structures-big-o.html">1. Data Structures &amp; Big O</a></summary><ul class="subtopics"><li><a class="" href="data-structures-big-o.html#11-data-structures--collections--12-big-o-notation">1.1 Data Structures &amp; Collections · 1.2 Big O Notation</a></li><li><a class="" href="data-structures-big-o.html#table-of-contents">Table of Contents</a></li><li><a class="" href="data-structures-big-o.html#1-arrays">1. Arrays</a></li><li><a class="" href="data-structures-big-o.html#2-arraylist--mutablelist">2. ArrayList / MutableList</a></li><li><a class="" href="data-structures-big-o.html#3-linkedlist">3. LinkedList</a></li><li><a class="" href="data-structures-big-o.html#4-stack">4. Stack</a></li><li><a class="" href="data-structures-big-o.html#5-queue">5. Queue</a></li><li><a class="" href="data-structures-big-o.html#6-deque">6. Deque</a></li><li><a class="" href="data-structures-big-o.html#7-hashmap--mutablemap">7. HashMap / MutableMap</a></li><li><a class="" href="data-structures-big-o.html#8-hashset--mutableset">8. HashSet / MutableSet</a></li><li><a class="" href="data-structures-big-o.html#9-linkedhashmap">9. LinkedHashMap</a></li><li><a class="" href="data-structures-big-o.html#10-treemap--sortedmap">10. TreeMap / SortedMap</a></li><li><a class="" href="data-structures-big-o.html#11-priorityqueue--heap">11. PriorityQueue / Heap</a></li><li><a class="" href="data-structures-big-o.html#12-trie">12. Trie</a></li><li><a class="" href="data-structures-big-o.html#13-graphs">13. Graphs</a></li><li><a class="" href="data-structures-big-o.html#14-android-specific-collections">14. Android-Specific Collections</a></li><li><a class="" href="data-structures-big-o.html#15-big-o-notation">15. Big O Notation</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="kotlin-java-fundamentals.html">2. Kotlin &amp; Java Fundamentals</a></summary><ul class="subtopics"><li><a class="" href="kotlin-java-fundamentals.html#table-of-contents">Table of Contents</a></li><li><a class="" href="kotlin-java-fundamentals.html#21-kotlin-fundamentals">2.1 Kotlin Fundamentals</a></li><li><a class="" href="kotlin-java-fundamentals.html#22-kotlin-generics">2.2 Kotlin Generics</a></li><li><a class="" href="kotlin-java-fundamentals.html#23-java-fundamentals">2.3 Java Fundamentals</a></li><li><a class="" href="kotlin-java-fundamentals.html#24-kotlin-java-interop">2.4 Kotlin-Java Interop</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="concurrency-android-threading.html">3. Concurrency &amp; Android Threading</a></summary><ul class="subtopics"><li><a class="" href="concurrency-android-threading.html#table-of-contents">Table of Contents</a></li><li><a class="" href="concurrency-android-threading.html#31-java-thread-basics">3.1 Java Thread Basics</a></li><li><a class="" href="concurrency-android-threading.html#32-locks-and-synchronization">3.2 Locks and Synchronization</a></li><li><a class="" href="concurrency-android-threading.html#33-volatile-and-atomic-classes">3.3 Volatile and Atomic Classes</a></li><li><a class="" href="concurrency-android-threading.html#34-waitnotify-and-producer-consumer">3.4 Wait/Notify and Producer-Consumer</a></li><li><a class="" href="concurrency-android-threading.html#35-executors-and-task-execution">3.5 Executors and Task Execution</a></li><li><a class="" href="concurrency-android-threading.html#36-android-application-threads">3.6 Android Application Threads</a></li><li><a class="" href="concurrency-android-threading.html#37-handler--looper--messagequeue">3.7 Handler / Looper / MessageQueue</a></li><li><a class="" href="concurrency-android-threading.html#38-kotlin-coroutines-on-android">3.8 Kotlin Coroutines on Android</a></li><li><a class="" href="concurrency-android-threading.html#39-flow-stateflow-sharedflow-channel">3.9 Flow, StateFlow, SharedFlow, Channel</a></li><li><a class="" href="concurrency-android-threading.html#310-background-work">3.10 Background Work</a></li><li><a class="" href="concurrency-android-threading.html#quick-reference-interview-cheat-sheet">Quick-Reference: Interview Cheat Sheet</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="thread-communication.html">4. Thread Communication</a></summary><ul class="subtopics"><li><a class="" href="thread-communication.html#table-of-contents">Table of Contents</a></li><li><a class="" href="thread-communication.html#41-pipes">4.1 Pipes</a></li><li><a class="" href="thread-communication.html#42-shared-memory">4.2 Shared Memory</a></li><li><a class="" href="thread-communication.html#43-signaling">4.3 Signaling</a></li><li><a class="" href="thread-communication.html#44-blockingqueue">4.4 BlockingQueue</a></li><li><a class="" href="thread-communication.html#45-message-passing--android-handlerloopermessagequeue">4.5 Message Passing — Android Handler/Looper/MessageQueue</a></li><li><a class="" href="thread-communication.html#cross-cutting-shared-memory-vs-message-passing">Cross-cutting: Shared Memory vs Message Passing</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="ipc-binder-aidl-messenger.html">5. IPC: Binder, AIDL, Messenger</a></summary><ul class="subtopics"><li><a class="" href="ipc-binder-aidl-messenger.html#table-of-contents">Table of Contents</a></li><li><a class="" href="ipc-binder-aidl-messenger.html#51-android-process-model">5.1 Android Process Model</a></li><li><a class="" href="ipc-binder-aidl-messenger.html#52-binder">5.2 Binder</a></li><li><a class="" href="ipc-binder-aidl-messenger.html#53-aidl">5.3 AIDL</a></li><li><a class="" href="ipc-binder-aidl-messenger.html#54-messenger">5.4 Messenger</a></li><li><a class="" href="ipc-binder-aidl-messenger.html#parcelable-vs-serializable">Parcelable vs Serializable</a></li><li><a class="" href="ipc-binder-aidl-messenger.html#aidl-vs-messenger-decision-guide">AIDL vs Messenger Decision Guide</a></li><li><a class="" href="ipc-binder-aidl-messenger.html#interview-quick-reference">Interview Quick-Reference</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="android-memory-management.html">6. Android Memory Management</a></summary><ul class="subtopics"><li><a class="" href="android-memory-management.html#table-of-contents">Table of Contents</a></li><li><a class="" href="android-memory-management.html#61-jvmart-memory-basics">6.1 JVM/ART Memory Basics</a></li><li><a class="" href="android-memory-management.html#62-android-memory-leaks">6.2 Android Memory Leaks</a></li><li><a class="" href="android-memory-management.html#63-context-leaks">6.3 Context Leaks</a></li><li><a class="" href="android-memory-management.html#64-bitmap-and-image-memory">6.4 Bitmap and Image Memory</a></li><li><a class="" href="android-memory-management.html#65-leak-detection-and-profiling">6.5 Leak Detection and Profiling</a></li><li><a class="" href="android-memory-management.html#interview-quick-reference">Interview Quick-Reference</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="architecture-patterns.html">7. Architecture Patterns</a></summary><ul class="subtopics"><li><a class="" href="architecture-patterns.html#table-of-contents">Table of Contents</a></li><li><a class="" href="architecture-patterns.html#71-mvc-mvp-mvvm-mvi">7.1 MVC, MVP, MVVM, MVI</a></li><li><a class="" href="architecture-patterns.html#72-clean-architecture">7.2 Clean Architecture</a></li><li><a class="" href="architecture-patterns.html#73-repository-pattern">7.3 Repository Pattern</a></li><li><a class="" href="architecture-patterns.html#74-dependency-injection">7.4 Dependency Injection</a></li><li><a class="" href="architecture-patterns.html#75-modularization">7.5 Modularization</a></li><li><a class="" href="architecture-patterns.html#quick-reference-cheat-sheet">Quick-Reference Cheat Sheet</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="view-rendering.html">8. View Rendering</a></summary><ul class="subtopics"><li><a class="" href="view-rendering.html#table-of-contents">Table of Contents</a></li><li><a class="" href="view-rendering.html#81-traditional-view-system-rendering">8.1 Traditional View System Rendering</a></li><li><a class="" href="view-rendering.html#82-choreographer-vsync-and-frame-rendering">8.2 Choreographer, VSync, and Frame Rendering</a></li><li><a class="" href="view-rendering.html#83-recyclerview-performance">8.3 RecyclerView Performance</a></li><li><a class="" href="view-rendering.html#84-jetpack-compose-rendering">8.4 Jetpack Compose Rendering</a></li><li><a class="" href="view-rendering.html#85-performance-tools">8.5 Performance Tools</a></li><li><a class="" href="view-rendering.html#interview-cheat-sheet">Interview Cheat Sheet</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="lifecycle-platform-components.html">9. Lifecycle &amp; Platform Components</a></summary><ul class="subtopics"><li><a class="" href="lifecycle-platform-components.html#table-of-contents">Table of Contents</a></li><li><a class="" href="lifecycle-platform-components.html#91-activity">9.1 Activity</a></li><li><a class="" href="lifecycle-platform-components.html#92-fragment">9.2 Fragment</a></li><li><a class="" href="lifecycle-platform-components.html#93-services">9.3 Services</a></li><li><a class="" href="lifecycle-platform-components.html#94-broadcastreceiver">9.4 BroadcastReceiver</a></li><li><a class="" href="lifecycle-platform-components.html#95-contentprovider">9.5 ContentProvider</a></li><li><a class="" href="lifecycle-platform-components.html#96-intents-and-pendingintents">9.6 Intents and PendingIntents</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="android-data-layer.html">10. Android Data Layer</a></summary><ul class="subtopics"><li><a class="" href="android-data-layer.html#table-of-contents">Table of Contents</a></li><li><a class="" href="android-data-layer.html#101-networking">10.1 Networking</a></li><li><a class="" href="android-data-layer.html#102-persistence">10.2 Persistence</a></li><li><a class="" href="android-data-layer.html#103-offline-first-design">10.3 Offline-First Design</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="testing.html">11. Testing</a></summary><ul class="subtopics"><li><a class="" href="testing.html#table-of-contents">Table of Contents</a></li><li><a class="" href="testing.html#111-unit-testing">11.1 Unit Testing</a></li><li><a class="" href="testing.html#112-ui-testing">11.2 UI Testing</a></li><li><a class="" href="testing.html#113-integration-and-end-to-end-testing">11.3 Integration and End-to-End Testing</a></li><li><a class="" href="testing.html#quick-reference-interview-cheat-sheet">Quick-Reference Interview Cheat Sheet</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="build-gradle-release.html">12. Build, Gradle &amp; Release</a></summary><ul class="subtopics"><li><a class="" href="build-gradle-release.html#table-of-contents">Table of Contents</a></li><li><a class="" href="build-gradle-release.html#121-gradle-basics">12.1 Gradle Basics</a></li><li><a class="" href="build-gradle-release.html#122-build-performance">12.2 Build Performance</a></li><li><a class="" href="build-gradle-release.html#123-release">12.3 Release</a></li><li><a class="" href="build-gradle-release.html#summary-table-quick-reference">Summary Table: Quick Reference</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="security-privacy.html">13. Security &amp; Privacy</a></summary><ul class="subtopics"><li><a class="" href="security-privacy.html#table-of-contents">Table of Contents</a></li><li><a class="" href="security-privacy.html#131-android-security-basics">13.1 Android Security Basics</a></li><li><a class="" href="security-privacy.html#132-data-security">13.2 Data Security</a></li><li><a class="" href="security-privacy.html#interview-qa-master-list">Interview Q&amp;A Master List</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="performance-beyond-rendering.html">14. Performance Beyond Rendering</a></summary><ul class="subtopics"><li><a class="" href="performance-beyond-rendering.html#table-of-contents">Table of Contents</a></li><li><a class="" href="performance-beyond-rendering.html#141-startup-performance">14.1 Startup Performance</a></li><li><a class="" href="performance-beyond-rendering.html#142-battery-and-resource-usage">14.2 Battery and Resource Usage</a></li><li><a class="" href="performance-beyond-rendering.html#143-anr-and-crash-debugging">14.3 ANR and Crash Debugging</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="senior-staff-system-design.html">15. Senior/Staff System Design</a></summary><ul class="subtopics"><li><a class="" href="senior-staff-system-design.html#table-of-contents">Table of Contents</a></li><li><a class="" href="senior-staff-system-design.html#151-android-app-architecture-design">15.1 Android App Architecture Design</a></li><li><a class="" href="senior-staff-system-design.html#152-trade-off-thinking">15.2 Trade-Off Thinking</a></li><li><a class="" href="senior-staff-system-design.html#153-legacy-code-and-migration">15.3 Legacy Code and Migration</a></li><li><a class="" href="senior-staff-system-design.html#154-engineering-leadership">15.4 Engineering Leadership</a></li></ul></details><details class="topic active" open><summary><span class="caret">▶</span><a href="interview-q-a-cheatsheet.html">16. Interview Q&amp;A &amp; Cheatsheet</a></summary><ul class="subtopics"><li><a class="spy" href="#table-of-contents">Table of Contents</a></li><li><a class="spy" href="#section-16--model-answers-by-category">Section 16 — Model Answers by Category</a></li><li><a class="spy" href="#section-17--must-revise-checklist">Section 17 — Must-Revise Checklist</a></li><li><a class="spy" href="#section-18--senior-answer-framework-with-worked-examples">Section 18 — Senior Answer Framework with Worked Examples</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="references.html">References</a></summary><ul class="subtopics"><li><a class="" href="references.html#table-of-contents">Table of Contents</a></li><li><a class="" href="references.html#section-1--data-structures--big-o">Section 1 — Data Structures &amp; Big O</a></li><li><a class="" href="references.html#section-2--kotlin--java-fundamentals">Section 2 — Kotlin &amp; Java Fundamentals</a></li><li><a class="" href="references.html#section-3--concurrency--threading">Section 3 — Concurrency &amp; Threading</a></li><li><a class="" href="references.html#section-4--thread-communication">Section 4 — Thread Communication</a></li><li><a class="" href="references.html#section-5--ipc-binder-aidl-messenger">Section 5 — IPC: Binder, AIDL, Messenger</a></li><li><a class="" href="references.html#section-6--memory-management">Section 6 — Memory Management</a></li><li><a class="" href="references.html#section-7--architecture-patterns">Section 7 — Architecture Patterns</a></li><li><a class="" href="references.html#section-8--view-rendering">Section 8 — View Rendering</a></li><li><a class="" href="references.html#section-9--lifecycle--platform-components">Section 9 — Lifecycle &amp; Platform Components</a></li><li><a class="" href="references.html#section-10--data-layer">Section 10 — Data Layer</a></li><li><a class="" href="references.html#section-11--testing">Section 11 — Testing</a></li><li><a class="" href="references.html#section-12--build-gradle--release">Section 12 — Build, Gradle &amp; Release</a></li><li><a class="" href="references.html#section-13--security--privacy">Section 13 — Security &amp; Privacy</a></li><li><a class="" href="references.html#section-14--performance-beyond-rendering">Section 14 — Performance (Beyond Rendering)</a></li><li><a class="" href="references.html#section-15--system-design">Section 15 — System Design</a></li><li><a class="" href="references.html#section-16--interview-qa-cheatsheet">Section 16 — Interview Q&amp;A Cheatsheet</a></li><li><a class="" href="references.html#section-17--must-revise-checklist">Section 17 — Must-Revise Checklist</a></li><li><a class="" href="references.html#section-18--seniorstaff-answer-framework">Section 18 — Senior/Staff Answer Framework</a></li><li><a class="" href="references.html#books">Books</a></li></ul></details></nav>
+<aside class="toc-right"><div class="toc-h">On this page</div><ul class="toc-tree"><li class="toc-grp"><a class="toc-2" href="#table-of-contents"><span class="tcaret tcaret-none"></span>Table of Contents</a></li><li class="toc-grp"><a class="toc-2" href="#section-16--model-answers-by-category"><span class="tcaret">▶</span>Section 16 — Model Answers by Category</a><ul class="toc-subs"><li><a class="toc-3" href="#data-structures">Data Structures</a></li><li><a class="toc-3" href="#concurrency">Concurrency</a></li><li><a class="toc-3" href="#android-threading">Android Threading</a></li><li><a class="toc-3" href="#ipc">IPC</a></li><li><a class="toc-3" href="#memory">Memory</a></li><li><a class="toc-3" href="#architecture">Architecture</a></li><li><a class="toc-3" href="#view-rendering">View Rendering</a></li></ul></li><li class="toc-grp"><a class="toc-2" href="#section-17--must-revise-checklist"><span class="tcaret tcaret-none"></span>Section 17 — Must-Revise Checklist</a></li><li class="toc-grp"><a class="toc-2" href="#section-18--senior-answer-framework-with-worked-examples"><span class="tcaret">▶</span>Section 18 — Senior Answer Framework with Worked Examples</a><ul class="toc-subs"><li><a class="toc-3" href="#the-framework">The Framework</a></li><li><a class="toc-3" href="#worked-example-1--handler-memory-leak-from-the-source-doc">Worked Example 1 — Handler Memory Leak (from the source doc)</a></li><li><a class="toc-3" href="#worked-example-2--coroutine-structured-concurrency--cancellation">Worked Example 2 — Coroutine Structured Concurrency &amp; Cancellation</a></li><li><a class="toc-3" href="#worked-example-3--compose-recomposition--stability">Worked Example 3 — Compose Recomposition &amp; Stability</a></li><li><a class="toc-3" href="#worked-example-4--binder-transaction-limits--ipc-design">Worked Example 4 — Binder Transaction Limits / IPC Design</a></li></ul></li></ul></aside>
+<div class="backdrop"></div>
+<div class="content">
+<div class="mtop"><button onclick="toggleNav()" aria-label="Menu">☰</button><a class="home" href="../index.html">🏠</a><span class="t">16. Interview Q&amp;A &amp; Cheatsheet</span></div>
+<a class="arrow left" href="senior-staff-system-design.html" title="Previous (15. Senior/Staff System Design)">‹</a>
+<a class="arrow right" href="references.html" title="Next (References)">›</a>
+<div class="wrap">
+<h1 id="16-interview-qa--cheatsheet">16. Interview Q&amp;A &amp; Cheatsheet</h1>
+<blockquote>Rapid-review cheatsheet for senior/staff Android interviews.<br>Source: <code>common/android/topics.md</code> lines 1822–1959.</blockquote>
+<hr>
+<h2 id="table-of-contents">Table of Contents</h2>
+<ol>
+<li><a href="#section-16--model-answers-by-category">Section 16 — Model Answers by Category</a></li>
+<ul>
+<li><a href="#data-structures">Data Structures</a></li>
+<li><a href="#concurrency">Concurrency</a></li>
+<li><a href="#android-threading">Android Threading</a></li>
+<li><a href="#ipc">IPC</a></li>
+<li><a href="#memory">Memory</a></li>
+<li><a href="#architecture">Architecture</a></li>
+<li><a href="#view-rendering">View Rendering</a></li>
+</ul>
+<li><a href="#section-17--must-revise-checklist">Section 17 — Must-Revise Checklist</a></li>
+<li><a href="#section-18--senior-answer-framework-with-worked-examples">Section 18 — Senior Answer Framework with Worked Examples</a></li>
+</ol>
+<hr>
+<h2 id="section-16--model-answers-by-category">Section 16 — Model Answers by Category</h2>
+<hr>
+<h3 id="data-structures">Data Structures</h3>
+<hr>
+<p><strong>Explain HashMap internals.</strong></p>
+<p>&quot;A HashMap is backed by an array of buckets — 16 by default. When you call <code>put</code>, the key&#x27;s <code>hashCode()</code> is computed and the bucket index is derived with <code>(n-1) &amp; hash</code>. Collisions are handled with a linked list inside each bucket. The important Java 8 upgrade is that once a bucket&#x27;s list exceeds 8 entries — that&#x27;s <code>TREEIFY_THRESHOLD</code> — and the overall array is at least 64 entries wide, the list converts to a red-black tree. That keeps worst-case lookup at O(log n) instead of O(n). The map doubles in size and rehashes everything when it crosses the load factor, which defaults to 0.75. In concurrent contexts you&#x27;d reach for <code>ConcurrentHashMap</code> instead, because it stripe-locks individual buckets rather than locking the whole structure.&quot;</p>
+<p><strong>Key complexities:</strong> average O(1) get/put, O(n) worst-case (pre-Java-8 or degenerate hash), O(log n) worst-case Java 8+.</p>
+<hr>
+<p><strong>Difference between HashMap and TreeMap.</strong></p>
+<p>&quot;The key difference is ordering and performance. A HashMap stores entries in an unordered hash table and gives you O(1) average for get and put. A TreeMap stores entries in a red-black tree sorted by the key&#x27;s natural order, or a <code>Comparator</code> you supply — so get, put, and remove are O(log n), but when you iterate you always get keys in sorted order. The trade-off is: reach for TreeMap when you need range queries like <code>subMap</code>, <code>headMap</code>, or <code>tailMap</code>, or when sorted iteration matters. Reach for HashMap when you just want raw speed and don&#x27;t care about order.&quot;</p>
+<hr>
+<p><strong>Difference between ArrayList and LinkedList.</strong></p>
+<p>&quot;An ArrayList is a resizable array, so you get O(1) random access, amortized O(1) append, but O(n) insert or delete in the middle because you have to shift elements. A LinkedList is a doubly-linked list: O(1) insert or delete once you have an iterator at the position, but O(n) to get to that position by index, and it has higher memory overhead because each node carries two pointers plus an object header. In practice, ArrayList wins in almost every Android use case because of CPU cache locality — the elements are contiguous in memory, so the prefetcher loves it. LinkedList is rarely worth it unless you have very frequent arbitrary insertions and deletions and you never need to access elements by index.&quot;</p>
+<hr>
+<p><strong>Implement LRU Cache.</strong></p>
+<p>&quot;The cleanest approach is to combine a <code>LinkedHashMap</code> in access-order mode with a max-size cap. If you need full control — say the interviewer asks you to build it from scratch — you can use a <code>HashMap</code> paired with a doubly-linked list, which gives you the same O(1) guarantees manually.&quot;</p>
+<pre><code>class LRUCache(private val capacity: Int) {
+    private val map = object : LinkedHashMap&lt;Int, Int&gt;(capacity, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry&lt;Int, Int&gt;?) =
+            size &gt; capacity
+    }
+
+    fun get(key: Int): Int = map.getOrDefault(key, -1)
+
+    fun put(key: Int, value: Int) {
+        map[key] = value
+    }
+}</code></pre>
+<p>&quot;Passing <code>accessOrder = true</code> to <code>LinkedHashMap</code> makes it move the most recently accessed entry to the tail on every get or put. Then overriding <code>removeEldestEntry</code> to return true when <code>size &gt; capacity</code> automatically evicts the head — which is always the least-recently-used entry. All operations are O(1).&quot;</p>
+<hr>
+<p><strong>Analyze time complexity of code.</strong></p>
+<p>&quot;My framework is to count the loops first — each level of nesting multiplies the complexity. Then I look at recursive calls and set up the recurrence relation. The thing I flag most often is hidden inner loops: calling <code>contains()</code> on a plain <code>List</code> inside another loop is O(n) per call, which makes the whole thing O(n²) without looking like it. I always express the answer in Big-O, and I make sure to clarify whether I mean amortized or worst-case. For Android interviews the patterns that come up most are: two nested loops gives O(n²), sorting gives O(n log n), hash lookups are O(1) average, and tree traversal is O(n).&quot;</p>
+<hr>
+<p><strong>Find duplicate elements.</strong></p>
+<pre><code>fun findDuplicates(nums: IntArray): List&lt;Int&gt; {
+    val seen = HashSet&lt;Int&gt;()
+    val dupes = mutableListOf&lt;Int&gt;()
+    for (n in nums) if (!seen.add(n)) dupes.add(n)
+    return dupes
+}
+// O(n) time, O(n) space</code></pre>
+<p>&quot;If you&#x27;re allowed to mutate the array and the values are in the range 1 to n, there&#x27;s a O(1) space trick: negate the value at index <code>abs(val)-1</code> as you visit each element. If you arrive at an index that&#x27;s already negative, the value at that index is a duplicate.&quot;</p>
+<hr>
+<p><strong>Top K frequent items.</strong></p>
+<p>&quot;There are two approaches. The standard one is a frequency map combined with a min-heap of size K — you keep evicting the least-frequent element from the heap whenever it grows past K, so only the top K survive. That runs in O(n log k). If you want O(n), you can use bucket sort: build an array of lists indexed by frequency from 0 to n, then read from the high-frequency end until you have K elements.&quot;</p>
+<pre><code>fun topKFrequent(nums: IntArray, k: Int): IntArray {
+    val freq = HashMap&lt;Int, Int&gt;()
+    for (n in nums) freq[n] = (freq[n] ?: 0) + 1
+
+    // min-heap keyed by frequency, evict when size &gt; k
+    val heap = PriorityQueue&lt;Map.Entry&lt;Int, Int&gt;&gt;(compareBy { it.value })
+    for (entry in freq.entries) {
+        heap.offer(entry)
+        if (heap.size &gt; k) heap.poll()
+    }
+    return heap.map { it.key }.toIntArray()
+}
+// O(n log k) time</code></pre>
+<p>&quot;The bucket-sort version creates an array of lists indexed by frequency from 0 to n, then iterates in reverse to collect the top K — O(n) time, O(n) space.&quot;</p>
+<hr>
+<p><strong>Merge intervals.</strong></p>
+<pre><code>fun merge(intervals: Array&lt;IntArray&gt;): Array&lt;IntArray&gt; {
+    intervals.sortBy { it[0] }
+    val result = mutableListOf&lt;IntArray&gt;()
+    for (interval in intervals) {
+        if (result.isEmpty() || result.last()[1] &lt; interval[0]) {
+            result.add(interval)
+        } else {
+            result.last()[1] = maxOf(result.last()[1], interval[1])
+        }
+    }
+    return result.toTypedArray()
+}
+// O(n log n) due to sort</code></pre>
+<p>&quot;The approach is to sort by start time first, then do a single pass. For each interval, if its start is greater than the last merged interval&#x27;s end, it doesn&#x27;t overlap — so you add it as a new interval. Otherwise, you extend the last merged interval&#x27;s end to the maximum of the two ends. The sort dominates at O(n log n).&quot;</p>
+<hr>
+<p><strong>Valid parentheses.</strong></p>
+<pre><code>fun isValid(s: String): Boolean {
+    val stack = ArrayDeque&lt;Char&gt;()
+    val match = mapOf(&#x27;)&#x27; to &#x27;(&#x27;, &#x27;]&#x27; to &#x27;[&#x27;, &#x27;}&#x27; to &#x27;{&#x27;)
+    for (c in s) {
+        if (c in &quot;([{&quot;) stack.addLast(c)
+        else if (stack.isEmpty() || stack.removeLast() != match[c]) return false
+    }
+    return stack.isEmpty()
+}
+// O(n) time, O(n) space</code></pre>
+<p>&quot;The idea is: push every opening bracket onto a stack. When you see a closing bracket, pop the top and verify it matches. If the stack is empty when you need to pop, or if it&#x27;s non-empty when you reach the end, the string is not balanced.&quot;</p>
+<hr>
+<p><strong>Binary search.</strong></p>
+<pre><code>fun binarySearch(arr: IntArray, target: Int): Int {
+    var lo = 0; var hi = arr.size - 1
+    while (lo &lt;= hi) {
+        val mid = lo + (hi - lo) / 2  // avoids overflow vs (lo+hi)/2
+        when {
+            arr[mid] == target -&gt; return mid
+            arr[mid] &lt; target  -&gt; lo = mid + 1
+            else               -&gt; hi = mid - 1
+        }
+    }
+    return -1
+}
+// O(log n)</code></pre>
+<p>&quot;One subtlety worth mentioning: I use <code>lo + (hi - lo) / 2</code> rather than <code>(lo + hi) / 2</code> to avoid integer overflow when both bounds are large. For variants — finding the first or last occurrence means you keep going after you match instead of returning immediately. For a rotated array, the key insight is that one half is always sorted, so you check which half and decide where to narrow.&quot;</p>
+<hr>
+<p><strong>BFS / DFS.</strong></p>
+<pre><code>// BFS — level order, shortest path in unweighted graph
+fun bfs(graph: Map&lt;Int, List&lt;Int&gt;&gt;, start: Int): List&lt;Int&gt; {
+    val visited = mutableSetOf(start)
+    val queue = ArrayDeque&lt;Int&gt;()
+    val order = mutableListOf&lt;Int&gt;()
+    queue.addLast(start)
+    while (queue.isNotEmpty()) {
+        val node = queue.removeFirst()
+        order.add(node)
+        graph[node]?.forEach { neighbor -&gt;
+            if (visited.add(neighbor)) queue.addLast(neighbor)
+        }
+    }
+    return order
+}
+
+// DFS — recursive or iterative, path finding, topological sort
+fun dfs(graph: Map&lt;Int, List&lt;Int&gt;&gt;, node: Int, visited: MutableSet&lt;Int&gt;, order: MutableList&lt;Int&gt;) {
+    if (!visited.add(node)) return
+    order.add(node)
+    graph[node]?.forEach { dfs(graph, it, visited, order) }
+}</code></pre>
+<p>&quot;BFS uses a queue and explores level by level, which makes it the right choice for shortest path in an unweighted graph and for level-order problems. DFS uses a stack or recursion and goes deep first — it&#x27;s better for connectivity checks, path existence, topological sort, and cycle detection.&quot;</p>
+<hr>
+<p><strong>Detect cycle in graph.</strong></p>
+<p>&quot;The approach depends on whether the graph is directed or undirected. For an undirected graph, you run DFS and track the parent node. If you reach a visited node that isn&#x27;t the parent you came from, there&#x27;s a cycle. For a directed graph, you need three colour states: WHITE means unvisited, GRAY means currently on the recursion stack, and BLACK means fully processed. If during DFS you encounter a GRAY node, you&#x27;ve found a back edge — that&#x27;s a cycle.&quot;</p>
+<pre><code>// Directed cycle detection
+fun hasCycle(n: Int, edges: List&lt;Pair&lt;Int,Int&gt;&gt;): Boolean {
+    val graph = Array(n) { mutableListOf&lt;Int&gt;() }
+    edges.forEach { (u, v) -&gt; graph[u].add(v) }
+    val color = IntArray(n) // 0=white,1=gray,2=black
+
+    fun dfs(u: Int): Boolean {
+        color[u] = 1
+        for (v in graph[u]) {
+            if (color[v] == 1) return true   // back edge
+            if (color[v] == 0 &amp;&amp; dfs(v)) return true
+        }
+        color[u] = 2
+        return false
+    }
+    return (0 until n).any { color[it] == 0 &amp;&amp; dfs(it) }
+}</code></pre>
+<p>&quot;There&#x27;s also a Union-Find approach for undirected graphs: if <code>find(u) == find(v)</code> before you call <code>union(u, v)</code>, the two nodes are already in the same component, so adding this edge creates a cycle.&quot;</p>
+<hr>
+<h3 id="concurrency">Concurrency</h3>
+<hr>
+<p><strong>What is thread safety?</strong></p>
+<p>&quot;A class or operation is thread-safe if it behaves correctly when accessed concurrently from multiple threads, without the caller having to add any extra synchronization themselves. There are three main ways to achieve it: mutual exclusion via <code>synchronized</code> or <code>ReentrantLock</code>, immutability — if the object never changes there&#x27;s nothing to protect — and lock-free data structures like <code>AtomicInteger</code> or <code>ConcurrentHashMap</code>. The naive approach of making all methods <code>synchronized</code> is the bluntest instrument. It works, but it serializes all access and creates contention under load, so at scale you want to prefer fine-grained locking or lock-free approaches.&quot;</p>
+<hr>
+<p><strong>What is a race condition?</strong></p>
+<p>&quot;A race condition is when the outcome of a computation depends on the non-deterministic ordering of concurrent operations. The classic example is a counter: two threads both read <code>count = 5</code>, both compute <code>6</code>, both write <code>6</code> — so the net result is <code>6</code> instead of the correct <code>7</code>. The fix is to make the read-modify-write sequence atomic, either with an <code>AtomicInteger</code>, a <code>synchronized</code> block, or a <code>Mutex</code> in coroutines.&quot;</p>
+<hr>
+<p><strong>synchronized vs volatile.</strong></p>
+<p>&quot;The critical distinction is that <code>synchronized</code> gives you two guarantees: mutual exclusion — only one thread is in the block at a time — and visibility — changes are flushed to main memory on exit and re-read on entry. <code>volatile</code> gives you visibility only. Reads and writes bypass CPU caches and go straight to main memory, but it does not make compound operations atomic. So <code>volatile</code> is fine for a simple on/off flag, but the moment you have a check-then-act pattern — read the flag, do something, write the flag — you need <code>synchronized</code> or an <code>Atomic*</code> type.&quot;</p>
+<hr>
+<p><strong>How does a Java monitor work?</strong></p>
+<p>&quot;Every Java object has an intrinsic lock called a monitor. When you call <code>synchronized(obj)</code>, the calling thread acquires that lock, and any other thread that tries to acquire it blocks until it&#x27;s released. The monitor also provides condition-based waiting through <code>wait()</code>, <code>notify()</code>, and <code>notifyAll()</code>. When a thread calls <code>wait()</code>, it releases the lock and suspends. When another thread calls <code>notify()</code>, one waiting thread wakes up, re-acquires the lock, and then returns from <code>wait()</code>. This primitive mechanism is the foundation for all the higher-level concurrency utilities in Java.&quot;</p>
+<hr>
+<p><strong>What causes deadlock?</strong></p>
+<p>&quot;Deadlock requires four conditions to be true at the same time — the Coffman conditions. First, mutual exclusion: resources can&#x27;t be shared. Second, hold-and-wait: a thread holds one lock while waiting for another. Third, no preemption: you can&#x27;t forcibly take a lock from a thread. Fourth, circular wait: thread A is waiting for something thread B holds, and thread B is waiting for something thread A holds. To prevent deadlock, the most practical approach is to always acquire locks in a consistent global order. You can also use <code>tryLock</code> with a timeout, avoid nested locks altogether, or use higher-level concurrent structures that don&#x27;t require explicit locking. When detecting a deadlock, thread dumps will show the relevant threads stuck in BLOCKED state with a circular wait chain.&quot;</p>
+<hr>
+<p><strong>Producer-consumer implementation.</strong></p>
+<pre><code>// Using BlockingQueue (Java)
+val queue = LinkedBlockingQueue&lt;Int&gt;(10)
+
+val producer = thread {
+    var i = 0
+    while (true) { queue.put(i++); Thread.sleep(100) }
+}
+val consumer = thread {
+    while (true) { val item = queue.take(); println(&quot;Consumed $item&quot;) }
+}
+
+// Coroutine Channel version
+val channel = Channel&lt;Int&gt;(10)
+launch { repeat(100) { channel.send(it) } }
+launch { for (item in channel) println(&quot;Got $item&quot;) }</code></pre>
+<p>&quot;The <code>BlockingQueue</code> handles backpressure naturally: <code>put</code> blocks when the queue is full, and <code>take</code> blocks when it&#x27;s empty. On Android the idiomatic equivalent is a coroutine <code>Channel</code>, which integrates with structured concurrency and suspension rather than blocking threads.&quot;</p>
+<hr>
+<p><strong>Executor vs raw Thread.</strong></p>
+<p>&quot;A raw <code>Thread</code> is unmanaged: every creation and teardown is an OS-level operation, there&#x27;s no pooling, and there&#x27;s no lifecycle management. An <code>Executor</code> or <code>ExecutorService</code> pools threads, queues tasks, and reuses threads across many work items. <code>Executors.newFixedThreadPool(n)</code> is good for CPU-bound work, and <code>newCachedThreadPool</code> works better for IO-bound work where most threads are waiting. On Android, you&#x27;d usually go one level higher still and use coroutine dispatchers — <code>Dispatchers.IO</code> and <code>Dispatchers.Default</code> — which are backed by shared thread pools and integrate with structured concurrency and cancellation.&quot;</p>
+<hr>
+<p><strong>Coroutine vs Thread.</strong></p>
+<p>&quot;The key insight is that coroutines are not threads — they&#x27;re lightweight and cheap to create, you can have thousands of them. They can suspend at suspension points without blocking the underlying OS thread at all. Threads are OS-level entities: expensive to create, and when they wait for IO they block the thread entirely. The practical implication is that <code>Dispatchers.IO</code> uses a pool of roughly 64 threads but can serve thousands of concurrent coroutines, because most of those coroutines are suspended and not actually executing at any given moment. Coroutines also compose naturally through structured concurrency, which gives you automatic cancellation propagation that threads simply don&#x27;t have.&quot;</p>
+<hr>
+<p><strong>launch vs async.</strong></p>
+<p>&quot;<code>launch</code> fires a coroutine and returns a <code>Job</code> — use it when you don&#x27;t need a result back, it&#x27;s essentially fire-and-forget within a structured lifecycle. <code>async</code> returns a <code>Deferred&lt;T&gt;</code> — use it when you need a result, which you retrieve by calling <code>await()</code>. Both are non-blocking. The classic pattern for parallelism is to start both with <code>async</code> — <code>val a = async { fetchA() }; val b = async { fetchB() }</code> — and then call <code>a.await() + b.await()</code>. They run concurrently, not sequentially.&quot;</p>
+<hr>
+<p><strong>StateFlow vs SharedFlow.</strong></p>
+<p>&quot;<code>StateFlow</code> always holds the latest value — you have to give it an initial value when you create it. When a new collector subscribes, it immediately gets the current value. It also conflates rapid emissions, so only the latest value is delivered. That makes it the right choice for UI state. <code>SharedFlow</code> is more configurable: no initial value by default, a configurable replay cache and buffer, and no conflation. It&#x27;s better for one-shot events like navigation triggers or toasts, where you either want no value replayed or exactly N values replayed. One nuance in practice: many teams back one-shot events with a <code>Channel</code>-based approach to avoid duplicate delivery on recomposition.&quot;</p>
+<hr>
+<p><strong>Why avoid GlobalScope?</strong></p>
+<p>&quot;<code>GlobalScope</code> ties a coroutine&#x27;s lifetime to the application process, not to any component lifecycle. So if you launch work in <code>GlobalScope</code> from an Activity, that coroutine keeps running after the Activity is destroyed. That causes three problems: memory leaks because the coroutine holds a reference to the destroyed Activity, wasted CPU doing work nobody will see, and potential crashes if the coroutine tries to update views that are gone. You should always prefer <code>viewModelScope</code>, <code>lifecycleScope</code>, or a custom <code>CoroutineScope</code> that you explicitly cancel in the appropriate lifecycle callback.&quot;</p>
+<hr>
+<p><strong>How do you cancel background work?</strong></p>
+<p>&quot;Coroutine cancellation is cooperative — the coroutine has to participate. Calling <code>Job.cancel()</code> sets a cancellation flag, and the coroutine is actually cancelled at its next suspension point. If you have a tight CPU loop with no suspending calls, you need to check <code>ensureActive()</code> or call <code>yield()</code> periodically, otherwise cancellation is never observed. Structured concurrency propagates cancellation automatically to all children. For cleanup, <code>finally</code> blocks run even when a coroutine is cancelled, and you can also use <code>invokeOnCompletion</code> for non-suspending cleanup. For WorkManager tasks, you cancel by calling <code>WorkManager.cancelWorkById()</code>.&quot;</p>
+<hr>
+<p><strong>How do you prevent ANRs?</strong></p>
+<p>&quot;The rule is that the main thread must never block for more than 5 seconds — or 10 seconds for a broadcast receiver — otherwise the system shows an ANR dialog. The answer is simple in principle: keep all IO, network calls, and heavy computation off the main thread. In practice that means using <code>Dispatchers.IO</code> for IO-bound work and <code>Dispatchers.Default</code> for CPU-bound work, then bringing results back to the main thread with <code>withContext(Dispatchers.Main)</code> to update UI. To catch violations early, I enable StrictMode in debug builds — it will flag any disk or network access on the main thread. I also profile with Android Studio&#x27;s CPU Profiler to find any main thread work that&#x27;s taking longer than the frame budget.&quot;</p>
+<hr>
+<h3 id="android-threading">Android Threading</h3>
+<hr>
+<p><strong>Explain main/UI thread.</strong></p>
+<p>&quot;Android runs all UI rendering, event dispatch, and lifecycle callbacks on a single main thread. Every view operation — invalidate, layout, text updates — has to happen there. If you block the main thread, you drop frames and eventually trigger an ANR. Under the hood, the main thread is just a <code>Looper</code> attached to a <code>MessageQueue</code> — it sits in an infinite loop dequeuing and processing <code>Message</code>s. You post work to it via <code>Handler(Looper.getMainLooper())</code>, <code>View.post()</code>, <code>runOnUiThread()</code>, or <code>withContext(Dispatchers.Main)</code> in a coroutine.&quot;</p>
+<hr>
+<p><strong>Explain Handler, Looper, MessageQueue.</strong></p>
+<p>&quot;These three work together. A <code>Looper</code> prepares a thread to process messages by creating and attaching a <code>MessageQueue</code>, then <code>Looper.loop()</code> enters an infinite loop reading from that queue. A <code>Handler</code> is bound to a <code>Looper</code> and gives you <code>sendMessage()</code> and <code>post(Runnable)</code> to enqueue work onto that thread. On the main thread, Android sets all of this up for you via <code>Looper.prepareMainLooper()</code> and <code>Looper.loop()</code>. On a background thread you&#x27;d have to call <code>Looper.prepare()</code> and <code>Looper.loop()</code> yourself — or just use <code>HandlerThread</code>, which does both and exposes <code>getLooper()</code> so you can attach a <code>Handler</code> to it.&quot;</p>
+<hr>
+<p><strong>What is HandlerThread?</strong></p>
+<p>&quot;<code>HandlerThread</code> is a <code>Thread</code> subclass that sets up a <code>Looper</code> for you and exposes <code>getLooper()</code> after you call <code>start()</code>, so you can attach a <code>Handler</code> to it and post work onto that specific thread. It gives you a sequential background message queue without the overhead of a full thread pool — messages are processed one at a time in order. It&#x27;s particularly useful for APIs that deliver callbacks on a specific thread, like camera preview callbacks or media player events. One important detail: always call <code>quit()</code> or <code>quitSafely()</code> when you&#x27;re done with it, to stop the looper and let the thread exit cleanly.&quot;</p>
+<hr>
+<p><strong>Why can&#x27;t you update UI from background thread?</strong></p>
+<p>&quot;Android&#x27;s view hierarchy is deliberately not thread-safe. <code>ViewRootImpl</code> checks that modifications come only from the thread that originally created the view hierarchy — the main thread — and throws <code>CalledFromWrongThreadException</code> if they don&#x27;t. This is a conscious design choice: if views were thread-safe, you&#x27;d need synchronization on every single view operation, which would be prohibitively expensive. The contract is simple — create and mutate views on the main thread only, and use any of the standard mechanisms to post back to it from a background thread.&quot;</p>
+<hr>
+<p><strong>Binder thread pool.</strong></p>
+<p>&quot;When your app receives an incoming IPC call — for example through a bound service&#x27;s AIDL — Android dispatches it on a thread from the app&#x27;s Binder thread pool. The pool goes up to 16 threads maximum, with at least 1 guaranteed. These threads are managed by the system and run concurrently, which means your AIDL implementation must be thread-safe if it touches any shared state. The other side of the coin is outgoing calls: Binder calls from your app to another process block the calling thread until the remote method returns, because they&#x27;re synchronous by default. That means you must never make Binder calls from the main thread.&quot;</p>
+<hr>
+<p><strong>WorkManager vs coroutine.</strong></p>
+<p>&quot;The key distinction is durability. WorkManager is for deferrable background work that must survive process death and device reboots — it persists work to a database, handles retries, supports chaining, and respects OS-level constraints like network availability and charging state. Coroutines scoped to <code>viewModelScope</code> or <code>lifecycleScope</code> are tied to the component&#x27;s lifecycle — they&#x27;re cancelled when the component is destroyed. My rule of thumb is: if the user could kill the app and the work still has to complete — like uploading logs or syncing data — use WorkManager. If the work is request/response within a single screen session, use coroutines.&quot;</p>
+<hr>
+<p><strong>Foreground service vs WorkManager.</strong></p>
+<p>&quot;A foreground service runs with an ongoing notification visible to the user, which makes it nearly immune to process killing by the OS — that makes it right for long-running user-visible tasks like music playback, GPS navigation, or a large file download. WorkManager is for deferred background tasks that can be queued, rescheduled, and potentially batched — the OS may defer them, especially in Doze mode. The way I choose is: if the user is actively aware the work is happening and needs real-time feedback, use a foreground service. If the task is best-effort and can run whenever conditions are right, use WorkManager.&quot;</p>
+<hr>
+<p><strong>How do you communicate from worker thread to UI?</strong></p>
+<p>&quot;There are a few options, and I&#x27;d rank them in preference order. First, <code>withContext(Dispatchers.Main) { updateUI() }</code> inside a coroutine — that&#x27;s the cleanest and most idiomatic. Second, <code>Handler(Looper.getMainLooper()).post { ... }</code> for non-coroutine callbacks like legacy camera or sensor APIs. Third, <code>Activity.runOnUiThread { ... }</code>, which is just a convenience wrapper around the same thing. Fourth, <code>LiveData.postValue()</code> or <code>StateFlow.emit()</code> from the background, with the UI observing on the main thread. The one thing to avoid is <code>runBlocking</code> on the main thread — that synchronously blocks the UI thread waiting for background work, which is exactly the opposite of what you want.&quot;</p>
+<hr>
+<p><strong>How can Handler cause memory leak?</strong></p>
+<p>&quot;The problem comes from how inner classes work in Java and Kotlin. A non-static inner <code>Handler</code> inside an <code>Activity</code> holds an implicit reference to the enclosing <code>Activity</code> instance. If you post a <code>Runnable</code> with a delay — say 30 seconds — that <code>Runnable</code> stays in the <code>MessageQueue</code> for 30 seconds. The chain is: <code>MessageQueue</code> holds the <code>Message</code>, <code>Message</code> holds the <code>Handler</code>, <code>Handler</code> holds the <code>Activity</code>. So even after the user navigates away and the <code>Activity</code> is destroyed, the GC can&#x27;t collect it because that live chain is still rooted. The fix is either to call <code>handler.removeCallbacksAndMessages(null)</code> in <code>onDestroy()</code>, switch to <code>lifecycleScope.launch</code> which is cancelled automatically, or use a static inner class with a <code>WeakReference&lt;Activity&gt;</code>.&quot;</p>
+<hr>
+<h3 id="ipc">IPC</h3>
+<hr>
+<p><strong>What is Binder?</strong></p>
+<p>&quot;Binder is Android&#x27;s high-performance IPC mechanism, implemented as a kernel driver. The key thing it does is let one process call methods on objects in another process as if they were local — you never really see the cross-process boundary in the code. What makes it fast is a single-copy design: the Binder kernel module copies data from the caller&#x27;s address space directly into the callee&#x27;s, whereas traditional Unix IPC like pipes or sockets often requires two copies. Binder also supports object identity — remote objects are uniquely identified — transactions, and death notifications so you know when the remote process dies. It&#x27;s the backbone of essentially all Android system services: Activity Manager, Package Manager, and so on.&quot;</p>
+<hr>
+<p><strong>What is AIDL?</strong></p>
+<p>&quot;AIDL stands for Android Interface Definition Language. It&#x27;s an IDL that generates the stub and proxy code you need for Binder IPC. You define your interface in a <code>.aidl</code> file, and the build system generates a <code>Stub</code> on the server side that extends <code>Binder</code>, and a <code>Proxy</code> on the client side. When the client calls a method, the proxy marshals the arguments into a <code>Parcel</code>, the Binder kernel transports it, and the server&#x27;s <code>Stub</code> unmarshals it and invokes the implementation on one of the Binder thread pool threads. AIDL supports primitive types, <code>String</code>, <code>Parcelable</code> objects, <code>List</code>, and <code>Map</code>.&quot;</p>
+<hr>
+<p><strong>AIDL vs Messenger.</strong></p>
+<p>&quot;<code>Messenger</code> wraps a <code>Handler</code> and sends <code>Message</code> objects over Binder. Because it goes through a <code>Handler</code>, calls are sequential — there&#x27;s no concurrency — which keeps it simple. It&#x27;s a good fit when you just need to pass simple messages between processes. AIDL is for defining a typed, multi-method interface where calls can arrive concurrently on Binder threads. It&#x27;s more powerful but also more complex to set up. My decision rule is: use <code>Messenger</code> for simple request/response messaging; use AIDL when you need multiple method signatures, concurrent access, or complex custom data types.&quot;</p>
+<hr>
+<p><strong>Synchronous vs asynchronous IPC.</strong></p>
+<p>&quot;Standard AIDL calls are synchronous — the calling thread blocks until the remote method returns, which makes them dangerous on the main thread because you risk an ANR. There are a few patterns to make IPC asynchronous. First, you can declare a method as <code>oneway</code> in the AIDL file: it becomes fire-and-forget with no return value and no exception propagation. Second, you can use <code>Messenger</code> for sequential message passing. Third, you can implement a callback interface: the client passes an AIDL callback object to the server, and the server calls back on a separate future Binder transaction. On Android 10 and above, <code>android.os.IBinder.FLAG_ONEWAY</code> achieves the same effect programmatically.&quot;</p>
+<hr>
+<p><strong>Parcelable vs Serializable.</strong></p>
+<p>&quot;<code>Parcelable</code> is Android&#x27;s custom serialization interface — you implement <code>writeToParcel</code> and a <code>CREATOR</code> yourself, which is verbose but fast: it avoids reflection entirely and writes directly to a shared memory <code>Parcel</code>, producing very little garbage. <code>Serializable</code> is Java&#x27;s standard serialization, which uses reflection, creates a lot of temporary objects, and is significantly slower. The rule is: always use <code>Parcelable</code> for Android IPC and <code>Bundle</code> extras — and in Kotlin you can just annotate with <code>@Parcelize</code> and the plugin generates the boilerplate for you. <code>Serializable</code> is acceptable for in-process persistence like writing an object to a file, but never for high-frequency IPC where the overhead compounds.&quot;</p>
+<hr>
+<p><strong>How do you handle remote service death?</strong></p>
+<p>&quot;You register a <code>DeathRecipient</code> by calling <code>IBinder.linkToDeath(recipient, 0)</code>. When the remote process dies, the system fires <code>binderDied()</code> on a Binder thread. Inside that callback you should unlink the recipient, null out your binder reference, and then either attempt to rebind or notify the user that the service is unavailable. For bound services, the system also calls <code>onServiceDisconnected()</code> on your <code>ServiceConnection</code> — I&#x27;d use both together for robust handling, because <code>onServiceDisconnected</code> only fires for bound services while <code>DeathRecipient</code> works for any direct Binder handle.&quot;</p>
+<hr>
+<p><strong>What should not be sent over Binder?</strong></p>
+<p>&quot;The main thing to avoid is large data. Binder has a per-process transaction buffer of roughly 1 MB, and if you exceed it by sending a bitmap or a large byte array in a <code>Parcel</code>, you get a <code>TransactionTooLargeException</code> — which can be especially confusing because it can surface in <code>onSaveInstanceState</code> as an apparently unrelated crash. For large payloads, use shared memory via <code>MemoryFile</code> or <code>SharedMemory</code> and pass only the <code>FileDescriptor</code> over Binder. Also, you can only send types that Binder knows how to serialize: primitives, <code>String</code>, <code>Parcelable</code> objects, <code>List</code>, and <code>Map</code>. You cannot send arbitrary Java objects — Binder has no reflection-based serialization.&quot;</p>
+<hr>
+<h3 id="memory">Memory</h3>
+<hr>
+<p><strong>How GC works conceptually.</strong></p>
+<p>&quot;ART uses a generational garbage collector. New objects are allocated in the Young generation — specifically the Eden space — and most short-lived objects die there quickly in what&#x27;s called a minor GC, which is fast. Objects that survive multiple GC cycles get promoted to the Old generation, which does major GC less frequently but with more work. ART also has a Large Object Space for objects that exceed a size threshold. GC pauses are minimized by running marking concurrently with the app threads, so the GC doesn&#x27;t have to stop the world for the full collection. The practical implication for Android development is: allocating a lot of short-lived objects is not free — it increases GC frequency, which can cause jank. That&#x27;s why I profile with Android Studio&#x27;s Memory Profiler to catch allocation hot spots.&quot;</p>
+<hr>
+<p><strong>What causes memory leaks in Android?</strong></p>
+<p>&quot;The root cause is always the same: a long-lived object holds a reference to a short-lived one — typically an <code>Activity</code> or <code>Fragment</code> — preventing the GC from collecting it. There are six common sources I watch for. First, static fields that hold a <code>Context</code> or a <code>View</code> — those live as long as the process. Second, non-static inner classes including anonymous Runnables and listeners, which carry an implicit <code>this</code> reference to the enclosing class. Third, a <code>Handler</code> with delayed messages, as I described above. Fourth, unregistered listeners and receivers — broadcast receivers, sensor listeners, and RxJava subscriptions that are never disposed. Fifth, <code>Fragment ViewBinding</code> references held beyond <code>onDestroyView()</code>. And sixth, coroutine scopes that are not cancelled when the lifecycle ends.&quot;</p>
+<hr>
+<p><strong>Activity context vs Application context.</strong></p>
+<p>&quot;Activity context has a shorter lifetime — it&#x27;s tied to the Activity instance — and it carries the Activity&#x27;s theming and configuration, which is why you need it for UI operations like inflating layouts and creating dialogs. Application context lives as long as the app process itself, so it&#x27;s the right choice for singletons, background services, and content providers, or anything that has to outlive a single Activity. The rule I follow is: never store Activity context in a singleton or a static field, because you&#x27;ll prevent the Activity from being garbage collected. Use Application context in those long-lived places instead.&quot;</p>
+<hr>
+<p><strong>Handler leak.</strong> <em>(also covered under Android Threading)</em></p>
+<p>&quot;Covered in the Android Threading section above. The short version: a non-static inner Handler in an Activity plus any delayed messages means the Activity cannot be GC&#x27;d until those messages drain from the queue. Fix it by calling <code>removeCallbacksAndMessages(null)</code> in <code>onDestroy()</code>, or better yet, use <code>lifecycleScope</code> which handles cancellation automatically.&quot;</p>
+<hr>
+<p><strong>Fragment view binding leak.</strong></p>
+<p>&quot;The problem here is that Fragments have two distinct lifetimes: the Fragment instance survives configuration changes and back-stack operations, but the Fragment&#x27;s view is destroyed in <code>onDestroyView()</code>. <code>ViewBinding</code> holds references to views. So if you store the binding in a field and forget to null it out in <code>onDestroyView()</code>, the binding keeps the entire view hierarchy alive even after the views have been destroyed. The fix is to always set <code>_binding = null</code> in <code>onDestroyView()</code> and access the binding through a non-null delegate backed by that nullable field — so safe access is guaranteed during the view&#x27;s lifetime and the reference is released when the view is gone.&quot;</p>
+<pre><code>private var _binding: FragmentFooBinding? = null
+private val binding get() = _binding!!
+
+override fun onCreateView(...) = FragmentFooBinding.inflate(inflater, container, false)
+    .also { _binding = it }.root
+
+override fun onDestroyView() {
+    super.onDestroyView()
+    _binding = null
+}</code></pre>
+<hr>
+<p><strong>Bitmap OOM.</strong></p>
+<p>&quot;Bitmaps are large objects stored in native memory under ART. A single 4K photo at 3840 by 2160 pixels in ARGB_8888 format consumes roughly 31 MB. OOM happens when you load full-resolution images without downsampling them first. The fix is to use <code>BitmapFactory.Options.inSampleSize</code> to downsample to the size you actually need before loading into memory — or better yet, use an image loading library like Glide or Coil, which handles downsampling automatically, pools and reuses bitmap memory, and ties the loading lifecycle to the component so it cancels requests when the screen is gone. The other thing to avoid is holding multiple large bitmaps in memory at the same time.&quot;</p>
+<hr>
+<p><strong>How to debug memory leaks.</strong></p>
+<p>&quot;My go-to workflow has four steps. First, I add LeakCanary to the debug build — it automatically detects leaks and fires a notification with the full reference chain leading to the leaking object, which takes most of the guesswork out. Second, I use Android Studio&#x27;s Memory Profiler to take heap dumps and compare snapshots before and after a suspected leak scenario. Third, for a quick command-line view, <code>adb shell dumpsys meminfo</code> shows PSS, heap usage, and retained objects per process. Fourth, in any of those tools I look for classes with unexpectedly high instance counts — for example, if I see multiple instances of an Activity class that should only ever have one at a time, I have a leak.&quot;</p>
+<hr>
+<p><strong>How to respond to low-memory conditions.</strong></p>
+<p>&quot;The right hook is <code>Application.onTrimMemory(level)</code>, or <code>ComponentCallbacks2.onTrimMemory(level)</code> on any component. The system calls this with different severity levels — <code>TRIM_MEMORY_RUNNING_LOW</code>, <code>TRIM_MEMORY_RUNNING_CRITICAL</code>, <code>TRIM_MEMORY_UI_HIDDEN</code>, <code>TRIM_MEMORY_BACKGROUND</code>, and others — and you respond by releasing caches, bitmaps, and any other non-essential memory proportional to the urgency of the level. In a ViewModel, for instance, I&#x27;d clear any in-memory caches that can be rebuilt from the DB. For APIs below 14 there&#x27;s the older <code>onLowMemory()</code> callback, but <code>onTrimMemory</code> is what you&#x27;d use in any modern codebase.&quot;</p>
+<hr>
+<h3 id="architecture">Architecture</h3>
+<hr>
+<p><strong>MVP vs MVVM.</strong></p>
+<p>&quot;In MVP, the Presenter handles all UI logic and calls View interface methods directly — the View is passive. The problem is that the Presenter holds a direct reference to the View interface, which means to unit test it you have to mock the View, and the coupling between Presenter and View contract can get tight. In MVVM, the ViewModel exposes observable state through <code>LiveData</code> or <code>StateFlow</code>, and the View just observes and renders. There&#x27;s no direct reference from ViewModel to View — the ViewModel doesn&#x27;t even know the View exists. That&#x27;s what makes it testable without a View mock and what allows it to survive configuration changes. MVVM with Compose is the current Android standard.&quot;</p>
+<hr>
+<p><strong>MVVM vs MVI.</strong></p>
+<p>&quot;Both follow the same general shape, but MVI takes it further. In MVVM, the ViewModel exposes state and events and the View can update individual pieces of state independently — it&#x27;s easier to set up and works well for most screens. In MVI — Model-View-Intent — there&#x27;s a single immutable state object. The View sends Intents, which are action objects, to the ViewModel, and the ViewModel reduces the current state plus the Intent into a new state, like Redux. The benefit is a complete audit trail: you can log every state transition, replay them, and debug complex state bugs much more easily. The trade-off is more boilerplate. My rule is: use MVI when screen state is complex and you need strict reproducibility; use MVVM for simpler flows.&quot;</p>
+<hr>
+<p><strong>What is clean architecture?</strong></p>
+<p>&quot;Clean architecture structures the codebase into three concentric layers. The outermost is Data — repositories, network sources, database sources. The middle is Domain — use cases and interactors written in pure Kotlin with no Android dependencies. The innermost is UI or Presentation — ViewModels and Compose. The key rule is that dependencies only point inward: UI depends on Domain, and Domain depends on nothing — it defines repository interfaces, and the Data layer provides the implementations. The payoff is that the Domain layer is completely unit-testable without any Android framework on the test classpath. The trade-off is more files and more indirection, which I think is worth it for medium-to-large apps but may be overkill for a small prototype.&quot;</p>
+<hr>
+<p><strong>What belongs in ViewModel?</strong></p>
+<p>&quot;The ViewModel owns three things. First, UI state — it&#x27;s the single source of truth, exposed via <code>StateFlow</code> or <code>LiveData</code>. Second, UI events like navigation triggers and snackbars, exposed via <code>SharedFlow</code>. Third, orchestration logic: calling use cases or interactors, handling their results, and transforming them into state. What it must NOT do is hold a reference to a View or a Context — unless it&#x27;s <code>AndroidViewModel</code> and absolutely needs Application context — and it should never reach directly into a database or make a network call itself. The reason it survives configuration changes is precisely because it has no reference to the Activity that gets destroyed and recreated.&quot;</p>
+<hr>
+<p><strong>What belongs in use case?</strong></p>
+<p>&quot;A use case — or interactor — encapsulates exactly one business operation: get a user profile, book an appointment. It calls one or more repositories, applies any business rules like validation or data mapping, combines data from multiple sources if needed, and returns a result. It&#x27;s a pure Kotlin class with zero Android dependencies, which makes it trivially unit-testable. The discipline to enforce is Single Responsibility: one use case per business action. If a class starts doing two distinct things, split it.&quot;</p>
+<hr>
+<p><strong>What belongs in repository?</strong></p>
+<p>&quot;The repository abstracts the data layer from the domain. It&#x27;s the place that decides where data comes from — local database, network, cache — and owns the caching and sync strategy. Critically, it exposes clean domain models, not raw DTOs or database entities. The domain layer has no idea whether data comes from Room, Retrofit, SharedPreferences, or a GraphQL endpoint — that&#x27;s all hidden behind the repository interface. The domain only calls those interfaces, and the concrete implementations are injected via DI, which is what makes it easy to substitute a fake repository in tests.&quot;</p>
+<hr>
+<p><strong>What is single source of truth?</strong></p>
+<p>&quot;Single source of truth means one authoritative owner for the canonical state of a piece of data. In Android, that&#x27;s typically either a Room database or a <code>StateFlow</code> in a ViewModel. The pattern for an offline-first app is: write network responses to the DB, and have the UI read exclusively from the DB. That prevents the inconsistency where your UI shows one thing from the in-memory cache and something different from a concurrent network call. In Compose, a single <code>uiState: StateFlow&lt;UiState&gt;</code> in the ViewModel is the SSOT for the entire screen — there&#x27;s no other place to look for what the screen should be showing.&quot;</p>
+<hr>
+<p><strong>What is UDF (Unidirectional Data Flow)?</strong></p>
+<p>&quot;UDF means state flows in one direction: down from the ViewModel to the UI, and events flow back up from the UI to the ViewModel. The UI never mutates state directly — it fires events, the ViewModel handles them and emits new state, and the UI renders whatever state it receives. Compose naturally enforces this pattern: composables receive state as parameters and call lambdas to signal user actions. The benefits are three-fold — state transitions are predictable, everything is easy to debug because all state changes go through one path, and it&#x27;s easy to test by simply asserting on the output state given a specific input event.&quot;</p>
+<hr>
+<p><strong>Why use dependency injection?</strong></p>
+<p>&quot;DI decouples class creation from class usage. The benefit is testability: instead of a class creating its own network client or database, you inject them from outside, so in tests you can inject a fake or a mock instead of the real thing. It also makes code reusable — you can swap implementations without touching the classes that use them — and explicit about dependencies, because everything a class needs is declared in its constructor. Without DI, every class that needs a database would new one up internally, making unit tests impossible without a real database. With Dagger, the framework builds and wires the entire object graph at compile time, which means missing bindings become compile errors rather than runtime crashes.&quot;</p>
+<hr>
+<p><strong>How would you modularize a large app?</strong></p>
+<p>&quot;I&#x27;d decompose by feature and by layer. The typical shape is: <code>:app</code> as the entry point, which depends on <code>:feature:X</code> modules for each distinct feature, which in turn depend on <code>:core:network</code>, <code>:core:database</code>, and <code>:core:ui</code> shared modules. Each feature module is an independent Android library. There are four main benefits: parallel compilation speeds up builds, <code>internal</code> visibility enforces API boundaries between modules, incremental compilation is faster because changes are isolated, and you get the option of on-demand delivery via Play Feature Delivery. The trade-offs are a more complex Gradle setup and the need to manage inter-module navigation — usually via a shared navigation graph or an interface-based approach. The rule to enforce strictly is no circular module dependencies.&quot;</p>
+<hr>
+<h3 id="view-rendering">View Rendering</h3>
+<hr>
+<p><strong>Explain measure/layout/draw.</strong></p>
+<p>&quot;Android renders views in three sequential passes, all on the main thread. First, measure: the parent passes <code>MeasureSpec</code> constraints to each child, the child calculates its desired size and reports it back via <code>setMeasuredDimension()</code>. Second, layout: <code>onLayout()</code> assigns the final <code>left</code>, <code>top</code>, <code>right</code>, and <code>bottom</code> coordinates for each child based on those measured sizes. Third, draw: each view renders itself onto a <code>Canvas</code> in <code>onDraw()</code>. The two ways to trigger these passes are <code>requestLayout()</code>, which restarts from the measure pass when a view&#x27;s size or position might change, and <code>invalidate()</code>, which skips straight to draw when only the visual appearance changes.&quot;</p>
+<hr>
+<p><strong>invalidate() vs requestLayout().</strong></p>
+<p>&quot;<code>invalidate()</code> marks a view as dirty and schedules a new draw pass — nothing more. Use it when only the visual appearance changes, like a color or text content, but the size and position stay the same. <code>requestLayout()</code> marks the view and its entire parent chain as needing a full measure plus layout plus draw pass. Use it when the view&#x27;s size or position might have changed. The mistake to avoid is calling <code>requestLayout()</code> when <code>invalidate()</code> would have been enough — you&#x27;re triggering an expensive re-measure and re-layout of the whole parent chain for no reason.&quot;</p>
+<hr>
+<p><strong>What is jank?</strong></p>
+<p>&quot;Jank is the visible stuttering you see when frames are dropped. Android targets 60 fps, which gives you a budget of 16 ms per frame. On 90 or 120 Hz displays the budget is even tighter. A frame is dropped whenever the main thread takes longer than that budget to complete its rendering work. The common causes are: expensive <code>onDraw()</code> implementations, deep or complex view hierarchies that take too long to measure and layout, any blocking operation on the main thread, and excessive allocations that trigger frequent GC pauses. I detect jank with Perfetto for a timeline view, Android Studio&#x27;s Frame Profiler, or <code>adb shell dumpsys gfxinfo</code> for a quick per-frame breakdown.&quot;</p>
+<hr>
+<p><strong>How to optimize RecyclerView?</strong></p>
+<p>&quot;There are a handful of changes that move the needle most. First, replace <code>notifyDataSetChanged()</code> with <code>DiffUtil</code> or <code>ListAdapter</code> — that gives you efficient, animated, diffed updates instead of rebinding everything. Second, always do a full bind in <code>onBindViewHolder</code> and never skip it. Third, call <code>setHasFixedSize(true)</code> when item count changes don&#x27;t affect the RecyclerView&#x27;s own dimensions — it skips an unnecessary parent remeasure. Fourth, share a <code>RecycledViewPool</code> across nested RecyclerViews that use the same view types to improve view reuse. Fifth, avoid nested weights and overly complex <code>ConstraintLayout</code> in list item layouts, because each item&#x27;s measure is expensive and it happens many times per scroll. Sixth, use Glide or Coil for async image loading — they handle downsampling, caching, and lifecycle binding. Finally, for nested RecyclerViews, set <code>setInitialPrefetchItemCount()</code> on the inner <code>LinearLayoutManager</code> so items are prefetched before they come on screen.&quot;</p>
+<hr>
+<p><strong>What triggers Compose recomposition?</strong></p>
+<p>&quot;Recomposition is triggered when the state that a composable reads changes. Compose&#x27;s snapshot system tracks exactly which <code>State&lt;T&gt;</code> objects are read during each composable&#x27;s execution. When a <code>State</code> is written, only the composables that read that specific state are scheduled for recomposition — not the whole tree. The important nuance is stability. For Compose to skip a composable when its parent recomposes, it needs to know that the composable&#x27;s inputs haven&#x27;t changed. That requires the parameter types to be stable — either primitives, <code>String</code>, classes annotated with <code>@Stable</code> or <code>@Immutable</code>, or types Compose can infer stability for. Unstable types always cause the composable to recompose when the parent does, regardless of whether the value actually changed. The practical fix is to use <code>derivedStateOf { }</code> for any computed state, and reach for <code>ImmutableList</code> for collections.&quot;</p>
+<hr>
+<p><strong>remember vs rememberSaveable.</strong></p>
+<p>&quot;<code>remember</code> stores a value in the composition, so it survives recompositions, but it is lost when the Activity is recreated — for example on a configuration change like rotation. <code>rememberSaveable</code> goes one step further: it persists the value through configuration changes using the <code>SavedStateRegistry</code>, which is the Compose equivalent of <code>onSaveInstanceState</code>. My decision rule is: use <code>remember</code> for purely transient UI state that doesn&#x27;t matter after a rotation, like an in-progress animation state. Use <code>rememberSaveable</code> for state the user would expect to still be there after rotating the device, like a text field they were typing in or the selected tab index.&quot;</p>
+<hr>
+<p><strong>State hoisting.</strong></p>
+<p>&quot;State hoisting is the pattern of moving state ownership up the composable hierarchy. Instead of a composable managing its own state internally with <code>remember</code>, it receives the current value as a parameter and emits changes via a lambda. The signature looks like <code>value: T, onValueChange: (T) -&gt; Unit</code>. The parent — or ultimately the ViewModel — holds the state; the child just renders what it&#x27;s given and fires events when the user interacts. This makes composables stateless, which makes them reusable in different contexts and easy to test. The Compose guideline is to hoist state to the lowest common ancestor of all composables that either read or write it.&quot;</p>
+<hr>
+<p><strong>Compose side effects.</strong></p>
+<p>&quot;Side effects are operations that escape the composition — starting a coroutine, registering a listener, firing an analytics event. Compose provides specific APIs for each pattern. <code>LaunchedEffect(key)</code> starts a coroutine scoped to the composition, re-launches it when the key changes, and cancels it when the composable leaves the composition — use it for one-shot effects like triggering navigation or playing an animation. <code>DisposableEffect(key)</code> handles non-coroutine side effects that need cleanup — you register something and return an <code>onDispose { }</code> block to unregister it. <code>SideEffect</code> runs on every successful recomposition with no key — it&#x27;s for pushing Compose state out to non-Compose code. And <code>rememberCoroutineScope()</code> gives you a coroutine scope tied to the composable&#x27;s lifetime for user-triggered effects like button clicks, where you need to launch a coroutine from a non-suspending lambda.&quot;</p>
+<hr>
+<p><strong>How to debug slow rendering.</strong></p>
+<p>&quot;My approach has several layers. First, Perfetto or systrace for a full frame timeline — it shows main thread work, RenderThread, and GPU work per frame so you can see exactly where the budget is being spent. Second, Android Studio&#x27;s Layout Inspector with recomposition highlights, which shows which composables are recomposing and how often — that surfaces excessive recompositions immediately. Third, <code>adb shell dumpsys gfxinfo &lt;package&gt;</code> for a quick command-line view of janky frame counts and frame time percentiles at the 50th, 90th, 95th, and 99th percentiles. Fourth, StrictMode in debug builds to catch disk or network access on the main thread. Fifth, I look for Baseline Profiles to reduce JIT overhead on startup and critical paths. The patterns I search for specifically are: excessive recompositions from unstable types, deep view hierarchies, <code>invalidate()</code> storms, image loading on the main thread, and any blocking call inside <code>onDraw()</code>.&quot;</p>
+<hr>
+<h2 id="section-17--must-revise-checklist">Section 17 — Must-Revise Checklist</h2>
+<blockquote>Prioritized for time-limited review. Each item has a one-line key insight.</blockquote>
+<table border="1" cellpadding="6" cellspacing="0">
+<thead><tr>
+<th>#</th>
+<th>Topic</th>
+<th>Key Insight</th>
+</tr></thead><tbody>
+<tr><td>1</td><td><strong>HashMap internals, ArrayList internals, Big O basics</strong></td><td>HashMap uses hash-bucketed arrays with tree fallback at 8+ collisions; ArrayList is O(1) random access; always name best/average/worst complexity.</td></tr>
+<tr><td>2</td><td><strong>Thread safety, synchronized, volatile, race conditions, deadlocks</strong></td><td><code>volatile</code> = visibility only; <code>synchronized</code> = visibility + atomicity; deadlock = circular lock acquisition; always acquire locks in consistent order.</td></tr>
+<tr><td>3</td><td><strong>Android main thread, ANR, Handler, Looper, MessageQueue</strong></td><td>Main thread is a Looper loop; blocking it &gt;5 s = ANR; push all I/O and computation off main thread.</td></tr>
+<tr><td>4</td><td><strong>Coroutines: structured concurrency, dispatchers, cancellation, Flow, StateFlow</strong></td><td>Cancellation is cooperative at suspension points; <code>viewModelScope</code>/<code>lifecycleScope</code> &gt; <code>GlobalScope</code>; <code>StateFlow</code> for UI state, <code>SharedFlow</code> for events.</td></tr>
+<tr><td>5</td><td><strong>WorkManager vs service vs coroutine</strong></td><td>WorkManager = durable/guaranteed across reboots; coroutine = lifecycle-scoped; foreground service = long-running user-visible with notification.</td></tr>
+<tr><td>6</td><td><strong>Binder / AIDL basics</strong></td><td>Binder = single-copy kernel IPC; AIDL generates typed stubs; never call Binder synchronously on main thread; limit transaction size to &lt;1 MB.</td></tr>
+<tr><td>7</td><td><strong>Android memory leaks: Context, Handler, Fragment binding, coroutine leaks</strong></td><td>Root cause is always a long-lived object holding a short-lived one; LeakCanary + Memory Profiler are the go-to tools.</td></tr>
+<tr><td>8</td><td><strong>MVP vs MVVM vs MVI</strong></td><td>MVVM = ViewModel + observable state, no direct View ref, survives config changes; MVI = single immutable state + UDF strictly enforced; MVP = Presenter holds View ref directly.</td></tr>
+<tr><td>9</td><td><strong>Clean architecture: UI / domain / data, repository, use case</strong></td><td>Domain layer is pure Kotlin with no Android dependencies; dependencies point inward only; repository abstracts data sources from the domain.</td></tr>
+<tr><td>10</td><td><strong>View rendering: measure/layout/draw, jank, RecyclerView, Compose recomposition</strong></td><td><code>invalidate()</code> = redraw only; <code>requestLayout()</code> = full remeasure; jank = frame &gt;16 ms; minimize recomposition scope with stable types and <code>derivedStateOf</code>.</td></tr>
+<tr><td>11</td><td><strong>Testing: unit tests, ViewModel tests, repository tests, UI tests</strong></td><td>Unit test ViewModel with fake repositories and <code>TestCoroutineDispatcher</code>; UI test with Espresso or Compose testing APIs; never use real network/DB in unit tests.</td></tr>
+<tr><td>12</td><td><strong>System design: offline-first app, modular architecture, performance debugging</strong></td><td>Offline-first = write to DB first, sync in background; SSOT = DB; modularize by feature + layer; profile with Perfetto for rendering, Memory Profiler for leaks.</td></tr>
+</tbody></table>
+<hr>
+<h2 id="section-18--senior-answer-framework-with-worked-examples">Section 18 — Senior Answer Framework with Worked Examples</h2>
+<hr>
+<h3 id="the-framework">The Framework</h3>
+<p>For every interview question, structure your answer with six beats:</p>
+<table border="1" cellpadding="6" cellspacing="0">
+<thead><tr>
+<th>Beat</th>
+<th>What to cover</th>
+</tr></thead><tbody>
+<tr><td><strong>1. Define</strong></td><td>State the concept simply in one or two sentences. No jargon overload.</td></tr>
+<tr><td><strong>2. Internals</strong></td><td>Explain how it works under the hood — data structures, kernel mechanisms, runtime behavior.</td></tr>
+<tr><td><strong>3. Android implications</strong></td><td>What does this mean specifically in the Android/Kotlin context? What API is involved?</td></tr>
+<tr><td><strong>4. Trade-offs</strong></td><td>What does it cost? What is it better or worse than? When would you NOT use it?</td></tr>
+<tr><td><strong>5. Failure cases</strong></td><td>What can go wrong? What are the bugs, leaks, or crashes that arise from misuse?</td></tr>
+<tr><td><strong>6. Debug / test</strong></td><td>How would you detect, reproduce, or prevent the failure? What tools do you use?</td></tr>
+</tbody></table>
+<p>This pattern signals seniority because a single answer covers what the thing is, how it works, why it matters on Android, what it costs, what can go wrong, and how to fix it — not just a textbook definition.</p>
+<hr>
+<h3 id="worked-example-1--handler-memory-leak-from-the-source-doc">Worked Example 1 — Handler Memory Leak (from the source doc)</h3>
+<p><strong>Question:</strong> How can a Handler cause a memory leak?</p>
+<p><strong>1. Define:</strong> &quot;A <code>Handler</code> lets you post <code>Message</code>s and <code>Runnable</code>s to a thread&#x27;s <code>MessageQueue</code> for deferred or repeated execution.&quot;</p>
+<p><strong>2. Internals:</strong> &quot;When you call <code>handler.postDelayed(runnable, 30_000)</code>, the system creates a <code>Message</code> object that holds a reference to the <code>Runnable</code>. That <code>Message</code> also holds a reference to the <code>Handler</code>. If the <code>Handler</code> is a non-static inner class of the <code>Activity</code>, it holds an implicit reference back to the <code>Activity</code> instance — that&#x27;s just how non-static inner classes work in Java and Kotlin.&quot;</p>
+<p><strong>3. Android implications:</strong> &quot;If the Activity is destroyed — the user pressed back, or there was a configuration change — while that delayed message is still sitting in the queue, the GC cannot collect the Activity. The chain is still live: <code>MessageQueue → Message → Handler → Activity</code>. Nothing in that chain can be collected until the message drains.&quot;</p>
+<p><strong>4. Trade-offs:</strong> &quot;Non-static inner Handlers are convenient to write, but they&#x27;re dangerous for any delay longer than a few milliseconds. The safer pattern is a static inner class with a <code>WeakReference&lt;Activity&gt;</code>, which is verbose but doesn&#x27;t prevent GC.&quot;</p>
+<p><strong>5. Failure cases:</strong></p>
+<ul>
+<li>A leaked Activity retains its entire view hierarchy and all attached bitmaps in memory.</li>
+<li>If the Runnable accesses destroyed views, it may throw <code>NullPointerException</code> or silently no-op.</li>
+<li>Multiple leaks accumulate across rotations, inflating heap over time.</li>
+</ul>
+<p><strong>6. Debug / test:</strong></p>
+<ul>
+<li>LeakCanary will surface this immediately with the full reference chain.</li>
+<li>Memory Profiler: take a heap dump after rotating; filter for your Activity class — multiple instances means a leak.</li>
+<li>Fix: call <code>handler.removeCallbacksAndMessages(null)</code> in <code>onDestroy()</code>, or replace with <code>lifecycleScope.launch { delay(30_000); updateUI() }</code> which is cancelled automatically when the Activity is destroyed.</li>
+</ul>
+<hr>
+<h3 id="worked-example-2--coroutine-structured-concurrency--cancellation">Worked Example 2 — Coroutine Structured Concurrency &amp; Cancellation</h3>
+<p><strong>Question:</strong> How does coroutine cancellation work, and what can go wrong?</p>
+<p><strong>1. Define:</strong> &quot;Structured concurrency means every coroutine belongs to a parent scope, and cancelling the parent automatically cancels all children. The important detail is that cancellation is cooperative — a coroutine has to check for it; it doesn&#x27;t get interrupted like a thread.&quot;</p>
+<p><strong>2. Internals:</strong> &quot;When you call <code>Job.cancel()</code>, the Job transitions to a Cancelling state and a <code>CancellationException</code> is scheduled to be thrown at the next suspension point. All child coroutines receive the same signal and go through the same process. <code>finally</code> blocks run normally, which is how you do cleanup. The subtle bug to watch for is catching <code>Exception</code> broadly and not rethrowing the <code>CancellationException</code> — the coroutine then swallows the cancellation and keeps running.&quot;</p>
+<p><strong>3. Android implications:</strong> &quot;<code>viewModelScope</code> is cancelled when <code>ViewModel.onCleared()</code> is called — which happens when the Activity or Fragment finishes. <code>lifecycleScope</code> is cancelled on <code>Lifecycle.Event.ON_DESTROY</code>. Both give you automatic cleanup without any manual <code>Job.cancel()</code> calls. Any coroutine launched with <code>GlobalScope</code> is completely outside this hierarchy and ignores both.&quot;</p>
+<p><strong>4. Trade-offs:</strong> &quot;The cooperative model is lightweight — there&#x27;s no thread interruption signal to send. The cost is that you have to ensure cancellation can actually be observed. Long CPU loops with no suspension points need periodic calls to <code>ensureActive()</code> or <code>yield()</code>. Libraries that use <code>BlockingQueue.take()</code> or other OS-level blocking primitives are not cancellation-aware without wrapping them carefully in <code>withContext</code> plus thread interruption.&quot;</p>
+<p><strong>5. Failure cases:</strong></p>
+<ul>
+<li>Catching <code>Exception</code> without rethrowing <code>CancellationException</code> makes the coroutine non-cancellable.</li>
+<li><code>runBlocking</code> on the main thread blocks cancellation and can cause ANR.</li>
+<li>Using <code>GlobalScope</code> means the coroutine outlives the ViewModel and may crash accessing destroyed state.</li>
+<li>Not cleaning up a <code>CoroutineScope</code> owned by a non-lifecycle object (a custom class) causes coroutine leaks.</li>
+</ul>
+<p><strong>6. Debug / test:</strong></p>
+<ul>
+<li>Use <code>TestCoroutineDispatcher</code> / <code>runTest</code> in tests to control coroutine execution deterministically.</li>
+<li>In production, monitor for jobs that never complete by logging in <code>invokeOnCompletion</code>.</li>
+<li>LeakCanary can surface ViewModel leaks caused by <code>GlobalScope</code> coroutines keeping the ViewModel alive.</li>
+</ul>
+<hr>
+<h3 id="worked-example-3--compose-recomposition--stability">Worked Example 3 — Compose Recomposition &amp; Stability</h3>
+<p><strong>Question:</strong> What triggers Compose recomposition, and how do you prevent excessive recompositions?</p>
+<p><strong>1. Define:</strong> &quot;Recomposition is Compose re-executing a composable function when the state it reads has changed. It&#x27;s the mechanism by which the UI stays in sync with state.&quot;</p>
+<p><strong>2. Internals:</strong> &quot;Compose&#x27;s snapshot system tracks exactly which <code>State&lt;T&gt;</code> objects are read during each composable&#x27;s execution. When a <code>State</code> is written, Compose schedules recomposition only for the composables that read that specific state — not the whole tree. For this optimisation to work, Compose has to be able to skip a composable when its inputs haven&#x27;t changed. That requires all the parameters to be stable — either primitives, <code>String</code>, classes annotated with <code>@Stable</code> or <code>@Immutable</code>, or types whose stability Compose can infer from their definition.&quot;</p>
+<p><strong>3. Android implications:</strong> &quot;A data class from a repository that has a plain <code>List&lt;T&gt;</code> property is treated as unstable by Compose because Compose can&#x27;t prove the list won&#x27;t mutate. That means its parent composable will always recompose when the parent recomposes, regardless of whether the data actually changed. The fix is to use <code>kotlinx.collections.immutable.ImmutableList</code> or to annotate the data class with <code>@Immutable</code>.&quot;</p>
+<p><strong>4. Trade-offs:</strong> &quot;<code>@Immutable</code> is a promise — you&#x27;re telling the compiler the class truly never changes after creation, and you have to keep that promise. <code>@Stable</code> is a looser contract for classes that change only in ways Compose can observe. Using <code>derivedStateOf { }</code> is the right tool for computed values that depend on state — it means the composable only recomposes when the derived value actually changes, not every time the upstream state changes.&quot;</p>
+<p><strong>5. Failure cases:</strong></p>
+<ul>
+<li>Lambda captures in composables can inadvertently capture unstable objects, breaking skippability.</li>
+<li>Reading a <code>StateFlow</code> value directly rather than via <code>collectAsState()</code> bypasses the snapshot system entirely.</li>
+<li>Excessive recompositions from unstable types cause jank on complex screens — the Layout Inspector&#x27;s recompose counts will show hot composables recomposing on every keystroke.</li>
+</ul>
+<p><strong>6. Debug / test:</strong></p>
+<ul>
+<li>Android Studio Layout Inspector → Recomposition Counts tab: shows which composables recompose and how often.</li>
+<li><code>@Stable</code> / <code>@Immutable</code> plus <code>ImmutableList</code> as the first remediation step.</li>
+<li>Compose compiler metrics (<code>-P plugin:androidx.compose.compiler.plugins.kotlin:reportsDestination=...</code>) report per-composable stability and skippability.</li>
+<li>In tests, use <code>composeTestRule.mainClock.autoAdvance</code> and verify UI state without flakiness from recompositions.</li>
+</ul>
+<hr>
+<h3 id="worked-example-4--binder-transaction-limits--ipc-design">Worked Example 4 — Binder Transaction Limits / IPC Design</h3>
+<p><strong>Question:</strong> What are the limits and failure modes of Android IPC via Binder?</p>
+<p><strong>1. Define:</strong> &quot;Binder is Android&#x27;s kernel-backed IPC. It lets a process call methods on objects in another process, and it does the data transfer with a single copy through the kernel. Every cross-process call is a Binder transaction.&quot;</p>
+<p><strong>2. Internals:</strong> &quot;Each process has a shared Binder transaction buffer of roughly 1 MB. The kernel copies data from the caller&#x27;s address space into that buffer, and the callee reads from it. By default, Binder calls are synchronous — the calling thread blocks until the remote method returns. Each process gets up to 16 Binder threads: 15 available for incoming calls and 1 spawning thread.&quot;</p>
+<p><strong>3. Android implications:</strong> &quot;Every call to a system service — <code>ActivityManager</code>, <code>PackageManager</code>, <code>WindowManager</code> — goes over Binder. Calling those on the main thread, or passing large objects like bitmaps or big lists, will cause slow or failed IPC. <code>TransactionTooLargeException</code> is thrown when you exceed the ~1 MB buffer limit. One particularly confusing manifestation of this is in <code>onSaveInstanceState</code>, where a large saved-state bundle silently crosses the limit and causes a crash that looks unrelated to IPC.&quot;</p>
+<p><strong>4. Trade-offs:</strong> &quot;Binder&#x27;s single-copy design makes it faster than socket-based IPC, but it still has overhead. For large payloads like video frames or audio buffers, the right approach is to use <code>SharedMemory</code> or <code>MemoryFile</code> and pass only the file descriptor over Binder. <code>oneway</code> AIDL declarations avoid the blocking call, but you give up return values and error propagation.&quot;</p>
+<p><strong>5. Failure cases:</strong></p>
+<ul>
+<li>Calling synchronous Binder methods on the main thread causes ANR.</li>
+<li>Sending large Parcelables causes <code>TransactionTooLargeException</code>, which is often hard to debug because the stack trace points to the OS rather than your code.</li>
+<li>Not registering a <code>DeathRecipient</code> means your app silently loses its remote service handle and all subsequent calls throw <code>DeadObjectException</code>.</li>
+<li>Binder thread pool exhaustion — if the remote service is slow and all 16 threads are occupied — causes the calling thread to block indefinitely.</li>
+</ul>
+<p><strong>6. Debug / test:</strong></p>
+<ul>
+<li><code>adb shell dumpsys binder_calls_stats</code> shows per-process IPC call frequency and latency.</li>
+<li>StrictMode <code>detectCustomSlowCalls()</code> plus a thread policy can flag Binder calls on the main thread in debug builds.</li>
+<li>For <code>TransactionTooLargeException</code>: log bundle sizes before <code>putExtra</code>, consider splitting large payloads, or switch to a content provider or file-based approach.</li>
+<li>Unit test AIDL implementations by calling the <code>Stub</code> directly in-process — no real Binder needed. Integration test with an instrumented test that binds to a real service running in a separate process.</li>
+</ul>
+<div class="pager">
+<a class="prev" href="senior-staff-system-design.html"><span class="lbl">‹ Previous</span>15. Senior/Staff System Design</a>
+<a class="next" href="references.html"><span class="lbl">Next ›</span>References</a>
+</div>
+</div></div>
+<script src="../site.js"></script>
+</body></html>

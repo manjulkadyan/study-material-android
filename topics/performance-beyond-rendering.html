@@ -1,0 +1,1082 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>14. Performance Beyond Rendering</title>
+<link rel="stylesheet" href="../style.css"></head>
+<body class="has-toc" data-prev="security-privacy.html" data-next="senior-staff-system-design.html">
+<nav class="sidebar"><a class="brand" href="../index.html">📱 Android Study Guide — Home</a><details class="topic"><summary><span class="caret">▶</span><a href="data-structures-big-o.html">1. Data Structures &amp; Big O</a></summary><ul class="subtopics"><li><a class="" href="data-structures-big-o.html#11-data-structures--collections--12-big-o-notation">1.1 Data Structures &amp; Collections · 1.2 Big O Notation</a></li><li><a class="" href="data-structures-big-o.html#table-of-contents">Table of Contents</a></li><li><a class="" href="data-structures-big-o.html#1-arrays">1. Arrays</a></li><li><a class="" href="data-structures-big-o.html#2-arraylist--mutablelist">2. ArrayList / MutableList</a></li><li><a class="" href="data-structures-big-o.html#3-linkedlist">3. LinkedList</a></li><li><a class="" href="data-structures-big-o.html#4-stack">4. Stack</a></li><li><a class="" href="data-structures-big-o.html#5-queue">5. Queue</a></li><li><a class="" href="data-structures-big-o.html#6-deque">6. Deque</a></li><li><a class="" href="data-structures-big-o.html#7-hashmap--mutablemap">7. HashMap / MutableMap</a></li><li><a class="" href="data-structures-big-o.html#8-hashset--mutableset">8. HashSet / MutableSet</a></li><li><a class="" href="data-structures-big-o.html#9-linkedhashmap">9. LinkedHashMap</a></li><li><a class="" href="data-structures-big-o.html#10-treemap--sortedmap">10. TreeMap / SortedMap</a></li><li><a class="" href="data-structures-big-o.html#11-priorityqueue--heap">11. PriorityQueue / Heap</a></li><li><a class="" href="data-structures-big-o.html#12-trie">12. Trie</a></li><li><a class="" href="data-structures-big-o.html#13-graphs">13. Graphs</a></li><li><a class="" href="data-structures-big-o.html#14-android-specific-collections">14. Android-Specific Collections</a></li><li><a class="" href="data-structures-big-o.html#15-big-o-notation">15. Big O Notation</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="kotlin-java-fundamentals.html">2. Kotlin &amp; Java Fundamentals</a></summary><ul class="subtopics"><li><a class="" href="kotlin-java-fundamentals.html#table-of-contents">Table of Contents</a></li><li><a class="" href="kotlin-java-fundamentals.html#21-kotlin-fundamentals">2.1 Kotlin Fundamentals</a></li><li><a class="" href="kotlin-java-fundamentals.html#22-kotlin-generics">2.2 Kotlin Generics</a></li><li><a class="" href="kotlin-java-fundamentals.html#23-java-fundamentals">2.3 Java Fundamentals</a></li><li><a class="" href="kotlin-java-fundamentals.html#24-kotlin-java-interop">2.4 Kotlin-Java Interop</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="concurrency-android-threading.html">3. Concurrency &amp; Android Threading</a></summary><ul class="subtopics"><li><a class="" href="concurrency-android-threading.html#table-of-contents">Table of Contents</a></li><li><a class="" href="concurrency-android-threading.html#31-java-thread-basics">3.1 Java Thread Basics</a></li><li><a class="" href="concurrency-android-threading.html#32-locks-and-synchronization">3.2 Locks and Synchronization</a></li><li><a class="" href="concurrency-android-threading.html#33-volatile-and-atomic-classes">3.3 Volatile and Atomic Classes</a></li><li><a class="" href="concurrency-android-threading.html#34-waitnotify-and-producer-consumer">3.4 Wait/Notify and Producer-Consumer</a></li><li><a class="" href="concurrency-android-threading.html#35-executors-and-task-execution">3.5 Executors and Task Execution</a></li><li><a class="" href="concurrency-android-threading.html#36-android-application-threads">3.6 Android Application Threads</a></li><li><a class="" href="concurrency-android-threading.html#37-handler--looper--messagequeue">3.7 Handler / Looper / MessageQueue</a></li><li><a class="" href="concurrency-android-threading.html#38-kotlin-coroutines-on-android">3.8 Kotlin Coroutines on Android</a></li><li><a class="" href="concurrency-android-threading.html#39-flow-stateflow-sharedflow-channel">3.9 Flow, StateFlow, SharedFlow, Channel</a></li><li><a class="" href="concurrency-android-threading.html#310-background-work">3.10 Background Work</a></li><li><a class="" href="concurrency-android-threading.html#quick-reference-interview-cheat-sheet">Quick-Reference: Interview Cheat Sheet</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="thread-communication.html">4. Thread Communication</a></summary><ul class="subtopics"><li><a class="" href="thread-communication.html#table-of-contents">Table of Contents</a></li><li><a class="" href="thread-communication.html#41-pipes">4.1 Pipes</a></li><li><a class="" href="thread-communication.html#42-shared-memory">4.2 Shared Memory</a></li><li><a class="" href="thread-communication.html#43-signaling">4.3 Signaling</a></li><li><a class="" href="thread-communication.html#44-blockingqueue">4.4 BlockingQueue</a></li><li><a class="" href="thread-communication.html#45-message-passing--android-handlerloopermessagequeue">4.5 Message Passing — Android Handler/Looper/MessageQueue</a></li><li><a class="" href="thread-communication.html#cross-cutting-shared-memory-vs-message-passing">Cross-cutting: Shared Memory vs Message Passing</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="ipc-binder-aidl-messenger.html">5. IPC: Binder, AIDL, Messenger</a></summary><ul class="subtopics"><li><a class="" href="ipc-binder-aidl-messenger.html#table-of-contents">Table of Contents</a></li><li><a class="" href="ipc-binder-aidl-messenger.html#51-android-process-model">5.1 Android Process Model</a></li><li><a class="" href="ipc-binder-aidl-messenger.html#52-binder">5.2 Binder</a></li><li><a class="" href="ipc-binder-aidl-messenger.html#53-aidl">5.3 AIDL</a></li><li><a class="" href="ipc-binder-aidl-messenger.html#54-messenger">5.4 Messenger</a></li><li><a class="" href="ipc-binder-aidl-messenger.html#parcelable-vs-serializable">Parcelable vs Serializable</a></li><li><a class="" href="ipc-binder-aidl-messenger.html#aidl-vs-messenger-decision-guide">AIDL vs Messenger Decision Guide</a></li><li><a class="" href="ipc-binder-aidl-messenger.html#interview-quick-reference">Interview Quick-Reference</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="android-memory-management.html">6. Android Memory Management</a></summary><ul class="subtopics"><li><a class="" href="android-memory-management.html#table-of-contents">Table of Contents</a></li><li><a class="" href="android-memory-management.html#61-jvmart-memory-basics">6.1 JVM/ART Memory Basics</a></li><li><a class="" href="android-memory-management.html#62-android-memory-leaks">6.2 Android Memory Leaks</a></li><li><a class="" href="android-memory-management.html#63-context-leaks">6.3 Context Leaks</a></li><li><a class="" href="android-memory-management.html#64-bitmap-and-image-memory">6.4 Bitmap and Image Memory</a></li><li><a class="" href="android-memory-management.html#65-leak-detection-and-profiling">6.5 Leak Detection and Profiling</a></li><li><a class="" href="android-memory-management.html#interview-quick-reference">Interview Quick-Reference</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="architecture-patterns.html">7. Architecture Patterns</a></summary><ul class="subtopics"><li><a class="" href="architecture-patterns.html#table-of-contents">Table of Contents</a></li><li><a class="" href="architecture-patterns.html#71-mvc-mvp-mvvm-mvi">7.1 MVC, MVP, MVVM, MVI</a></li><li><a class="" href="architecture-patterns.html#72-clean-architecture">7.2 Clean Architecture</a></li><li><a class="" href="architecture-patterns.html#73-repository-pattern">7.3 Repository Pattern</a></li><li><a class="" href="architecture-patterns.html#74-dependency-injection">7.4 Dependency Injection</a></li><li><a class="" href="architecture-patterns.html#75-modularization">7.5 Modularization</a></li><li><a class="" href="architecture-patterns.html#quick-reference-cheat-sheet">Quick-Reference Cheat Sheet</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="view-rendering.html">8. View Rendering</a></summary><ul class="subtopics"><li><a class="" href="view-rendering.html#table-of-contents">Table of Contents</a></li><li><a class="" href="view-rendering.html#81-traditional-view-system-rendering">8.1 Traditional View System Rendering</a></li><li><a class="" href="view-rendering.html#82-choreographer-vsync-and-frame-rendering">8.2 Choreographer, VSync, and Frame Rendering</a></li><li><a class="" href="view-rendering.html#83-recyclerview-performance">8.3 RecyclerView Performance</a></li><li><a class="" href="view-rendering.html#84-jetpack-compose-rendering">8.4 Jetpack Compose Rendering</a></li><li><a class="" href="view-rendering.html#85-performance-tools">8.5 Performance Tools</a></li><li><a class="" href="view-rendering.html#interview-cheat-sheet">Interview Cheat Sheet</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="lifecycle-platform-components.html">9. Lifecycle &amp; Platform Components</a></summary><ul class="subtopics"><li><a class="" href="lifecycle-platform-components.html#table-of-contents">Table of Contents</a></li><li><a class="" href="lifecycle-platform-components.html#91-activity">9.1 Activity</a></li><li><a class="" href="lifecycle-platform-components.html#92-fragment">9.2 Fragment</a></li><li><a class="" href="lifecycle-platform-components.html#93-services">9.3 Services</a></li><li><a class="" href="lifecycle-platform-components.html#94-broadcastreceiver">9.4 BroadcastReceiver</a></li><li><a class="" href="lifecycle-platform-components.html#95-contentprovider">9.5 ContentProvider</a></li><li><a class="" href="lifecycle-platform-components.html#96-intents-and-pendingintents">9.6 Intents and PendingIntents</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="android-data-layer.html">10. Android Data Layer</a></summary><ul class="subtopics"><li><a class="" href="android-data-layer.html#table-of-contents">Table of Contents</a></li><li><a class="" href="android-data-layer.html#101-networking">10.1 Networking</a></li><li><a class="" href="android-data-layer.html#102-persistence">10.2 Persistence</a></li><li><a class="" href="android-data-layer.html#103-offline-first-design">10.3 Offline-First Design</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="testing.html">11. Testing</a></summary><ul class="subtopics"><li><a class="" href="testing.html#table-of-contents">Table of Contents</a></li><li><a class="" href="testing.html#111-unit-testing">11.1 Unit Testing</a></li><li><a class="" href="testing.html#112-ui-testing">11.2 UI Testing</a></li><li><a class="" href="testing.html#113-integration-and-end-to-end-testing">11.3 Integration and End-to-End Testing</a></li><li><a class="" href="testing.html#quick-reference-interview-cheat-sheet">Quick-Reference Interview Cheat Sheet</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="build-gradle-release.html">12. Build, Gradle &amp; Release</a></summary><ul class="subtopics"><li><a class="" href="build-gradle-release.html#table-of-contents">Table of Contents</a></li><li><a class="" href="build-gradle-release.html#121-gradle-basics">12.1 Gradle Basics</a></li><li><a class="" href="build-gradle-release.html#122-build-performance">12.2 Build Performance</a></li><li><a class="" href="build-gradle-release.html#123-release">12.3 Release</a></li><li><a class="" href="build-gradle-release.html#summary-table-quick-reference">Summary Table: Quick Reference</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="security-privacy.html">13. Security &amp; Privacy</a></summary><ul class="subtopics"><li><a class="" href="security-privacy.html#table-of-contents">Table of Contents</a></li><li><a class="" href="security-privacy.html#131-android-security-basics">13.1 Android Security Basics</a></li><li><a class="" href="security-privacy.html#132-data-security">13.2 Data Security</a></li><li><a class="" href="security-privacy.html#interview-qa-master-list">Interview Q&amp;A Master List</a></li></ul></details><details class="topic active" open><summary><span class="caret">▶</span><a href="performance-beyond-rendering.html">14. Performance Beyond Rendering</a></summary><ul class="subtopics"><li><a class="spy" href="#table-of-contents">Table of Contents</a></li><li><a class="spy" href="#141-startup-performance">14.1 Startup Performance</a></li><li><a class="spy" href="#142-battery-and-resource-usage">14.2 Battery and Resource Usage</a></li><li><a class="spy" href="#143-anr-and-crash-debugging">14.3 ANR and Crash Debugging</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="senior-staff-system-design.html">15. Senior/Staff System Design</a></summary><ul class="subtopics"><li><a class="" href="senior-staff-system-design.html#table-of-contents">Table of Contents</a></li><li><a class="" href="senior-staff-system-design.html#151-android-app-architecture-design">15.1 Android App Architecture Design</a></li><li><a class="" href="senior-staff-system-design.html#152-trade-off-thinking">15.2 Trade-Off Thinking</a></li><li><a class="" href="senior-staff-system-design.html#153-legacy-code-and-migration">15.3 Legacy Code and Migration</a></li><li><a class="" href="senior-staff-system-design.html#154-engineering-leadership">15.4 Engineering Leadership</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="interview-q-a-cheatsheet.html">16. Interview Q&amp;A &amp; Cheatsheet</a></summary><ul class="subtopics"><li><a class="" href="interview-q-a-cheatsheet.html#table-of-contents">Table of Contents</a></li><li><a class="" href="interview-q-a-cheatsheet.html#section-16--model-answers-by-category">Section 16 — Model Answers by Category</a></li><li><a class="" href="interview-q-a-cheatsheet.html#section-17--must-revise-checklist">Section 17 — Must-Revise Checklist</a></li><li><a class="" href="interview-q-a-cheatsheet.html#section-18--senior-answer-framework-with-worked-examples">Section 18 — Senior Answer Framework with Worked Examples</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="references.html">References</a></summary><ul class="subtopics"><li><a class="" href="references.html#table-of-contents">Table of Contents</a></li><li><a class="" href="references.html#section-1--data-structures--big-o">Section 1 — Data Structures &amp; Big O</a></li><li><a class="" href="references.html#section-2--kotlin--java-fundamentals">Section 2 — Kotlin &amp; Java Fundamentals</a></li><li><a class="" href="references.html#section-3--concurrency--threading">Section 3 — Concurrency &amp; Threading</a></li><li><a class="" href="references.html#section-4--thread-communication">Section 4 — Thread Communication</a></li><li><a class="" href="references.html#section-5--ipc-binder-aidl-messenger">Section 5 — IPC: Binder, AIDL, Messenger</a></li><li><a class="" href="references.html#section-6--memory-management">Section 6 — Memory Management</a></li><li><a class="" href="references.html#section-7--architecture-patterns">Section 7 — Architecture Patterns</a></li><li><a class="" href="references.html#section-8--view-rendering">Section 8 — View Rendering</a></li><li><a class="" href="references.html#section-9--lifecycle--platform-components">Section 9 — Lifecycle &amp; Platform Components</a></li><li><a class="" href="references.html#section-10--data-layer">Section 10 — Data Layer</a></li><li><a class="" href="references.html#section-11--testing">Section 11 — Testing</a></li><li><a class="" href="references.html#section-12--build-gradle--release">Section 12 — Build, Gradle &amp; Release</a></li><li><a class="" href="references.html#section-13--security--privacy">Section 13 — Security &amp; Privacy</a></li><li><a class="" href="references.html#section-14--performance-beyond-rendering">Section 14 — Performance (Beyond Rendering)</a></li><li><a class="" href="references.html#section-15--system-design">Section 15 — System Design</a></li><li><a class="" href="references.html#section-16--interview-qa-cheatsheet">Section 16 — Interview Q&amp;A Cheatsheet</a></li><li><a class="" href="references.html#section-17--must-revise-checklist">Section 17 — Must-Revise Checklist</a></li><li><a class="" href="references.html#section-18--seniorstaff-answer-framework">Section 18 — Senior/Staff Answer Framework</a></li><li><a class="" href="references.html#books">Books</a></li></ul></details></nav>
+<aside class="toc-right"><div class="toc-h">On this page</div><ul class="toc-tree"><li class="toc-grp"><a class="toc-2" href="#table-of-contents"><span class="tcaret tcaret-none"></span>Table of Contents</a></li><li class="toc-grp"><a class="toc-2" href="#141-startup-performance"><span class="tcaret">▶</span>14.1 Startup Performance</a><ul class="toc-subs"><li><a class="toc-3" href="#cold-start">Cold Start</a></li><li><a class="toc-3" href="#warm-start">Warm Start</a></li><li><a class="toc-3" href="#hot-start">Hot Start</a></li><li><a class="toc-3" href="#applicationoncreate">Application.onCreate()</a></li><li><a class="toc-3" href="#lazy-initialization">Lazy Initialization</a></li><li><a class="toc-3" href="#app-startup-library">App Startup Library</a></li><li><a class="toc-3" href="#baseline-profiles">Baseline Profiles</a></li><li><a class="toc-3" href="#splash-screen">Splash Screen</a></li><li><a class="toc-3" href="#dependency-graph-initialization">Dependency Graph Initialization</a></li><li><a class="toc-3" href="#avoiding-main-thread-io">Avoiding Main-Thread I/O</a></li><li><a class="toc-3" href="#interview-angles-startup">Interview Angles: Startup</a></li></ul></li><li class="toc-grp"><a class="toc-2" href="#142-battery-and-resource-usage"><span class="tcaret">▶</span>14.2 Battery and Resource Usage</a><ul class="toc-subs"><li><a class="toc-3" href="#wake-locks">Wake Locks</a></li><li><a class="toc-3" href="#doze-mode">Doze Mode</a></li><li><a class="toc-3" href="#app-standby">App Standby</a></li><li><a class="toc-3" href="#background-restrictions">Background Restrictions</a></li><li><a class="toc-3" href="#network-batching">Network Batching</a></li><li><a class="toc-3" href="#job-constraints">Job Constraints</a></li><li><a class="toc-3" href="#location-updates">Location Updates</a></li><li><a class="toc-3" href="#sensor-usage">Sensor Usage</a></li><li><a class="toc-3" href="#foreground-service-impact">Foreground Service Impact</a></li><li><a class="toc-3" href="#interview-angles-battery">Interview Angles: Battery</a></li></ul></li><li class="toc-grp"><a class="toc-2" href="#143-anr-and-crash-debugging"><span class="tcaret">▶</span>14.3 ANR and Crash Debugging</a><ul class="toc-subs"><li><a class="toc-3" href="#main-thread-blocking">Main-Thread Blocking</a></li><li><a class="toc-3" href="#deadlock">Deadlock</a></li><li><a class="toc-3" href="#lock-contention">Lock Contention</a></li><li><a class="toc-3" href="#slow-binder-call">Slow Binder Call</a></li><li><a class="toc-3" href="#broadcastreceiver-timeout">BroadcastReceiver Timeout</a></li><li><a class="toc-3" href="#service-timeout">Service Timeout</a></li><li><a class="toc-3" href="#input-dispatch-timeout">Input Dispatch Timeout</a></li><li><a class="toc-3" href="#tombstones">Tombstones</a></li><li><a class="toc-3" href="#stack-traces">Stack Traces</a></li><li><a class="toc-3" href="#crashlytics">Crashlytics</a></li><li><a class="toc-3" href="#android-vitals">Android Vitals</a></li><li><a class="toc-3" href="#interview-angles-anr-and-crashes">Interview Angles: ANR and Crashes</a></li></ul></li></ul></aside>
+<div class="backdrop"></div>
+<div class="content">
+<div class="mtop"><button onclick="toggleNav()" aria-label="Menu">☰</button><a class="home" href="../index.html">🏠</a><span class="t">14. Performance Beyond Rendering</span></div>
+<a class="arrow left" href="security-privacy.html" title="Previous (13. Security &amp; Privacy)">‹</a>
+<a class="arrow right" href="senior-staff-system-design.html" title="Next (15. Senior/Staff System Design)">›</a>
+<div class="wrap">
+<h1 id="14-performance-beyond-rendering">14. Performance Beyond Rendering</h1>
+<blockquote>Senior/Staff-level Android interview study material. Covers startup performance, battery and resource usage, and ANR/crash debugging exhaustively — definition → mechanics → Android implications → trade-offs → failure modes → debug/test, with concrete examples.</blockquote>
+<hr>
+<h2 id="table-of-contents">Table of Contents</h2>
+<ul>
+<li><a href="#141-startup-performance">14.1 Startup Performance</a></li>
+<ul>
+<li><a href="#cold-start">Cold Start</a></li>
+<li><a href="#warm-start">Warm Start</a></li>
+<li><a href="#hot-start">Hot Start</a></li>
+<li><a href="#applicationoncreate">Application.onCreate()</a></li>
+<li><a href="#lazy-initialization">Lazy Initialization</a></li>
+<li><a href="#app-startup-library">App Startup Library</a></li>
+<li><a href="#baseline-profiles">Baseline Profiles</a></li>
+<li><a href="#splash-screen">Splash Screen</a></li>
+<li><a href="#dependency-graph-initialization">Dependency Graph Initialization</a></li>
+<li><a href="#avoiding-main-thread-io">Avoiding Main-Thread I/O</a></li>
+<li><a href="#interview-angles-startup">Interview Angles: Startup</a></li>
+</ul>
+<li><a href="#142-battery-and-resource-usage">14.2 Battery and Resource Usage</a></li>
+<ul>
+<li><a href="#wake-locks">Wake Locks</a></li>
+<li><a href="#doze-mode">Doze Mode</a></li>
+<li><a href="#app-standby">App Standby</a></li>
+<li><a href="#background-restrictions">Background Restrictions</a></li>
+<li><a href="#network-batching">Network Batching</a></li>
+<li><a href="#job-constraints">Job Constraints</a></li>
+<li><a href="#location-updates">Location Updates</a></li>
+<li><a href="#sensor-usage">Sensor Usage</a></li>
+<li><a href="#foreground-service-impact">Foreground Service Impact</a></li>
+<li><a href="#interview-angles-battery">Interview Angles: Battery</a></li>
+</ul>
+<li><a href="#143-anr-and-crash-debugging">14.3 ANR and Crash Debugging</a></li>
+<ul>
+<li><a href="#main-thread-blocking">Main-Thread Blocking</a></li>
+<li><a href="#deadlock">Deadlock</a></li>
+<li><a href="#lock-contention">Lock Contention</a></li>
+<li><a href="#slow-binder-call">Slow Binder Call</a></li>
+<li><a href="#broadcastreceiver-timeout">BroadcastReceiver Timeout</a></li>
+<li><a href="#service-timeout">Service Timeout</a></li>
+<li><a href="#input-dispatch-timeout">Input Dispatch Timeout</a></li>
+<li><a href="#tombstones">Tombstones</a></li>
+<li><a href="#stack-traces">Stack Traces</a></li>
+<li><a href="#crashlytics">Crashlytics</a></li>
+<li><a href="#android-vitals">Android Vitals</a></li>
+<li><a href="#interview-angles-anr-and-crashes">Interview Angles: ANR and Crashes</a></li>
+</ul>
+</ul>
+<hr>
+<h2 id="141-startup-performance">14.1 Startup Performance</h2>
+<h3 id="cold-start">Cold Start</h3>
+<p><strong>Definition</strong>: A cold start is what happens when the app process does not exist in memory at all and the system has to spin up a brand-new process from scratch.</p>
+<p><strong>How it works</strong>:</p>
+<ol>
+<li>The system forks a new process from <code>zygote</code> (the pre-forked Android runtime).</li>
+<li>The app&#x27;s <code>Application</code> class is instantiated and <code>Application.onCreate()</code> runs.</li>
+<li>The target <code>Activity</code> is created: <code>onCreate()</code> → <code>onStart()</code> → <code>onResume()</code>.</li>
+<li>The first frame is rendered and delivered to SurfaceFlinger.</li>
+</ol>
+<p><strong>Timeline breakdown</strong>:</p>
+<ul>
+<li><strong>Time To Initial Display (TTID)</strong>: Time until the first frame is drawn. This is what <code>Displayed</code> in logcat measures.</li>
+<li><strong>Time To Full Display (TTFD)</strong>: Time until the app&#x27;s content is fully loaded and interactive (can be reported with <code>reportFullyDrawn()</code>).</li>
+</ul>
+<p><strong>Android implications</strong>:</p>
+<ul>
+<li>Cold start is measured from when the user taps the launcher icon to when the first frame appears.</li>
+<li>The system displays a splash screen window (preview window) immediately from <code>windowBackground</code> theme attribute, providing visual feedback before any app code runs.</li>
+<li>All Dagger component initialization, third-party SDK initialization, and database schema migrations that run in <code>Application.onCreate()</code> add directly to cold start time.</li>
+<li>Pre-Android 12, apps controlled the splash screen entirely. Android 12+ enforces a system-managed splash screen.</li>
+</ul>
+<p><strong>Optimizing cold start</strong>:</p>
+<ul>
+<li>Defer initialization that is not needed immediately (lazy init, background threads).</li>
+<li>Use App Startup library to sequence and parallelize initializer dependencies.</li>
+<li>Use Baseline Profiles so the ART JIT compiler has pre-compiled hot paths.</li>
+<li>Avoid disk I/O or network calls on the main thread during startup.</li>
+<li>Minimize the depth and breadth of the Dagger object graph that is constructed eagerly.</li>
+</ul>
+<p><strong>Measuring cold start</strong>:</p>
+<pre><code># Force a cold start by killing the process first
+adb shell am force-stop com.example.app
+adb shell am start-activity -W com.example.app/.MainActivity
+
+# Output:
+# ThisTime: 847
+# TotalTime: 1203
+# WaitTime: 1210</code></pre>
+<ul>
+<li><code>ThisTime</code>: Time for the last activity to start.</li>
+<li><code>TotalTime</code>: Time from process creation to <code>onResume()</code> of the first activity.</li>
+<li><code>WaitTime</code>: Total time including the system overhead before <code>am start</code> returns.</li>
+</ul>
+<p>Also watch logcat for:</p>
+<pre><code>I/ActivityManager: Displayed com.example.app/.MainActivity: +1s203ms</code></pre>
+<hr>
+<h3 id="warm-start">Warm Start</h3>
+<p><strong>Definition</strong>: A warm start is when the app process is already alive in memory, but the Activity itself was destroyed — for example, the user navigated away and the system reclaimed it, or the user killed the Activity without killing the whole process.</p>
+<p><strong>How it works</strong>:</p>
+<ul>
+<li>The <code>Application</code> object already exists — <code>Application.onCreate()</code> is NOT called again.</li>
+<li>The system recreates the <code>Activity</code> from scratch: <code>onCreate()</code> → <code>onStart()</code> → <code>onResume()</code>.</li>
+<li>Saved instance state (<code>Bundle</code>) is restored if available.</li>
+</ul>
+<p><strong>Android implications</strong>:</p>
+<ul>
+<li>Warm starts are typically 2–3x faster than cold starts because process + class loading is already done.</li>
+<li>Any initialization in <code>Application.onCreate()</code> is not repeated, but <code>Activity.onCreate()</code> still runs.</li>
+<li>Retained ViewModel instances survive warm starts (across configuration changes), but do NOT survive process death — which triggers a cold start.</li>
+</ul>
+<p><strong>Common warm-start failure mode</strong>: Assuming ViewModel data is always populated because warm start is common during development. In production, users can always encounter a cold start; code must handle null/empty initial state gracefully.</p>
+<hr>
+<h3 id="hot-start">Hot Start</h3>
+<p><strong>Definition</strong>: A hot start is the best case — the app process and the Activity both already exist in memory, and the user has simply backgrounded the app and come back.</p>
+<p><strong>How it works</strong>:</p>
+<ul>
+<li>The system simply brings the existing Activity to the foreground: <code>onRestart()</code> → <code>onStart()</code> → <code>onResume()</code>.</li>
+<li>No new object creation occurs for the Application or Activity.</li>
+</ul>
+<p><strong>Android implications</strong>:</p>
+<ul>
+<li>Hot starts are extremely fast (&lt; 100 ms typically) and are not a meaningful startup optimization target.</li>
+<li>The primary concern for hot starts is state freshness: data cached in memory may be stale if the user was gone for a long time.</li>
+<li>Memory pressure while backgrounded can cause the system to kill the process and degrade the next start to cold.</li>
+</ul>
+<hr>
+<h3 id="applicationoncreate">Application.onCreate()</h3>
+<p><strong>Definition</strong>: <code>Application.onCreate()</code> is the single entry point that runs once when the app process is first created. It&#x27;s the place every library, SDK, and framework gravitates toward for global initialization, which is exactly what makes it the most important location for startup optimization.</p>
+<p><strong>What happens here (and why it matters)</strong>:</p>
+<ul>
+<li>The main thread is blocked until <code>Application.onCreate()</code> returns.</li>
+<li>Everything inside it adds directly to cold start time.</li>
+<li>This is the most impactful single location for startup optimization.</li>
+</ul>
+<p><strong>What MUST happen in Application.onCreate()</strong>:</p>
+<ul>
+<li>Crash reporting initialization (Crashlytics, Sentry) — needs to be active before any crash can occur.</li>
+<li>Strict mode setup (debug builds only).</li>
+<li>Process-name-specific initialization (multi-process apps must guard with <code>ProcessUtils.getProcessName()</code> to avoid initializing UI dependencies in background processes).</li>
+</ul>
+<p><strong>What should NOT happen in Application.onCreate()</strong>:</p>
+<ul>
+<li>Database schema migration or opening database connections.</li>
+<li><code>SharedPreferences.getSharedPreferences()</code> calls (triggers disk read on main thread).</li>
+<li>Network calls of any kind.</li>
+<li>Heavy Dagger graph construction (e.g., constructing a component that transitively initializes dozens of dependencies).</li>
+<li>Analytics SDK full initialization if it can be deferred.</li>
+<li>Image loading library disk cache setup (Glide/Coil manage this lazily).</li>
+<li>Feature flag synchronization from network.</li>
+</ul>
+<p><strong>Multi-process trap</strong>: In apps with <code>:remote</code> or other background processes (e.g., push notification services, Bluetooth services), <code>Application.onCreate()</code> runs once per process. If you initialize your Dagger component unconditionally, you&#x27;re paying full initialization cost in every process. Guard with:</p>
+<pre><code>class MyApplication : Application() {
+    override fun onCreate() {
+        super.onCreate()
+        if (isMainProcess()) {
+            initializeMainProcessComponents()
+        }
+        // crash reporting is OK for all processes
+        initializeCrashReporting()
+    }
+
+    private fun isMainProcess(): Boolean =
+        packageName == getProcessName()
+}</code></pre>
+<hr>
+<h3 id="lazy-initialization">Lazy Initialization</h3>
+<p><strong>Definition</strong>: Lazy initialization means deferring object construction or expensive operations until the first time they are actually needed, rather than paying the cost upfront at startup.</p>
+<p><strong>How it works in Kotlin</strong>:</p>
+<pre><code>// Property-level lazy — thread-safe by default (SYNCHRONIZED mode)
+val database: AppDatabase by lazy {
+    Room.databaseBuilder(context, AppDatabase::class.java, &quot;app.db&quot;).build()
+}
+
+// LazyThreadSafetyMode.NONE — fastest, only safe if accessed from one thread
+val cache: LruCache&lt;String, Bitmap&gt; by lazy(LazyThreadSafetyMode.NONE) {
+    LruCache(maxSize)
+}</code></pre>
+<p><strong>Dagger lazy injection</strong>:</p>
+<pre><code>// Dagger provides Lazy&lt;T&gt; — the object is constructed on first .get() call
+@Inject lateinit var expensiveService: Lazy&lt;AnalyticsService&gt;
+
+fun trackEvent(event: String) {
+    expensiveService.get().track(event)  // constructed only here
+}</code></pre>
+<p><strong>Android implications</strong>:</p>
+<ul>
+<li><code>by lazy</code> is ideal for singletons that are expensive to construct but used infrequently.</li>
+<li>The trade-off: the first access has the full construction cost. If this happens on the main thread during a user interaction, it causes jank. Move first access to a background thread or preload on a background thread after startup.</li>
+<li>Avoid lazy init for objects required immediately on every cold start — the cost is identical, just deferred.</li>
+</ul>
+<p><strong>Failure modes</strong>:</p>
+<ul>
+<li>Lazy init on main thread during first user interaction causing dropped frames or ANR.</li>
+<li>Thread-safety issues with <code>LazyThreadSafetyMode.NONE</code> when multiple threads access the same lazy property.</li>
+<li>Circular initialization: lazy A depends on lazy B which depends on lazy A.</li>
+</ul>
+<hr>
+<h3 id="app-startup-library">App Startup Library</h3>
+<p><strong>Definition</strong>: The App Startup library (<code>androidx.startup</code>) is a Jetpack library that gives you a structured, dependency-aware way to initialize components at startup, replacing the scattered <code>ContentProvider</code> initialization tricks that libraries historically relied on.</p>
+<p><strong>Background — the ContentProvider trick</strong>: Many libraries (WorkManager, Firebase, etc.) historically used a <code>ContentProvider</code> to auto-initialize without requiring app code. A <code>ContentProvider</code> with <code>android:initOrder</code> runs before <code>Application.onCreate()</code>. The problem: each <code>ContentProvider</code> is a separate process boundary hook, they run sequentially, and they bloat startup time invisibly.</p>
+<p><strong>How App Startup works</strong>:</p>
+<ol>
+<li>A single <code>InitializationProvider</code> (one ContentProvider total, shared across all initializers) is registered in the manifest.</li>
+<li>You define <code>Initializer&lt;T&gt;</code> classes for each component.</li>
+<li>Each initializer declares its dependencies via <code>dependencies()</code>, forming a DAG.</li>
+<li>The library topologically sorts the DAG and runs initializers in order, on the main thread by default.</li>
+</ol>
+<pre><code>class WorkManagerInitializer : Initializer&lt;WorkManager&gt; {
+    override fun create(context: Context): WorkManager {
+        WorkManager.initialize(
+            context,
+            Configuration.Builder()
+                .setMinimumLoggingLevel(Log.ERROR)
+                .build()
+        )
+        return WorkManager.getInstance(context)
+    }
+
+    override fun dependencies(): List&lt;Class&lt;out Initializer&lt;*&gt;&gt;&gt; = emptyList()
+}
+
+class AnalyticsInitializer : Initializer&lt;Analytics&gt; {
+    override fun create(context: Context): Analytics {
+        // depends on WorkManager being ready
+        return Analytics.init(context)
+    }
+
+    override fun dependencies() = listOf(WorkManagerInitializer::class.java)
+}</code></pre>
+<p><strong>Manifest registration</strong>:</p>
+<pre><code>&lt;provider
+    android:name=&quot;androidx.startup.InitializationProvider&quot;
+    android:authorities=&quot;${applicationId}.androidx-startup&quot;
+    android:exported=&quot;false&quot;
+    tools:node=&quot;merge&quot;&gt;
+    &lt;meta-data
+        android:name=&quot;com.example.WorkManagerInitializer&quot;
+        android:value=&quot;androidx.startup&quot; /&gt;
+    &lt;!-- AnalyticsInitializer is discovered transitively via dependencies() --&gt;
+&lt;/provider&gt;</code></pre>
+<p><strong>Lazy/manual initialization</strong>: Remove the <code>&lt;meta-data&gt;</code> entry and call manually:</p>
+<pre><code>AppInitializer.getInstance(context)
+    .initializeComponent(WorkManagerInitializer::class.java)</code></pre>
+<p><strong>Trade-offs</strong>:</p>
+<ul>
+<li>Pro: Centralizes and makes startup dependencies explicit and auditable.</li>
+<li>Pro: Eliminates redundant ContentProviders.</li>
+<li>Con: All initializers still run on the main thread by default; async initializers require careful handling.</li>
+<li>Con: Dependency cycles produce a runtime exception at startup.</li>
+</ul>
+<p><strong>Android implications</strong>:</p>
+<ul>
+<li>Use to replace library <code>ContentProvider</code> auto-init patterns (disable with <code>tools:node=&quot;remove&quot;</code> in manifest merger).</li>
+<li>Prefer lazy initialization over eager App Startup for anything not needed at first frame.</li>
+</ul>
+<hr>
+<h3 id="baseline-profiles">Baseline Profiles</h3>
+<p><strong>Definition</strong>: Baseline Profiles are pre-compiled ART profiles that you ship inside your APK or AAB. The key idea is that they let the system AOT-compile your hot code paths on install, so you get native-speed execution from the very first launch instead of waiting for the JIT compiler to warm up over several runs.</p>
+<p><strong>Background — ART compilation modes</strong>:</p>
+<ul>
+<li><strong>Interpreted mode</strong>: Bytecode run directly. Slowest but requires no compilation time.</li>
+<li><strong>JIT (Just-In-Time)</strong>: Code is profiled at runtime; hot methods are compiled to native. After ~10 minutes of use, the system compiles the profile in the background. This means new installs are slow for the first few app starts.</li>
+<li><strong>AOT (Ahead-Of-Time)</strong>: Code compiled to native before execution. Fastest at runtime but compilation takes time and space.</li>
+</ul>
+<p>Baseline Profiles give you AOT compilation of critical paths on <strong>first launch</strong>, eliminating the JIT warm-up period.</p>
+<p><strong>How to create a Baseline Profile</strong>:</p>
+<ol>
+<li>Add the <code>androidx.benchmark:benchmark-macro</code> and <code>androidx.profileinstaller:profileinstaller</code> dependencies.</li>
+<li>Write a <code>BaselineProfileGenerator</code> (a Macrobenchmark test) that exercises your startup path:</li>
+</ol>
+<pre><code>@RunWith(AndroidJUnit4::class)
+class BaselineProfileGenerator {
+    @get:Rule
+    val rule = BaselineProfileRule()
+
+    @Test
+    fun generate() = rule.collect(
+        packageName = &quot;com.example.app&quot;,
+        profileBlock = {
+            // navigate the critical startup path
+            pressHome()
+            startActivityAndWait()
+            // interact with the home screen
+            device.findObject(By.text(&quot;Search&quot;)).click()
+            waitForIdle()
+        }
+    )
+}</code></pre>
+<ol>
+<li>Run the test on a rooted device or emulator — it produces a <code>baseline-prof.txt</code> in <code>src/main/</code>.</li>
+<li>The profile is packaged into the APK and read by the <code>ProfileInstaller</code> library on device.</li>
+</ol>
+<p><strong>AGP integration (AGP 8.x)</strong>:</p>
+<pre><code>// build.gradle.kts
+android {
+    defaultConfig {
+        // enables ProfileInstaller to install profile at first run
+    }
+}</code></pre>
+<p>The Baseline Profile plugin (<code>com.android.tools.baselineprofile</code>) automates generation and inclusion.</p>
+<p><strong>Measured impact</strong>: Google reports 30–40% startup improvement for apps with comprehensive Baseline Profiles. The improvement is most visible on cold starts on lower-end devices.</p>
+<p><strong>Trade-offs</strong>:</p>
+<ul>
+<li>Pro: Dramatic cold start improvement, especially on first run post-install.</li>
+<li>Pro: Works at the library level too — Jetpack libraries ship their own baseline profiles.</li>
+<li>Con: Requires a connected rooted device for profile generation (CI setup is non-trivial).</li>
+<li>Con: Profiles go stale if code changes significantly — need periodic regeneration.</li>
+<li>Con: APK size increases slightly.</li>
+</ul>
+<p><strong>Failure mode</strong>: Forgetting to add <code>profileinstaller</code> dependency — the profile ships in the APK but is never installed on the device.</p>
+<hr>
+<h3 id="splash-screen">Splash Screen</h3>
+<p><strong>Definition</strong>: The splash screen is the initial visual shown while the app loads. Starting with Android 12, the system enforces a standardized splash screen API rather than letting apps roll their own.</p>
+<p><strong>Pre-Android 12 (legacy)</strong>:</p>
+<ul>
+<li>Apps set <code>windowBackground</code> on the launch theme to a drawable/color, giving the appearance of instant launch.</li>
+<li>The &quot;splash screen&quot; was actually the window background visible before the Activity drew its first frame.</li>
+<li>Common pattern: theme switch — launch with <code>SplashTheme</code> (sets <code>windowBackground</code>), then <code>setTheme(R.style.AppTheme)</code> in <code>onCreate()</code> before <code>setContentView()</code>.</li>
+</ul>
+<p><strong>Android 12+ SplashScreen API</strong>:</p>
+<ul>
+<li>The system always shows a splash screen on cold and warm starts.</li>
+<li>Composed of: icon (adaptive icon), icon background, window background.</li>
+<li>The splash screen is dismissed when the app draws its first frame (or when you call <code>splashScreen.setKeepOnScreenCondition { true }</code> to hold it longer).</li>
+</ul>
+<p><strong>Jetpack SplashScreen library</strong> (<code>androidx.core:core-splashscreen</code>) — backports to API 23:</p>
+<pre><code>// In Activity.onCreate(), BEFORE super.onCreate()
+val splashScreen = installSplashScreen()
+
+// Keep splash visible until data is ready
+splashScreen.setKeepOnScreenCondition {
+    viewModel.isLoading.value
+}
+
+// Animate the exit
+splashScreen.setOnExitAnimationListener { splashScreenView -&gt;
+    val slideUp = ObjectAnimator.ofFloat(
+        splashScreenView.view, View.TRANSLATION_Y, 0f, -splashScreenView.view.height.toFloat()
+    )
+    slideUp.doOnEnd { splashScreenView.remove() }
+    slideUp.start()
+}</code></pre>
+<p><strong>Theme setup</strong>:</p>
+<pre><code>&lt;style name=&quot;Theme.App.Starting&quot; parent=&quot;Theme.SplashScreen&quot;&gt;
+    &lt;item name=&quot;windowSplashScreenBackground&quot;&gt;@color/colors_background_white&lt;/item&gt;
+    &lt;item name=&quot;windowSplashScreenAnimatedIcon&quot;&gt;@drawable/ic_launcher_foreground&lt;/item&gt;
+    &lt;item name=&quot;windowSplashScreenAnimationDuration&quot;&gt;300&lt;/item&gt;
+    &lt;item name=&quot;postSplashScreenTheme&quot;&gt;@style/Theme.App&lt;/item&gt;
+&lt;/style&gt;</code></pre>
+<p><strong>Android implications</strong>:</p>
+<ul>
+<li><code>setKeepOnScreenCondition</code> is checked on every frame; keep it cheap (read a StateFlow value, not a blocking call).</li>
+<li>The splash screen duration should be minimized — it&#x27;s loading time from the user&#x27;s perspective.</li>
+<li>Do not use the splash screen to hide a slow startup; use it to bridge the inevitable gap.</li>
+<li>On Android 12+, showing a custom splash screen Activity before the system splash screen will result in a double-splash flicker.</li>
+</ul>
+<p><strong>Failure modes</strong>:</p>
+<ul>
+<li>Forgetting <code>installSplashScreen()</code> before <code>super.onCreate()</code> — the splash screen is dismissed immediately.</li>
+<li><code>setKeepOnScreenCondition</code> that never returns <code>false</code> — app appears frozen.</li>
+<li>Custom animated icon not respecting adaptive icon safe zone — icon appears clipped.</li>
+</ul>
+<hr>
+<h3 id="dependency-graph-initialization">Dependency Graph Initialization</h3>
+<p><strong>Definition</strong>: Dependency graph initialization is the cost of constructing all the objects and their interdependencies that have to exist before the app can serve its first user interaction.</p>
+<p><strong>The problem</strong>: Dependency injection frameworks like Dagger construct an entire object graph eagerly when you call <code>DaggerAppComponent.create()</code>. If the component includes dozens of singletons — each with their own <code>@Inject</code> constructor doing I/O or computation — the graph construction cost is paid at startup.</p>
+<p><strong>Strategies</strong>:</p>
+<ol>
+<li><strong>Scoped components</strong>: Don&#x27;t build the entire graph in <code>Application.onCreate()</code>. Use a <code>SingletonComponent</code> with only truly global singletons, and defer feature-scoped components (booking, search) until those features are accessed.</li>
+</ol>
+<ol>
+<li><strong>Lazy bindings</strong>: Use <code>Lazy&lt;T&gt;</code> in Dagger for singletons that are needed globally but not immediately:</li>
+</ol>
+<pre><code>@Singleton
+class MyRepository @Inject constructor(
+    private val db: Lazy&lt;AppDatabase&gt;,  // DB constructed on first access
+    private val api: MyApi
+)</code></pre>
+<ol>
+<li><strong>Background graph construction</strong>: For large sub-graphs, construct on a background thread and block only when the UI actually needs the result:</li>
+</ol>
+<pre><code>class Application : Application() {
+    val appComponent: Deferred&lt;AppComponent&gt; by lazy {
+        CoroutineScope(Dispatchers.Default).async {
+            DaggerAppComponent.factory().create(this@Application)
+        }
+    }
+}</code></pre>
+<p>This is risky — any code that calls <code>runBlocking { appComponent.await() }</code> on the main thread defeats the purpose. Use carefully.</p>
+<ol>
+<li><strong>Tracing initialization</strong>: Use <code>Trace.beginSection(&quot;DaggerInit&quot;)</code> / <code>Trace.endSection()</code> around each initializer to see cost in Perfetto/systrace.</li>
+</ol>
+<p><strong>Failure modes</strong>:</p>
+<ul>
+<li>Cyclical dependency in Dagger graph — compile-time error (good).</li>
+<li>Transitive I/O in constructor: <code>@Inject constructor(prefs: SharedPreferences)</code> — <code>SharedPreferences</code> reads from disk on first <code>getSharedPreferences()</code>.</li>
+<li>SDK <code>init()</code> methods that internally call Dagger-provided singletons before the graph is ready.</li>
+</ul>
+<hr>
+<h3 id="avoiding-main-thread-io">Avoiding Main-Thread I/O</h3>
+<p><strong>Definition</strong>: Avoiding main-thread I/O means making sure disk reads, disk writes, and network calls never block the main UI thread — not during startup, not during any user interaction, ever.</p>
+<p><strong>Why it matters</strong>:</p>
+<ul>
+<li>Disk read speed varies enormously across devices — what takes 2 ms on a Pixel 8 may take 200 ms on a low-end device with NAND flash.</li>
+<li>eMMC/UFS storage is shared across all apps; I/O contention on a busy device makes latencies unpredictable.</li>
+<li>Network I/O on the main thread can block for seconds.</li>
+</ul>
+<p><strong>Detection: StrictMode</strong>:</p>
+<pre><code>// In Application.onCreate() for debug builds
+if (BuildConfig.DEBUG) {
+    StrictMode.setThreadPolicy(
+        StrictMode.ThreadPolicy.Builder()
+            .detectDiskReads()
+            .detectDiskWrites()
+            .detectNetwork()
+            .penaltyLog()    // logcat warning
+            .penaltyDeath()  // crash on violation — catch all before shipping
+            .build()
+    )
+    StrictMode.setVmPolicy(
+        StrictMode.VmPolicy.Builder()
+            .detectLeakedSqlLiteObjects()
+            .detectLeakedClosableObjects()
+            .penaltyLog()
+            .build()
+    )
+}</code></pre>
+<p><strong>Common sources of main-thread I/O at startup</strong>:</p>
+<ul>
+<li><code>PreferenceManager.getDefaultSharedPreferences(context)</code> — triggers an XML file parse from disk.</li>
+<li><code>Room.databaseBuilder(...).build()</code> (not the query, but schema validation on first access).</li>
+<li>Any <code>File.exists()</code> or <code>File.read()</code> in an initializer.</li>
+<li><code>ClassLoader</code> loading many new classes for the first time (inherent, but can be mitigated by Baseline Profiles).</li>
+<li>Some third-party SDK <code>init()</code> methods that read license files or configuration from assets.</li>
+</ul>
+<p><strong>Solutions</strong>:</p>
+<ul>
+<li>Move all <code>SharedPreferences</code> access to a <code>DataStore</code> (which is coroutines-based and async by design).</li>
+<li>Wrap synchronous I/O in <code>withContext(Dispatchers.IO) { ... }</code>.</li>
+<li>Preload critical preferences on a background thread immediately after startup and cache them in memory.</li>
+</ul>
+<hr>
+<h3 id="interview-angles-startup">Interview Angles: Startup</h3>
+<p><strong>Q: How do you improve cold start?</strong></p>
+<p>&quot;I think about this in eight layers. First, measure — I run <code>adb shell am start-activity -W</code>, pull a Perfetto trace, or use Macrobenchmark. I never optimize what I haven&#x27;t measured. Second, I audit <code>Application.onCreate()</code>: add StrictMode in debug builds to catch any disk I/O, and defer SDK initializations using the App Startup library or lazy init. Third, I look at the Dagger graph — I instrument expensive singleton constructors with <code>Trace.beginSection()</code> to find the slow ones, then make them lazy or scope-delayed. Fourth, I generate and ship a Baseline Profile to eliminate the JIT warm-up on the very first run. Fifth, I verify the splash screen&#x27;s window background is set correctly so the user sees a pixel of UI instantly. Sixth, I kick off above-the-fold network calls on a coroutine right in <code>onCreate()</code> so data is arriving by the time the first frame paints. Seventh, I make sure R8 is enabled for release because it can inline and dead-strip code paths, which helps the class-loading cost. And eighth, I call <code>reportFullyDrawn()</code> when the content is actually ready, because TTID isn&#x27;t enough — TTFD is what the user actually experiences.&quot;</p>
+<p><strong>Q: What should NOT happen in Application.onCreate()?</strong></p>
+<p>&quot;The short answer is: anything that blocks the main thread or initializes more than you need right now. Specifically — disk reads like <code>SharedPreferences</code> access or opening a database, any network request, any blocking call. I also don&#x27;t want to build the full Dagger component if it transitively initializes dozens of singletons. And SDKs that are only needed in specific flows — payment SDKs, camera SDKs — shouldn&#x27;t be eagerly initialized here at all. The rule of thumb I use is: if it shows up as more than 5 ms in a Perfetto trace, it needs to move.&quot;</p>
+<p><strong>Q: How do you measure startup?</strong></p>
+<p>&quot;There are six tools I reach for, depending on how much detail I need. For a quick sanity check, <code>adb shell am start-activity -W</code> gives me TTID on the command line in seconds. Logcat also automatically prints <code>Displayed com.example/.MainActivity: +1s203ms</code> — that&#x27;s TTID with zero instrumentation. When the content itself is ready — not just the first frame — I call <code>reportFullyDrawn()</code>, which surfaces TTFD in logcat and Perfetto. For CI and regression tracking I use the Macrobenchmark library, which runs repeated cold starts on a real device and gives me p50, p90, p99 distributions. For understanding what&#x27;s happening inside a specific startup — which method is taking 80 ms — I pull a Perfetto trace and instrument critical blocks with <code>Trace.beginSection()</code> and <code>endSection()</code>. And when I want a visual overview without setting up Perfetto, Android Studio Profiler&#x27;s App Startup view shows the phase breakdown.&quot;</p>
+<hr>
+<h2 id="142-battery-and-resource-usage">14.2 Battery and Resource Usage</h2>
+<h3 id="wake-locks">Wake Locks</h3>
+<p><strong>Definition</strong>: A wake lock is a mechanism that prevents the CPU — and optionally the screen or keyboard backlight — from going to sleep for as long as the app holds it.</p>
+<p><strong>How it works</strong>:</p>
+<pre><code>val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
+val wakeLock = powerManager.newWakeLock(
+    PowerManager.PARTIAL_WAKE_LOCK,
+    &quot;MyApp::MyWakeLock&quot;
+)
+wakeLock.acquire(10 * 60 * 1000L) // 10-minute timeout — ALWAYS specify timeout
+try {
+    doLongRunningWork()
+} finally {
+    wakeLock.release()
+}</code></pre>
+<p><strong>Wake lock types</strong>:</p>
+<ul>
+<li><code>PARTIAL_WAKE_LOCK</code>: CPU on, screen/keyboard can sleep. Most common for background work.</li>
+<li><code>SCREEN_DIM_WAKE_LOCK</code> / <code>SCREEN_BRIGHT_WAKE_LOCK</code>: Deprecated in API 17. Use <code>WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON</code> or <code>View.setKeepScreenOn(true)</code> instead.</li>
+<li><code>FULL_WAKE_LOCK</code>: Deprecated. Used to keep screen bright.</li>
+</ul>
+<p><strong>When a wake lock is necessary</strong>:</p>
+<ul>
+<li>Downloading a large file that must complete even if the screen turns off.</li>
+<li>Receiving a push notification and doing critical processing before the CPU sleeps.</li>
+<li>Audio playback (though <code>MediaSession</code> manages this internally via <code>AudioFocus</code> + <code>WifiLock</code>).</li>
+<li>Sensors that require CPU to process data as it arrives.</li>
+</ul>
+<p><strong>When NOT to use a wake lock</strong>:</p>
+<ul>
+<li>For anything that can be deferred — use WorkManager with appropriate constraints instead.</li>
+<li>For periodic background tasks — use <code>JobScheduler</code>/WorkManager which handle wake lock management internally.</li>
+<li>For network calls — WorkManager + <code>NetworkType.CONNECTED</code> constraint is almost always correct.</li>
+</ul>
+<p><strong>Trade-offs</strong>:</p>
+<ul>
+<li>Pro: Guarantees work completes without CPU suspension.</li>
+<li>Con: Terrible for battery. A partial wake lock prevents all CPU power-saving states.</li>
+<li>Con: Requires <code>WAKE_LOCK</code> permission in manifest.</li>
+<li>Con: If not released (e.g., exception before <code>release()</code>), the lock is held until the timeout or process death.</li>
+</ul>
+<p><strong>Failure modes</strong>:</p>
+<ul>
+<li>Wake lock not released due to missed <code>finally</code> block — CPU stays awake indefinitely, draining battery.</li>
+<li>No timeout specified — <code>acquire()</code> without a timeout holds the lock until explicitly released; process crash = locked until reboot.</li>
+<li><code>WifiLock</code> forgotten — CPU wakes up but WiFi radio sleeps, causing network timeouts.</li>
+</ul>
+<p><strong>Android 13+ restrictions</strong>: Background apps requesting <code>WAKE_LOCK</code> are increasingly restricted. WorkManager is the right abstraction.</p>
+<hr>
+<h3 id="doze-mode">Doze Mode</h3>
+<p><strong>Definition</strong>: Doze Mode is a battery-saving state introduced in Android 6.0 (API 23) that aggressively restricts background CPU and network activity whenever the device is unplugged, stationary, and has its screen off.</p>
+<p><strong>How Doze works — two stages</strong>:</p>
+<p><strong>Stage 1 (Light Doze — API 24+)</strong>: Triggered when screen off + unplugged, even while device is moving.</p>
+<ul>
+<li>Network access is restricted.</li>
+<li><code>JobScheduler</code> jobs are deferred.</li>
+<li><code>AlarmManager</code> <code>setExact()</code> alarms are deferred (unless <code>setExactAndAllowWhileIdle()</code>).</li>
+<li>Wake locks are ignored.</li>
+<li>Sync adapters are paused.</li>
+</ul>
+<p><strong>Stage 2 (Deep Doze)</strong>: Triggered after Stage 1 + device stationary for ~1 hour.</p>
+<ul>
+<li>Same restrictions as Stage 1, but stricter.</li>
+<li>The system allows brief &quot;maintenance windows&quot; (a few minutes every hour or so) where restrictions are lifted and deferred work runs.</li>
+</ul>
+<p><strong>Maintenance window</strong>: Work scheduled via <code>JobScheduler</code> or WorkManager is queued and executed during these windows. This is why WorkManager&#x27;s constraint-based scheduling is battery-friendly — it piggybacks on maintenance windows.</p>
+<p><strong>What still works in Doze</strong>:</p>
+<ul>
+<li>High-priority FCM (Firebase Cloud Messaging) push notifications — FCM has a special exemption to wake the device and deliver urgent notifications.</li>
+<li><code>AlarmManager.setAlarmClock()</code> — used for calendar alarms, user-visible.</li>
+<li>Foreground services (but the device CPU is still sleeping; a foreground service notification doesn&#x27;t prevent Doze itself).</li>
+</ul>
+<p><strong>Testing Doze</strong>:</p>
+<pre><code># Force device into Doze
+adb shell dumpsys deviceidle force-idle
+
+# Check current Doze state
+adb shell dumpsys deviceidle
+
+# Disable Doze for testing
+adb shell dumpsys deviceidle disable</code></pre>
+<p><strong>Android implications</strong>:</p>
+<ul>
+<li>Never use <code>AlarmManager.setRepeating()</code> for background sync — use WorkManager.</li>
+<li>Never use <code>Handler.postDelayed()</code> as a background schedule mechanism — it stops in Doze.</li>
+<li>Legitimate use of <code>setExactAndAllowWhileIdle()</code> is limited: calendar/clock alarms, critical security-related timers.</li>
+</ul>
+<hr>
+<h3 id="app-standby">App Standby</h3>
+<p><strong>Definition</strong>: App Standby is a battery-saving mechanism that progressively restricts an app&#x27;s background activity based on how recently and how often the user has opened it.</p>
+<p><strong>How App Standby works (API 23+)</strong>: The system categorizes apps into buckets based on recency and frequency of use:</p>
+<table border="1" cellpadding="6" cellspacing="0">
+<thead><tr>
+<th>Bucket</th>
+<th>Description</th>
+<th>Job / Alarm / Network restriction</th>
+</tr></thead><tbody>
+<tr><td><code>ACTIVE</code></td><td>Currently in use or used very recently</td><td>None</td></tr>
+<tr><td><code>WORKING_SET</code></td><td>Used regularly</td><td>Mild: jobs run more infrequently</td></tr>
+<tr><td><code>FREQUENT</code></td><td>Used regularly but not daily</td><td>Moderate: hourly limit on jobs</td></tr>
+<tr><td><code>RARE</code></td><td>Used infrequently</td><td>Severe: jobs limited to a few per day</td></tr>
+<tr><td><code>RESTRICTED</code> (API 30+)</td><td>Not used for weeks and device is low battery</td><td>Most aggressive: ~1 job/day</td></tr>
+<tr><td><code>NEVER</code></td><td>Installed but never opened</td><td>No background work</td></tr>
+</tbody></table>
+<p><strong>What this means</strong>:</p>
+<ul>
+<li>An app the user hasn&#x27;t opened in a week may only be allowed to run WorkManager jobs once per day.</li>
+<li>Background sync, push notification processing, and analytics uploads are all affected.</li>
+<li>The bucket is determined by the system autonomously based on usage patterns and cannot be queried directly by apps (it can be read via <code>UsageStatsManager</code> with a permission).</li>
+</ul>
+<p><strong>Testing App Standby</strong>:</p>
+<pre><code># Put app in standby
+adb shell am set-standby-bucket com.example.app rare
+
+# Check current bucket
+adb shell am get-standby-bucket com.example.app</code></pre>
+<p><strong>Exemptions</strong>: Battery optimization whitelist (<code>ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS</code>). Requesting this exemption requires justification for Play Store listing; over-broad use is rejected.</p>
+<hr>
+<h3 id="background-restrictions">Background Restrictions</h3>
+<p><strong>Definition</strong>: Background restrictions are additional per-app limits on background activity — either ones the user enables manually (Android 9+) or ones the system applies automatically on Android 12+ and on low-RAM devices.</p>
+<p><strong>Layers of background restrictions</strong>:</p>
+<ol>
+<li><strong>Implicit broadcast restrictions (API 26+)</strong>: Most implicit broadcasts (e.g., <code>CONNECTIVITY_CHANGE</code>) no longer delivered to manifest-registered receivers. Must use <code>JobScheduler</code> with network constraints or runtime-registered receivers.</li>
+<li><strong>Background service restrictions (API 26+)</strong>: <code>startService()</code> throws <code>IllegalStateException</code> if called while app is in background. Must use <code>startForegroundService()</code> (and call <code>startForeground()</code> within 5 seconds) or WorkManager.</li>
+<li><strong>User-triggered battery restriction</strong>: User can mark an app as &quot;restricted&quot; in Settings → Battery → Background usage. This stops background execution entirely except for FCM.</li>
+<li><strong><code>PROCESS_CAPABILITY_*</code> flags</strong>: Apps declaring certain capabilities must justify them.</li>
+</ol>
+<p><strong>Best practices</strong>:</p>
+<ul>
+<li>Use WorkManager for all deferrable background work.</li>
+<li>Use FCM for server-to-device push; never poll.</li>
+<li>Declare foreground services only when truly needed (GPS tracking, music playback, file download with user awareness).</li>
+</ul>
+<hr>
+<h3 id="network-batching">Network Batching</h3>
+<p><strong>Definition</strong>: Network batching is the practice of grouping multiple small network requests together so the radio is activated as few times as possible.</p>
+<p><strong>Why it matters — radio state machine</strong>: The cellular radio transitions through states:</p>
+<ul>
+<li><strong>Idle</strong>: Radio off. No power.</li>
+<li><strong>Low power (FACH)</strong>: Radio partially active. ~40 mW on LTE.</li>
+<li><strong>Full power (DCH/Connected)</strong>: Radio fully active. ~600 mW on LTE.</li>
+</ul>
+<p>After a network request, the radio stays in &quot;full power&quot; for a &quot;tail time&quot; (~10 seconds on LTE) before dropping back to idle. This means a single 1 KB request uses as much power as a 100 KB request — the tail time dominates.</p>
+<p><strong>Batching strategy</strong>:</p>
+<ul>
+<li>Combine multiple small requests into one (e.g., batch analytics events, batch API calls).</li>
+<li>Use <code>JobScheduler</code> / WorkManager with <code>setRequiredNetworkType(NetworkType.CONNECTED)</code> — the system batches work from multiple apps, sharing radio activation.</li>
+<li>Use HTTP/2 multiplexing — multiple requests over a single connection reduce overhead.</li>
+<li>Implement request coalescing in your network layer: buffer events for 30 seconds, then flush.</li>
+</ul>
+<p><strong>Android implications</strong>:</p>
+<ul>
+<li><code>WorkManager.enqueueUniquePeriodicWork()</code> with a 15-minute interval (minimum) is the correct pattern for periodic sync.</li>
+<li>OkHttp connection pooling helps amortize connection setup across sequential requests.</li>
+<li>Consider <code>ConnectivityManager.registerNetworkCallback()</code> to detect when WiFi is available and batch Wi-Fi-only uploads then.</li>
+</ul>
+<hr>
+<h3 id="job-constraints">Job Constraints</h3>
+<p><strong>Definition</strong>: Job constraints are the conditions that must all be satisfied before a scheduled job — whether via WorkManager or JobScheduler — is allowed to execute.</p>
+<p><strong>WorkManager constraints</strong>:</p>
+<pre><code>val constraints = Constraints.Builder()
+    .setRequiredNetworkType(NetworkType.CONNECTED)     // any network
+    .setRequiredNetworkType(NetworkType.UNMETERED)     // WiFi only
+    .setRequiresBatteryNotLow(true)                    // battery above threshold
+    .setRequiresCharging(true)                         // plugged in
+    .setRequiresDeviceIdle(true)                       // device not actively used
+    .setRequiresStorageNotLow(true)                    // internal storage not low
+    .build()
+
+val uploadWork = OneTimeWorkRequestBuilder&lt;UploadWorker&gt;()
+    .setConstraints(constraints)
+    .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 10, TimeUnit.MINUTES)
+    .build()
+
+WorkManager.getInstance(context).enqueue(uploadWork)</code></pre>
+<p><strong>Constraint trade-offs</strong>:</p>
+<ul>
+<li>More constraints = better for battery/user, but work may never run for users on metered connections or old devices that never charge.</li>
+<li><code>setRequiresDeviceIdle(true)</code> combined with <code>setRequiresCharging(true)</code> is ideal for very heavy background tasks (large data migrations) but may only run at night.</li>
+<li><code>UNMETERED</code> is too strict for critical syncs; <code>CONNECTED</code> is generally correct.</li>
+</ul>
+<p><strong>PeriodicWork minimum interval</strong>: 15 minutes. The system may run it less frequently based on App Standby bucket. Do not use <code>PeriodicWork</code> for anything requiring precision timing.</p>
+<p><strong>Failure mode</strong>: Job that has <code>setRequiresCharging(true)</code> + <code>setRequiresDeviceIdle(true)</code> + <code>UNMETERED</code> on a user who only has cellular data and never uses their phone while charging — work never runs.</p>
+<hr>
+<h3 id="location-updates">Location Updates</h3>
+<p><strong>Definition</strong>: Location updates are the mechanism by which apps receive position data from GPS, network, or passive providers — and the way you configure them has a dramatic impact on battery life.</p>
+<p><strong>Location providers</strong>:</p>
+<ul>
+<li><strong>GPS</strong>: High accuracy, high battery drain. Requires clear sky view.</li>
+<li><strong>Network (Fused)</strong>: Cell towers + WiFi. Lower accuracy, lower power.</li>
+<li><strong>Passive</strong>: Receives location updates only when another app requests them. Zero additional battery cost.</li>
+<li><strong>Fused Location Provider (FLP)</strong>: Google Play Services API that automatically selects the best provider based on requested accuracy and power constraints.</li>
+</ul>
+<p><strong>Power levels</strong>:</p>
+<pre><code>LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, intervalMillis = 1000)  // GPS on, max battery
+LocationRequest.Builder(Priority.PRIORITY_BALANCED_POWER_ACCURACY, 5000)         // network location
+LocationRequest.Builder(Priority.PRIORITY_LOW_POWER, 60_000)                     // city-level accuracy
+LocationRequest.Builder(Priority.PRIORITY_PASSIVE, Long.MAX_VALUE)               // passive only</code></pre>
+<p><strong>Battery impact guidelines</strong>:</p>
+<ul>
+<li><code>PRIORITY_HIGH_ACCURACY</code> at 1-second intervals: GPS active, ~200 mW. Only for turn-by-turn navigation.</li>
+<li><code>PRIORITY_BALANCED_POWER_ACCURACY</code> at 5 seconds: ~10 mW. Reasonable for location-aware search.</li>
+<li><code>PRIORITY_PASSIVE</code>: ~0 mW overhead.</li>
+</ul>
+<p><strong>Best practices</strong>:</p>
+<ul>
+<li>Request the lowest accuracy that meets your feature requirements.</li>
+<li>Use the longest interval that is acceptable.</li>
+<li>Remove location updates when not needed (<code>removeLocationUpdates()</code> in <code>onStop()</code>).</li>
+<li>Use geofencing APIs instead of polling for &quot;is the user near location X&quot; use cases.</li>
+<li>Android 10+ background location requires <code>ACCESS_BACKGROUND_LOCATION</code> permission and user justification.</li>
+</ul>
+<p><strong>Failure mode</strong>: Forgetting to <code>removeLocationUpdates()</code> when the Activity pauses — GPS stays active in the background, draining battery and triggering background location access in Android 10+.</p>
+<hr>
+<h3 id="sensor-usage">Sensor Usage</h3>
+<p><strong>Definition</strong>: Sensor usage covers how apps read hardware sensors — accelerometer, gyroscope, heart rate, barometer, and so on — via <code>SensorManager</code>, and the sampling rate you choose directly determines how much battery the sensor hardware consumes.</p>
+<p><strong>How it works</strong>:</p>
+<pre><code>val sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
+val accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
+
+sensorManager.registerListener(
+    listener,
+    accelerometer,
+    SensorManager.SENSOR_DELAY_NORMAL  // ~200ms updates
+)</code></pre>
+<p><strong>Sampling rates and battery</strong>:</p>
+<ul>
+<li><code>SENSOR_DELAY_FASTEST</code> (~1 ms): Maximum rate, maximum battery.</li>
+<li><code>SENSOR_DELAY_GAME</code> (~20 ms): For gaming.</li>
+<li><code>SENSOR_DELAY_UI</code> (~60 ms): For UI interactions.</li>
+<li><code>SENSOR_DELAY_NORMAL</code> (~200 ms): Most background use cases.</li>
+</ul>
+<p><strong>Power guidelines</strong>:</p>
+<ul>
+<li>Unregister listeners in <code>onStop()</code> or whenever the data is not needed.</li>
+<li>Use batch mode (<code>SensorManager.registerListener()</code> with <code>maxReportLatencyUs</code>) to buffer sensor events and deliver them in batches, keeping the CPU in low-power states between batches.</li>
+<li>On Wear OS and health apps, use the Health Services API which manages sensor duty cycling.</li>
+</ul>
+<p><strong>Failure mode</strong>: Registering a <code>SENSOR_DELAY_FASTEST</code> accelerometer listener and forgetting to unregister it — sensor hardware stays active at full rate, draining battery significantly.</p>
+<hr>
+<h3 id="foreground-service-impact">Foreground Service Impact</h3>
+<p><strong>Definition</strong>: A foreground service is a service with a persistent, user-visible notification that signals to both the user and the system that the app is doing ongoing, intentional work.</p>
+<p><strong>Why foreground services exist</strong>: Android 8.0+ prevents background services. Foreground services are the approved mechanism for long-running work that the user must be aware of: music playback, navigation, file downloads, health tracking.</p>
+<p><strong>Battery impact</strong>:</p>
+<ul>
+<li>The CPU is kept from deep sleep while a foreground service runs.</li>
+<li>Network radios may be prevented from sleeping.</li>
+<li>The persistent notification consumes notification shade space.</li>
+<li>Heavy foreground services (GPS + network + database writes) can consume 10–30% battery per hour.</li>
+</ul>
+<p><strong>Foreground service types (API 29+)</strong>: Must declare type in manifest and in <code>startForeground()</code>:</p>
+<pre><code>// Manifest
+&lt;service android:name=&quot;.MyService&quot;
+    android:foregroundServiceType=&quot;location|mediaPlayback&quot; /&gt;
+
+// Code
+startForeground(NOTIFICATION_ID, notification,
+    ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION)</code></pre>
+<p>Types: <code>camera</code>, <code>connectedDevice</code>, <code>dataSync</code>, <code>health</code>, <code>location</code>, <code>mediaPlayback</code>, <code>mediaProjection</code>, <code>microphone</code>, <code>phoneCall</code>, <code>remoteMessaging</code>, <code>shortService</code>, <code>specialUse</code>, <code>systemExempted</code>.</p>
+<p><strong>Android 14+ restrictions</strong>: Most foreground service types require a runtime permission grant before starting. <code>dataSync</code> foreground services are limited to 6 hours total per app per day.</p>
+<p><strong>When to use vs. WorkManager</strong>:</p>
+<ul>
+<li>Use foreground service: music playback, turn-by-turn navigation, screen recording, active health session — user-visible, ongoing.</li>
+<li>Use WorkManager: background sync, image upload, data migration, analytics flush — deferrable, doesn&#x27;t need UI.</li>
+<li>Never use foreground service as a workaround to bypass WorkManager&#x27;s 15-minute periodic interval — Google Play policies prohibit this.</li>
+</ul>
+<p><strong>Failure mode</strong>: Starting a foreground service with <code>startForegroundService()</code> but not calling <code>startForeground()</code> within 5 seconds — the system throws an <code>ANR</code>-like <code>ForegroundServiceDidNotStartInTimeException</code>.</p>
+<hr>
+<h3 id="interview-angles-battery">Interview Angles: Battery</h3>
+<p><strong>Q: How do you reduce battery drain?</strong></p>
+<p>&quot;I work through this in seven areas. First, I audit all background work and replace any manual <code>Service</code> plus <code>AlarmManager</code> patterns with WorkManager, using appropriate constraints so the system can batch work efficiently. Second, network batching — I combine analytics events and API calls, use HTTP/2, and schedule uploads when the device is on WiFi or charging. Third, location: I use the lowest priority that the feature actually needs, I always remove the listener in <code>onStop()</code>, and I prefer geofencing over polling for &#x27;is the user near X&#x27; use cases. Fourth, sensors: I default to <code>SENSOR_DELAY_NORMAL</code>, unregister in <code>onStop()</code>, and use batch mode to let the CPU sleep between deliveries. Fifth, I measure — Android Studio Energy Profiler and Battery Historian from <code>adb bugreport</code> both show me exactly where time in wake state is being spent. Sixth, I audit every <code>WAKE_LOCK</code> usage: anything that could be WorkManager should be WorkManager, every remaining lock must have a timeout and be released in a <code>finally</code> block. And seventh, I design for Doze and App Standby: I test under <code>adb shell dumpsys deviceidle force-idle</code>, and I make sure any work that genuinely must run in Doze uses FCM high-priority or <code>setExactAndAllowWhileIdle()</code>.&quot;</p>
+<p><strong>Q: Why batch background work?</strong></p>
+<p>&quot;There are two reasons. The first is the radio tail-time effect: once the LTE radio activates, it stays in full-power mode for roughly 10 seconds, regardless of how much data actually goes over the wire. So ten individual 1 KB requests spread over 10 seconds cost exactly the same as ten requests fired in one burst — the tail time dominates. Batching collapses all those tail times into one.</p>
+<p>The second reason is that the system already does batching for you during Doze maintenance windows and when multiple apps share a WiFi connection moment. By scheduling work through WorkManager, you&#x27;re opting into that system-level batching instead of fighting it. Your jobs piggyback on other apps&#x27; radio activations, and you share the cost.&quot;</p>
+<p><strong>Q: When is a wake lock necessary?</strong></p>
+<p>&quot;Honestly, in modern Android the answer is almost never — WorkManager handles its own wake lock internally, so most of the time you should just use that. But there are three situations where a raw wake lock is genuinely the right tool. First, when work must complete without interruption even if the screen turns off and the CPU would otherwise sleep, and you can&#x27;t afford to wait for a Doze maintenance window. Second, when the work is time-critical enough that Doze scheduling is truly unacceptable. And third, when WorkManager isn&#x27;t the right abstraction — for example, the work is user-initiated and must finish right now, like an active file transfer.</p>
+<p>The most legitimate real-world examples I&#x27;d give are: a media download the user explicitly started that must not be paused, an active health-monitoring foreground service that needs continuous CPU, or a critical security operation triggered by a high-priority FCM message. Outside those cases, if I see a raw wake lock I treat it as a code smell and look for the WorkManager equivalent.&quot;</p>
+<hr>
+<h2 id="143-anr-and-crash-debugging">14.3 ANR and Crash Debugging</h2>
+<h3 id="main-thread-blocking">Main-Thread Blocking</h3>
+<p><strong>Definition</strong>: Main-thread blocking is any operation on the Android UI thread that consumes more time than the allowed budget, causing an ANR — Application Not Responding. The main thread owns input event processing, UI updates, and every <code>Choreographer</code> frame, so blocking it freezes the entire app.</p>
+<p><strong>Time budgets</strong>:</p>
+<ul>
+<li>Input dispatch: 5 seconds to handle a touch/key event.</li>
+<li>Broadcast receiver: 10 seconds to return from <code>onReceive()</code>.</li>
+<li>Service <code>onCreate</code>/<code>onStartCommand</code>/<code>onBind</code>: 20 seconds.</li>
+</ul>
+<p><strong>Common causes</strong>:</p>
+<ul>
+<li>Database queries on main thread (pre-Room&#x27;s enforced coroutine-based API).</li>
+<li><code>SharedPreferences.getSharedPreferences()</code> on first access (disk read).</li>
+<li>Network call on main thread (throws <code>NetworkOnMainThreadException</code> on API 11+, but Binder calls to network-capable services do not throw this).</li>
+<li><code>Thread.sleep()</code> in UI code.</li>
+<li>Heavy <code>RecyclerView.Adapter.onBindViewHolder()</code> doing computation.</li>
+<li>Synchronous IPC (Binder call) to a slow service.</li>
+<li><code>runBlocking { }</code> on the main thread awaiting a slow coroutine.</li>
+</ul>
+<p><strong>Detection</strong>:</p>
+<ul>
+<li>StrictMode <code>ThreadPolicy.detectAll().penaltyDeath()</code> in debug builds catches most main-thread violations.</li>
+<li>Systrace/Perfetto shows main-thread slices and their duration.</li>
+<li>Android Studio Profiler → CPU → main thread timeline.</li>
+</ul>
+<hr>
+<h3 id="deadlock">Deadlock</h3>
+<p><strong>Definition</strong>: A deadlock is the situation where two or more threads are each waiting for the other to release a lock — so all of them end up permanently blocked, waiting forever.</p>
+<p><strong>Classic deadlock pattern</strong>:</p>
+<pre><code>// Thread A holds lockA, waiting for lockB
+// Thread B holds lockB, waiting for lockA
+val lockA = ReentrantLock()
+val lockB = ReentrantLock()
+
+// Thread A
+lockA.lock()
+Thread.sleep(10) // context switch happens here
+lockB.lock()     // Thread A waits for Thread B to release lockB
+
+// Thread B
+lockB.lock()
+lockA.lock()     // Thread B waits for Thread A to release lockA — DEADLOCK</code></pre>
+<p><strong>Android-specific deadlocks</strong>:</p>
+<ul>
+<li>Main thread waiting on a coroutine (<code>runBlocking</code>) that internally posts back to the main thread — the coroutine can never resume because the main thread is blocked.</li>
+<li><code>synchronized</code> blocks in a ViewModel accessed from both a coroutine (Dispatchers.IO) and the main thread.</li>
+<li>ContentProvider accessing a database while holding a lock that a background migration thread is waiting on.</li>
+</ul>
+<p><strong>Detection</strong>:</p>
+<ul>
+<li>ANR traces (<code>/data/anr/traces.txt</code> or <code>anr_&lt;pid&gt;.txt</code>) show thread states. Look for threads in <code>BLOCKED</code> state and trace the lock ownership chain.</li>
+<li><code>jstack</code> equivalent: <code>adb shell kill -3 &lt;pid&gt;</code> dumps thread state to logcat.</li>
+</ul>
+<hr>
+<h3 id="lock-contention">Lock Contention</h3>
+<p><strong>Definition</strong>: Lock contention happens when multiple threads compete for the same lock, causing them to queue up and wait serially even though no deadlock exists — they&#x27;re just all fighting over a single bottleneck.</p>
+<p><strong>How it harms performance</strong>:</p>
+<ul>
+<li>Lock contention does not cause ANR by itself, but if the main thread is one of the contending threads and must wait &gt; 5 seconds, it becomes an ANR.</li>
+<li>High contention on a lock used frequently by background threads causes throughput degradation.</li>
+</ul>
+<p><strong>Identifying lock contention</strong>:</p>
+<ul>
+<li>Perfetto CPU trace shows main-thread slices with status <code>Sleeping</code> or <code>Blocked</code> on a monitor lock.</li>
+<li><code>monitor_contention</code> events in systrace output.</li>
+</ul>
+<p><strong>Solutions</strong>:</p>
+<ul>
+<li>Replace <code>synchronized</code> with <code>ConcurrentHashMap</code>, <code>AtomicInteger</code>, <code>StateFlow</code> where appropriate.</li>
+<li>Use lock-free data structures (e.g., <code>java.util.concurrent</code> classes).</li>
+<li>Minimize lock scope — acquire lock, do minimal work, release.</li>
+<li>Use <code>ReadWriteLock</code> when reads are far more frequent than writes.</li>
+</ul>
+<hr>
+<h3 id="slow-binder-call">Slow Binder Call</h3>
+<p><strong>Definition</strong>: A slow Binder call is a synchronous IPC call through Android&#x27;s Binder mechanism that takes longer than expected — and because it blocks the calling thread, if that thread is the main thread, it becomes a direct path to ANR.</p>
+<p><strong>How Binder works</strong>:</p>
+<ul>
+<li>Every system service call (e.g., <code>ActivityManager</code>, <code>WindowManager</code>, <code>PackageManager</code>) goes through Binder IPC.</li>
+<li>The call blocks the calling thread until the remote process processes the request and returns.</li>
+<li>Under system load, Binder thread pools can be exhausted, causing callers to wait.</li>
+</ul>
+<p><strong>Common slow Binder calls</strong>:</p>
+<ul>
+<li><code>PackageManager.queryIntentActivities()</code> — queries all installed packages; can take 50–500 ms on devices with many apps.</li>
+<li><code>ActivityManager.getRunningAppProcesses()</code> — deprecated but still used in legacy code.</li>
+<li><code>ContentResolver.query()</code> — goes through Binder if the ContentProvider is in another process.</li>
+<li><code>AccountManager.getAccounts()</code> — blocked by other account operations.</li>
+<li><code>WifiManager.getScanResults()</code> — can be slow under radio contention.</li>
+</ul>
+<p><strong>Detection</strong>:</p>
+<ul>
+<li>Perfetto: main-thread slice labeled with <code>binder transaction</code> in <code>SLEEPING</code> state.</li>
+<li><code>systrace</code> with <code>-a com.example.app</code> shows Binder call chains.</li>
+<li>ANR trace shows main thread in <code>Object.wait()</code> or <code>nativePollOnce</code> waiting for Binder reply.</li>
+</ul>
+<p><strong>Solutions</strong>:</p>
+<ul>
+<li>Move Binder calls to background threads (<code>Dispatchers.IO</code>).</li>
+<li>Cache results: call once, cache, serve from cache.</li>
+<li>Use async Binder APIs where available.</li>
+</ul>
+<hr>
+<h3 id="broadcastreceiver-timeout">BroadcastReceiver Timeout</h3>
+<p><strong>Definition</strong>: A <code>BroadcastReceiver</code>&#x27;s <code>onReceive()</code> must return within 10 seconds — exceed that budget and the system fires an ANR.</p>
+<p><strong>How it works</strong>:</p>
+<ul>
+<li><code>onReceive()</code> is called on the main thread for manifest-registered receivers.</li>
+<li>Runtime-registered receivers can be dispatched on a custom handler/executor (API 33+).</li>
+<li>The 10-second window is for <code>onReceive()</code> to return. Background work must be handed off and <code>onReceive()</code> must return quickly.</li>
+</ul>
+<p><strong>Correct pattern for long work in onReceive()</strong>:</p>
+<pre><code>class MyReceiver : BroadcastReceiver() {
+    override fun onReceive(context: Context, intent: Intent) {
+        // Do NOT do any I/O or long work here
+        // Hand off to WorkManager
+        WorkManager.getInstance(context)
+            .enqueue(OneTimeWorkRequestBuilder&lt;MyWorker&gt;().build())
+        // onReceive() returns immediately
+    }
+}</code></pre>
+<p><strong>Ordered broadcasts</strong>: If you call <code>goAsync()</code>, you get up to 10 seconds of async processing, but the <code>PendingResult.finish()</code> must be called within that window:</p>
+<pre><code>override fun onReceive(context: Context, intent: Intent) {
+    val pendingResult = goAsync()
+    CoroutineScope(Dispatchers.IO).launch {
+        try {
+            doWork() // max 10 seconds total
+        } finally {
+            pendingResult.finish()
+        }
+    }
+}</code></pre>
+<p><strong>Failure mode</strong>: Doing network I/O or database access directly in <code>onReceive()</code> without <code>goAsync()</code> — causes ANR on slow devices or under load.</p>
+<hr>
+<h3 id="service-timeout">Service Timeout</h3>
+<p><strong>Definition</strong>: Service lifecycle callbacks — <code>onCreate</code>, <code>onStartCommand</code>, and <code>onBind</code> — must complete within 20 seconds, and <code>onDestroy</code> must return promptly; hanging in any of these causes a service ANR.</p>
+<p><strong>Foreground service not started in time</strong>: When <code>startForegroundService()</code> is called, the service must call <code>startForeground()</code> within 5 seconds:</p>
+<pre><code>class MyService : Service() {
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        // Must call startForeground() within 5 seconds of startForegroundService()
+        startForeground(NOTIF_ID, buildNotification())
+        
+        // Start coroutine for actual work
+        serviceScope.launch {
+            doWork()
+            stopSelf(startId)
+        }
+        return START_NOT_STICKY
+    }
+}</code></pre>
+<p><strong>API 34+ <code>ForegroundServiceDidNotStartInTimeException</code></strong>: System throws this if <code>startForeground()</code> isn&#x27;t called in time. Treat it like an ANR.</p>
+<hr>
+<h3 id="input-dispatch-timeout">Input Dispatch Timeout</h3>
+<p><strong>Definition</strong>: The input dispatch timeout is the 5-second window the system gives the focused window to acknowledge each touch or key event. If the window misses that deadline — because the main thread is blocked — the user sees the ANR dialog.</p>
+<p><strong>How it works</strong>:</p>
+<ul>
+<li>The input dispatcher sends an event to the app&#x27;s <code>ViewRootImpl</code>.</li>
+<li><code>ViewRootImpl</code> dispatches it on the main thread.</li>
+<li>If the main thread is blocked (doing I/O, waiting on a lock, in a long computation), it cannot acknowledge the event.</li>
+<li>After 5 seconds, the system logs an ANR and shows the dialog.</li>
+</ul>
+<p><strong>Input ANR vs. other ANRs</strong>:</p>
+<ul>
+<li>Input ANR: &quot;App is not responding. Do you want to close it?&quot; — triggered by touch/key timeout.</li>
+<li>Broadcast ANR: less visible to users but still logged.</li>
+<li>Service ANR: logged and potentially killed.</li>
+</ul>
+<p><strong>Diagnosing input dispatch ANR</strong>: The ANR trace shows:</p>
+<pre><code>DALVIK THREADS (48):
+&quot;main&quot; prio=5 tid=1 Blocked
+  | group=&quot;main&quot; sCount=1 dsCount=0 obj=0x... self=0x...
+  | sysTid=1234 nice=-10 cgrp=default sched=0/0 handle=0x...
+  | state=S schedstat=( 0 0 0 ) utm=0 stm=0 core=0 HZ=100
+  | stack=0x... stackSize=8MB
+  | held mutexes=
+  at com.example.DatabaseHelper.query(DatabaseHelper.java:47)   ← BLOCKING CALL
+  - waiting to lock &lt;0x...&gt; (a java.lang.Object)
+  held by thread 12</code></pre>
+<p>The <code>main</code> thread is <code>Blocked</code> waiting for a lock. Thread 12 holds the lock — look it up in the same file to see what it&#x27;s doing.</p>
+<hr>
+<h3 id="tombstones">Tombstones</h3>
+<p><strong>Definition</strong>: A tombstone is a crash dump file written by Android&#x27;s native crash handler (<code>debuggerd</code>) whenever a native process terminates with a fatal signal — SIGSEGV, SIGABRT, and so on.</p>
+<p><strong>Location</strong>: <code>/data/tombstones/tombstone_XX</code> (requires root) or via <code>adb bugreport</code>.</p>
+<p><strong>Tombstone contents</strong>:</p>
+<ul>
+<li>Build fingerprint and timestamp.</li>
+<li>Process name, PID, thread ID.</li>
+<li>Signal that caused the crash (e.g., <code>SIGSEGV</code> = null pointer dereference in native code).</li>
+<li>Register dump at the time of crash.</li>
+<li>Full native stack trace (with symbols if mapping files are available).</li>
+<li>Memory maps.</li>
+<li>Log output near the time of crash.</li>
+</ul>
+<p><strong>When tombstones occur</strong>:</p>
+<ul>
+<li>Native code bug (JNI code, NDK libraries, system libraries).</li>
+<li>OOM with <code>oom_adj</code> killing the process.</li>
+<li>Calling a null function pointer.</li>
+<li>Stack overflow in native code.</li>
+</ul>
+<p><strong>Symbolication</strong>: Raw tombstones contain hex addresses. Use <code>ndk-stack</code> or the Android Studio tombstone parser to resolve to function names:</p>
+<pre><code>adb logcat | ndk-stack -sym /path/to/app/obj/local/arm64-v8a</code></pre>
+<p><strong>Java crashes</strong> produce a <code>FATAL EXCEPTION</code> log in logcat, not tombstones. Tombstones are specifically native crashes.</p>
+<hr>
+<h3 id="stack-traces">Stack Traces</h3>
+<p><strong>Definition</strong>: A stack trace is the ordered list of method calls that were active at the moment of a crash or ANR, with the most recent call at the top and the root invocation at the bottom — it&#x27;s the primary artifact you read to find the actual cause.</p>
+<p><strong>Java/Kotlin stack trace anatomy</strong>:</p>
+<pre><code>FATAL EXCEPTION: main
+Process: com.example.app, PID: 12345
+java.lang.NullPointerException: Attempt to invoke virtual method
+  &#x27;java.lang.String android.content.Context.getPackageName()&#x27; on a null object reference
+  at com.example.MyClass.doSomething(MyClass.kt:42)    ← line 42 in your code
+  at com.example.MyActivity.onCreate(MyActivity.kt:25)
+  at android.app.Activity.performCreate(Activity.java:8000)
+  at android.app.Instrumentation.callActivityOnCreate(Instrumentation.java:1309)
+  at android.app.ActivityThread.performLaunchActivity(ActivityThread.java:3404)
+  ...</code></pre>
+<p><strong>Reading ANR traces</strong> (<code>/data/anr/anr_&lt;timestamp&gt;.txt</code>):</p>
+<pre><code>----- pid 12345 at 2025-01-15 10:30:00.123456789+0000 -----
+Cmd line: com.example.app
+...
+&quot;main&quot; prio=5 tid=1 Native
+  | group=&quot;main&quot; sCount=1 ...
+  at java.lang.Thread.sleep(Native method)         ← native sleep
+  at com.example.SlowInit.&lt;clinit&gt;(SlowInit.java:8) ← static init block doing Thread.sleep
+  at com.example.MyActivity.onCreate(MyActivity.kt:15)</code></pre>
+<p>Key: look for the topmost frame in your code (not framework code). That&#x27;s where the blocking happens.</p>
+<p><strong>Multiple thread traces</strong>: ANR files include ALL threads. The main thread is labeled <code>&quot;main&quot;</code> or <code>tid=1</code>. Other threads show their pool names (e.g., <code>&quot;OkHttp Dispatcher&quot;</code>, <code>&quot;DefaultDispatcher-worker-1&quot;</code>).</p>
+<hr>
+<h3 id="crashlytics">Crashlytics</h3>
+<p><strong>Definition</strong>: Firebase Crashlytics is a real-time crash reporting service that aggregates crash data from every app instance in the field so you can see, group, and prioritize production failures without needing to wait for user reports.</p>
+<p><strong>How it works</strong>:</p>
+<ul>
+<li><code>FirebaseCrashlytics.getInstance()</code> installs exception handlers for both the JVM (<code>Thread.UncaughtExceptionHandler</code>) and native code (signal handlers).</li>
+<li>On crash, the report is written to disk and uploaded on next app launch.</li>
+<li>Reports include: stack trace, device info (model, OS version, RAM), custom logs, custom keys, breadcrumbs (recent log calls).</li>
+</ul>
+<p><strong>Best practices</strong>:</p>
+<pre><code>// Log breadcrumbs for context before crashes
+FirebaseCrashlytics.getInstance().log(&quot;User tapped checkout button&quot;)
+
+// Set custom keys for crash segmentation
+FirebaseCrashlytics.getInstance().apply {
+    setCustomKey(&quot;user_type&quot;, &quot;premium&quot;)
+    setCustomKey(&quot;screen&quot;, &quot;checkout&quot;)
+    setCustomKey(&quot;cart_items&quot;, cartSize)
+}
+
+// Log non-fatal exceptions (handled exceptions you want visibility on)
+try {
+    riskyOperation()
+} catch (e: IOException) {
+    FirebaseCrashlytics.getInstance().recordException(e)
+    showUserError()
+}
+
+// Set user identifier (anonymized — NEVER use real email/name for GDPR)
+FirebaseCrashlytics.getInstance().setUserId(anonymizedId)</code></pre>
+<p><strong>Prioritizing crashes</strong>:</p>
+<ul>
+<li><strong>Crash-free rate</strong>: Target &gt; 99.5% for production apps. Google Play Console flags apps below 99%.</li>
+<li><strong>Velocity alerts</strong>: Crashlytics alerts when a crash issue suddenly spikes — key for catching regressions in new releases.</li>
+<li><strong>Impact score</strong>: Number of affected users × severity. Fix issues affecting many users first.</li>
+<li><strong>Grouping</strong>: Crashlytics groups crashes by stack trace. If a crash is grouped incorrectly (different root cause, same stack), use custom keys to segment.</li>
+</ul>
+<p><strong>Limitations</strong>:</p>
+<ul>
+<li>Does not capture ANRs (use Android Vitals for ANR rate).</li>
+<li>Non-fatal recording has rate limiting — not every non-fatal is uploaded.</li>
+<li>Large <code>.so</code> files require uploading symbol maps for native stack trace symbolication.</li>
+</ul>
+<hr>
+<h3 id="android-vitals">Android Vitals</h3>
+<p><strong>Definition</strong>: Android Vitals is Google Play&#x27;s dashboard of performance and stability metrics aggregated across all active users of your app, available in the Play Console. It&#x27;s the only place you can see ANR rates and bad-behavior flags that directly affect your Play Store ranking.</p>
+<p><strong>Key metrics</strong>:</p>
+<table border="1" cellpadding="6" cellspacing="0">
+<thead><tr>
+<th>Metric</th>
+<th>Bad behavior threshold</th>
+<th>Description</th>
+</tr></thead><tbody>
+<tr><td>ANR rate</td><td>&gt; 0.47% (Play threshold)</td><td>% of daily active users who experience at least one ANR</td></tr>
+<tr><td>Crash rate</td><td>&gt; 1.09%</td><td>% of daily active users who experience at least one crash</td></tr>
+<tr><td>Excessive wake locks</td><td>Wake lock held &gt; 1 hour</td><td></td></tr>
+<tr><td>Stuck partial wake locks</td><td>Wake lock not released after 1 hour with screen off</td><td></td></tr>
+<tr><td>Excessive background Wi-Fi scans</td><td>&gt; 1 scan per minute</td><td></td></tr>
+<tr><td>Excessive background location</td><td>Background location too frequently</td><td></td></tr>
+</tbody></table>
+<p><strong>ANR traces in Android Vitals</strong>:</p>
+<ul>
+<li>Android Vitals aggregates ANR reports similarly to Crashlytics for crashes.</li>
+<li>Stack traces show the main-thread state at the time of ANR.</li>
+<li>Filtering by OS version, device model, and app version helps identify device-specific or release-specific regressions.</li>
+</ul>
+<p><strong>Using Android Vitals for prioritization</strong>:</p>
+<ol>
+<li>Check &quot;bad behavior&quot; thresholds — apps that exceed them get lower Play Store visibility rankings.</li>
+<li>Sort by &quot;sessions affected&quot; to find the highest-impact issues.</li>
+<li>Use OS/device filters to identify if a crash is device-specific (hardware driver issue, OEM customization).</li>
+<li>Compare across releases using the version filter to identify when a regression was introduced.</li>
+</ol>
+<p><strong>Limitation</strong>: Android Vitals data is delayed by ~24 hours and is only from users who have opted into Google&#x27;s usage and diagnostics program. Real-time data requires Crashlytics + your own instrumentation.</p>
+<hr>
+<h3 id="interview-angles-anr-and-crashes">Interview Angles: ANR and Crashes</h3>
+<p><strong>Q: How do you debug an ANR?</strong></p>
+<p>&quot;I work through this in seven steps. First, reproduce — I identify the user flow, run it in a debug build with StrictMode enabled, and attach Android Studio Profiler to trigger the scenario. Second, pull the ANR trace: either <code>adb pull /data/anr/</code> if I have root, or <code>adb bugreport</code> and extract the <code>anr_*.txt</code> from the zip. Third, find the main thread — I search for <code>&quot;main&quot;</code> or <code>tid=1</code> and look at the topmost non-framework frame in my own code.</p>
+<p>Fourth, identify the blocking pattern. There are four signatures I look for: if the main thread is <code>Blocked</code> with <code>waiting to lock &lt;0x...&gt; held by thread N</code>, that&#x27;s lock contention — I then look up thread N in the same file to see what it&#x27;s doing. If the main thread is in <code>Native</code> state at <code>epoll_wait</code> or <code>nativePollOnce</code>, it&#x27;s actually idle, which means the ANR was probably a slow Binder call rather than a pure CPU block. If I see a frame at <code>Object.wait()</code>, the main thread is waiting for a signal from another thread — potential deadlock or a runaway background operation. And if I see a frame directly in my own code doing disk or network I/O, that&#x27;s just a missing <code>withContext(Dispatchers.IO)</code>.</p>
+<p>Fifth, I scan all the other threads looking for any that are <code>BLOCKED</code> and hold the lock the main thread is waiting for. Sixth, I fix — move blocking work off the main thread, reduce lock scope, or restructure to avoid contention. And seventh, I verify with Macrobenchmark on the specific interaction path that triggered the ANR, and add a StrictMode or tracing check so a regression would be caught before it ships again.&quot;</p>
+<p><strong>Q: What is the difference between a crash and an ANR?</strong></p>
+<p>&quot;The core distinction is cause and timing. A crash is an unhandled exception — a <code>NullPointerException</code>, an <code>OutOfMemoryError</code>, or a native signal — and the process dies immediately. An ANR is not a crash; the process is still running, but the main thread is blocked so long that the system decides the app has stopped responding.</p>
+<p>From the user&#x27;s perspective: a crash closes the app instantly with an &#x27;App has stopped&#x27; dialog. An ANR freezes the app, and after 5 seconds the user sees &#x27;App is not responding&#x27; with a choice to wait or close. Crucially, if the main thread unblocks before the user acts, an ANR can self-resolve — a crash never can.</p>
+<p>For diagnosis: crashes go to Crashlytics via the <code>FATAL EXCEPTION</code> logcat tag, and the stack trace points to the throw site. ANRs go into <code>/data/anr/</code> traces and Android Vitals, and the stack trace points to whatever blocking call the main thread is stuck on. They need different debugging strategies.&quot;</p>
+<table border="1" cellpadding="6" cellspacing="0">
+<thead><tr>
+<th>Aspect</th>
+<th>Crash</th>
+<th>ANR</th>
+</tr></thead><tbody>
+<tr><td>Cause</td><td>Unhandled exception (e.g., NullPointerException, OutOfMemoryError) or native signal</td><td>Main thread blocked for too long (I/O, lock, Binder)</td></tr>
+<tr><td>User experience</td><td>App closes immediately with &quot;App has stopped&quot; dialog</td><td>App freezes; after 5s user sees &quot;App not responding&quot; dialog</td></tr>
+<tr><td>System behavior</td><td>Process is killed</td><td>System kills the process after the dialog is dismissed (or user waits)</td></tr>
+<tr><td>Diagnosis tool</td><td>Crashlytics, logcat FATAL EXCEPTION</td><td>ANR traces (<code>/data/anr/</code>), Android Vitals ANR dashboard</td></tr>
+<tr><td>Stack trace location</td><td>At the exception throw site</td><td>At the blocking call on the main thread</td></tr>
+<tr><td>Recoverability</td><td>None — process is dead</td><td>User can &quot;Wait&quot; and app may recover if blocking clears</td></tr>
+</tbody></table>
+<p><strong>Q: How do you prioritize production stability issues?</strong></p>
+<p>&quot;I use a seven-factor framework. First, impact — users affected times frequency. A crash hitting 10,000 users a day is always higher priority than one hitting 10, regardless of how easy either is to fix. Second, bad behavior thresholds: Android Vitals flags ANR rate above 0.47% and crash rate above 1.09% as bad behavior, and those directly hurt your Play Store ranking — anything above the threshold is immediate. Third, recency: a crash that appears for the first time in the latest release is a P0 because it&#x27;s a regression and you have a clear rollback option. An old crash with a flat rate is lower urgency. Fourth, Crashlytics velocity alerts — a sudden spike on an existing issue means a new trigger just appeared, whether a new OS version, a new device model, or a user behavior change. Fifth, business impact: a crash in the checkout or payment flow is P0 regardless of volume, because it directly blocks revenue. A crash in the settings screen can wait. Sixth, reproducibility: an issue I can reproduce locally is cheaper to fix than one that only shows up on obscure devices in the field — give reproducible issues a priority boost. And seventh, user feedback correlation: if app store reviews start mentioning a specific crash, cross-reference with Crashlytics — that signal often surfaces issues before the volume numbers look alarming.</p>
+<p>In practice that maps to:&quot;</p>
+<p><strong>Practical prioritization matrix</strong>:</p>
+<pre><code>P0 (fix immediately): new regression, checkout/payment crash, ANR &gt; threshold
+P1 (this sprint): high-volume crash (&gt; 1000 affected users/day), ANR cluster
+P2 (next sprint): medium-volume crash, non-critical flow
+P3 (backlog): rare crash (&lt; 10/day), device-specific, already mitigated</code></pre>
+<div class="pager">
+<a class="prev" href="security-privacy.html"><span class="lbl">‹ Previous</span>13. Security &amp; Privacy</a>
+<a class="next" href="senior-staff-system-design.html"><span class="lbl">Next ›</span>15. Senior/Staff System Design</a>
+</div>
+</div></div>
+<script src="../site.js"></script>
+</body></html>

@@ -1,0 +1,811 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>4. Thread Communication</title>
+<link rel="stylesheet" href="../style.css"></head>
+<body class="has-toc" data-prev="concurrency-android-threading.html" data-next="ipc-binder-aidl-messenger.html">
+<nav class="sidebar"><a class="brand" href="../index.html">📱 Android Study Guide — Home</a><details class="topic"><summary><span class="caret">▶</span><a href="data-structures-big-o.html">1. Data Structures &amp; Big O</a></summary><ul class="subtopics"><li><a class="" href="data-structures-big-o.html#11-data-structures--collections--12-big-o-notation">1.1 Data Structures &amp; Collections · 1.2 Big O Notation</a></li><li><a class="" href="data-structures-big-o.html#table-of-contents">Table of Contents</a></li><li><a class="" href="data-structures-big-o.html#1-arrays">1. Arrays</a></li><li><a class="" href="data-structures-big-o.html#2-arraylist--mutablelist">2. ArrayList / MutableList</a></li><li><a class="" href="data-structures-big-o.html#3-linkedlist">3. LinkedList</a></li><li><a class="" href="data-structures-big-o.html#4-stack">4. Stack</a></li><li><a class="" href="data-structures-big-o.html#5-queue">5. Queue</a></li><li><a class="" href="data-structures-big-o.html#6-deque">6. Deque</a></li><li><a class="" href="data-structures-big-o.html#7-hashmap--mutablemap">7. HashMap / MutableMap</a></li><li><a class="" href="data-structures-big-o.html#8-hashset--mutableset">8. HashSet / MutableSet</a></li><li><a class="" href="data-structures-big-o.html#9-linkedhashmap">9. LinkedHashMap</a></li><li><a class="" href="data-structures-big-o.html#10-treemap--sortedmap">10. TreeMap / SortedMap</a></li><li><a class="" href="data-structures-big-o.html#11-priorityqueue--heap">11. PriorityQueue / Heap</a></li><li><a class="" href="data-structures-big-o.html#12-trie">12. Trie</a></li><li><a class="" href="data-structures-big-o.html#13-graphs">13. Graphs</a></li><li><a class="" href="data-structures-big-o.html#14-android-specific-collections">14. Android-Specific Collections</a></li><li><a class="" href="data-structures-big-o.html#15-big-o-notation">15. Big O Notation</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="kotlin-java-fundamentals.html">2. Kotlin &amp; Java Fundamentals</a></summary><ul class="subtopics"><li><a class="" href="kotlin-java-fundamentals.html#table-of-contents">Table of Contents</a></li><li><a class="" href="kotlin-java-fundamentals.html#21-kotlin-fundamentals">2.1 Kotlin Fundamentals</a></li><li><a class="" href="kotlin-java-fundamentals.html#22-kotlin-generics">2.2 Kotlin Generics</a></li><li><a class="" href="kotlin-java-fundamentals.html#23-java-fundamentals">2.3 Java Fundamentals</a></li><li><a class="" href="kotlin-java-fundamentals.html#24-kotlin-java-interop">2.4 Kotlin-Java Interop</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="concurrency-android-threading.html">3. Concurrency &amp; Android Threading</a></summary><ul class="subtopics"><li><a class="" href="concurrency-android-threading.html#table-of-contents">Table of Contents</a></li><li><a class="" href="concurrency-android-threading.html#31-java-thread-basics">3.1 Java Thread Basics</a></li><li><a class="" href="concurrency-android-threading.html#32-locks-and-synchronization">3.2 Locks and Synchronization</a></li><li><a class="" href="concurrency-android-threading.html#33-volatile-and-atomic-classes">3.3 Volatile and Atomic Classes</a></li><li><a class="" href="concurrency-android-threading.html#34-waitnotify-and-producer-consumer">3.4 Wait/Notify and Producer-Consumer</a></li><li><a class="" href="concurrency-android-threading.html#35-executors-and-task-execution">3.5 Executors and Task Execution</a></li><li><a class="" href="concurrency-android-threading.html#36-android-application-threads">3.6 Android Application Threads</a></li><li><a class="" href="concurrency-android-threading.html#37-handler--looper--messagequeue">3.7 Handler / Looper / MessageQueue</a></li><li><a class="" href="concurrency-android-threading.html#38-kotlin-coroutines-on-android">3.8 Kotlin Coroutines on Android</a></li><li><a class="" href="concurrency-android-threading.html#39-flow-stateflow-sharedflow-channel">3.9 Flow, StateFlow, SharedFlow, Channel</a></li><li><a class="" href="concurrency-android-threading.html#310-background-work">3.10 Background Work</a></li><li><a class="" href="concurrency-android-threading.html#quick-reference-interview-cheat-sheet">Quick-Reference: Interview Cheat Sheet</a></li></ul></details><details class="topic active" open><summary><span class="caret">▶</span><a href="thread-communication.html">4. Thread Communication</a></summary><ul class="subtopics"><li><a class="spy" href="#table-of-contents">Table of Contents</a></li><li><a class="spy" href="#41-pipes">4.1 Pipes</a></li><li><a class="spy" href="#42-shared-memory">4.2 Shared Memory</a></li><li><a class="spy" href="#43-signaling">4.3 Signaling</a></li><li><a class="spy" href="#44-blockingqueue">4.4 BlockingQueue</a></li><li><a class="spy" href="#45-message-passing--android-handlerloopermessagequeue">4.5 Message Passing — Android Handler/Looper/MessageQueue</a></li><li><a class="spy" href="#cross-cutting-shared-memory-vs-message-passing">Cross-cutting: Shared Memory vs Message Passing</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="ipc-binder-aidl-messenger.html">5. IPC: Binder, AIDL, Messenger</a></summary><ul class="subtopics"><li><a class="" href="ipc-binder-aidl-messenger.html#table-of-contents">Table of Contents</a></li><li><a class="" href="ipc-binder-aidl-messenger.html#51-android-process-model">5.1 Android Process Model</a></li><li><a class="" href="ipc-binder-aidl-messenger.html#52-binder">5.2 Binder</a></li><li><a class="" href="ipc-binder-aidl-messenger.html#53-aidl">5.3 AIDL</a></li><li><a class="" href="ipc-binder-aidl-messenger.html#54-messenger">5.4 Messenger</a></li><li><a class="" href="ipc-binder-aidl-messenger.html#parcelable-vs-serializable">Parcelable vs Serializable</a></li><li><a class="" href="ipc-binder-aidl-messenger.html#aidl-vs-messenger-decision-guide">AIDL vs Messenger Decision Guide</a></li><li><a class="" href="ipc-binder-aidl-messenger.html#interview-quick-reference">Interview Quick-Reference</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="android-memory-management.html">6. Android Memory Management</a></summary><ul class="subtopics"><li><a class="" href="android-memory-management.html#table-of-contents">Table of Contents</a></li><li><a class="" href="android-memory-management.html#61-jvmart-memory-basics">6.1 JVM/ART Memory Basics</a></li><li><a class="" href="android-memory-management.html#62-android-memory-leaks">6.2 Android Memory Leaks</a></li><li><a class="" href="android-memory-management.html#63-context-leaks">6.3 Context Leaks</a></li><li><a class="" href="android-memory-management.html#64-bitmap-and-image-memory">6.4 Bitmap and Image Memory</a></li><li><a class="" href="android-memory-management.html#65-leak-detection-and-profiling">6.5 Leak Detection and Profiling</a></li><li><a class="" href="android-memory-management.html#interview-quick-reference">Interview Quick-Reference</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="architecture-patterns.html">7. Architecture Patterns</a></summary><ul class="subtopics"><li><a class="" href="architecture-patterns.html#table-of-contents">Table of Contents</a></li><li><a class="" href="architecture-patterns.html#71-mvc-mvp-mvvm-mvi">7.1 MVC, MVP, MVVM, MVI</a></li><li><a class="" href="architecture-patterns.html#72-clean-architecture">7.2 Clean Architecture</a></li><li><a class="" href="architecture-patterns.html#73-repository-pattern">7.3 Repository Pattern</a></li><li><a class="" href="architecture-patterns.html#74-dependency-injection">7.4 Dependency Injection</a></li><li><a class="" href="architecture-patterns.html#75-modularization">7.5 Modularization</a></li><li><a class="" href="architecture-patterns.html#quick-reference-cheat-sheet">Quick-Reference Cheat Sheet</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="view-rendering.html">8. View Rendering</a></summary><ul class="subtopics"><li><a class="" href="view-rendering.html#table-of-contents">Table of Contents</a></li><li><a class="" href="view-rendering.html#81-traditional-view-system-rendering">8.1 Traditional View System Rendering</a></li><li><a class="" href="view-rendering.html#82-choreographer-vsync-and-frame-rendering">8.2 Choreographer, VSync, and Frame Rendering</a></li><li><a class="" href="view-rendering.html#83-recyclerview-performance">8.3 RecyclerView Performance</a></li><li><a class="" href="view-rendering.html#84-jetpack-compose-rendering">8.4 Jetpack Compose Rendering</a></li><li><a class="" href="view-rendering.html#85-performance-tools">8.5 Performance Tools</a></li><li><a class="" href="view-rendering.html#interview-cheat-sheet">Interview Cheat Sheet</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="lifecycle-platform-components.html">9. Lifecycle &amp; Platform Components</a></summary><ul class="subtopics"><li><a class="" href="lifecycle-platform-components.html#table-of-contents">Table of Contents</a></li><li><a class="" href="lifecycle-platform-components.html#91-activity">9.1 Activity</a></li><li><a class="" href="lifecycle-platform-components.html#92-fragment">9.2 Fragment</a></li><li><a class="" href="lifecycle-platform-components.html#93-services">9.3 Services</a></li><li><a class="" href="lifecycle-platform-components.html#94-broadcastreceiver">9.4 BroadcastReceiver</a></li><li><a class="" href="lifecycle-platform-components.html#95-contentprovider">9.5 ContentProvider</a></li><li><a class="" href="lifecycle-platform-components.html#96-intents-and-pendingintents">9.6 Intents and PendingIntents</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="android-data-layer.html">10. Android Data Layer</a></summary><ul class="subtopics"><li><a class="" href="android-data-layer.html#table-of-contents">Table of Contents</a></li><li><a class="" href="android-data-layer.html#101-networking">10.1 Networking</a></li><li><a class="" href="android-data-layer.html#102-persistence">10.2 Persistence</a></li><li><a class="" href="android-data-layer.html#103-offline-first-design">10.3 Offline-First Design</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="testing.html">11. Testing</a></summary><ul class="subtopics"><li><a class="" href="testing.html#table-of-contents">Table of Contents</a></li><li><a class="" href="testing.html#111-unit-testing">11.1 Unit Testing</a></li><li><a class="" href="testing.html#112-ui-testing">11.2 UI Testing</a></li><li><a class="" href="testing.html#113-integration-and-end-to-end-testing">11.3 Integration and End-to-End Testing</a></li><li><a class="" href="testing.html#quick-reference-interview-cheat-sheet">Quick-Reference Interview Cheat Sheet</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="build-gradle-release.html">12. Build, Gradle &amp; Release</a></summary><ul class="subtopics"><li><a class="" href="build-gradle-release.html#table-of-contents">Table of Contents</a></li><li><a class="" href="build-gradle-release.html#121-gradle-basics">12.1 Gradle Basics</a></li><li><a class="" href="build-gradle-release.html#122-build-performance">12.2 Build Performance</a></li><li><a class="" href="build-gradle-release.html#123-release">12.3 Release</a></li><li><a class="" href="build-gradle-release.html#summary-table-quick-reference">Summary Table: Quick Reference</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="security-privacy.html">13. Security &amp; Privacy</a></summary><ul class="subtopics"><li><a class="" href="security-privacy.html#table-of-contents">Table of Contents</a></li><li><a class="" href="security-privacy.html#131-android-security-basics">13.1 Android Security Basics</a></li><li><a class="" href="security-privacy.html#132-data-security">13.2 Data Security</a></li><li><a class="" href="security-privacy.html#interview-qa-master-list">Interview Q&amp;A Master List</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="performance-beyond-rendering.html">14. Performance Beyond Rendering</a></summary><ul class="subtopics"><li><a class="" href="performance-beyond-rendering.html#table-of-contents">Table of Contents</a></li><li><a class="" href="performance-beyond-rendering.html#141-startup-performance">14.1 Startup Performance</a></li><li><a class="" href="performance-beyond-rendering.html#142-battery-and-resource-usage">14.2 Battery and Resource Usage</a></li><li><a class="" href="performance-beyond-rendering.html#143-anr-and-crash-debugging">14.3 ANR and Crash Debugging</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="senior-staff-system-design.html">15. Senior/Staff System Design</a></summary><ul class="subtopics"><li><a class="" href="senior-staff-system-design.html#table-of-contents">Table of Contents</a></li><li><a class="" href="senior-staff-system-design.html#151-android-app-architecture-design">15.1 Android App Architecture Design</a></li><li><a class="" href="senior-staff-system-design.html#152-trade-off-thinking">15.2 Trade-Off Thinking</a></li><li><a class="" href="senior-staff-system-design.html#153-legacy-code-and-migration">15.3 Legacy Code and Migration</a></li><li><a class="" href="senior-staff-system-design.html#154-engineering-leadership">15.4 Engineering Leadership</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="interview-q-a-cheatsheet.html">16. Interview Q&amp;A &amp; Cheatsheet</a></summary><ul class="subtopics"><li><a class="" href="interview-q-a-cheatsheet.html#table-of-contents">Table of Contents</a></li><li><a class="" href="interview-q-a-cheatsheet.html#section-16--model-answers-by-category">Section 16 — Model Answers by Category</a></li><li><a class="" href="interview-q-a-cheatsheet.html#section-17--must-revise-checklist">Section 17 — Must-Revise Checklist</a></li><li><a class="" href="interview-q-a-cheatsheet.html#section-18--senior-answer-framework-with-worked-examples">Section 18 — Senior Answer Framework with Worked Examples</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="references.html">References</a></summary><ul class="subtopics"><li><a class="" href="references.html#table-of-contents">Table of Contents</a></li><li><a class="" href="references.html#section-1--data-structures--big-o">Section 1 — Data Structures &amp; Big O</a></li><li><a class="" href="references.html#section-2--kotlin--java-fundamentals">Section 2 — Kotlin &amp; Java Fundamentals</a></li><li><a class="" href="references.html#section-3--concurrency--threading">Section 3 — Concurrency &amp; Threading</a></li><li><a class="" href="references.html#section-4--thread-communication">Section 4 — Thread Communication</a></li><li><a class="" href="references.html#section-5--ipc-binder-aidl-messenger">Section 5 — IPC: Binder, AIDL, Messenger</a></li><li><a class="" href="references.html#section-6--memory-management">Section 6 — Memory Management</a></li><li><a class="" href="references.html#section-7--architecture-patterns">Section 7 — Architecture Patterns</a></li><li><a class="" href="references.html#section-8--view-rendering">Section 8 — View Rendering</a></li><li><a class="" href="references.html#section-9--lifecycle--platform-components">Section 9 — Lifecycle &amp; Platform Components</a></li><li><a class="" href="references.html#section-10--data-layer">Section 10 — Data Layer</a></li><li><a class="" href="references.html#section-11--testing">Section 11 — Testing</a></li><li><a class="" href="references.html#section-12--build-gradle--release">Section 12 — Build, Gradle &amp; Release</a></li><li><a class="" href="references.html#section-13--security--privacy">Section 13 — Security &amp; Privacy</a></li><li><a class="" href="references.html#section-14--performance-beyond-rendering">Section 14 — Performance (Beyond Rendering)</a></li><li><a class="" href="references.html#section-15--system-design">Section 15 — System Design</a></li><li><a class="" href="references.html#section-16--interview-qa-cheatsheet">Section 16 — Interview Q&amp;A Cheatsheet</a></li><li><a class="" href="references.html#section-17--must-revise-checklist">Section 17 — Must-Revise Checklist</a></li><li><a class="" href="references.html#section-18--seniorstaff-answer-framework">Section 18 — Senior/Staff Answer Framework</a></li><li><a class="" href="references.html#books">Books</a></li></ul></details></nav>
+<aside class="toc-right"><div class="toc-h">On this page</div><ul class="toc-tree"><li class="toc-grp"><a class="toc-2" href="#table-of-contents"><span class="tcaret tcaret-none"></span>Table of Contents</a></li><li class="toc-grp"><a class="toc-2" href="#41-pipes"><span class="tcaret">▶</span>4.1 Pipes</a><ul class="toc-subs"><li><a class="toc-3" href="#definition">Definition</a></li><li><a class="toc-3" href="#internals">Internals</a></li><li><a class="toc-3" href="#blocking-behavior-and-thread-design-implications">Blocking Behavior and Thread-Design Implications</a></li><li><a class="toc-3" href="#pipelines">Pipelines</a></li><li><a class="toc-3" href="#android-implications">Android Implications</a></li><li><a class="toc-3" href="#trade-offs">Trade-offs</a></li><li><a class="toc-3" href="#failure-modes">Failure Modes</a></li><li><a class="toc-3" href="#interview-angles">Interview Angles</a></li></ul></li><li class="toc-grp"><a class="toc-2" href="#42-shared-memory"><span class="tcaret">▶</span>4.2 Shared Memory</a><ul class="toc-subs"><li><a class="toc-3" href="#definition-1">Definition</a></li><li><a class="toc-3" href="#synchronization-need">Synchronization Need</a></li><li><a class="toc-3" href="#race-conditions">Race Conditions</a></li><li><a class="toc-3" href="#visibility-issues">Visibility Issues</a></li><li><a class="toc-3" href="#protecting-shared-mutable-state">Protecting Shared Mutable State</a></li><li><a class="toc-3" href="#immutability-reduces-risk">Immutability Reduces Risk</a></li><li><a class="toc-3" href="#android-implications-1">Android Implications</a></li><li><a class="toc-3" href="#trade-offs-1">Trade-offs</a></li><li><a class="toc-3" href="#failure-modes-1">Failure Modes</a></li></ul></li><li class="toc-grp"><a class="toc-2" href="#43-signaling"><span class="tcaret">▶</span>4.3 Signaling</a><ul class="toc-subs"><li><a class="toc-3" href="#waitnotify">wait/notify</a></li><li><a class="toc-3" href="#countdownlatch">CountDownLatch</a></li><li><a class="toc-3" href="#semaphore">Semaphore</a></li><li><a class="toc-3" href="#cyclicbarrier">CyclicBarrier</a></li><li><a class="toc-3" href="#mutex--reentrantlock">Mutex / ReentrantLock</a></li><li><a class="toc-3" href="#condition-variables">Condition Variables</a></li><li><a class="toc-3" href="#countdownlatch-vs-semaphore">CountDownLatch vs Semaphore</a></li><li><a class="toc-3" href="#signal-vs-shared-data">Signal vs Shared Data</a></li><li><a class="toc-3" href="#android-implications-for-signaling">Android Implications for Signaling</a></li></ul></li><li class="toc-grp"><a class="toc-2" href="#44-blockingqueue"><span class="tcaret">▶</span>4.4 BlockingQueue</a><ul class="toc-subs"><li><a class="toc-3" href="#definition-2">Definition</a></li><li><a class="toc-3" href="#producer-consumer-example">Producer-Consumer Example</a></li><li><a class="toc-3" href="#internals-1">Internals</a></li><li><a class="toc-3" href="#blocking-vs-non-blocking-operations">Blocking vs Non-Blocking Operations</a></li><li><a class="toc-3" href="#bounded-vs-unbounded-queues">Bounded vs Unbounded Queues</a></li><li><a class="toc-3" href="#backpressure">Backpressure</a></li><li><a class="toc-3" href="#android-implications-2">Android Implications</a></li><li><a class="toc-3" href="#trade-offs-2">Trade-offs</a></li><li><a class="toc-3" href="#failure-modes-2">Failure Modes</a></li><li><a class="toc-3" href="#interview-angles-1">Interview Angles</a></li></ul></li><li class="toc-grp"><a class="toc-2" href="#45-message-passing--android-handlerloopermessagequeue"><span class="tcaret">▶</span>4.5 Message Passing — Android Handler/Looper/MessageQueue</a><ul class="toc-subs"><li><a class="toc-3" href="#definition-3">Definition</a></li><li><a class="toc-3" href="#avoids-shared-mutable-state">Avoids Shared Mutable State</a></li><li><a class="toc-3" href="#android-handlerloopermessagequeue-architecture">Android Handler/Looper/MessageQueue Architecture</a></li><li><a class="toc-3" href="#messages-should-be-small">Messages Should Be Small</a></li><li><a class="toc-3" href="#message-ordering">Message Ordering</a></li><li><a class="toc-3" href="#delayed-message-lifecycle-leaks">Delayed-Message Lifecycle Leaks</a></li><li><a class="toc-3" href="#android-implications-summary">Android Implications Summary</a></li><li><a class="toc-3" href="#trade-offs-3">Trade-offs</a></li><li><a class="toc-3" href="#failure-modes-3">Failure Modes</a></li><li><a class="toc-3" href="#interview-angles-2">Interview Angles</a></li></ul></li><li class="toc-grp"><a class="toc-2" href="#cross-cutting-shared-memory-vs-message-passing"><span class="tcaret tcaret-none"></span>Cross-cutting: Shared Memory vs Message Passing</a></li></ul></aside>
+<div class="backdrop"></div>
+<div class="content">
+<div class="mtop"><button onclick="toggleNav()" aria-label="Menu">☰</button><a class="home" href="../index.html">🏠</a><span class="t">4. Thread Communication</span></div>
+<a class="arrow left" href="concurrency-android-threading.html" title="Previous (3. Concurrency &amp; Android Threading)">‹</a>
+<a class="arrow right" href="ipc-binder-aidl-messenger.html" title="Next (5. IPC: Binder, AIDL, Messenger)">›</a>
+<div class="wrap">
+<h1 id="4-thread-communication">4. Thread Communication</h1>
+<p>Inter-thread communication is how threads exchange data and coordinate execution. There are four core strategies — pipes, shared memory, signaling, and message passing — and they differ in coupling, safety, and performance. <code>BlockingQueue</code> gets its own section because it is the most practical concurrency utility in the JVM world and it underlies Android&#x27;s own work queues.</p>
+<hr>
+<h2 id="table-of-contents">Table of Contents</h2>
+<ol>
+<li><a href="#41-pipes">4.1 Pipes</a></li>
+<li><a href="#42-shared-memory">4.2 Shared Memory</a></li>
+<li><a href="#43-signaling">4.3 Signaling</a></li>
+<ul>
+<li><a href="#waitnotify">wait / notify</a></li>
+<li><a href="#countdownlatch">CountDownLatch</a></li>
+<li><a href="#semaphore">Semaphore</a></li>
+<li><a href="#cyclicbarrier">CyclicBarrier</a></li>
+<li><a href="#mutex--reentrantlock">Mutex (ReentrantLock)</a></li>
+<li><a href="#condition-variables">Condition Variables</a></li>
+<li><a href="#countdownlatch-vs-semaphore">CountDownLatch vs Semaphore</a></li>
+<li><a href="#signal-vs-shared-data">Signal vs Shared Data</a></li>
+</ul>
+<li><a href="#44-blockingqueue">4.4 BlockingQueue</a></li>
+<li><a href="#45-message-passing--android-handlerloopermessagequeue">4.5 Message Passing — Android Handler/Looper/MessageQueue</a></li>
+<li><a href="#cross-cutting-shared-memory-vs-message-passing">Cross-cutting: Shared Memory vs Message Passing</a></li>
+</ol>
+<hr>
+<h2 id="41-pipes">4.1 Pipes</h2>
+<h3 id="definition">Definition</h3>
+<p>A pipe is a <strong>unidirectional, buffer-backed channel</strong> that connects exactly two threads: a producer writes into the write-end and a consumer reads from the read-end. The channel owns a fixed internal buffer, and the JVM manages flow control automatically — the producer blocks when the buffer is full and the consumer blocks when it is empty.</p>
+<p>In Java/Kotlin the standard classes are:</p>
+<ul>
+<li><code>PipedOutputStream</code> / <code>PipedInputStream</code> — byte streams</li>
+<li><code>PipedWriter</code> / <code>PipedReader</code> — character streams</li>
+</ul>
+<pre><code>fun pipeExample() {
+    val writer = PipedWriter()
+    val reader = PipedReader(writer)   // connects the two ends
+
+    // Producer thread
+    Thread {
+        writer.use { w -&gt;
+            w.write(&quot;hello from producer\n&quot;)
+        }
+    }.start()
+
+    // Consumer thread
+    Thread {
+        reader.use { r -&gt;
+            val buf = CharArray(256)
+            val n = r.read(buf)
+            println(String(buf, 0, n))   // &quot;hello from producer&quot;
+        }
+    }.start()
+}</code></pre>
+<h3 id="internals">Internals</h3>
+<ol>
+<li><code>PipedWriter.connect(PipedReader)</code> links both ends to a shared circular char buffer (default</li>
+</ol>
+<p>1024 chars / 1024 bytes for the byte variant).</p>
+<ol>
+<li><strong>Write side:</strong> if the buffer is full the producer blocks (<code>wait()</code>) until the consumer drains</li>
+</ol>
+<p>some data.</p>
+<ol>
+<li><strong>Read side:</strong> if the buffer is empty the consumer blocks until the producer writes more data or</li>
+</ol>
+<p>closes the write-end (EOF).</p>
+<ol>
+<li>Closing the write-end signals EOF to the reader.</li>
+<li><strong>Broken pipe:</strong> if the reader thread dies, the next producer write throws</li>
+</ol>
+<p><code>IOException(&quot;Pipe broken&quot;)</code>.</p>
+<h3 id="blocking-behavior-and-thread-design-implications">Blocking Behavior and Thread-Design Implications</h3>
+<table border="1" cellpadding="6" cellspacing="0">
+<thead><tr>
+<th>Condition</th>
+<th>What happens</th>
+<th>Thread impact</th>
+</tr></thead><tbody>
+<tr><td>Buffer full</td><td>Producer blocks on <code>write()</code></td><td>Producer thread is descheduled; no busy-wait</td></tr>
+<tr><td>Buffer empty</td><td>Consumer blocks on <code>read()</code></td><td>Consumer thread is descheduled</td></tr>
+<tr><td>Write-end closed</td><td><code>read()</code> returns -1 (EOF)</td><td>Consumer can exit cleanly</td></tr>
+<tr><td>Reader thread dead</td><td><code>write()</code> throws <code>IOException</code></td><td>Producer must handle exception</td></tr>
+</tbody></table>
+<p>Because both ends block, the two threads must run on <strong>separate threads</strong> — connecting both ends on the same thread is a classic deadlock: the producer fills the buffer and blocks before the consumer ever gets CPU time.</p>
+<h3 id="pipelines">Pipelines</h3>
+<p>Multiple pipes can be chained:</p>
+<pre><code>Thread-A --&gt; PipedWriter/Reader --&gt; Thread-B --&gt; PipedWriter/Reader --&gt; Thread-C</code></pre>
+<p>This is analogous to Unix <code>cmd1 | cmd2 | cmd3</code>. Each intermediate thread is both a consumer (of the upstream pipe) and a producer (of the downstream pipe).</p>
+<h3 id="android-implications">Android Implications</h3>
+<p><code>PipedInputStream/OutputStream</code> are standard Java and work on Android, but they are rarely used in modern Android code. The more idiomatic equivalents are:</p>
+<ul>
+<li><strong>Kotlin <code>Channel&lt;T&gt;</code></strong> — typed, suspending, composable with coroutines.</li>
+<li><strong><code>Flow</code></strong> — cold, lazy pipe that only runs when collected.</li>
+<li><strong><code>SharedFlow</code> / <code>StateFlow</code></strong> — hot variants for multi-subscriber broadcast.</li>
+</ul>
+<p>Use <code>java.io.Pipe*</code> only when you must interface with legacy InputStream/OutputStream APIs.</p>
+<h3 id="trade-offs">Trade-offs</h3>
+<table border="1" cellpadding="6" cellspacing="0">
+<thead><tr>
+<th>Pro</th>
+<th>Con</th>
+</tr></thead><tbody>
+<tr><td>Simple producer→consumer coupling</td><td>Only byte/char streams (no typed objects)</td></tr>
+<tr><td>Natural backpressure (buffer full → block)</td><td>Must be on separate threads</td></tr>
+<tr><td>EOF signals termination cleanly</td><td>Broken-pipe if consumer dies</td></tr>
+<tr><td>No explicit lock management</td><td>1 KB default buffer; may need tuning</td></tr>
+</tbody></table>
+<h3 id="failure-modes">Failure Modes</h3>
+<ul>
+<li><strong>Deadlock:</strong> both ends on the same thread.</li>
+<li><strong>Broken pipe:</strong> consumer thread dies; producer gets <code>IOException</code>.</li>
+<li><strong>Starvation:</strong> consumer is too slow and producer keeps blocking — pipeline throughput limited by slowest stage.</li>
+</ul>
+<h3 id="interview-angles">Interview Angles</h3>
+<p><strong>What is a pipe?</strong></p>
+<p>&quot;A pipe is a unidirectional, buffer-backed byte or character channel between exactly two threads. The producer blocks when the buffer is full; the consumer blocks when it is empty. That blocking behavior is actually the feature — it gives you natural backpressure without any manual synchronization.&quot;</p>
+<p><strong>When would pipe-style communication be useful?</strong></p>
+<p>&quot;Pipes are most useful for streaming data processing — things like log parsing, transcoding, or compression pipelines — where you want natural backpressure and you don&#x27;t want to write manual synchronization. They&#x27;re also the right tool when you need to interface with legacy APIs that speak <code>InputStream</code> or <code>OutputStream</code>, because those APIs expect a stream, and a pipe gives you exactly that.&quot;</p>
+<p><strong>How does blocking affect thread design?</strong></p>
+<p>&quot;The key constraint is that each end of the pipe must live on its own thread, because blocking puts the thread to sleep — no busy-wait — but it also means that thread is stuck waiting. So you need one thread per pipeline stage. In modern Android the better answer is to replace pipes with <code>Channel&lt;T&gt;</code> from coroutines, which suspends instead of blocking, so many logical stages can share a small thread pool without starving each other.&quot;</p>
+<hr>
+<h2 id="42-shared-memory">4.2 Shared Memory</h2>
+<h3 id="definition-1">Definition</h3>
+<p>Shared memory is the <strong>default communication model in Java and Kotlin</strong> — all threads share the heap, so any thread can read or write the same field directly without copying anything. That zero-copy access is what makes it fast, but it also means every concurrent read-write pair is a potential race condition unless you establish a happens-before relationship.</p>
+<pre><code>// Unsynchronized shared counter — DATA RACE
+class SharedCounter {
+    var count = 0         // shared mutable state
+}
+
+val counter = SharedCounter()
+val t1 = Thread { repeat(100_000) { counter.count++ } }
+val t2 = Thread { repeat(100_000) { counter.count++ } }
+t1.start(); t2.start()
+t1.join();  t2.join()
+// counter.count is NOT reliably 200_000</code></pre>
+<h3 id="synchronization-need">Synchronization Need</h3>
+<p>The JVM memory model (JMM, JSR-133) does <strong>not</strong> guarantee that writes by one thread are immediately visible to another unless a <strong>happens-before</strong> relationship exists. Happens-before is established by:</p>
+<ul>
+<li><code>synchronized</code> block/method entry and exit</li>
+<li><code>volatile</code> write → subsequent <code>volatile</code> read</li>
+<li><code>Thread.start()</code> → first action in that thread</li>
+<li><code>Thread.join()</code> → actions after join see all writes before join</li>
+<li><code>Lock.unlock()</code> → subsequent <code>Lock.lock()</code></li>
+</ul>
+<p>Without happens-before, a thread may see a stale cached value from its CPU register or L1 cache.</p>
+<h3 id="race-conditions">Race Conditions</h3>
+<p>A <strong>race condition</strong> occurs when the correctness of the program depends on the relative timing of thread scheduling. The classic example is check-then-act:</p>
+<pre><code>// BAD: check-then-act without atomicity
+if (map.containsKey(key)) {          // check
+    val v = map[key]!!               // act — another thread may have removed key here
+    process(v)
+}</code></pre>
+<p>Read-modify-write is another common pattern:</p>
+<pre><code>// count++ is actually: read count, add 1, write count — three non-atomic steps
+counter.count++</code></pre>
+<h3 id="visibility-issues">Visibility Issues</h3>
+<p><code>@Volatile</code> on a JVM field forces every read/write to go to main memory (disables CPU caching of that field) and prevents instruction reordering around it:</p>
+<pre><code>@Volatile var running = true        // other threads see the update immediately
+
+// Writer thread
+fun stop() { running = false }
+
+// Reader thread
+while (running) { /* work */ }      // will observe running=false without @Volatile delay</code></pre>
+<p><code>@Volatile</code> solves visibility but <strong>not atomicity</strong>. <code>running = false</code> is a single write, so <code>@Volatile</code> is sufficient. <code>count++</code> (read-modify-write) still needs <code>AtomicInteger</code> or <code>synchronized</code>.</p>
+<h3 id="protecting-shared-mutable-state">Protecting Shared Mutable State</h3>
+<table border="1" cellpadding="6" cellspacing="0">
+<thead><tr>
+<th>Mechanism</th>
+<th>Use-case</th>
+<th>Cost</th>
+</tr></thead><tbody>
+<tr><td><code>synchronized</code> block</td><td>coarse-grained critical section</td><td>moderate (monitor acquire/release)</td></tr>
+<tr><td><code>ReentrantLock</code></td><td>same as <code>synchronized</code> but with tryLock / timed lock</td><td>moderate</td></tr>
+<tr><td><code>AtomicInteger</code> / <code>AtomicReference</code></td><td>single-field CAS</td><td>very low (single CAS instruction)</td></tr>
+<tr><td><code>@Volatile</code></td><td>single boolean flag / reference</td><td>very low (memory barrier)</td></tr>
+<tr><td><code>ConcurrentHashMap</code></td><td>thread-safe map reads</td><td>low (striped locking)</td></tr>
+<tr><td>Immutable data</td><td>no writes → no races</td><td>zero (allocation cost only)</td></tr>
+</tbody></table>
+<pre><code>import java.util.concurrent.atomic.AtomicInteger
+
+class SafeCounter {
+    private val count = AtomicInteger(0)
+    fun increment() = count.incrementAndGet()
+    fun get() = count.get()
+}</code></pre>
+<h3 id="immutability-reduces-risk">Immutability Reduces Risk</h3>
+<p>An <strong>immutable</strong> object&#x27;s state cannot change after construction. Any thread can read it freely because there are no concurrent writes to race with. In Kotlin, prefer:</p>
+<ul>
+<li><code>val</code> over <code>var</code> wherever possible.</li>
+<li><code>data class</code> with all <code>val</code> fields — a classic value object.</li>
+<li>Kotlin&#x27;s <code>List</code> / <code>Map</code> / <code>Set</code> (read-only views) for collections.</li>
+<li><code>copy()</code> to produce new instances with modified fields.</li>
+</ul>
+<pre><code>data class Config(val host: String, val port: Int)   // immutable; safe to share across threads</code></pre>
+<p>When state must change, use the <strong>replace</strong> pattern: create a new immutable instance and swap an <code>AtomicReference</code>:</p>
+<pre><code>val configRef = AtomicReference(Config(&quot;localhost&quot;, 8080))
+
+// thread-safe update
+configRef.updateAndGet { old -&gt; old.copy(port = 9090) }</code></pre>
+<h3 id="android-implications-1">Android Implications</h3>
+<ul>
+<li><strong>Main thread</strong> holds <code>View</code> state. Only the main thread should read/write <code>View</code> properties.</li>
+</ul>
+<p>Background threads communicating results to the UI must go through <code>LiveData</code>, <code>StateFlow</code>, or <code>Handler.post</code>.</p>
+<ul>
+<li><strong>ViewModel</strong> is often accessed from both background coroutines and the UI thread. Use</li>
+</ul>
+<p><code>MutableStateFlow</code> (which is thread-safe) instead of raw mutable fields.</p>
+<ul>
+<li><strong>Room</strong> handles its own internal locking; never hold a <code>Cursor</code> across threads.</li>
+</ul>
+<h3 id="trade-offs-1">Trade-offs</h3>
+<table border="1" cellpadding="6" cellspacing="0">
+<thead><tr>
+<th>Pro</th>
+<th>Con</th>
+</tr></thead><tbody>
+<tr><td>Zero-copy — extremely fast</td><td>Requires explicit synchronization</td></tr>
+<tr><td>Familiar Java model</td><td>Deadlock risk if locks acquired in different order</td></tr>
+<tr><td>Fine-grained control</td><td>Race conditions are silent and hard to reproduce</td></tr>
+<tr><td>Works well for small hot data</td><td>Visibility bugs are compiler/CPU dependent</td></tr>
+</tbody></table>
+<h3 id="failure-modes-1">Failure Modes</h3>
+<ul>
+<li><strong>Data race:</strong> two threads write/write or read/write the same field without synchronization —</li>
+</ul>
+<p>undefined behavior under the JMM.</p>
+<ul>
+<li><strong>Stale read:</strong> a thread caches a field value in a register; writes from other threads are never</li>
+</ul>
+<p>observed.</p>
+<ul>
+<li><strong>Deadlock:</strong> thread A holds lock-1 and waits for lock-2; thread B holds lock-2 and waits for</li>
+</ul>
+<p>lock-1.</p>
+<ul>
+<li><strong>Livelock:</strong> threads keep reacting to each other but make no forward progress.</li>
+<li><strong>Priority inversion:</strong> a high-priority thread waits for a lock held by a low-priority thread</li>
+</ul>
+<p>that is itself starved by a medium-priority thread.</p>
+<hr>
+<h2 id="43-signaling">4.3 Signaling</h2>
+<p>Signaling is about threads <strong>notifying</strong> each other — &quot;I am done&quot;, &quot;a slot is available&quot;, &quot;N workers have reached the rendezvous&quot; — and it is distinct from sharing data. You can signal without transferring any payload at all.</p>
+<h3 id="waitnotify">wait/notify</h3>
+<p><code>wait</code>/<code>notify</code> is the lowest-level JVM signaling mechanism. Every object has an intrinsic monitor, and a thread that holds that monitor can call <code>wait()</code> to release it and suspend. Another thread then calls <code>notify()</code> or <code>notifyAll()</code> to wake the waiting thread or threads back up.</p>
+<pre><code>val lock = Object()
+var ready = false
+
+// Consumer thread
+Thread {
+    synchronized(lock) {
+        while (!ready) {         // always loop — spurious wakeups
+            lock.wait()
+        }
+        println(&quot;Consumer: data is ready&quot;)
+    }
+}.start()
+
+// Producer thread
+Thread {
+    Thread.sleep(500)
+    synchronized(lock) {
+        ready = true
+        lock.notify()            // wake one waiter
+    }
+}.start()</code></pre>
+<p><strong>Rules:</strong></p>
+<ol>
+<li><code>wait()</code> / <code>notify()</code> must be called from within a <code>synchronized</code> block on the same object.</li>
+<li>Always check the condition in a <strong><code>while</code> loop</strong>, not <code>if</code> — spurious wakeups are permitted by</li>
+</ol>
+<p>the JVM spec.</p>
+<ol>
+<li><code>notify()</code> wakes one arbitrary waiter; <code>notifyAll()</code> wakes all — safer when multiple threads</li>
+</ol>
+<p>wait for different conditions.</p>
+<p><strong>Limitations:</strong> <code>wait</code>/<code>notify</code> is fragile, verbose, and hard to compose. In practice you should always prefer the higher-level utilities below.</p>
+<hr>
+<h3 id="countdownlatch">CountDownLatch</h3>
+<p>A <code>CountDownLatch</code> lets one or more threads <strong>wait</strong> until a set of operations in other threads completes. You initialize it with a count; each worker calls <code>countDown()</code> when it finishes; and any waiter calls <code>await()</code>, which blocks until the count reaches zero.</p>
+<p><strong>Key property: one-shot, non-resettable.</strong></p>
+<pre><code>import java.util.concurrent.CountDownLatch
+
+fun parallelInit() {
+    val latch = CountDownLatch(3)   // 3 workers to wait for
+
+    repeat(3) { i -&gt;
+        Thread {
+            println(&quot;Worker $i initializing...&quot;)
+            Thread.sleep(100L * (i + 1))
+            println(&quot;Worker $i done&quot;)
+            latch.countDown()       // decrement
+        }.start()
+    }
+
+    latch.await()                   // main thread blocks here until count == 0
+    println(&quot;All workers done, proceeding&quot;)
+}</code></pre>
+<p>Timed variant: <code>latch.await(5, TimeUnit.SECONDS)</code> returns <code>false</code> if it times out.</p>
+<p><strong>Android use:</strong> waiting for multiple parallel API calls before showing a screen; waiting for analytics SDK init before logging events.</p>
+<hr>
+<h3 id="semaphore">Semaphore</h3>
+<p>A <code>Semaphore</code> maintains a count of <strong>permits</strong>. <code>acquire()</code> decrements the count and blocks if it is already zero; <code>release()</code> increments it. The whole point is to control how many threads can access a bounded resource pool at the same time.</p>
+<pre><code>import java.util.concurrent.Semaphore
+
+val dbConnections = Semaphore(5)    // max 5 concurrent DB connections
+
+fun queryDatabase(query: String) {
+    dbConnections.acquire()         // blocks if 5 connections already in use
+    try {
+        // use the connection
+        println(&quot;Executing: $query&quot;)
+        Thread.sleep(200)
+    } finally {
+        dbConnections.release()     // always release, even on exception
+    }
+}</code></pre>
+<p><strong>Binary semaphore (permits=1):</strong> behaves like a mutex, but with two important differences — it is not re-entrant, and it can be released by a different thread than the one that acquired it. That is unlike <code>synchronized</code>, which is re-entrant and is always released by its owning thread.</p>
+<p><strong>Fair semaphore:</strong> <code>Semaphore(n, true)</code> grants permits in FIFO order, preventing starvation.</p>
+<p><strong>Android use:</strong> throttling parallel image downloads; limiting concurrent network requests.</p>
+<hr>
+<h3 id="cyclicbarrier">CyclicBarrier</h3>
+<p>A <code>CyclicBarrier</code> makes N threads <strong>rendezvous</strong> at a common point. Each thread calls <code>await()</code>; the last one to arrive optionally triggers a barrier action, and then all threads are released together. The key difference from <code>CountDownLatch</code> is that a <code>CyclicBarrier</code> is resettable — you can reuse it for multiple phases of work.</p>
+<pre><code>import java.util.concurrent.CyclicBarrier
+
+val barrier = CyclicBarrier(3) {
+    println(&quot;All 3 threads reached the barrier — next phase begins&quot;)
+}
+
+repeat(3) { i -&gt;
+    Thread {
+        println(&quot;Thread $i doing phase 1 work&quot;)
+        Thread.sleep(50L * (i + 1))
+        barrier.await()             // wait for all peers
+        println(&quot;Thread $i doing phase 2 work&quot;)
+    }.start()
+}</code></pre>
+<p><strong>Android use:</strong> coordinating multiple parallel data-fetch coroutines before merging results (more idiomatic: <code>awaitAll()</code> in coroutines).</p>
+<hr>
+<h3 id="mutex--reentrantlock">Mutex / ReentrantLock</h3>
+<p><code>ReentrantLock</code> is the explicit-lock equivalent of <code>synchronized</code>. &quot;Re-entrant&quot; means the same thread can lock it multiple times without deadlocking — it just keeps an internal acquisition count and only releases when that count drops to zero.</p>
+<pre><code>import java.util.concurrent.locks.ReentrantLock
+
+val lock = ReentrantLock()
+
+fun criticalSection() {
+    lock.lock()
+    try {
+        // protected code
+    } finally {
+        lock.unlock()   // must always be in finally
+    }
+}
+
+// Timed tryLock — avoids deadlock by giving up
+fun tryWork(): Boolean {
+    if (lock.tryLock(100, java.util.concurrent.TimeUnit.MILLISECONDS)) {
+        try {
+            // do work
+            return true
+        } finally {
+            lock.unlock()
+        }
+    }
+    return false   // could not acquire lock in time
+}</code></pre>
+<p>Kotlin coroutines provide <code>kotlinx.coroutines.sync.Mutex</code> — a <strong>suspending</strong> mutex that does not block a thread. When one coroutine holds it, others suspend rather than park their OS thread:</p>
+<pre><code>import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+
+val mutex = Mutex()
+
+suspend fun safeUpdate() {
+    mutex.withLock {
+        // only one coroutine runs this at a time
+    }
+}</code></pre>
+<hr>
+<h3 id="condition-variables">Condition Variables</h3>
+<p>A <code>Condition</code> is associated with a <code>Lock</code> and lets you have <strong>multiple wait queues</strong> on a single lock. That is something plain <code>synchronized</code> cannot do — every <code>synchronized</code> object has only one wait-set, so you cannot separately signal &quot;not full&quot; and &quot;not empty&quot;. With two <code>Condition</code> objects you can.</p>
+<pre><code>import java.util.concurrent.locks.ReentrantLock
+
+val lock = ReentrantLock()
+val notEmpty = lock.newCondition()
+val notFull  = lock.newCondition()
+val buffer = ArrayDeque&lt;Int&gt;()
+val capacity = 10
+
+fun produce(value: Int) {
+    lock.lock()
+    try {
+        while (buffer.size == capacity) notFull.await()
+        buffer.addLast(value)
+        notEmpty.signal()
+    } finally { lock.unlock() }
+}
+
+fun consume(): Int {
+    lock.lock()
+    try {
+        while (buffer.isEmpty()) notEmpty.await()
+        val v = buffer.removeFirst()
+        notFull.signal()
+        return v
+    } finally { lock.unlock() }
+}</code></pre>
+<p>This pattern is exactly how <code>LinkedBlockingQueue</code> is implemented internally.</p>
+<hr>
+<h3 id="countdownlatch-vs-semaphore">CountDownLatch vs Semaphore</h3>
+<table border="1" cellpadding="6" cellspacing="0">
+<thead><tr>
+<th>Dimension</th>
+<th>CountDownLatch</th>
+<th>Semaphore</th>
+</tr></thead><tbody>
+<tr><td><strong>Purpose</strong></td><td>Wait for N events to complete</td><td>Throttle concurrent access to a resource</td></tr>
+<tr><td><strong>Resettable</strong></td><td>No — one-shot</td><td>Yes — release() can add permits at any time</td></tr>
+<tr><td><strong>Direction</strong></td><td>Workers decrement; waiters await</td><td>Acquirers take permits; holders release</td></tr>
+<tr><td><strong>Who calls what</strong></td><td>Workers: <code>countDown()</code> / Waiters: <code>await()</code></td><td>Same threads: <code>acquire()</code> then <code>release()</code></td></tr>
+<tr><td><strong>Permits &gt; 0</strong></td><td>Any remaining count just means not all events happened</td><td>Multiple threads can proceed concurrently</td></tr>
+<tr><td><strong>Permits = 0</strong></td><td>All events done, all waiters released</td><td>Resource exhausted, all acquirers block</td></tr>
+<tr><td><strong>Android analogy</strong></td><td>Wait for analytics + feature flags before showing first screen</td><td>Limit parallel image downloads to 3</td></tr>
+</tbody></table>
+<p>The rule of thumb is: reach for <code>CountDownLatch</code> when you want &quot;wait until done&quot;, and reach for <code>Semaphore</code> when you want &quot;allow at most N concurrent&quot;.</p>
+<hr>
+<h3 id="signal-vs-shared-data">Signal vs Shared Data</h3>
+<p>When two threads need to communicate, there are two broad approaches — you signal the other thread, or you poll a shared flag — and the table below shows where each wins:</p>
+<table border="1" cellpadding="6" cellspacing="0">
+<thead><tr>
+<th></th>
+<th>Signaling</th>
+<th>Polling shared data</th>
+</tr></thead><tbody>
+<tr><td><strong>Mechanism</strong></td><td><code>notify()</code>, <code>CountDownLatch</code>, <code>Channel</code>, <code>Flow</code></td><td>Loop checking a <code>@Volatile</code> flag</td></tr>
+<tr><td><strong>CPU use</strong></td><td>Zero while waiting (thread sleeps)</td><td>Burns CPU if spinning; moderate with <code>sleep()</code></td></tr>
+<tr><td><strong>Latency</strong></td><td>Low — woken immediately</td><td>Depends on poll interval</td></tr>
+<tr><td><strong>Complexity</strong></td><td>Requires synchronization protocol</td><td>Simple but brittle</td></tr>
+<tr><td><strong>Missed signals</strong></td><td>Risk if <code>notify()</code> fires before <code>wait()</code> — use condition loop</td><td>N/A — flag stays set</td></tr>
+<tr><td><strong>Verdict</strong></td><td>Prefer for event-driven handoffs</td><td>Only for simple termination flags (<code>@Volatile running</code>)</td></tr>
+</tbody></table>
+<hr>
+<h3 id="android-implications-for-signaling">Android Implications for Signaling</h3>
+<ul>
+<li>Prefer <code>kotlinx.coroutines</code> primitives (<code>Mutex</code>, <code>Channel</code>, <code>Job.join()</code>, <code>async/await</code>) over</li>
+</ul>
+<p>Java concurrency utilities — they are suspending and work correctly with coroutine cancellation.</p>
+<ul>
+<li><code>CountDownLatch.await()</code> <strong>blocks</strong> the calling thread — never call it on the main thread.</li>
+<li>Use <code>Flow.first()</code> or <code>StateFlow</code> as a coroutine-native alternative to <code>CountDownLatch</code> for</li>
+</ul>
+<p>&quot;wait for a value to become available&quot;.</p>
+<hr>
+<h2 id="44-blockingqueue">4.4 BlockingQueue</h2>
+<h3 id="definition-2">Definition</h3>
+<p>A <code>BlockingQueue&lt;E&gt;</code> is a <strong>thread-safe queue that blocks the caller</strong> whenever the operation cannot complete immediately. There are two key operations: <code>put(e)</code> blocks if the queue is full until space becomes available, and <code>take()</code> blocks if the queue is empty until an element is added. That blocking contract is what makes it the foundational building block for the producer-consumer pattern — no manual <code>wait</code>/<code>notify</code> required.</p>
+<pre><code>Producer Thread(s)              BlockingQueue              Consumer Thread(s)
+      |                      +------------------+                |
+      |---- put(item) -----&gt; |  [ ][ ][ ][ ]    | &lt;-- take() ---|
+      |  (blocks if full)    +------------------+  (blocks if empty)</code></pre>
+<h3 id="producer-consumer-example">Producer-Consumer Example</h3>
+<pre><code>import java.util.concurrent.LinkedBlockingQueue
+import java.util.concurrent.TimeUnit
+
+fun producerConsumerDemo() {
+    val queue = LinkedBlockingQueue&lt;Int&gt;(5)    // bounded: max 5 items
+
+    // Producer
+    val producer = Thread {
+        for (i in 1..10) {
+            println(&quot;Producing $i&quot;)
+            queue.put(i)                        // blocks when queue has 5 items
+            Thread.sleep(50)
+        }
+        queue.put(-1)                           // sentinel: signals end-of-stream
+    }
+
+    // Consumer
+    val consumer = Thread {
+        while (true) {
+            val item = queue.take()             // blocks when queue is empty
+            if (item == -1) break
+            println(&quot;Consuming $item (queue size: ${queue.size})&quot;)
+            Thread.sleep(150)                   // consumer is slower than producer
+        }
+    }
+
+    producer.start()
+    consumer.start()
+    producer.join()
+    consumer.join()
+}</code></pre>
+<h3 id="internals-1">Internals</h3>
+<p><code>LinkedBlockingQueue</code> uses two separate <code>ReentrantLock</code>s — one guarding the head for takes, one guarding the tail for puts — plus two <code>Condition</code> variables (<code>notEmpty</code>, <code>notFull</code>). That &quot;two-lock&quot; design is what lets puts and takes happen simultaneously at full concurrency.</p>
+<p><code>ArrayBlockingQueue</code> uses a single lock instead, which is slightly lower throughput, but it pre-allocates its array so it uses less memory overall.</p>
+<table border="1" cellpadding="6" cellspacing="0">
+<thead><tr>
+<th>Implementation</th>
+<th>Backing</th>
+<th>Bounded?</th>
+<th>Notes</th>
+</tr></thead><tbody>
+<tr><td><code>LinkedBlockingQueue</code></td><td>Linked nodes</td><td>Optional (default <code>MAX_VALUE</code>)</td><td>High throughput (2 locks)</td></tr>
+<tr><td><code>ArrayBlockingQueue</code></td><td>Array</td><td>Yes (required)</td><td>Fair ordering option; lower GC pressure</td></tr>
+<tr><td><code>PriorityBlockingQueue</code></td><td>Heap</td><td>Unbounded</td><td>Items dequeued by priority, not FIFO</td></tr>
+<tr><td><code>SynchronousQueue</code></td><td>No storage</td><td>Effectively 0</td><td>Each put blocks until a take, and vice versa</td></tr>
+<tr><td><code>DelayQueue</code></td><td>Heap</td><td>Unbounded</td><td>Items become available only after their delay</td></tr>
+</tbody></table>
+<h3 id="blocking-vs-non-blocking-operations">Blocking vs Non-Blocking Operations</h3>
+<table border="1" cellpadding="6" cellspacing="0">
+<thead><tr>
+<th>Method</th>
+<th>Behavior</th>
+</tr></thead><tbody>
+<tr><td><code>put(e)</code></td><td>Blocks until space available</td></tr>
+<tr><td><code>take()</code></td><td>Blocks until element available</td></tr>
+<tr><td><code>offer(e)</code></td><td>Returns <code>false</code> immediately if full</td></tr>
+<tr><td><code>poll()</code></td><td>Returns <code>null</code> immediately if empty</td></tr>
+<tr><td><code>offer(e, time, unit)</code></td><td>Times out if still full after duration</td></tr>
+<tr><td><code>poll(time, unit)</code></td><td>Times out if still empty after duration</td></tr>
+</tbody></table>
+<h3 id="bounded-vs-unbounded-queues">Bounded vs Unbounded Queues</h3>
+<p><strong>Bounded queue (e.g., <code>ArrayBlockingQueue(100)</code> or <code>LinkedBlockingQueue(100)</code>):</strong></p>
+<ul>
+<li>Finite memory footprint — predictable and safe.</li>
+<li><code>put()</code> blocks when full, which gives you natural <strong>backpressure</strong>: producers automatically slow down when consumers fall behind.</li>
+<li>Prevents OOM when consumers are slower than producers.</li>
+</ul>
+<p><strong>Unbounded queue (default <code>LinkedBlockingQueue()</code>, <code>PriorityBlockingQueue</code>):</strong></p>
+<ul>
+<li><code>put()</code> never blocks (until heap memory is exhausted).</li>
+<li>There is no backpressure — a fast producer and a slow consumer will grow the queue without limit.</li>
+<li>Risk: <code>OutOfMemoryError</code> if the producer is consistently faster than the consumer.</li>
+</ul>
+<h3 id="backpressure">Backpressure</h3>
+<p><strong>Backpressure</strong> is the mechanism by which a slow consumer signals to a fast producer to slow down. With a bounded <code>BlockingQueue</code>, backpressure is built-in — a full queue simply blocks the producer thread until the consumer processes some items, and no extra code is needed.</p>
+<p>With an unbounded queue, you have to implement backpressure yourself. Two options: check <code>queue.size</code> and slow the producer when it crosses a threshold, or use a <code>SynchronousQueue</code> where every <code>put</code> must be matched by a <code>take</code> — zero buffering, maximum backpressure.</p>
+<p>In Kotlin coroutines, <code>Channel&lt;T&gt;</code> with a finite <code>capacity</code> achieves the same effect with suspension instead of blocking.</p>
+<h3 id="android-implications-2">Android Implications</h3>
+<ul>
+<li><code>ThreadPoolExecutor</code> accepts a <code>BlockingQueue&lt;Runnable&gt;</code> as its work queue:</li>
+<ul>
+<li><code>LinkedBlockingQueue</code> (unbounded) — <code>Executors.newFixedThreadPool(n)</code> default; can OOM.</li>
+<li><code>SynchronousQueue</code> — <code>Executors.newCachedThreadPool()</code> default; no buffering.</li>
+<li><code>ArrayBlockingQueue(n)</code> — explicit bound; <code>execute()</code> throws <code>RejectedExecutionException</code> when</li>
+</ul>
+</ul>
+<p>full (useful for shedding load).</p>
+<ul>
+<li><code>AsyncTask</code> (deprecated) used an internal <code>LinkedBlockingQueue</code>.</li>
+<li>Modern Android: prefer coroutine <code>Channel</code> or <code>Flow</code> with <code>buffer()</code> operator over raw</li>
+</ul>
+<p><code>BlockingQueue</code> in app code.</p>
+<ul>
+<li>Never call <code>take()</code> or <code>put()</code> on the <strong>main thread</strong> — they block and cause ANR.</li>
+</ul>
+<h3 id="trade-offs-2">Trade-offs</h3>
+<table border="1" cellpadding="6" cellspacing="0">
+<thead><tr>
+<th>Pro</th>
+<th>Con</th>
+</tr></thead><tbody>
+<tr><td>Thread-safe by design</td><td><code>take()</code>/<code>put()</code> block calling thread — must not call on main thread</td></tr>
+<tr><td>Natural backpressure with bounded queue</td><td>Unbounded queues risk OOM</td></tr>
+<tr><td>Rich API (offer, poll, timed variants)</td><td>FIFO ordering only (unless <code>PriorityBlockingQueue</code>)</td></tr>
+<tr><td>Decouples producer and consumer speeds</td><td>Sentinel-value pattern is fragile (what if producer dies?)</td></tr>
+</tbody></table>
+<h3 id="failure-modes-2">Failure Modes</h3>
+<ul>
+<li><strong>Unbounded queue OOM:</strong> production system — always use bounded queues in production.</li>
+<li><strong>Lost sentinel:</strong> producer crashes before sending the &quot;poison pill&quot; (<code>-1</code>, <code>null</code>, etc.) →</li>
+</ul>
+<p>consumer blocks forever. Mitigate: use timed <code>poll()</code> with a timeout, or use <code>Future</code>/ <code>CompletableFuture</code> to model completion.</p>
+<ul>
+<li><strong>Thread starvation:</strong> too few consumer threads for the volume; queue backs up.</li>
+<li><strong>Deadlock:</strong> two <code>BlockingQueue</code>s where thread A waits on queue-1 and thread B waits on</li>
+</ul>
+<p>queue-2, while each holds the other.</p>
+<h3 id="interview-angles-1">Interview Angles</h3>
+<p><strong>Why use BlockingQueue?</strong></p>
+<p>&quot;A <code>BlockingQueue</code> separates producers from consumers with a thread-safe buffer and gives you automatic blocking semantics — no manual <code>wait</code>/<code>notify</code> needed. The bounded variant goes one step further and gives you free backpressure: a full queue automatically slows the producer without any extra code on your part.&quot;</p>
+<p><strong>What happens with an unbounded queue?</strong></p>
+<p>&quot;<code>put()</code> never blocks, all the way up until the heap is exhausted. If the producer is consistently faster than the consumer, the queue grows without limit and you eventually get an <code>OutOfMemoryError</code>. That is why I always use a bounded queue in production systems where load is unpredictable — an unbounded queue is essentially a memory leak waiting to happen.&quot;</p>
+<p><strong>How do you implement backpressure?</strong></p>
+<p>&quot;The simplest answer is to use a bounded <code>BlockingQueue</code> — the producer&#x27;s <code>put()</code> naturally blocks when the queue is full, which is backpressure by definition. If you need something softer, use <code>offer(e, timeout, unit)</code> and apply back-off or drop logic when it times out. And in coroutines, <code>Channel</code> with a finite <code>capacity</code> does the same thing with suspension instead of blocking.&quot;</p>
+<hr>
+<h2 id="45-message-passing--android-handlerloopermessagequeue">4.5 Message Passing — Android Handler/Looper/MessageQueue</h2>
+<h3 id="definition-3">Definition</h3>
+<p>Message passing is a communication model where threads exchange <strong>discrete, self-contained messages</strong> rather than sharing mutable state. The sender packages data into a message and dispatches it into a queue; the receiver picks it up and processes it on its own thread. The key point is that threads never directly touch each other&#x27;s memory — data is owned by one thread at a time and transferred via the message.</p>
+<p>This is the model behind Erlang actors, Go channels, and Android&#x27;s own <code>Handler</code>/<code>Looper</code>/<code>MessageQueue</code> system.</p>
+<h3 id="avoids-shared-mutable-state">Avoids Shared Mutable State</h3>
+<p>Because each message is delivered to exactly one thread&#x27;s queue and processed serially, there is never a concurrent read-write on the same data. Races are eliminated by design — not by adding locks, but because the ownership model makes them structurally impossible.</p>
+<pre><code>Thread A owns data-A         Thread B owns data-B
+     |                             |
+     |  Message { data copy }      |
+     |-----------------------------&gt;
+                                   | processes message serially
+                                   | never races with Thread A</code></pre>
+<h3 id="android-handlerloopermessagequeue-architecture">Android Handler/Looper/MessageQueue Architecture</h3>
+<p>Android&#x27;s main thread has run inside a <code>Looper</code> loop since <code>ActivityThread.main()</code>. Every component lifecycle event — <code>onCreate</code>, <code>onStart</code>, button clicks, draw frames — is a <code>Message</code> or <code>Runnable</code> dispatched through the main <code>MessageQueue</code>. There is no special fast path; it all goes through the same queue.</p>
+<pre><code>           ┌─────────────────────────────────────────┐
+           │           Main Thread                   │
+           │                                         │
+           │  Looper.loop()                          │
+           │    └── MessageQueue.next()              │
+           │          └── dequeue Message/Runnable   │
+           │                └── Handler.dispatchMessage() │
+           └─────────────────────────────────────────┘
+                              ▲
+                              │  Handler.sendMessage() / post(Runnable)
+                              │
+           ┌─────────────────────────────────────────┐
+           │         Background Thread               │
+           └─────────────────────────────────────────┘</code></pre>
+<h4 id="core-classes">Core Classes</h4>
+<table border="1" cellpadding="6" cellspacing="0">
+<thead><tr>
+<th>Class</th>
+<th>Role</th>
+</tr></thead><tbody>
+<tr><td><code>Looper</code></td><td>Owns a <code>MessageQueue</code>; runs an infinite dequeue loop on its thread</td></tr>
+<tr><td><code>MessageQueue</code></td><td>Thread-safe priority queue of <code>Message</code> objects, ordered by <code>when</code> timestamp</td></tr>
+<tr><td><code>Handler</code></td><td>API for posting <code>Message</code>/<code>Runnable</code> to a <code>Looper</code>&#x27;s queue; also processes them</td></tr>
+<tr><td><code>Message</code></td><td>Lightweight data carrier: <code>what</code> (int), <code>obj</code> (Object), <code>arg1</code>/<code>arg2</code>, <code>data</code> (Bundle)</td></tr>
+</tbody></table>
+<h4 id="typical-background-to-main-thread-communication">Typical Background-to-Main Thread Communication</h4>
+<pre><code>class MyActivity : AppCompatActivity() {
+
+    private val mainHandler = Handler(Looper.getMainLooper())
+
+    fun startWork() {
+        Thread {
+            val result = fetchDataFromNetwork()   // runs on background thread
+            mainHandler.post {
+                // this Runnable runs on the main thread
+                textView.text = result
+            }
+        }.start()
+    }
+}</code></pre>
+<h4 id="creating-a-background-looper-thread">Creating a Background Looper Thread</h4>
+<pre><code>class WorkerThread : Thread(&quot;worker&quot;) {
+    lateinit var handler: Handler
+    private val ready = CountDownLatch(1)
+
+    override fun run() {
+        Looper.prepare()
+        handler = Handler(Looper.myLooper()!!)
+        ready.countDown()       // signal that handler is ready
+        Looper.loop()           // blocks here; processes messages until quit()
+    }
+
+    fun start() = apply {
+        super.start()
+        ready.await()           // caller waits until Looper is set up
+    }
+
+    fun quit() = handler.looper.quit()
+}
+
+val worker = WorkerThread().start()
+worker.handler.post { /* runs on WorkerThread */ }
+worker.quit()</code></pre>
+<p><code>HandlerThread</code> is Android&#x27;s convenience wrapper that does exactly the above.</p>
+<h4 id="sendmessage-vs-post">sendMessage vs post</h4>
+<pre><code>// post: Runnable wrapped in a Message
+handler.post { doWork() }
+
+// sendMessage: structured message with type code
+val msg = Message.obtain(handler, MSG_LOAD_DATA)
+msg.arg1 = itemId
+handler.sendMessage(msg)
+
+// delayed
+handler.postDelayed({ doWork() }, 2000L)
+handler.sendMessageDelayed(msg, 2000L)</code></pre>
+<h3 id="messages-should-be-small">Messages Should Be Small</h3>
+<p><code>Message</code> objects are pooled — <code>Message.obtain()</code> retrieves from a recycled pool to avoid allocation. Passing large objects (large bitmaps, deep object graphs) via <code>Message.obj</code> or <code>Bundle</code> is an anti-pattern for two reasons. First, it defeats the purpose of message passing, because you are really just sharing the same object reference, which reintroduces all the ownership and visibility problems you were trying to avoid. Second, large <code>Bundle</code>s cause IPC overhead when crossing process boundaries via <code>Binder</code>. The right approach is to pass an identifier or a lightweight value object and let the consumer fetch the full data itself.</p>
+<h3 id="message-ordering">Message Ordering</h3>
+<p><code>MessageQueue</code> orders messages by their <code>when</code> timestamp (wall-clock <code>SystemClock.uptimeMillis()</code>). Within the same delivery time, messages are processed FIFO. <code>sendMessageAtFrontOfQueue()</code> bypasses that ordering — use it sparingly, because it can starve other messages.</p>
+<p>Two subtleties worth knowing: ordering is not guaranteed across different <code>Handler</code> instances even if they post to the same <code>Looper</code>, and <code>Looper.myLooper().setMessageLogging()</code> can measure dispatch times — which is the basis for <code>BlockCanary</code> and <code>Choreographer</code> jank detection.</p>
+<h3 id="delayed-message-lifecycle-leaks">Delayed-Message Lifecycle Leaks</h3>
+<p>Delayed messages are one of the most common sources of Android memory leaks:</p>
+<pre><code>// LEAKS the Activity
+class MyActivity : AppCompatActivity() {
+    private val handler = Handler(Looper.getMainLooper())
+
+    override fun onCreate(...) {
+        handler.postDelayed({
+            // this lambda captures &#x27;this&#x27; (MyActivity) implicitly
+            updateUI()
+        }, 30_000L)    // 30-second delay
+    }
+}</code></pre>
+<p><strong>Why it leaks:</strong> The <code>Message</code> holds a reference to the <code>Runnable</code> lambda, and the lambda captures <code>this</code> — the <code>Activity</code>. The <code>MessageQueue</code> is owned by the <code>Looper</code>, which outlives the <code>Activity</code>, so the chain is: <code>Looper</code> → <code>MessageQueue</code> → <code>Message</code> → <code>Runnable</code> → <code>Activity</code>. That chain keeps the <code>Activity</code> from being garbage-collected for the full 30 seconds even after <code>finish()</code> is called.</p>
+<p><strong>Fix:</strong></p>
+<pre><code>class MyActivity : AppCompatActivity() {
+    private val handler = Handler(Looper.getMainLooper())
+    private val updateRunnable = Runnable { updateUI() }
+
+    override fun onCreate(...) {
+        handler.postDelayed(updateRunnable, 30_000L)
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        handler.removeCallbacks(updateRunnable)   // cancel pending message
+    }
+}</code></pre>
+<p>Or use a static inner class + <code>WeakReference</code>:</p>
+<pre><code>private class SafeRunnable(activity: MyActivity) : Runnable {
+    private val ref = WeakReference(activity)
+    override fun run() { ref.get()?.updateUI() }
+}</code></pre>
+<p>Or, in modern Android: replace <code>Handler.postDelayed</code> with a coroutine:</p>
+<pre><code>override fun onCreate(...) {
+    lifecycleScope.launch {
+        delay(30_000L)
+        updateUI()              // auto-cancelled when Activity is destroyed
+    }
+}</code></pre>
+<p><code>lifecycleScope</code> is bound to the <code>Lifecycle</code> and is automatically cancelled on <code>onDestroy</code> — no manual cleanup needed at all.</p>
+<h3 id="android-implications-summary">Android Implications Summary</h3>
+<table border="1" cellpadding="6" cellspacing="0">
+<thead><tr>
+<th>Pattern</th>
+<th>Tool</th>
+<th>Notes</th>
+</tr></thead><tbody>
+<tr><td>Background → Main UI update</td><td><code>Handler(mainLooper).post {}</code></td><td>Classic but verbose</td></tr>
+<tr><td>Background → Main UI (modern)</td><td><code>withContext(Dispatchers.Main) {}</code></td><td>Coroutine; cleaner</td></tr>
+<tr><td>Main → Background work</td><td><code>Handler(HandlerThread.looper).post {}</code></td><td>Works; prefer coroutines</td></tr>
+<tr><td>Delayed work (no leak)</td><td><code>lifecycleScope.launch { delay(…) }</code></td><td>Lifecycle-aware cancellation</td></tr>
+<tr><td>Inter-process message</td><td><code>Binder</code> / <code>AIDL</code></td><td>Built on same Message model, IPC overhead</td></tr>
+<tr><td>Broadcast</td><td><code>BroadcastReceiver</code></td><td>Heavyweight; use <code>LocalBroadcastManager</code> or <code>Flow</code> locally</td></tr>
+</tbody></table>
+<h3 id="trade-offs-3">Trade-offs</h3>
+<table border="1" cellpadding="6" cellspacing="0">
+<thead><tr>
+<th>Pro</th>
+<th>Con</th>
+</tr></thead><tbody>
+<tr><td>No shared mutable state → no races</td><td>Message copying overhead (small)</td></tr>
+<tr><td>Natural ordering via queue</td><td>Delayed messages can cause lifecycle leaks</td></tr>
+<tr><td>Decoupled sender/receiver</td><td>Verbose boilerplate (<code>Handler</code>, <code>Message.obtain</code>, <code>what</code> codes)</td></tr>
+<tr><td>Pooled <code>Message</code> objects reduce allocation</td><td>Large messages anti-pattern — tempting to pass big objects</td></tr>
+<tr><td>Main-thread model is single-threaded serial</td><td>Queue can back up if handler is slow (ANR risk)</td></tr>
+</tbody></table>
+<h3 id="failure-modes-3">Failure Modes</h3>
+<ul>
+<li><strong>Lifecycle leak:</strong> delayed message holds <code>Activity</code> reference past <code>onDestroy</code>. Always call</li>
+</ul>
+<p><code>removeCallbacks</code> in <code>onDestroy</code> or use <code>lifecycleScope</code>.</p>
+<ul>
+<li><strong>Message queue overflow:</strong> main thread ANR if the queue backs up (&gt;5 sec without processing).</li>
+<li><strong>Wrong <code>Looper</code>:</strong> calling <code>Handler()</code> without specifying <code>Looper</code> was deprecated in API 30</li>
+</ul>
+<p>because it defaults to the calling thread&#x27;s <code>Looper</code>, which may not be the main thread. Always pass <code>Looper.getMainLooper()</code> or a specific <code>HandlerThread.looper</code> explicitly.</p>
+<ul>
+<li><strong>Accessing destroyed context:</strong> <code>Message.obj</code> holds a reference to an Activity that is now</li>
+</ul>
+<p><code>isDestroyed</code>. Always guard: <code>if (!isDestroyed) { … }</code>.</p>
+<h3 id="interview-angles-2">Interview Angles</h3>
+<p><strong>Shared memory vs message passing?</strong></p>
+<p>&quot;Shared memory is fast — zero-copy, direct read-write — but it requires explicit synchronization to prevent races and visibility problems, and that synchronization is where bugs live. Message passing eliminates races by design: data is owned by one thread at a time, and transferring a message is a disciplined handoff, so there is nothing to race over. Android&#x27;s <code>Handler</code>/<code>Looper</code> system is pure message passing for the main thread. The trade-off is that message passing adds a small amount of serialization overhead and queue latency, while shared memory adds synchronization complexity and risk. In practice I default to message passing for Android app code and only reach for shared memory when profiling shows the queue overhead is actually a bottleneck.&quot;</p>
+<p><strong>How does Android main-thread communication work?</strong></p>
+<p>&quot;The main thread runs <code>Looper.loop()</code>, which just spins on <code>MessageQueue.next()</code>. Any other thread can create a <code>Handler</code> bound to <code>Looper.getMainLooper()</code> and post <code>Message</code> or <code>Runnable</code> objects into the main queue. The <code>Looper</code> dequeues them in <code>when</code>-timestamp order and dispatches each one to its <code>Handler</code> on the main thread. Every View callback, every lifecycle event, every touch event, and every Choreographer frame goes through that same queue — there is no other path onto the main thread.&quot;</p>
+<p><strong>How can delayed messages leak an Activity?</strong></p>
+<p>&quot;The chain is: <code>Handler.postDelayed(runnable, 30_000)</code> stores the <code>Runnable</code> inside a <code>Message</code> in the <code>MessageQueue</code>. The <code>MessageQueue</code> is owned by the <code>Looper</code>, which is a long-lived process-level object. If the <code>Runnable</code> is a lambda inside the <code>Activity</code>, it implicitly captures <code>this</code>, so the full reference chain from <code>Looper</code> down to <code>Activity</code> is alive for the entire 30-second window. The <code>Activity</code> cannot be garbage-collected even after <code>finish()</code>. The fix has three options: call <code>handler.removeCallbacks(runnable)</code> in <code>onDestroy</code>, use a <code>WeakReference</code> so the chain doesn&#x27;t keep the <code>Activity</code> alive, or replace the whole thing with a <code>lifecycleScope.launch { delay(30_000) }</code> coroutine that is automatically cancelled when the <code>Activity</code> is destroyed.&quot;</p>
+<hr>
+<h2 id="cross-cutting-shared-memory-vs-message-passing">Cross-cutting: Shared Memory vs Message Passing</h2>
+<p>This comparison appears as an interview question in both 4.2 and 4.5.</p>
+<table border="1" cellpadding="6" cellspacing="0">
+<thead><tr>
+<th>Dimension</th>
+<th>Shared Memory</th>
+<th>Message Passing</th>
+</tr></thead><tbody>
+<tr><td><strong>Data transfer</strong></td><td>By reference (zero copy)</td><td>By value or disciplined reference</td></tr>
+<tr><td><strong>Synchronization</strong></td><td>Explicit (locks, atomics, volatile)</td><td>Implicit (queue serializes access)</td></tr>
+<tr><td><strong>Race conditions</strong></td><td>Possible — developer&#x27;s responsibility</td><td>Eliminated by design</td></tr>
+<tr><td><strong>Deadlock risk</strong></td><td>Yes — if multiple locks acquired</td><td>Low — queues do not cross-lock</td></tr>
+<tr><td><strong>Performance</strong></td><td>Fastest (direct read/write)</td><td>Small overhead (queue ops, potential copy)</td></tr>
+<tr><td><strong>Coupling</strong></td><td>Tight (both threads know the shared object)</td><td>Loose (sender just posts; receiver owns)</td></tr>
+<tr><td><strong>Ordering</strong></td><td>No inherent ordering guarantees</td><td>FIFO queue provides natural ordering</td></tr>
+<tr><td><strong>Backpressure</strong></td><td>Manual (check and throttle)</td><td>Natural (bounded queue blocks sender)</td></tr>
+<tr><td><strong>Android example</strong></td><td><code>@Volatile running</code>, <code>AtomicReference&lt;Config&gt;</code></td><td><code>Handler.post {}</code>, <code>Channel</code>, <code>Flow</code></td></tr>
+<tr><td><strong>Best for</strong></td><td>High-frequency, low-latency data sharing (audio buffers, game state)</td><td>Event-driven UI updates, actor-style isolation</td></tr>
+</tbody></table>
+<p>The guideline is: default to <strong>message passing</strong> (coroutines + <code>Channel</code>/<code>Flow</code>) for new Android code. Reach for shared memory only when profiling shows the message overhead is an actual bottleneck, and always protect it with the minimum synchronization necessary.</p>
+<hr>
+<p><em>End of Section 4: Thread Communication</em></p>
+<div class="pager">
+<a class="prev" href="concurrency-android-threading.html"><span class="lbl">‹ Previous</span>3. Concurrency &amp; Android Threading</a>
+<a class="next" href="ipc-binder-aidl-messenger.html"><span class="lbl">Next ›</span>5. IPC: Binder, AIDL, Messenger</a>
+</div>
+</div></div>
+<script src="../site.js"></script>
+</body></html>

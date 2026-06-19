@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>References</title>
+<link rel="stylesheet" href="../style.css"></head>
+<body class="has-toc" data-prev="interview-q-a-cheatsheet.html" data-next="../index.html">
+<nav class="sidebar"><a class="brand" href="../index.html">📱 Android Study Guide — Home</a><details class="topic"><summary><span class="caret">▶</span><a href="data-structures-big-o.html">1. Data Structures &amp; Big O</a></summary><ul class="subtopics"><li><a class="" href="data-structures-big-o.html#11-data-structures--collections--12-big-o-notation">1.1 Data Structures &amp; Collections · 1.2 Big O Notation</a></li><li><a class="" href="data-structures-big-o.html#table-of-contents">Table of Contents</a></li><li><a class="" href="data-structures-big-o.html#1-arrays">1. Arrays</a></li><li><a class="" href="data-structures-big-o.html#2-arraylist--mutablelist">2. ArrayList / MutableList</a></li><li><a class="" href="data-structures-big-o.html#3-linkedlist">3. LinkedList</a></li><li><a class="" href="data-structures-big-o.html#4-stack">4. Stack</a></li><li><a class="" href="data-structures-big-o.html#5-queue">5. Queue</a></li><li><a class="" href="data-structures-big-o.html#6-deque">6. Deque</a></li><li><a class="" href="data-structures-big-o.html#7-hashmap--mutablemap">7. HashMap / MutableMap</a></li><li><a class="" href="data-structures-big-o.html#8-hashset--mutableset">8. HashSet / MutableSet</a></li><li><a class="" href="data-structures-big-o.html#9-linkedhashmap">9. LinkedHashMap</a></li><li><a class="" href="data-structures-big-o.html#10-treemap--sortedmap">10. TreeMap / SortedMap</a></li><li><a class="" href="data-structures-big-o.html#11-priorityqueue--heap">11. PriorityQueue / Heap</a></li><li><a class="" href="data-structures-big-o.html#12-trie">12. Trie</a></li><li><a class="" href="data-structures-big-o.html#13-graphs">13. Graphs</a></li><li><a class="" href="data-structures-big-o.html#14-android-specific-collections">14. Android-Specific Collections</a></li><li><a class="" href="data-structures-big-o.html#15-big-o-notation">15. Big O Notation</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="kotlin-java-fundamentals.html">2. Kotlin &amp; Java Fundamentals</a></summary><ul class="subtopics"><li><a class="" href="kotlin-java-fundamentals.html#table-of-contents">Table of Contents</a></li><li><a class="" href="kotlin-java-fundamentals.html#21-kotlin-fundamentals">2.1 Kotlin Fundamentals</a></li><li><a class="" href="kotlin-java-fundamentals.html#22-kotlin-generics">2.2 Kotlin Generics</a></li><li><a class="" href="kotlin-java-fundamentals.html#23-java-fundamentals">2.3 Java Fundamentals</a></li><li><a class="" href="kotlin-java-fundamentals.html#24-kotlin-java-interop">2.4 Kotlin-Java Interop</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="concurrency-android-threading.html">3. Concurrency &amp; Android Threading</a></summary><ul class="subtopics"><li><a class="" href="concurrency-android-threading.html#table-of-contents">Table of Contents</a></li><li><a class="" href="concurrency-android-threading.html#31-java-thread-basics">3.1 Java Thread Basics</a></li><li><a class="" href="concurrency-android-threading.html#32-locks-and-synchronization">3.2 Locks and Synchronization</a></li><li><a class="" href="concurrency-android-threading.html#33-volatile-and-atomic-classes">3.3 Volatile and Atomic Classes</a></li><li><a class="" href="concurrency-android-threading.html#34-waitnotify-and-producer-consumer">3.4 Wait/Notify and Producer-Consumer</a></li><li><a class="" href="concurrency-android-threading.html#35-executors-and-task-execution">3.5 Executors and Task Execution</a></li><li><a class="" href="concurrency-android-threading.html#36-android-application-threads">3.6 Android Application Threads</a></li><li><a class="" href="concurrency-android-threading.html#37-handler--looper--messagequeue">3.7 Handler / Looper / MessageQueue</a></li><li><a class="" href="concurrency-android-threading.html#38-kotlin-coroutines-on-android">3.8 Kotlin Coroutines on Android</a></li><li><a class="" href="concurrency-android-threading.html#39-flow-stateflow-sharedflow-channel">3.9 Flow, StateFlow, SharedFlow, Channel</a></li><li><a class="" href="concurrency-android-threading.html#310-background-work">3.10 Background Work</a></li><li><a class="" href="concurrency-android-threading.html#quick-reference-interview-cheat-sheet">Quick-Reference: Interview Cheat Sheet</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="thread-communication.html">4. Thread Communication</a></summary><ul class="subtopics"><li><a class="" href="thread-communication.html#table-of-contents">Table of Contents</a></li><li><a class="" href="thread-communication.html#41-pipes">4.1 Pipes</a></li><li><a class="" href="thread-communication.html#42-shared-memory">4.2 Shared Memory</a></li><li><a class="" href="thread-communication.html#43-signaling">4.3 Signaling</a></li><li><a class="" href="thread-communication.html#44-blockingqueue">4.4 BlockingQueue</a></li><li><a class="" href="thread-communication.html#45-message-passing--android-handlerloopermessagequeue">4.5 Message Passing — Android Handler/Looper/MessageQueue</a></li><li><a class="" href="thread-communication.html#cross-cutting-shared-memory-vs-message-passing">Cross-cutting: Shared Memory vs Message Passing</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="ipc-binder-aidl-messenger.html">5. IPC: Binder, AIDL, Messenger</a></summary><ul class="subtopics"><li><a class="" href="ipc-binder-aidl-messenger.html#table-of-contents">Table of Contents</a></li><li><a class="" href="ipc-binder-aidl-messenger.html#51-android-process-model">5.1 Android Process Model</a></li><li><a class="" href="ipc-binder-aidl-messenger.html#52-binder">5.2 Binder</a></li><li><a class="" href="ipc-binder-aidl-messenger.html#53-aidl">5.3 AIDL</a></li><li><a class="" href="ipc-binder-aidl-messenger.html#54-messenger">5.4 Messenger</a></li><li><a class="" href="ipc-binder-aidl-messenger.html#parcelable-vs-serializable">Parcelable vs Serializable</a></li><li><a class="" href="ipc-binder-aidl-messenger.html#aidl-vs-messenger-decision-guide">AIDL vs Messenger Decision Guide</a></li><li><a class="" href="ipc-binder-aidl-messenger.html#interview-quick-reference">Interview Quick-Reference</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="android-memory-management.html">6. Android Memory Management</a></summary><ul class="subtopics"><li><a class="" href="android-memory-management.html#table-of-contents">Table of Contents</a></li><li><a class="" href="android-memory-management.html#61-jvmart-memory-basics">6.1 JVM/ART Memory Basics</a></li><li><a class="" href="android-memory-management.html#62-android-memory-leaks">6.2 Android Memory Leaks</a></li><li><a class="" href="android-memory-management.html#63-context-leaks">6.3 Context Leaks</a></li><li><a class="" href="android-memory-management.html#64-bitmap-and-image-memory">6.4 Bitmap and Image Memory</a></li><li><a class="" href="android-memory-management.html#65-leak-detection-and-profiling">6.5 Leak Detection and Profiling</a></li><li><a class="" href="android-memory-management.html#interview-quick-reference">Interview Quick-Reference</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="architecture-patterns.html">7. Architecture Patterns</a></summary><ul class="subtopics"><li><a class="" href="architecture-patterns.html#table-of-contents">Table of Contents</a></li><li><a class="" href="architecture-patterns.html#71-mvc-mvp-mvvm-mvi">7.1 MVC, MVP, MVVM, MVI</a></li><li><a class="" href="architecture-patterns.html#72-clean-architecture">7.2 Clean Architecture</a></li><li><a class="" href="architecture-patterns.html#73-repository-pattern">7.3 Repository Pattern</a></li><li><a class="" href="architecture-patterns.html#74-dependency-injection">7.4 Dependency Injection</a></li><li><a class="" href="architecture-patterns.html#75-modularization">7.5 Modularization</a></li><li><a class="" href="architecture-patterns.html#quick-reference-cheat-sheet">Quick-Reference Cheat Sheet</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="view-rendering.html">8. View Rendering</a></summary><ul class="subtopics"><li><a class="" href="view-rendering.html#table-of-contents">Table of Contents</a></li><li><a class="" href="view-rendering.html#81-traditional-view-system-rendering">8.1 Traditional View System Rendering</a></li><li><a class="" href="view-rendering.html#82-choreographer-vsync-and-frame-rendering">8.2 Choreographer, VSync, and Frame Rendering</a></li><li><a class="" href="view-rendering.html#83-recyclerview-performance">8.3 RecyclerView Performance</a></li><li><a class="" href="view-rendering.html#84-jetpack-compose-rendering">8.4 Jetpack Compose Rendering</a></li><li><a class="" href="view-rendering.html#85-performance-tools">8.5 Performance Tools</a></li><li><a class="" href="view-rendering.html#interview-cheat-sheet">Interview Cheat Sheet</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="lifecycle-platform-components.html">9. Lifecycle &amp; Platform Components</a></summary><ul class="subtopics"><li><a class="" href="lifecycle-platform-components.html#table-of-contents">Table of Contents</a></li><li><a class="" href="lifecycle-platform-components.html#91-activity">9.1 Activity</a></li><li><a class="" href="lifecycle-platform-components.html#92-fragment">9.2 Fragment</a></li><li><a class="" href="lifecycle-platform-components.html#93-services">9.3 Services</a></li><li><a class="" href="lifecycle-platform-components.html#94-broadcastreceiver">9.4 BroadcastReceiver</a></li><li><a class="" href="lifecycle-platform-components.html#95-contentprovider">9.5 ContentProvider</a></li><li><a class="" href="lifecycle-platform-components.html#96-intents-and-pendingintents">9.6 Intents and PendingIntents</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="android-data-layer.html">10. Android Data Layer</a></summary><ul class="subtopics"><li><a class="" href="android-data-layer.html#table-of-contents">Table of Contents</a></li><li><a class="" href="android-data-layer.html#101-networking">10.1 Networking</a></li><li><a class="" href="android-data-layer.html#102-persistence">10.2 Persistence</a></li><li><a class="" href="android-data-layer.html#103-offline-first-design">10.3 Offline-First Design</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="testing.html">11. Testing</a></summary><ul class="subtopics"><li><a class="" href="testing.html#table-of-contents">Table of Contents</a></li><li><a class="" href="testing.html#111-unit-testing">11.1 Unit Testing</a></li><li><a class="" href="testing.html#112-ui-testing">11.2 UI Testing</a></li><li><a class="" href="testing.html#113-integration-and-end-to-end-testing">11.3 Integration and End-to-End Testing</a></li><li><a class="" href="testing.html#quick-reference-interview-cheat-sheet">Quick-Reference Interview Cheat Sheet</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="build-gradle-release.html">12. Build, Gradle &amp; Release</a></summary><ul class="subtopics"><li><a class="" href="build-gradle-release.html#table-of-contents">Table of Contents</a></li><li><a class="" href="build-gradle-release.html#121-gradle-basics">12.1 Gradle Basics</a></li><li><a class="" href="build-gradle-release.html#122-build-performance">12.2 Build Performance</a></li><li><a class="" href="build-gradle-release.html#123-release">12.3 Release</a></li><li><a class="" href="build-gradle-release.html#summary-table-quick-reference">Summary Table: Quick Reference</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="security-privacy.html">13. Security &amp; Privacy</a></summary><ul class="subtopics"><li><a class="" href="security-privacy.html#table-of-contents">Table of Contents</a></li><li><a class="" href="security-privacy.html#131-android-security-basics">13.1 Android Security Basics</a></li><li><a class="" href="security-privacy.html#132-data-security">13.2 Data Security</a></li><li><a class="" href="security-privacy.html#interview-qa-master-list">Interview Q&amp;A Master List</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="performance-beyond-rendering.html">14. Performance Beyond Rendering</a></summary><ul class="subtopics"><li><a class="" href="performance-beyond-rendering.html#table-of-contents">Table of Contents</a></li><li><a class="" href="performance-beyond-rendering.html#141-startup-performance">14.1 Startup Performance</a></li><li><a class="" href="performance-beyond-rendering.html#142-battery-and-resource-usage">14.2 Battery and Resource Usage</a></li><li><a class="" href="performance-beyond-rendering.html#143-anr-and-crash-debugging">14.3 ANR and Crash Debugging</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="senior-staff-system-design.html">15. Senior/Staff System Design</a></summary><ul class="subtopics"><li><a class="" href="senior-staff-system-design.html#table-of-contents">Table of Contents</a></li><li><a class="" href="senior-staff-system-design.html#151-android-app-architecture-design">15.1 Android App Architecture Design</a></li><li><a class="" href="senior-staff-system-design.html#152-trade-off-thinking">15.2 Trade-Off Thinking</a></li><li><a class="" href="senior-staff-system-design.html#153-legacy-code-and-migration">15.3 Legacy Code and Migration</a></li><li><a class="" href="senior-staff-system-design.html#154-engineering-leadership">15.4 Engineering Leadership</a></li></ul></details><details class="topic"><summary><span class="caret">▶</span><a href="interview-q-a-cheatsheet.html">16. Interview Q&amp;A &amp; Cheatsheet</a></summary><ul class="subtopics"><li><a class="" href="interview-q-a-cheatsheet.html#table-of-contents">Table of Contents</a></li><li><a class="" href="interview-q-a-cheatsheet.html#section-16--model-answers-by-category">Section 16 — Model Answers by Category</a></li><li><a class="" href="interview-q-a-cheatsheet.html#section-17--must-revise-checklist">Section 17 — Must-Revise Checklist</a></li><li><a class="" href="interview-q-a-cheatsheet.html#section-18--senior-answer-framework-with-worked-examples">Section 18 — Senior Answer Framework with Worked Examples</a></li></ul></details><details class="topic active" open><summary><span class="caret">▶</span><a href="references.html">References</a></summary><ul class="subtopics"><li><a class="spy" href="#table-of-contents">Table of Contents</a></li><li><a class="spy" href="#section-1--data-structures--big-o">Section 1 — Data Structures &amp; Big O</a></li><li><a class="spy" href="#section-2--kotlin--java-fundamentals">Section 2 — Kotlin &amp; Java Fundamentals</a></li><li><a class="spy" href="#section-3--concurrency--threading">Section 3 — Concurrency &amp; Threading</a></li><li><a class="spy" href="#section-4--thread-communication">Section 4 — Thread Communication</a></li><li><a class="spy" href="#section-5--ipc-binder-aidl-messenger">Section 5 — IPC: Binder, AIDL, Messenger</a></li><li><a class="spy" href="#section-6--memory-management">Section 6 — Memory Management</a></li><li><a class="spy" href="#section-7--architecture-patterns">Section 7 — Architecture Patterns</a></li><li><a class="spy" href="#section-8--view-rendering">Section 8 — View Rendering</a></li><li><a class="spy" href="#section-9--lifecycle--platform-components">Section 9 — Lifecycle &amp; Platform Components</a></li><li><a class="spy" href="#section-10--data-layer">Section 10 — Data Layer</a></li><li><a class="spy" href="#section-11--testing">Section 11 — Testing</a></li><li><a class="spy" href="#section-12--build-gradle--release">Section 12 — Build, Gradle &amp; Release</a></li><li><a class="spy" href="#section-13--security--privacy">Section 13 — Security &amp; Privacy</a></li><li><a class="spy" href="#section-14--performance-beyond-rendering">Section 14 — Performance (Beyond Rendering)</a></li><li><a class="spy" href="#section-15--system-design">Section 15 — System Design</a></li><li><a class="spy" href="#section-16--interview-qa-cheatsheet">Section 16 — Interview Q&amp;A Cheatsheet</a></li><li><a class="spy" href="#section-17--must-revise-checklist">Section 17 — Must-Revise Checklist</a></li><li><a class="spy" href="#section-18--seniorstaff-answer-framework">Section 18 — Senior/Staff Answer Framework</a></li><li><a class="spy" href="#books">Books</a></li></ul></details></nav>
+<aside class="toc-right"><div class="toc-h">On this page</div><ul class="toc-tree"><li class="toc-grp"><a class="toc-2" href="#table-of-contents"><span class="tcaret tcaret-none"></span>Table of Contents</a></li><li class="toc-grp"><a class="toc-2" href="#section-1--data-structures--big-o"><span class="tcaret">▶</span>Section 1 — Data Structures &amp; Big O</a><ul class="toc-subs"><li><a class="toc-3" href="#official-android--kotlin-docs">Official Android / Kotlin Docs</a></li><li><a class="toc-3" href="#library-docs">Library Docs</a></li><li><a class="toc-3" href="#further-reading">Further Reading</a></li></ul></li><li class="toc-grp"><a class="toc-2" href="#section-2--kotlin--java-fundamentals"><span class="tcaret">▶</span>Section 2 — Kotlin &amp; Java Fundamentals</a><ul class="toc-subs"><li><a class="toc-3" href="#official-kotlin-docs">Official Kotlin Docs</a></li><li><a class="toc-3" href="#official-java--jdk-docs">Official Java / JDK Docs</a></li><li><a class="toc-3" href="#further-reading-1">Further Reading</a></li></ul></li><li class="toc-grp"><a class="toc-2" href="#section-3--concurrency--threading"><span class="tcaret">▶</span>Section 3 — Concurrency &amp; Threading</a><ul class="toc-subs"><li><a class="toc-3" href="#official-android-docs">Official Android Docs</a></li><li><a class="toc-3" href="#official-kotlin-coroutines-docs">Official Kotlin Coroutines Docs</a></li><li><a class="toc-3" href="#library-docs-1">Library Docs</a></li><li><a class="toc-3" href="#further-reading-2">Further Reading</a></li></ul></li><li class="toc-grp"><a class="toc-2" href="#section-4--thread-communication"><span class="tcaret">▶</span>Section 4 — Thread Communication</a><ul class="toc-subs"><li><a class="toc-3" href="#official-android--java-docs">Official Android / Java Docs</a></li><li><a class="toc-3" href="#kotlin-coroutines-synchronization">Kotlin Coroutines Synchronization</a></li><li><a class="toc-3" href="#further-reading-3">Further Reading</a></li></ul></li><li class="toc-grp"><a class="toc-2" href="#section-5--ipc-binder-aidl-messenger"><span class="tcaret">▶</span>Section 5 — IPC: Binder, AIDL, Messenger</a><ul class="toc-subs"><li><a class="toc-3" href="#official-android-docs-1">Official Android Docs</a></li><li><a class="toc-3" href="#further-reading-4">Further Reading</a></li></ul></li><li class="toc-grp"><a class="toc-2" href="#section-6--memory-management"><span class="tcaret">▶</span>Section 6 — Memory Management</a><ul class="toc-subs"><li><a class="toc-3" href="#official-android-docs-2">Official Android Docs</a></li><li><a class="toc-3" href="#library-docs-2">Library Docs</a></li><li><a class="toc-3" href="#tools">Tools</a></li><li><a class="toc-3" href="#further-reading-5">Further Reading</a></li></ul></li><li class="toc-grp"><a class="toc-2" href="#section-7--architecture-patterns"><span class="tcaret">▶</span>Section 7 — Architecture Patterns</a><ul class="toc-subs"><li><a class="toc-3" href="#official-android-docs-3">Official Android Docs</a></li><li><a class="toc-3" href="#library-docs-3">Library Docs</a></li><li><a class="toc-3" href="#further-reading-6">Further Reading</a></li></ul></li><li class="toc-grp"><a class="toc-2" href="#section-8--view-rendering"><span class="tcaret">▶</span>Section 8 — View Rendering</a><ul class="toc-subs"><li><a class="toc-3" href="#official-android-docs-4">Official Android Docs</a></li><li><a class="toc-3" href="#library-docs-4">Library Docs</a></li><li><a class="toc-3" href="#tools-1">Tools</a></li></ul></li><li class="toc-grp"><a class="toc-2" href="#section-9--lifecycle--platform-components"><span class="tcaret">▶</span>Section 9 — Lifecycle &amp; Platform Components</a><ul class="toc-subs"><li><a class="toc-3" href="#official-android-docs-5">Official Android Docs</a></li></ul></li><li class="toc-grp"><a class="toc-2" href="#section-10--data-layer"><span class="tcaret">▶</span>Section 10 — Data Layer</a><ul class="toc-subs"><li><a class="toc-3" href="#official-android-docs-6">Official Android Docs</a></li><li><a class="toc-3" href="#library-docs-5">Library Docs</a></li><li><a class="toc-3" href="#further-reading-7">Further Reading</a></li></ul></li><li class="toc-grp"><a class="toc-2" href="#section-11--testing"><span class="tcaret">▶</span>Section 11 — Testing</a><ul class="toc-subs"><li><a class="toc-3" href="#official-android-docs-7">Official Android Docs</a></li><li><a class="toc-3" href="#library-docs-6">Library Docs</a></li></ul></li><li class="toc-grp"><a class="toc-2" href="#section-12--build-gradle--release"><span class="tcaret">▶</span>Section 12 — Build, Gradle &amp; Release</a><ul class="toc-subs"><li><a class="toc-3" href="#official-android--gradle-docs">Official Android / Gradle Docs</a></li><li><a class="toc-3" href="#library-docs-7">Library Docs</a></li></ul></li><li class="toc-grp"><a class="toc-2" href="#section-13--security--privacy"><span class="tcaret">▶</span>Section 13 — Security &amp; Privacy</a><ul class="toc-subs"><li><a class="toc-3" href="#official-android-docs-8">Official Android Docs</a></li><li><a class="toc-3" href="#library-docs-8">Library Docs</a></li></ul></li><li class="toc-grp"><a class="toc-2" href="#section-14--performance-beyond-rendering"><span class="tcaret">▶</span>Section 14 — Performance (Beyond Rendering)</a><ul class="toc-subs"><li><a class="toc-3" href="#official-android-docs-9">Official Android Docs</a></li><li><a class="toc-3" href="#tools-2">Tools</a></li></ul></li><li class="toc-grp"><a class="toc-2" href="#section-15--system-design"><span class="tcaret">▶</span>Section 15 — System Design</a><ul class="toc-subs"><li><a class="toc-3" href="#official-android-docs-10">Official Android Docs</a></li><li><a class="toc-3" href="#further-reading-8">Further Reading</a></li></ul></li><li class="toc-grp"><a class="toc-2" href="#section-16--interview-qa-cheatsheet"><span class="tcaret tcaret-none"></span>Section 16 — Interview Q&amp;A Cheatsheet</a></li><li class="toc-grp"><a class="toc-2" href="#section-17--must-revise-checklist"><span class="tcaret tcaret-none"></span>Section 17 — Must-Revise Checklist</a></li><li class="toc-grp"><a class="toc-2" href="#section-18--seniorstaff-answer-framework"><span class="tcaret tcaret-none"></span>Section 18 — Senior/Staff Answer Framework</a></li><li class="toc-grp"><a class="toc-2" href="#books"><span class="tcaret">▶</span>Books</a><ul class="toc-subs"><li><a class="toc-3" href="#the-threading-book-cited-throughout-topicsmd">&quot;The Threading Book&quot; (cited throughout topics.md)</a></li><li><a class="toc-3" href="#kotlin">Kotlin</a></li><li><a class="toc-3" href="#java--jvm">Java / JVM</a></li><li><a class="toc-3" href="#architecture--system-design">Architecture / System Design</a></li></ul></li></ul></aside>
+<div class="backdrop"></div>
+<div class="content">
+<div class="mtop"><button onclick="toggleNav()" aria-label="Menu">☰</button><a class="home" href="../index.html">🏠</a><span class="t">References</span></div>
+<a class="arrow left" href="interview-q-a-cheatsheet.html" title="Previous (16. Interview Q&amp;A &amp; Cheatsheet)">‹</a>
+<a class="arrow right" href="../index.html" title="Next (Home)">›</a>
+<div class="wrap">
+<h1 id="references">References</h1>
+<p>Canonical sources for all 18 sections. URLs are real and stable as of the guide&#x27;s writing. Mark <code>[~]</code> means the URL path is approximate — navigate from the root if a 404 occurs.</p>
+<hr>
+<h2 id="table-of-contents">Table of Contents</h2>
+<ol>
+<li><a href="#section-1--data-structures--big-o">Section 1 — Data Structures &amp; Big O</a></li>
+<li><a href="#section-2--kotlin--java-fundamentals">Section 2 — Kotlin &amp; Java Fundamentals</a></li>
+<li><a href="#section-3--concurrency--threading">Section 3 — Concurrency &amp; Threading</a></li>
+<li><a href="#section-4--thread-communication">Section 4 — Thread Communication</a></li>
+<li><a href="#section-5--ipc-binder-aidl-messenger">Section 5 — IPC: Binder, AIDL, Messenger</a></li>
+<li><a href="#section-6--memory-management">Section 6 — Memory Management</a></li>
+<li><a href="#section-7--architecture-patterns">Section 7 — Architecture Patterns</a></li>
+<li><a href="#section-8--view-rendering">Section 8 — View Rendering</a></li>
+<li><a href="#section-9--lifecycle--platform-components">Section 9 — Lifecycle &amp; Platform Components</a></li>
+<li><a href="#section-10--data-layer">Section 10 — Data Layer</a></li>
+<li><a href="#section-11--testing">Section 11 — Testing</a></li>
+<li><a href="#section-12--build-gradle--release">Section 12 — Build, Gradle &amp; Release</a></li>
+<li><a href="#section-13--security--privacy">Section 13 — Security &amp; Privacy</a></li>
+<li><a href="#section-14--performance-beyond-rendering">Section 14 — Performance (Beyond Rendering)</a></li>
+<li><a href="#section-15--system-design">Section 15 — System Design</a></li>
+<li><a href="#section-16--interview-qa-cheatsheet">Section 16 — Interview Q&amp;A Cheatsheet</a></li>
+<li><a href="#section-17--must-revise-checklist">Section 17 — Must-Revise Checklist</a></li>
+<li><a href="#section-18--seniorstaff-answer-framework">Section 18 — Senior/Staff Answer Framework</a></li>
+<li><a href="#books">Books</a></li>
+</ol>
+<hr>
+<h2 id="section-1--data-structures--big-o">Section 1 — Data Structures &amp; Big O</h2>
+<h3 id="official-android--kotlin-docs">Official Android / Kotlin Docs</h3>
+<table border="1" cellpadding="6" cellspacing="0">
+<thead><tr>
+<th>Source</th>
+<th>URL</th>
+<th>Covers</th>
+</tr></thead><tbody>
+<tr><td>Android — SparseArray</td><td>https://developer.android.com/reference/android/util/SparseArray</td><td>Integer-keyed sparse map; avoids boxing</td></tr>
+<tr><td>Android — LongSparseArray</td><td>https://developer.android.com/reference/android/util/LongSparseArray</td><td>Long-keyed variant of SparseArray</td></tr>
+<tr><td>Android — ArrayMap</td><td>https://developer.android.com/reference/android/util/ArrayMap</td><td>Memory-efficient map for small sets (&lt;1000 items)</td></tr>
+<tr><td>Android — LruCache</td><td>https://developer.android.com/reference/androidx/collection/LruCache</td><td>Least-recently-used cache backed by LinkedHashMap</td></tr>
+<tr><td>Kotlin — Collections overview</td><td>https://kotlinlang.org/docs/collections-overview.html</td><td>List, Set, Map — read-only vs mutable</td></tr>
+<tr><td>Kotlin — ArrayDeque</td><td>https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.collections/-array-deque/</td><td>Preferred Stack/Queue implementation</td></tr>
+<tr><td>Kotlin — Sequences</td><td>https://kotlinlang.org/docs/sequences.html</td><td>Lazy evaluation vs eager collections</td></tr>
+</tbody></table>
+<h3 id="library-docs">Library Docs</h3>
+<table border="1" cellpadding="6" cellspacing="0">
+<thead><tr>
+<th>Library</th>
+<th>URL</th>
+<th>Covers</th>
+</tr></thead><tbody>
+<tr><td>AndroidX Collection</td><td>https://developer.android.com/jetpack/androidx/releases/collection</td><td>SparseArray, ArraySet, LruCache and other memory-efficient containers</td></tr>
+</tbody></table>
+<h3 id="further-reading">Further Reading</h3>
+<ul>
+<li>Android Developers Blog — &quot;Smaller, faster: Android ArrayMap&quot; [~] https://android-developers.googleblog.com</li>
+<li>OpenJDK source — HashMap treeification at TREEIFY_THRESHOLD=8: https://github.com/openjdk/jdk/blob/master/src/java.base/share/classes/java/util/HashMap.java</li>
+</ul>
+<hr>
+<h2 id="section-2--kotlin--java-fundamentals">Section 2 — Kotlin &amp; Java Fundamentals</h2>
+<h3 id="official-kotlin-docs">Official Kotlin Docs</h3>
+<table border="1" cellpadding="6" cellspacing="0">
+<thead><tr>
+<th>Source</th>
+<th>URL</th>
+<th>Covers</th>
+</tr></thead><tbody>
+<tr><td>Null safety</td><td>https://kotlinlang.org/docs/null-safety.html</td><td>Nullable types, safe call, Elvis, !! operator</td></tr>
+<tr><td>Data classes</td><td>https://kotlinlang.org/docs/data-classes.html</td><td>equals/hashCode/copy/componentN auto-generation</td></tr>
+<tr><td>Sealed classes</td><td>https://kotlinlang.org/docs/sealed-classes.html</td><td>Exhaustive when branches, sealed vs enum</td></tr>
+<tr><td>Object declarations</td><td>https://kotlinlang.org/docs/object-declarations.html</td><td>Singleton object, companion object</td></tr>
+<tr><td>Extension functions</td><td>https://kotlinlang.org/docs/extensions.html</td><td>Extending third-party classes without inheritance</td></tr>
+<tr><td>Scope functions</td><td>https://kotlinlang.org/docs/scope-functions.html</td><td>let, run, apply, also, with — when to use each</td></tr>
+<tr><td>Higher-order functions &amp; lambdas</td><td>https://kotlinlang.org/docs/lambdas.html</td><td>Function types, inline, noinline, crossinline</td></tr>
+<tr><td>Inline functions</td><td>https://kotlinlang.org/docs/inline-functions.html</td><td>Byte-code inlining, reified generics</td></tr>
+<tr><td>Generics</td><td>https://kotlinlang.org/docs/generics.html</td><td>out (covariance), in (contravariance), star projection</td></tr>
+<tr><td>Type erasure</td><td>https://kotlinlang.org/docs/generics.html#type-erasure</td><td>Runtime generic information loss</td></tr>
+<tr><td>Value classes</td><td>https://kotlinlang.org/docs/inline-classes.html</td><td>Zero-overhead wrappers around primitives</td></tr>
+<tr><td>Delegated properties</td><td>https://kotlinlang.org/docs/delegated-properties.html</td><td>lazy, observable, by map</td></tr>
+<tr><td>lateinit</td><td>https://kotlinlang.org/docs/properties.html#late-initialized-properties-and-variables</td><td>Non-null late initialization without null check</td></tr>
+<tr><td>Delegation pattern</td><td>https://kotlinlang.org/docs/delegation.html</td><td>Interface delegation via <code>by</code> keyword</td></tr>
+</tbody></table>
+<h3 id="official-java--jdk-docs">Official Java / JDK Docs</h3>
+<table border="1" cellpadding="6" cellspacing="0">
+<thead><tr>
+<th>Source</th>
+<th>URL</th>
+<th>Covers</th>
+</tr></thead><tbody>
+<tr><td>Java Language Spec — Inheritance</td><td>https://docs.oracle.com/javase/specs/</td><td>Abstract classes, interfaces, default methods</td></tr>
+<tr><td>Java — final keyword</td><td>https://docs.oracle.com/en/java/docs/books/jls/ [~]</td><td>final class/method/field semantics</td></tr>
+<tr><td>Java — static members</td><td>https://docs.oracle.com/en/java/docs/books/jls/ [~]</td><td>Class-level vs instance-level members</td></tr>
+</tbody></table>
+<h3 id="further-reading-1">Further Reading</h3>
+<ul>
+<li>Kotlin documentation root: https://kotlinlang.org/docs/home.html</li>
+<li>Effective Kotlin — Marcin Moskala (see Books section)</li>
+<li>Effective Java — Joshua Bloch (see Books section)</li>
+</ul>
+<hr>
+<h2 id="section-3--concurrency--threading">Section 3 — Concurrency &amp; Threading</h2>
+<h3 id="official-android-docs">Official Android Docs</h3>
+<table border="1" cellpadding="6" cellspacing="0">
+<thead><tr>
+<th>Source</th>
+<th>URL</th>
+<th>Covers</th>
+</tr></thead><tbody>
+<tr><td>Processes and threads overview</td><td>https://developer.android.com/guide/components/processes-and-threads</td><td>Main thread rules, ANR explanation</td></tr>
+<tr><td>Keep your app responsive</td><td>https://developer.android.com/training/articles/perf-anr</td><td>ANR conditions, 5 s timeout, diagnosis with traces</td></tr>
+<tr><td>Background work overview</td><td>https://developer.android.com/guide/background</td><td>When to use threads, coroutines, WorkManager, services</td></tr>
+<tr><td>WorkManager overview</td><td>https://developer.android.com/topic/libraries/architecture/workmanager</td><td>Guaranteed background execution with constraints</td></tr>
+<tr><td>WorkManager — advanced topics</td><td>https://developer.android.com/topic/libraries/architecture/workmanager/advanced</td><td>Chaining, unique work, cancellation</td></tr>
+<tr><td>Foreground services</td><td>https://developer.android.com/guide/components/foreground-services</td><td>When and how to use foreground services</td></tr>
+<tr><td>AlarmManager</td><td>https://developer.android.com/reference/android/app/AlarmManager</td><td>Exact vs inexact alarms, Doze-mode behavior</td></tr>
+</tbody></table>
+<h3 id="official-kotlin-coroutines-docs">Official Kotlin Coroutines Docs</h3>
+<table border="1" cellpadding="6" cellspacing="0">
+<thead><tr>
+<th>Source</th>
+<th>URL</th>
+<th>Covers</th>
+</tr></thead><tbody>
+<tr><td>Coroutines overview</td><td>https://kotlinlang.org/docs/coroutines-overview.html</td><td>Suspension, structured concurrency</td></tr>
+<tr><td>Coroutines basics</td><td>https://kotlinlang.org/docs/coroutines-basics.html</td><td>launch, async, runBlocking, scope</td></tr>
+<tr><td>Cancellation and timeouts</td><td>https://kotlinlang.org/docs/cancellation-and-timeouts.html</td><td>CancellationException, withTimeout</td></tr>
+<tr><td>Exception handling</td><td>https://kotlinlang.org/docs/exception-handling.html</td><td>CoroutineExceptionHandler, SupervisorJob</td></tr>
+<tr><td>Dispatchers</td><td>https://kotlinlang.org/docs/coroutine-context-and-dispatchers.html</td><td>Default, IO, Main, Unconfined</td></tr>
+<tr><td>Flow basics</td><td>https://kotlinlang.org/docs/flow.html</td><td>Cold streams, operators, cancellation</td></tr>
+<tr><td>StateFlow and SharedFlow</td><td>https://kotlinlang.org/docs/flow.html#stateflow-and-sharedflow</td><td>Hot flows, replay, emission</td></tr>
+<tr><td>Channels</td><td>https://kotlinlang.org/docs/channels.html</td><td>Hot communication between coroutines</td></tr>
+<tr><td>Coroutines best practices (Android)</td><td>https://developer.android.com/kotlin/coroutines/coroutines-best-practices</td><td>Main-safety, structured concurrency, testing</td></tr>
+<tr><td>Coroutines in Android — overview</td><td>https://developer.android.com/kotlin/coroutines</td><td>ViewModel scope, lifecycle scope</td></tr>
+</tbody></table>
+<h3 id="library-docs-1">Library Docs</h3>
+<table border="1" cellpadding="6" cellspacing="0">
+<thead><tr>
+<th>Library</th>
+<th>URL</th>
+<th>Covers</th>
+</tr></thead><tbody>
+<tr><td>WorkManager (AndroidX)</td><td>https://developer.android.com/jetpack/androidx/releases/work</td><td>Release notes and stable version tracking</td></tr>
+<tr><td>kotlinx.coroutines GitHub</td><td>https://github.com/Kotlin/kotlinx.coroutines</td><td>Source, issue tracker, test utilities</td></tr>
+</tbody></table>
+<h3 id="further-reading-2">Further Reading</h3>
+<ul>
+<li>Android Developers Blog — Coroutines on Android series: https://medium.com/androiddevelopers/coroutines-on-android-part-i-getting-the-background-5a3e0a57b864</li>
+<li>&quot;The threading book&quot; (see Books section) — chapters on ExecutorService, producer-consumer, and stopping worker threads</li>
+</ul>
+<hr>
+<h2 id="section-4--thread-communication">Section 4 — Thread Communication</h2>
+<h3 id="official-android--java-docs">Official Android / Java Docs</h3>
+<table border="1" cellpadding="6" cellspacing="0">
+<thead><tr>
+<th>Source</th>
+<th>URL</th>
+<th>Covers</th>
+</tr></thead><tbody>
+<tr><td>Handler</td><td>https://developer.android.com/reference/android/os/Handler</td><td>Posting Runnables and Messages to a thread&#x27;s Looper</td></tr>
+<tr><td>Looper</td><td>https://developer.android.com/reference/android/os/Looper</td><td>Message loop, prepare(), loop(), quit()</td></tr>
+<tr><td>MessageQueue</td><td>https://developer.android.com/reference/android/os/MessageQueue</td><td>Queue internals, idle handlers</td></tr>
+<tr><td>HandlerThread</td><td>https://developer.android.com/reference/android/os/HandlerThread</td><td>Worker thread with a built-in Looper</td></tr>
+<tr><td>Java — BlockingQueue</td><td>https://docs.oracle.com/javase/8/docs/api/java/util/concurrent/BlockingQueue.html</td><td>put/take/offer/poll with blocking semantics</td></tr>
+<tr><td>Java — LinkedBlockingQueue</td><td>https://docs.oracle.com/javase/8/docs/api/java/util/concurrent/LinkedBlockingQueue.html</td><td>Unbounded (or bounded) FIFO blocking queue</td></tr>
+<tr><td>Java — ArrayBlockingQueue</td><td>https://docs.oracle.com/javase/8/docs/api/java/util/concurrent/ArrayBlockingQueue.html</td><td>Bounded, array-backed blocking queue</td></tr>
+<tr><td>Java — SynchronousQueue</td><td>https://docs.oracle.com/javase/8/docs/api/java/util/concurrent/SynchronousQueue.html</td><td>Rendezvous channel — zero capacity</td></tr>
+<tr><td>Java — CountDownLatch</td><td>https://docs.oracle.com/javase/8/docs/api/java/util/concurrent/CountDownLatch.html</td><td>One-shot barrier; await until count reaches zero</td></tr>
+<tr><td>Java — CyclicBarrier</td><td>https://docs.oracle.com/javase/8/docs/api/java/util/concurrent/CyclicBarrier.html</td><td>Reusable barrier for a fixed number of threads</td></tr>
+<tr><td>Java — Semaphore</td><td>https://docs.oracle.com/javase/8/docs/api/java/util/concurrent/Semaphore.html</td><td>Permit-based access control</td></tr>
+<tr><td>Java — ReentrantLock</td><td>https://docs.oracle.com/javase/8/docs/api/java/util/concurrent/locks/ReentrantLock.html</td><td>Re-entrant mutual exclusion lock with Condition</td></tr>
+<tr><td>Java Memory Model (JLS §17)</td><td>https://docs.oracle.com/javase/specs/jls/se8/html/jls-17.html</td><td>Happens-before, volatile, synchronized semantics</td></tr>
+</tbody></table>
+<h3 id="kotlin-coroutines-synchronization">Kotlin Coroutines Synchronization</h3>
+<table border="1" cellpadding="6" cellspacing="0">
+<thead><tr>
+<th>Source</th>
+<th>URL</th>
+<th>Covers</th>
+</tr></thead><tbody>
+<tr><td>kotlinx.coroutines.sync.Mutex</td><td>https://kotlinlang.org/api/kotlinx.coroutines/kotlinx-coroutines-core/kotlinx.coroutines.sync/-mutex/</td><td>Coroutine-friendly mutual exclusion</td></tr>
+<tr><td>Channels (as message passing)</td><td>https://kotlinlang.org/docs/channels.html</td><td>Producer/consumer patterns without shared mutable state</td></tr>
+</tbody></table>
+<h3 id="further-reading-3">Further Reading</h3>
+<ul>
+<li>&quot;The threading book&quot; (see Books section) — chapters on Handler/Looper/MessageQueue, producer-consumer, and message queue cleanup</li>
+<li>Java Concurrency in Practice — Brian Goetz (see Books section) — chapters on liveness, wait/notify, Executor framework</li>
+</ul>
+<hr>
+<h2 id="section-5--ipc-binder-aidl-messenger">Section 5 — IPC: Binder, AIDL, Messenger</h2>
+<h3 id="official-android-docs-1">Official Android Docs</h3>
+<table border="1" cellpadding="6" cellspacing="0">
+<thead><tr>
+<th>Source</th>
+<th>URL</th>
+<th>Covers</th>
+</tr></thead><tbody>
+<tr><td>Bound services overview</td><td>https://developer.android.com/guide/components/bound-services</td><td>Service binding lifecycle, IBinder, Messenger</td></tr>
+<tr><td>AIDL</td><td>https://developer.android.com/guide/components/aidl</td><td>Defining AIDL interfaces, in/out/inout, oneway</td></tr>
+<tr><td>Binder — IBinder reference</td><td>https://developer.android.com/reference/android/os/IBinder</td><td>Token interface, transact(), pingBinder()</td></tr>
+<tr><td>Messenger</td><td>https://developer.android.com/reference/android/os/Messenger</td><td>Binder-backed sequential Handler messaging</td></tr>
+<tr><td>Parcelable</td><td>https://developer.android.com/reference/android/os/Parcelable</td><td>Interface for custom IPC-serializable types</td></tr>
+<tr><td>Parcelable — @Parcelize</td><td>https://developer.android.com/kotlin/parcelize</td><td>Kotlin compiler plugin for auto-Parcelable</td></tr>
+<tr><td>IBinder.DeathRecipient</td><td>https://developer.android.com/reference/android/os/IBinder.DeathRecipient</td><td>Callback when a remote process dies</td></tr>
+<tr><td>TransactionTooLargeException</td><td>https://developer.android.com/reference/android/os/TransactionTooLargeException</td><td>~1 MB Binder transaction limit</td></tr>
+<tr><td>ContentProvider</td><td>https://developer.android.com/guide/topics/providers/content-providers</td><td>Cross-process data sharing via URIs</td></tr>
+<tr><td>android:process attribute</td><td>https://developer.android.com/guide/topics/manifest/application-element#proc</td><td>Multi-process app configuration</td></tr>
+</tbody></table>
+<h3 id="further-reading-4">Further Reading</h3>
+<ul>
+<li>Android Internals — Binder driver source on AOSP: https://android.googlesource.com/kernel/common/+/refs/heads/android-mainline/drivers/android/binder.c [~]</li>
+<li>&quot;The threading book&quot; (see Books section) — not directly covering Binder but relevant for understanding the thread-pool model</li>
+</ul>
+<hr>
+<h2 id="section-6--memory-management">Section 6 — Memory Management</h2>
+<h3 id="official-android-docs-2">Official Android Docs</h3>
+<table border="1" cellpadding="6" cellspacing="0">
+<thead><tr>
+<th>Source</th>
+<th>URL</th>
+<th>Covers</th>
+</tr></thead><tbody>
+<tr><td>Manage your app&#x27;s memory</td><td>https://developer.android.com/topic/performance/memory</td><td>onTrimMemory(), memory pressure levels</td></tr>
+<tr><td>onTrimMemory levels</td><td>https://developer.android.com/reference/android/content/ComponentCallbacks2</td><td>TRIM_MEMORY_* constants and their meaning</td></tr>
+<tr><td>Android Vitals — memory</td><td>https://developer.android.com/topic/performance/vitals</td><td>Production crash/ANR rate; memory signals</td></tr>
+<tr><td>Reduce memory usage</td><td>https://developer.android.com/topic/performance/memory-overview</td><td>Heap, GC, bitmap size, profiling overview</td></tr>
+<tr><td>BitmapFactory — inSampleSize</td><td>https://developer.android.com/reference/android/graphics/BitmapFactory.Options#inSampleSize</td><td>Downsampling bitmaps at decode time</td></tr>
+<tr><td>Bitmap.Config (ARGB_8888, RGB_565)</td><td>https://developer.android.com/reference/android/graphics/Bitmap.Config</td><td>Bytes-per-pixel for each config</td></tr>
+<tr><td>Hardware bitmaps</td><td>https://developer.android.com/reference/android/graphics/Bitmap.Config#HARDWARE</td><td>GPU-only bitmaps — no CPU-side access</td></tr>
+<tr><td>LruCache</td><td>https://developer.android.com/reference/androidx/collection/LruCache</td><td>In-memory cache with LRU eviction</td></tr>
+<tr><td>WeakReference</td><td>https://developer.android.com/reference/java/lang/ref/WeakReference</td><td>Cleared before GC if only weakly reachable</td></tr>
+<tr><td>SoftReference</td><td>https://developer.android.com/reference/java/lang/ref/SoftReference</td><td>Cleared when memory is low (not on every GC)</td></tr>
+<tr><td>PhantomReference</td><td>https://developer.android.com/reference/java/lang/ref/PhantomReference</td><td>Post-finalization hook for cleanup</td></tr>
+<tr><td>dumpsys meminfo</td><td>https://developer.android.com/studio/profile/memory-profiler</td><td>PSS/Private Dirty interpretation</td></tr>
+</tbody></table>
+<h3 id="library-docs-2">Library Docs</h3>
+<table border="1" cellpadding="6" cellspacing="0">
+<thead><tr>
+<th>Library</th>
+<th>URL</th>
+<th>Covers</th>
+</tr></thead><tbody>
+<tr><td>LeakCanary</td><td>https://square.github.io/leakcanary/</td><td>Automatic heap dump + Shark analysis for leaks</td></tr>
+<tr><td>LeakCanary — Fundamentals</td><td>https://square.github.io/leakcanary/fundamentals-how-leakcanary-works/</td><td>KeyedWeakReference, hprof dump, Shark parser</td></tr>
+<tr><td>Coil — image loading</td><td>https://coil-kt.github.io/coil/</td><td>Coroutine-based image loader; memory + disk cache</td></tr>
+<tr><td>Glide</td><td>https://bumptech.github.io/glide/</td><td>Request management, cache, custom targets</td></tr>
+<tr><td>Picasso</td><td>https://square.github.io/picasso/</td><td>Simple image loading (legacy reference)</td></tr>
+</tbody></table>
+<h3 id="tools">Tools</h3>
+<table border="1" cellpadding="6" cellspacing="0">
+<thead><tr>
+<th>Tool</th>
+<th>URL</th>
+<th>Covers</th>
+</tr></thead><tbody>
+<tr><td>Android Studio Memory Profiler</td><td>https://developer.android.com/studio/profile/memory-profiler</td><td>Heap dumps, allocation tracking</td></tr>
+<tr><td>Perfetto — heapprofd</td><td>https://perfetto.dev/docs/data-sources/native-heap-profiler</td><td>Native heap profiling</td></tr>
+<tr><td>Perfetto — android.java_hprof</td><td>https://perfetto.dev/docs/data-sources/java-heap-profiler</td><td>Java/ART heap profiling</td></tr>
+</tbody></table>
+<h3 id="further-reading-5">Further Reading</h3>
+<ul>
+<li>&quot;The threading book&quot; (see Books section) — chapters on static inner classes, weak references in thread callbacks, and avoiding thread-induced leaks</li>
+<li>Android Developers Blog — &quot;LeakCanary: Detect all memory leaks!&quot;: https://medium.com/square-corner-blog/leakcanary-detect-all-memory-leaks-875d0c9a0e7c [~]</li>
+</ul>
+<hr>
+<h2 id="section-7--architecture-patterns">Section 7 — Architecture Patterns</h2>
+<h3 id="official-android-docs-3">Official Android Docs</h3>
+<table border="1" cellpadding="6" cellspacing="0">
+<thead><tr>
+<th>Source</th>
+<th>URL</th>
+<th>Covers</th>
+</tr></thead><tbody>
+<tr><td>App architecture guide</td><td>https://developer.android.com/topic/architecture</td><td>UI layer → Domain layer → Data layer</td></tr>
+<tr><td>ViewModel overview</td><td>https://developer.android.com/topic/libraries/architecture/viewmodel</td><td>Lifecycle survival, ViewModelStore, factory</td></tr>
+<tr><td>UI events</td><td>https://developer.android.com/topic/architecture/ui-layer/events</td><td>UDF, SharedFlow for one-shot events</td></tr>
+<tr><td>UI layer</td><td>https://developer.android.com/topic/architecture/ui-layer</td><td>StateFlow for state, event handling</td></tr>
+<tr><td>Domain layer</td><td>https://developer.android.com/topic/architecture/domain-layer</td><td>Use cases, single-responsibility, reuse</td></tr>
+<tr><td>Data layer</td><td>https://developer.android.com/topic/architecture/data-layer</td><td>Repository, data sources, single source of truth</td></tr>
+<tr><td>Repository pattern</td><td>https://developer.android.com/topic/architecture/data-layer#repository</td><td>Abstracting data sources behind an interface</td></tr>
+<tr><td>Hilt — dependency injection</td><td>https://developer.android.com/training/dependency-injection/hilt-android</td><td>@HiltAndroidApp, @AndroidEntryPoint, scopes</td></tr>
+<tr><td>Hilt — component scopes</td><td>https://developer.android.com/training/dependency-injection/hilt-android#component-scopes</td><td>@Singleton, @ActivityScoped, @ViewModelScoped</td></tr>
+<tr><td>Hilt — testing</td><td>https://developer.android.com/training/dependency-injection/hilt-testing</td><td>@HiltAndroidTest, TestInstallIn</td></tr>
+<tr><td>Modularization guide</td><td>https://developer.android.com/topic/modularization</td><td>Feature/core/API module patterns, dependency rules</td></tr>
+<tr><td>Guide to app modularization</td><td>https://developer.android.com/topic/modularization/patterns</td><td>Cohesion, coupling, types of modules</td></tr>
+<tr><td>Dynamic feature modules</td><td>https://developer.android.com/guide/playcore/feature-delivery</td><td>On-demand delivery, SplitCompat</td></tr>
+<tr><td>Dagger 2 on Android</td><td>https://developer.android.com/training/dependency-injection/dagger-android</td><td>@Component, @Module, @Inject</td></tr>
+</tbody></table>
+<h3 id="library-docs-3">Library Docs</h3>
+<table border="1" cellpadding="6" cellspacing="0">
+<thead><tr>
+<th>Library</th>
+<th>URL</th>
+<th>Covers</th>
+</tr></thead><tbody>
+<tr><td>Hilt</td><td>https://dagger.dev/hilt/</td><td>Official Hilt documentation on dagger.dev</td></tr>
+<tr><td>Dagger 2</td><td>https://dagger.dev/</td><td>Component/Module/Inject, providers, qualifiers</td></tr>
+</tbody></table>
+<h3 id="further-reading-6">Further Reading</h3>
+<ul>
+<li>Now in Android sample (MVVM/MVI reference implementation): https://github.com/android/nowinandroid</li>
+<li>Android Architecture samples: https://github.com/android/architecture-samples</li>
+<li>&quot;Clean Architecture&quot; — Robert C. Martin (Uncle Bob) — domain-layer concepts</li>
+</ul>
+<hr>
+<h2 id="section-8--view-rendering">Section 8 — View Rendering</h2>
+<h3 id="official-android-docs-4">Official Android Docs</h3>
+<table border="1" cellpadding="6" cellspacing="0">
+<thead><tr>
+<th>Source</th>
+<th>URL</th>
+<th>Covers</th>
+</tr></thead><tbody>
+<tr><td>How Android draws views</td><td>https://developer.android.com/guide/topics/ui/how-android-draws</td><td>Measure → Layout → Draw pass overview</td></tr>
+<tr><td>Custom view drawing</td><td>https://developer.android.com/training/custom-views/custom-drawing</td><td>onMeasure, onLayout, onDraw, Canvas/Paint</td></tr>
+<tr><td>Hardware acceleration</td><td>https://developer.android.com/guide/topics/graphics/hardware-accel</td><td>RenderNode, display lists, LAYER_TYPE_*</td></tr>
+<tr><td>Slow rendering (jank)</td><td>https://developer.android.com/topic/performance/vitals/render</td><td>16 ms frame budget, frozen frames, Android Vitals</td></tr>
+<tr><td>Inspect GPU rendering</td><td>https://developer.android.com/topic/performance/rendering/inspect-gpu-rendering</td><td>Profile GPU Rendering overlay</td></tr>
+<tr><td>RecyclerView</td><td>https://developer.android.com/guide/topics/ui/layout/recyclerview</td><td>Adapter, ViewHolder, LayoutManager overview</td></tr>
+<tr><td>DiffUtil</td><td>https://developer.android.com/reference/androidx/recyclerview/widget/DiffUtil</td><td>Myers diff algorithm, payload updates</td></tr>
+<tr><td>ListAdapter</td><td>https://developer.android.com/reference/androidx/recyclerview/widget/ListAdapter</td><td>AsyncListDiffer, automatic diffing</td></tr>
+<tr><td>Paging 3 with RecyclerView</td><td>https://developer.android.com/topic/libraries/architecture/paging/v3-overview</td><td>Load pages, PagingDataAdapter, RemoteMediator</td></tr>
+<tr><td>Choreographer</td><td>https://developer.android.com/reference/android/view/Choreographer</td><td>VSync callbacks, frame pacing</td></tr>
+<tr><td>SurfaceView and SurfaceHolder</td><td>https://developer.android.com/reference/android/view/SurfaceView</td><td>Dedicated Surface for custom rendering</td></tr>
+<tr><td>Jetpack Compose — mental model</td><td>https://developer.android.com/jetpack/compose/mental-model</td><td>Composition, recomposition, declarative UI</td></tr>
+<tr><td>Compose — lifecycle</td><td>https://developer.android.com/jetpack/compose/lifecycle</td><td>Composition lifecycle, remember, keys</td></tr>
+<tr><td>Compose — state</td><td>https://developer.android.com/jetpack/compose/state</td><td>mutableStateOf, remember, rememberSaveable</td></tr>
+<tr><td>Compose — side effects</td><td>https://developer.android.com/jetpack/compose/side-effects</td><td>LaunchedEffect, DisposableEffect, SideEffect, rememberUpdatedState</td></tr>
+<tr><td>Compose — phases</td><td>https://developer.android.com/jetpack/compose/phases</td><td>Composition → Layout → Drawing</td></tr>
+<tr><td>Compose — performance</td><td>https://developer.android.com/jetpack/compose/performance</td><td>Stability, skippability, derivedStateOf, keys</td></tr>
+<tr><td>Compose — stability</td><td>https://developer.android.com/jetpack/compose/performance/stability</td><td>@Stable, @Immutable, stable classes</td></tr>
+<tr><td>Compose — lazy lists</td><td>https://developer.android.com/jetpack/compose/lists</td><td>LazyColumn, LazyRow, keys, item reuse</td></tr>
+<tr><td>Compose — testing</td><td>https://developer.android.com/jetpack/compose/testing</td><td>ComposeTestRule, semantics, assertions</td></tr>
+<tr><td>Compose — interop with Views</td><td>https://developer.android.com/jetpack/compose/interop</td><td>ComposeView, AndroidView, ViewCompositionStrategy</td></tr>
+<tr><td>Layout Inspector</td><td>https://developer.android.com/studio/debug/layout-inspector</td><td>View hierarchy, recomposition counts</td></tr>
+<tr><td>Baseline Profiles</td><td>https://developer.android.com/topic/performance/baselineprofiles</td><td>AOT compilation rules for startup &amp; scrolling</td></tr>
+<tr><td>Macrobenchmark</td><td>https://developer.android.com/topic/performance/benchmarking/macrobenchmark-overview</td><td>Startup, scrolling, interaction benchmarks in CI</td></tr>
+</tbody></table>
+<h3 id="library-docs-4">Library Docs</h3>
+<table border="1" cellpadding="6" cellspacing="0">
+<thead><tr>
+<th>Library</th>
+<th>URL</th>
+<th>Covers</th>
+</tr></thead><tbody>
+<tr><td>Compose BOM</td><td>https://developer.android.com/jetpack/compose/bom</td><td>Bill of Materials for consistent Compose versions</td></tr>
+<tr><td>Benchmark library</td><td>https://developer.android.com/jetpack/androidx/releases/benchmark</td><td>Macrobenchmark + Microbenchmark releases</td></tr>
+</tbody></table>
+<h3 id="tools-1">Tools</h3>
+<table border="1" cellpadding="6" cellspacing="0">
+<thead><tr>
+<th>Tool</th>
+<th>URL</th>
+<th>Covers</th>
+</tr></thead><tbody>
+<tr><td>Perfetto</td><td>https://perfetto.dev/</td><td>System-wide tracing; Choreographer, GPU, CPU</td></tr>
+<tr><td>Android Studio Profiler</td><td>https://developer.android.com/studio/profile</td><td>CPU, Memory, Energy, Network profiling</td></tr>
+</tbody></table>
+<hr>
+<h2 id="section-9--lifecycle--platform-components">Section 9 — Lifecycle &amp; Platform Components</h2>
+<h3 id="official-android-docs-5">Official Android Docs</h3>
+<table border="1" cellpadding="6" cellspacing="0">
+<thead><tr>
+<th>Source</th>
+<th>URL</th>
+<th>Covers</th>
+</tr></thead><tbody>
+<tr><td>Activity lifecycle</td><td>https://developer.android.com/guide/components/activities/activity-lifecycle</td><td>onCreate→onDestroy, configuration changes</td></tr>
+<tr><td>Understand the Activity lifecycle</td><td>https://developer.android.com/guide/components/activities/intro-activities</td><td>Back stack, launch modes</td></tr>
+<tr><td>Handle configuration changes</td><td>https://developer.android.com/guide/topics/resources/runtime-changes</td><td>ViewModel for survival, onSaveInstanceState</td></tr>
+<tr><td>Saved instance state</td><td>https://developer.android.com/guide/components/activities/parcelables-and-bundles</td><td>Bundle limits, Parcelable for state</td></tr>
+<tr><td>ViewModel</td><td>https://developer.android.com/topic/libraries/architecture/viewmodel</td><td>ViewModelStore, ViewModelProvider, factory</td></tr>
+<tr><td>Tasks and back stack</td><td>https://developer.android.com/guide/components/activities/tasks-and-back-stack</td><td>Affinity, launch modes, FLAG_ACTIVITY_*</td></tr>
+<tr><td>Intent flags</td><td>https://developer.android.com/reference/android/content/Intent</td><td>FLAG_ACTIVITY_CLEAR_TOP, FLAG_ACTIVITY_NEW_TASK</td></tr>
+<tr><td>Activity Result API</td><td>https://developer.android.com/training/basics/intents/result</td><td>registerForActivityResult, ActivityResultLauncher</td></tr>
+<tr><td>Deep links</td><td>https://developer.android.com/training/app-links</td><td>Intent filters, App Links, verification</td></tr>
+<tr><td>Multi-window support</td><td>https://developer.android.com/guide/topics/ui/multi-window</td><td>onMultiWindowModeChanged, freeform</td></tr>
+<tr><td>Fragment lifecycle</td><td>https://developer.android.com/guide/fragments/lifecycle</td><td>onCreate→onDestroyView, view lifecycle</td></tr>
+<tr><td>Fragments overview</td><td>https://developer.android.com/guide/fragments</td><td>Back stack, transactions, commit</td></tr>
+<tr><td>viewLifecycleOwner</td><td>https://developer.android.com/reference/androidx/fragment/app/Fragment#getViewLifecycleOwner()</td><td>Use instead of <code>this</code> in Observers to avoid leaks</td></tr>
+<tr><td>Fragment Result API</td><td>https://developer.android.com/guide/fragments/communicate#fragment-result</td><td>setFragmentResult, setFragmentResultListener</td></tr>
+<tr><td>Navigation component</td><td>https://developer.android.com/guide/navigation</td><td>NavHost, NavController, safe args, deep links</td></tr>
+<tr><td>Services overview</td><td>https://developer.android.com/guide/components/services</td><td>Started vs Bound, onStartCommand return values</td></tr>
+<tr><td>Foreground services</td><td>https://developer.android.com/guide/components/foreground-services</td><td>Notification requirement, types (API 34+)</td></tr>
+<tr><td>Background execution limits</td><td>https://developer.android.com/about/versions/oreo/background</td><td>API 26+ restrictions on background services</td></tr>
+<tr><td>BroadcastReceiver</td><td>https://developer.android.com/guide/components/broadcasts</td><td>Manifest vs context-registered, ordered, implicit</td></tr>
+<tr><td>ContentProvider</td><td>https://developer.android.com/guide/topics/providers/content-provider-basics</td><td>URI contract, MIME types, CursorLoader</td></tr>
+<tr><td>App Widgets</td><td>https://developer.android.com/guide/topics/appwidgets</td><td>AppWidgetProvider, RemoteViews</td></tr>
+<tr><td>Predictive Back</td><td>https://developer.android.com/guide/navigation/custom-back/predictive-back-gesture</td><td>OnBackPressedCallback, BackHandler in Compose</td></tr>
+<tr><td>Process and app lifecycle</td><td>https://developer.android.com/guide/components/activities/process-lifecycle</td><td>Importance hierarchy, process death</td></tr>
+</tbody></table>
+<hr>
+<h2 id="section-10--data-layer">Section 10 — Data Layer</h2>
+<h3 id="official-android-docs-6">Official Android Docs</h3>
+<table border="1" cellpadding="6" cellspacing="0">
+<thead><tr>
+<th>Source</th>
+<th>URL</th>
+<th>Covers</th>
+</tr></thead><tbody>
+<tr><td>Room persistence library</td><td>https://developer.android.com/training/data-storage/room</td><td>Entity, DAO, Database, TypeConverter</td></tr>
+<tr><td>Room — relationships</td><td>https://developer.android.com/training/data-storage/room/relationships</td><td>@Relation, @Junction, one-to-many</td></tr>
+<tr><td>Room — migrations</td><td>https://developer.android.com/training/data-storage/room/migrating-db-versions</td><td>Migration object, fallbackToDestructiveMigration</td></tr>
+<tr><td>Room — Flow</td><td>https://developer.android.com/training/data-storage/room/async-queries</td><td>Suspend DAOs, Flow, LiveData returns</td></tr>
+<tr><td>Room — testing</td><td>https://developer.android.com/training/data-storage/room/testing-db</td><td>In-memory database, MigrationTestHelper</td></tr>
+<tr><td>DataStore</td><td>https://developer.android.com/topic/libraries/architecture/datastore</td><td>Proto DataStore, Preferences DataStore</td></tr>
+<tr><td>DataStore vs SharedPreferences</td><td>https://developer.android.com/topic/libraries/architecture/datastore#datastore-and-sharedpreferences</td><td>Migration path, async API</td></tr>
+<tr><td>SharedPreferences</td><td>https://developer.android.com/reference/android/content/SharedPreferences</td><td>Synchronous apply() vs commit()</td></tr>
+<tr><td>Scoped storage</td><td>https://developer.android.com/about/versions/11/privacy/storage</td><td>Scoped storage model (API 29+), MediaStore</td></tr>
+<tr><td>FileProvider</td><td>https://developer.android.com/reference/androidx/core/content/FileProvider</td><td>Sharing files across apps via content:// URIs</td></tr>
+<tr><td>Paging 3</td><td>https://developer.android.com/topic/libraries/architecture/paging/v3-overview</td><td>PagingSource, RemoteMediator, PagingData</td></tr>
+<tr><td>Paging 3 — from network+db</td><td>https://developer.android.com/topic/libraries/architecture/paging/v3-network-db</td><td>RemoteMediator for offline-first pagination</td></tr>
+<tr><td>Network security config</td><td>https://developer.android.com/training/articles/security-config</td><td>Certificate pinning, cleartext traffic rules</td></tr>
+</tbody></table>
+<h3 id="library-docs-5">Library Docs</h3>
+<table border="1" cellpadding="6" cellspacing="0">
+<thead><tr>
+<th>Library</th>
+<th>URL</th>
+<th>Covers</th>
+</tr></thead><tbody>
+<tr><td>Retrofit</td><td>https://square.github.io/retrofit/</td><td>Type-safe HTTP client; annotations, converters, adapters</td></tr>
+<tr><td>OkHttp</td><td>https://square.github.io/okhttp/</td><td>HTTP engine; interceptors, connection pooling, caching</td></tr>
+<tr><td>OkHttp — Interceptors</td><td>https://square.github.io/okhttp/features/interceptors/</td><td>Application vs network interceptors</td></tr>
+<tr><td>OkHttp — Caching</td><td>https://square.github.io/okhttp/features/caching/</td><td>Cache-Control, conditional GET</td></tr>
+<tr><td>OkHttp — MockWebServer</td><td>https://github.com/square/okhttp/tree/master/mockwebserver</td><td>In-process HTTP server for Retrofit tests</td></tr>
+<tr><td>Gson</td><td>https://github.com/google/gson</td><td>JSON serialization/deserialization</td></tr>
+<tr><td>Moshi</td><td>https://github.com/square/moshi</td><td>Kotlin-friendly JSON library with codegen</td></tr>
+<tr><td>kotlinx.serialization</td><td>https://github.com/Kotlin/kotlinx.serialization</td><td>Official Kotlin JSON/Proto/CBOR serialization</td></tr>
+</tbody></table>
+<h3 id="further-reading-7">Further Reading</h3>
+<ul>
+<li>Android Developers Blog — &quot;Introducing Paging 3&quot;: https://medium.com/androiddevelopers/introduction-to-paging-3-0-in-the-mad-skills-series-648f77231121 [~]</li>
+<li>Android Developers Blog — &quot;DataStore preferences vs Proto&quot;: https://medium.com/androiddevelopers/introduction-to-jetpack-datastore-3dc8d74139e7 [~]</li>
+</ul>
+<hr>
+<h2 id="section-11--testing">Section 11 — Testing</h2>
+<h3 id="official-android-docs-7">Official Android Docs</h3>
+<table border="1" cellpadding="6" cellspacing="0">
+<thead><tr>
+<th>Source</th>
+<th>URL</th>
+<th>Covers</th>
+</tr></thead><tbody>
+<tr><td>Testing fundamentals</td><td>https://developer.android.com/training/testing/fundamentals</td><td>Unit, integration, E2E pyramid</td></tr>
+<tr><td>Test doubles</td><td>https://developer.android.com/training/testing/fundamentals#test-doubles</td><td>Mock, fake, stub, spy, dummy definitions</td></tr>
+<tr><td>What to test</td><td>https://developer.android.com/training/testing/fundamentals#what-to-test</td><td>Boundary conditions, edge cases</td></tr>
+<tr><td>Coroutines testing</td><td>https://developer.android.com/kotlin/coroutines/test</td><td>TestCoroutineScheduler, runTest, advanceTimeBy</td></tr>
+<tr><td>ViewModel testing</td><td>https://developer.android.com/topic/libraries/architecture/viewmodel/viewmodel-testing [~]</td><td>InstantTaskExecutorRule, TestCoroutineRule</td></tr>
+<tr><td>ActivityScenario</td><td>https://developer.android.com/reference/androidx/test/core/app/ActivityScenario</td><td>Launch, move to state, recreate Activity</td></tr>
+<tr><td>FragmentScenario</td><td>https://developer.android.com/reference/androidx/fragment/app/testing/FragmentScenario</td><td>Isolated Fragment testing</td></tr>
+<tr><td>Espresso</td><td>https://developer.android.com/training/testing/espresso</td><td>onView, onData, perform, check, idling resources</td></tr>
+<tr><td>Espresso — IdlingResource</td><td>https://developer.android.com/training/testing/espresso/idling-resource</td><td>Synchronizing Espresso with async work</td></tr>
+<tr><td>Compose testing</td><td>https://developer.android.com/jetpack/compose/testing</td><td>ComposeTestRule, semantics tree, SemanticsNodeInteraction</td></tr>
+<tr><td>Compose testing cheatsheet</td><td>https://developer.android.com/jetpack/compose/testing-cheatsheet</td><td>Finders, assertions, actions quick reference</td></tr>
+<tr><td>Hilt testing</td><td>https://developer.android.com/training/dependency-injection/hilt-testing</td><td>@HiltAndroidTest, @UninstallModules, TestInstallIn</td></tr>
+<tr><td>UI Automator</td><td>https://developer.android.com/training/testing/other-components/ui-automator</td><td>Cross-app testing, device interactions</td></tr>
+<tr><td>Screenshot testing (AndroidX)</td><td>https://developer.android.com/studio/test/advanced-test-setup#screenshot-testing [~]</td><td>Paparazzi / screenshot diff</td></tr>
+<tr><td>Accessibility testing</td><td>https://developer.android.com/guide/topics/ui/accessibility/testing</td><td>AccessibilityChecks, TalkBack</td></tr>
+</tbody></table>
+<h3 id="library-docs-6">Library Docs</h3>
+<table border="1" cellpadding="6" cellspacing="0">
+<thead><tr>
+<th>Library</th>
+<th>URL</th>
+<th>Covers</th>
+</tr></thead><tbody>
+<tr><td>MockK</td><td>https://mockk.io/</td><td>Kotlin-idiomatic mocking; coEvery, slot, verify</td></tr>
+<tr><td>MockK — GitHub</td><td>https://github.com/mockk/mockk</td><td>Source, changelog, annotation support</td></tr>
+<tr><td>Turbine</td><td>https://github.com/cashapp/turbine</td><td>Flow testing — awaitItem, awaitComplete, awaitError</td></tr>
+<tr><td>JUnit 4</td><td>https://junit.org/junit4/</td><td>@Test, @Before, @After, @Rule, @RunWith</td></tr>
+<tr><td>JUnit 5 (Jupiter)</td><td>https://junit.org/junit5/</td><td>@BeforeEach, @ExtendWith, parameterized tests</td></tr>
+<tr><td>Robolectric</td><td>https://robolectric.org/</td><td>Android API shadows on the JVM (no emulator)</td></tr>
+<tr><td>Paparazzi</td><td>https://github.com/cashapp/paparazzi</td><td>Offline screenshot testing without emulator</td></tr>
+<tr><td>OkHttp MockWebServer</td><td>https://github.com/square/okhttp/tree/master/mockwebserver</td><td>Intercepting HTTP responses in API tests</td></tr>
+<tr><td>Kotlin coroutines test</td><td>https://github.com/Kotlin/kotlinx.coroutines/tree/master/kotlinx-coroutines-test</td><td>TestScope, UnconfinedTestDispatcher, StandardTestDispatcher</td></tr>
+</tbody></table>
+<hr>
+<h2 id="section-12--build-gradle--release">Section 12 — Build, Gradle &amp; Release</h2>
+<h3 id="official-android--gradle-docs">Official Android / Gradle Docs</h3>
+<table border="1" cellpadding="6" cellspacing="0">
+<thead><tr>
+<th>Source</th>
+<th>URL</th>
+<th>Covers</th>
+</tr></thead><tbody>
+<tr><td>Configure your build</td><td>https://developer.android.com/build</td><td>Gradle overview, AGP, build variants</td></tr>
+<tr><td>Build types</td><td>https://developer.android.com/build/build-variants#build-types</td><td>debug, release, minify, debuggable</td></tr>
+<tr><td>Product flavors</td><td>https://developer.android.com/build/build-variants</td><td>Flavor dimensions, source sets</td></tr>
+<tr><td>Dependency configurations</td><td>https://developer.android.com/build/dependencies</td><td>implementation, api, runtimeOnly, testImplementation</td></tr>
+<tr><td>Version Catalogs</td><td>https://developer.android.com/build/migrate-to-catalogs</td><td>libs.versions.toml, unified dependency versioning</td></tr>
+<tr><td>Convention plugins</td><td>https://developer.android.com/build/share-build-logic</td><td>Sharing build logic across modules</td></tr>
+<tr><td>Build cache</td><td>https://developer.android.com/build/build-cache</td><td>Local and remote caching</td></tr>
+<tr><td>Configuration cache</td><td>https://docs.gradle.org/current/userguide/configuration_cache.html</td><td>Skip configuration phase on subsequent builds</td></tr>
+<tr><td>KSP (Kotlin Symbol Processing)</td><td>https://developer.android.com/build/migrate-to-ksp</td><td>Faster annotation processing vs KAPT</td></tr>
+<tr><td>R8 / ProGuard</td><td>https://developer.android.com/build/shrink-code</td><td>Code shrinking, obfuscation, mapping files</td></tr>
+<tr><td>App Bundles (AAB)</td><td>https://developer.android.com/guide/app-bundle</td><td>Play Asset Delivery, split APKs</td></tr>
+<tr><td>App signing</td><td>https://developer.android.com/studio/publish/app-signing</td><td>Keystore, Play App Signing, upload key</td></tr>
+<tr><td>Staged rollouts</td><td>https://support.google.com/googleplay/android-developer/answer/6346149</td><td>Google Play % rollout and halt</td></tr>
+<tr><td>Versioning</td><td>https://developer.android.com/studio/publish/versioning</td><td>versionCode, versionName semantics</td></tr>
+<tr><td>Gradle Profiler</td><td>https://github.com/gradle/gradle-profiler</td><td>Build profiling and benchmarking tool</td></tr>
+</tbody></table>
+<h3 id="library-docs-7">Library Docs</h3>
+<table border="1" cellpadding="6" cellspacing="0">
+<thead><tr>
+<th>Library</th>
+<th>URL</th>
+<th>Covers</th>
+</tr></thead><tbody>
+<tr><td>Android Gradle Plugin releases</td><td>https://developer.android.com/build/releases/gradle-plugin</td><td>AGP version history and migration guides</td></tr>
+<tr><td>Gradle docs</td><td>https://docs.gradle.org/</td><td>Task, Plugin, API documentation</td></tr>
+</tbody></table>
+<hr>
+<h2 id="section-13--security--privacy">Section 13 — Security &amp; Privacy</h2>
+<h3 id="official-android-docs-8">Official Android Docs</h3>
+<table border="1" cellpadding="6" cellspacing="0">
+<thead><tr>
+<th>Source</th>
+<th>URL</th>
+<th>Covers</th>
+</tr></thead><tbody>
+<tr><td>Android security overview</td><td>https://source.android.com/docs/security/overview</td><td>App sandbox, UID isolation, SELinux</td></tr>
+<tr><td>Permissions overview</td><td>https://developer.android.com/guide/topics/permissions/overview</td><td>Normal, dangerous, signature permissions</td></tr>
+<tr><td>Request runtime permissions</td><td>https://developer.android.com/training/permissions/requesting</td><td>shouldShowRequestPermissionRationale, flow</td></tr>
+<tr><td>Security best practices</td><td>https://developer.android.com/topic/security/best-practices</td><td>Exported components, intent validation, FileProvider</td></tr>
+<tr><td>PendingIntent mutability</td><td>https://developer.android.com/reference/android/app/PendingIntent</td><td>FLAG_IMMUTABLE required API 31+</td></tr>
+<tr><td>Android Keystore</td><td>https://developer.android.com/training/articles/keystore</td><td>Key generation, AES-GCM, RSA in hardware-backed TEE</td></tr>
+<tr><td>EncryptedSharedPreferences</td><td>https://developer.android.com/reference/androidx/security/crypto/EncryptedSharedPreferences</td><td>AES256_SIV key encryption via Jetpack Security</td></tr>
+<tr><td>EncryptedFile</td><td>https://developer.android.com/reference/androidx/security/crypto/EncryptedFile</td><td>Streaming file encryption</td></tr>
+<tr><td>Biometric authentication</td><td>https://developer.android.com/training/sign-in/biometric-auth</td><td>BiometricPrompt, Class 2 vs Class 3</td></tr>
+<tr><td>Network security configuration</td><td>https://developer.android.com/training/articles/security-config</td><td>Certificate pinning, debug overrides</td></tr>
+<tr><td>SafetyNet / Play Integrity API</td><td>https://developer.android.com/google/play/integrity</td><td>Attestation, device integrity checks</td></tr>
+<tr><td>WebView security</td><td>https://developer.android.com/guide/webapps/webview</td><td>setJavaScriptEnabled, addJavascriptInterface risks</td></tr>
+<tr><td>Scoped storage (privacy)</td><td>https://developer.android.com/about/versions/11/privacy/storage</td><td>Restricting broad file-system access</td></tr>
+<tr><td>Privacy changes by API level</td><td>https://developer.android.com/about/versions/14/privacy</td><td>Per-release privacy restrictions</td></tr>
+</tbody></table>
+<h3 id="library-docs-8">Library Docs</h3>
+<table border="1" cellpadding="6" cellspacing="0">
+<thead><tr>
+<th>Library</th>
+<th>URL</th>
+<th>Covers</th>
+</tr></thead><tbody>
+<tr><td>Jetpack Security (crypto)</td><td>https://developer.android.com/jetpack/androidx/releases/security</td><td>EncryptedSharedPreferences, EncryptedFile releases</td></tr>
+</tbody></table>
+<hr>
+<h2 id="section-14--performance-beyond-rendering">Section 14 — Performance (Beyond Rendering)</h2>
+<h3 id="official-android-docs-9">Official Android Docs</h3>
+<table border="1" cellpadding="6" cellspacing="0">
+<thead><tr>
+<th>Source</th>
+<th>URL</th>
+<th>Covers</th>
+</tr></thead><tbody>
+<tr><td>App startup time</td><td>https://developer.android.com/topic/performance/vitals/launch-time</td><td>Cold/warm/hot start, TTID, TTFD</td></tr>
+<tr><td>App Startup library</td><td>https://developer.android.com/topic/libraries/app-startup</td><td>Initializer graph, lazy init</td></tr>
+<tr><td>Splash screen</td><td>https://developer.android.com/develop/ui/views/launch/splash-screen</td><td>SplashScreen API (API 31+), animated icon</td></tr>
+<tr><td>Baseline Profiles</td><td>https://developer.android.com/topic/performance/baselineprofiles</td><td>Profile-guided AOT compilation, Macrobenchmark generation</td></tr>
+<tr><td>Macrobenchmark</td><td>https://developer.android.com/topic/performance/benchmarking/macrobenchmark-overview</td><td>Measuring startup, frame timing, custom journeys</td></tr>
+<tr><td>Doze mode</td><td>https://developer.android.com/training/monitoring-device-state/doze-standby</td><td>Light Doze, full Doze, maintenance windows</td></tr>
+<tr><td>App Standby buckets</td><td>https://developer.android.com/topic/performance/power/power-details</td><td>Active, Working Set, Frequent, Rare, Restricted</td></tr>
+<tr><td>Battery optimization</td><td>https://developer.android.com/training/monitoring-device-state</td><td>Wake locks, JobScheduler, WorkManager constraints</td></tr>
+<tr><td>Wake locks</td><td>https://developer.android.com/reference/android/os/PowerManager.WakeLock</td><td>PARTIAL_WAKE_LOCK, acquire/release symmetry</td></tr>
+<tr><td>Keep your app responsive (ANR)</td><td>https://developer.android.com/training/articles/perf-anr</td><td>Input dispatch timeout, BroadcastReceiver timeout</td></tr>
+<tr><td>ANR in Google Play</td><td>https://developer.android.com/topic/performance/vitals/anr</td><td>ANR rate thresholds, traces.txt analysis</td></tr>
+<tr><td>Android Vitals</td><td>https://developer.android.com/topic/performance/vitals</td><td>Crash rate, ANR rate, jank, start time in Play Console</td></tr>
+<tr><td>StrictMode</td><td>https://developer.android.com/reference/android/os/StrictMode</td><td>Disk/network-on-main-thread detection in dev builds</td></tr>
+<tr><td>Profiling with Perfetto</td><td>https://developer.android.com/topic/performance/tracing</td><td>App-layer tracing with <code>Trace.beginSection</code></td></tr>
+<tr><td>Systrace (legacy)</td><td>https://developer.android.com/topic/performance/tracing/command-line</td><td>Superseded by Perfetto; still referenced</td></tr>
+</tbody></table>
+<h3 id="tools-2">Tools</h3>
+<table border="1" cellpadding="6" cellspacing="0">
+<thead><tr>
+<th>Tool</th>
+<th>URL</th>
+<th>Covers</th>
+</tr></thead><tbody>
+<tr><td>Perfetto UI</td><td>https://ui.perfetto.dev/</td><td>Interactive trace viewer for Perfetto traces</td></tr>
+<tr><td>Android Studio Profiler</td><td>https://developer.android.com/studio/profile</td><td>CPU traces, energy profiler, startup profiling mode</td></tr>
+<tr><td>Firebase Crashlytics</td><td>https://firebase.google.com/docs/crashlytics</td><td>Crash grouping, ANR reports, custom keys</td></tr>
+</tbody></table>
+<hr>
+<h2 id="section-15--system-design">Section 15 — System Design</h2>
+<h3 id="official-android-docs-10">Official Android Docs</h3>
+<table border="1" cellpadding="6" cellspacing="0">
+<thead><tr>
+<th>Source</th>
+<th>URL</th>
+<th>Covers</th>
+</tr></thead><tbody>
+<tr><td>App architecture guide</td><td>https://developer.android.com/topic/architecture</td><td>Recommended layered architecture</td></tr>
+<tr><td>Guide to modularization</td><td>https://developer.android.com/topic/modularization</td><td>Module types, dependency rules, build speed</td></tr>
+<tr><td>WorkManager — advanced</td><td>https://developer.android.com/topic/libraries/architecture/workmanager/advanced</td><td>Chaining, unique work, periodic, expedited</td></tr>
+<tr><td>Paging 3 — network + database</td><td>https://developer.android.com/topic/libraries/architecture/paging/v3-network-db</td><td>Offline-first pagination with RemoteMediator</td></tr>
+<tr><td>Background work guide</td><td>https://developer.android.com/guide/background</td><td>Choosing between coroutines, WorkManager, FGS</td></tr>
+<tr><td>MAD (Modern Android Development) skills</td><td>https://developer.android.com/series/mad-skills</td><td>Architecture, Kotlin, Navigation, Compose video series</td></tr>
+</tbody></table>
+<h3 id="further-reading-8">Further Reading</h3>
+<ul>
+<li>Now in Android sample app (reference architecture): https://github.com/android/nowinandroid</li>
+<li>Android architecture samples: https://github.com/android/architecture-samples</li>
+<li>Google I/O — &quot;Modern Android Development&quot; talks: https://io.google [~]</li>
+</ul>
+<hr>
+<h2 id="section-16--interview-qa-cheatsheet">Section 16 — Interview Q&amp;A Cheatsheet</h2>
+<p>No external references — this section synthesizes all preceding sections. Refer to the source docs for each category:</p>
+<ul>
+<li>Data structures → Section 1 references</li>
+<li>Concurrency / threading → Section 3–4 references</li>
+<li>IPC → Section 5 references</li>
+<li>Memory → Section 6 references</li>
+<li>Architecture → Section 7 references</li>
+<li>View rendering → Section 8 references</li>
+</ul>
+<hr>
+<h2 id="section-17--must-revise-checklist">Section 17 — Must-Revise Checklist</h2>
+<p>No external references — tracks coverage across Sections 1–16. Use the Android Developers documentation root as a reference hub: https://developer.android.com/docs</p>
+<hr>
+<h2 id="section-18--seniorstaff-answer-framework">Section 18 — Senior/Staff Answer Framework</h2>
+<p>No external references — meta-guidance on structuring answers. Relevant foundational reading:</p>
+<ul>
+<li>Staff Engineer — Will Larson: https://staffeng.com/book [~]</li>
+<li>Designing Data-Intensive Applications — Martin Kleppmann (system design trade-off thinking)</li>
+</ul>
+<hr>
+<h2 id="books">Books</h2>
+<p>The following books are cited or recommended throughout the study guide.</p>
+<h3 id="the-threading-book-cited-throughout-topicsmd">&quot;The Threading Book&quot; (cited throughout topics.md)</h3>
+<p>The study guide repeatedly references a concurrency/Android threading book covering:</p>
+<ul>
+<li><strong>Part I</strong> — Process and thread fundamentals in Android</li>
+<li>Producer-consumer patterns</li>
+<li>Handler / Looper / MessageQueue internals</li>
+<li>Thread-induced memory leaks (static inner classes, weak references)</li>
+<li>Stopping and retaining worker threads</li>
+<li>Cleaning up message queues</li>
+</ul>
+<p>The exact title is not recorded in the source. The description most closely matches one of:</p>
+<ul>
+<li><strong>&quot;Android Concurrency&quot;</strong> — G. Blake Meike (covers HandlerThread, Looper, AsyncTask)</li>
+<li><strong>&quot;Efficient Android Threading&quot;</strong> — Anders Göransson (O&#x27;Reilly, ISBN 978-1449364137) — covers all cited topics and is the most widely referenced Android-specific threading book; <strong>most likely match</strong></li>
+</ul>
+<p>Search ISBN 9781449364137 or title &quot;Efficient Android Threading&quot; to locate it.</p>
+<h3 id="kotlin">Kotlin</h3>
+<ul>
+<li><strong>Effective Kotlin</strong> — Marcin Moskala (Kt. Academy)</li>
+<ul>
+<li>Best practices for null safety, coroutines, collections, performance</li>
+<li>https://kt.academy/book/effectivekotlin</li>
+</ul>
+</ul>
+<ul>
+<li><strong>Kotlin in Action</strong> — Dmitry Jemerov &amp; Svetlana Isakova (Manning)</li>
+<ul>
+<li>Comprehensive Kotlin language guide</li>
+</ul>
+</ul>
+<h3 id="java--jvm">Java / JVM</h3>
+<ul>
+<li><strong>Effective Java (3rd edition)</strong> — Joshua Bloch (Addison-Wesley)</li>
+<ul>
+<li>Items on equals/hashCode, generics, enums, concurrency — directly tested in interviews</li>
+<li>https://www.oreilly.com/library/view/effective-java/9780134686097/</li>
+</ul>
+</ul>
+<ul>
+<li><strong>Java Concurrency in Practice</strong> — Brian Goetz et al. (Addison-Wesley)</li>
+<ul>
+<li>The definitive reference for JMM, visibility, atomicity, Executor framework, wait/notify</li>
+<li>Core for Section 3 and Section 4 questions</li>
+</ul>
+</ul>
+<h3 id="architecture--system-design">Architecture / System Design</h3>
+<ul>
+<li><strong>Clean Architecture</strong> — Robert C. Martin</li>
+<ul>
+<li>Dependency rule, layer boundaries, use cases — directly maps to Section 7</li>
+</ul>
+</ul>
+<ul>
+<li><strong>Designing Data-Intensive Applications</strong> — Martin Kleppmann (O&#x27;Reilly)</li>
+<ul>
+<li>Distributed systems trade-offs; useful for senior system-design questions in Section 15</li>
+</ul>
+</ul>
+<ul>
+<li><strong>Staff Engineer</strong> — Will Larson</li>
+<ul>
+<li>Technical leadership, influence without authority — useful context for Section 18 answer framing</li>
+<li>https://staffeng.com/book</li>
+</ul>
+</ul>
+<div class="pager">
+<a class="prev" href="interview-q-a-cheatsheet.html"><span class="lbl">‹ Previous</span>16. Interview Q&amp;A &amp; Cheatsheet</a>
+<a class="next" href="../index.html"><span class="lbl">Next ›</span>Home</a>
+</div>
+</div></div>
+<script src="../site.js"></script>
+</body></html>
