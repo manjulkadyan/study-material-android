@@ -31,6 +31,7 @@
 <hr>
 <h2 id="31-java-thread-basics">3.1 Java Thread Basics</h2>
 <h3 id="process-vs-thread">Process vs Thread</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;A process is an isolated instance with its own address space, file descriptors, and OS resources, while a thread is a unit of execution inside a process that shares the heap and static fields but has its own stack and program counter. Threads are far cheaper to create than processes, but that shared address space is exactly what makes them dangerous — there&#x27;s no memory isolation, so unsynchronized access corrupts state. On Android each app is usually one process with many runtime threads already running: main, GC, and Binder threads.&quot;</blockquote>
 <p>A process is an isolated program instance — it gets its own memory space, file descriptors, and OS resources, and the kernel schedules it independently. Processes cannot share memory without explicit IPC.</p>
 <p>A thread is an execution unit that lives inside a process. All threads in a process share the same heap and static fields, but each has its own stack, program counter, and register set. Creating a thread is much cheaper than forking a process, but the shared address space is exactly what makes multi-threading dangerous.</p>
 <p>On Android, every <code>Application</code> normally runs in a single process (unless <code>android:process</code> is set on a component). Inside that process, the runtime starts several threads automatically — the main thread, GC threads, Binder threads, and so on.</p>
@@ -38,7 +39,15 @@
 Thread.currentThread().name  // &quot;main&quot;, &quot;pool-1-thread-1&quot;, etc.
 android.os.Process.myPid()   // Linux PID of the process
 android.os.Process.myTid()   // Linux TID of the calling thread</code></pre>
+<p><strong>Under the hood</strong></p>
+<p>On ART a <code>java.lang.Thread</code> maps 1:1 to a native OS thread — a Linux <code>pthread</code> created via <code>pthread_create</code>, which underneath issues the <code>clone(2)</code> syscall with flags like <code>CLONE_VM | CLONE_FILES | CLONE_THREAD</code> so the new task shares the address space and FD table with its peers. A process by contrast is a <code>clone</code>/<code>fork</code> without those sharing flags, giving copy-on-write separate memory. The thread&#x27;s Linux TID (<code>gettid</code>) is what <code>Process.myTid()</code> returns, and the kernel&#x27;s scheduler operates on these tasks, not on the JVM&#x27;s abstract <code>Thread</code> objects.</p>
+<pre><code>Process (PID)
+ ├─ shared: heap, static fields, code, FD table   ← one address space
+ └─ Thread (TID)  Thread (TID)  Thread (TID)
+     own: stack, PC, registers, kernel task_struct</code></pre>
+<hr>
 <h3 id="thread-lifecycle-states">Thread Lifecycle States</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;A Java thread moves NEW → RUNNABLE → terminated, and while runnable it can park into BLOCKED, WAITING, or TIMED_WAITING. The subtlety interviewers probe is the difference between BLOCKED and WAITING: a BLOCKED thread is actively contending for a monitor lock and is otherwise ready, whereas a WAITING thread is parked indefinitely and can&#x27;t be scheduled until someone calls notify, signals it, or unparks it. The other gotcha is that a thread is single-use — once it&#x27;s TERMINATED you can&#x27;t call start again.&quot;</blockquote>
 <pre><code>NEW ──► RUNNABLE ──► RUNNING ──► TERMINATED
                   ▲        │
                   │        ▼
@@ -57,10 +66,18 @@ android.os.Process.myTid()   // Linux TID of the calling thread</code></pre>
 <tr><td><code>TERMINATED</code></td><td><code>run()</code> returned or threw an uncaught exception</td></tr>
 </tbody></table>
 <p>The key transition gotcha is this: a thread in <code>WAITING</code> cannot be scheduled until another thread calls <code>notify()</code>/<code>notifyAll()</code> or <code>unpark()</code>. A thread in <code>BLOCKED</code> is actively competing for a lock with other threads — it&#x27;s ready to run, it just can&#x27;t get in.</p>
+<p><strong>Under the hood</strong></p>
+<p><code>Thread.State</code> is a pure JVM/JLS abstraction — there&#x27;s no <code>RUNNING</code> enum value (it&#x27;s folded into <code>RUNNABLE</code>), because from the JVM&#x27;s view &quot;ready to run&quot; and &quot;on-CPU&quot; are both the kernel scheduler&#x27;s business. ART tracks a separate internal thread state on its native <code>Thread</code> struct (e.g. <code>kRunnable</code>, <code>kBlocked</code>, <code>kWaiting</code>, <code>kTimedWaiting</code>, <code>kSuspended</code>) that the GC and debugger care about, and maps it onto the public enum. Underneath, a <code>RUNNABLE</code> thread is a Linux task in run state <code>R</code>, while BLOCKED/WAITING/TIMED_WAITING correspond to the kernel <code>S</code> (interruptible sleep) state parked on a futex. A <code>Thread</code> can&#x27;t be restarted because <code>start()</code> checks the internal <code>started</code>/state field and throws <code>IllegalThreadStateException</code> once it has left NEW.</p>
+<hr>
 <h3 id="context-switching">Context Switching</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;A context switch is when the scheduler saves one thread&#x27;s CPU state — registers, stack pointer, program counter — and loads another&#x27;s, either on a time-slice boundary or when a thread blocks. It&#x27;s not free: beyond the kernel bookkeeping you pay for cache and TLB eviction, so the new thread starts cold. That&#x27;s why spawning hundreds of threads hurts throughput and why we use bounded thread pools — past the core count you mostly buy switching overhead, not parallelism.&quot;</blockquote>
 <p>The OS scheduler preempts threads on time-slice boundaries or when a thread blocks. Switching means saving the current thread&#x27;s registers and stack pointer, loading the next thread&#x27;s saved state, and updating the TLB. On Android (Linux scheduler — CFS, Completely Fair Scheduler), threads are scheduled by priority (nice value). <code>android.os.Process.setThreadPriority()</code> maps to nice values.</p>
 <p>The cost implication is that context switches carry CPU cache eviction overhead. Too many threads means too many switches, which means contention for CPU caches and a real slowdown in throughput. That is exactly why thread pools exist.</p>
+<p><strong>Under the hood</strong></p>
+<p>A switch is a kernel-mode operation: on a timer interrupt or blocking syscall the CPU traps into the kernel, the scheduler picks the next runnable task via CFS (which orders tasks by virtual runtime weighted by <code>nice</code>), and a low-level <code>context_switch</code>/<code>switch_to</code> swaps the register file, stack pointer, and address-space pointer (<code>CR3</code> on x86). Swapping address spaces flushes much of the TLB; the new thread&#x27;s working set is also cold in L1/L2, so the real cost is mostly micro-architectural, not the instruction count. Java thread priorities (1–10) are translated by ART into Linux <code>nice</code> values via <code>setpriority</code>/<code>set_sched</code>, which only bias CFS&#x27;s choices — they don&#x27;t give hard real-time guarantees.</p>
+<hr>
 <h3 id="race-conditions">Race Conditions</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;A race condition is when correctness depends on the relative timing of operations across threads and nothing controls that timing. The canonical one is a read-modify-write like <code>balance += x</code>: two threads both read the old value, both compute, and one write clobbers the other, so an update is lost. The key insight is that the <code>+=</code> looks atomic in source but is actually three separate steps at the bytecode level, and the scheduler can interleave them — you fix it with a lock, an atomic, or by confining the state.&quot;</blockquote>
 <p>A race condition occurs when program correctness depends on the relative timing of operations across two or more threads, and that timing is not controlled.</p>
 <p>Classic example — two threads each doing <code>balance += deposit</code>:</p>
 <pre><code>Thread A reads balance (100)
@@ -68,30 +85,61 @@ Thread B reads balance (100)
 Thread A writes 100 + 50 = 150
 Thread B writes 100 + 75 = 175   // A&#x27;s update is lost!</code></pre>
 <p>The final value should be 225 but is 175. The compound &quot;read-modify-write&quot; operation is the hazard.</p>
+<p><strong>Under the hood</strong></p>
+<p><code>balance += deposit</code> is not one operation at the bytecode level — for a field it compiles to roughly <code>getfield</code> (load), <code>iadd</code> (compute), <code>putfield</code> (store), and on a local/static the analogue is <code>iload</code>/<code>iadd</code>/<code>istore</code>. The JVM/ART is free to interleave any other thread&#x27;s bytecode between those instructions, and the CPU may additionally keep <code>balance</code> in a register so each thread works on its own stale copy. There&#x27;s no implicit lock and no happens-before edge, so even the final visibility of either write isn&#x27;t guaranteed. <code>java.util.concurrent.atomic</code> types close the gap with a single CAS instruction (<code>cmpxchg</code>) that does compare-and-set indivisibly.</p>
+<hr>
 <h3 id="critical-sections">Critical Sections</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;A critical section is a region of code that touches shared mutable state and must be run by at most one thread at a time. Every synchronization primitive — synchronized, ReentrantLock, semaphores — exists to enforce mutual exclusion over critical sections. The design goal is to make the section as small as possible: you want it long enough to protect the invariant but short enough that threads aren&#x27;t queueing behind a lock doing work that didn&#x27;t need protecting.&quot;</blockquote>
 <p>A critical section is a block of code that accesses shared mutable state and must be executed by at most one thread at a time. The goal of every synchronization mechanism is to enforce mutual exclusion over critical sections while minimizing the time threads spend waiting.</p>
+<p><strong>Under the hood</strong></p>
+<p>A critical section has no special bytecode of its own — it&#x27;s whatever instructions sit between a lock acquire and release. With <code>synchronized</code> that&#x27;s the span between <code>MONITORENTER</code> and <code>MONITOREXIT</code>; with <code>ReentrantLock</code> it&#x27;s the code between <code>lock()</code> and <code>unlock()</code>, enforced only by convention (hence the <code>try/finally</code>). The mutual-exclusion guarantee comes entirely from the surrounding lock&#x27;s monitor or AQS state, plus the memory barriers those acquire/release operations emit, which is what turns &quot;only one at a time&quot; into &quot;and the next thread sees the previous one&#x27;s writes.&quot;</p>
+<hr>
 <h3 id="shared-mutable-state">Shared Mutable State</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;Thread-safety problems need three ingredients at once: the data is shared across threads, it&#x27;s mutable, and access isn&#x27;t synchronized. Remove any one and the problem disappears, which gives you three strategies — confine the state to a single thread, make it immutable, or synchronize access with locks or atomics. I reach for confinement or immutability first because they&#x27;re cheaper and harder to get wrong than locking.&quot;</blockquote>
 <p>There are three factors that create thread-safety problems. First, the data is shared — accessible from multiple threads. Second, it is mutable — the value can change. Third, there is no synchronization — no mechanism forces ordered, exclusive access.</p>
 <p>There are three solution paths. Either do not share the data and confine it to one thread (thread confinement). Or do not mutate it and use immutable or read-only data structures. Or synchronize access using locks, atomics, or lock-free algorithms.</p>
+<p><strong>Under the hood</strong></p>
+<p>Immutability is enforced by the JMM&#x27;s <code>final</code>-field semantics: when a constructor finishes, the JVM emits a freeze (a <code>StoreStore</code> barrier on the writer side) so that any thread observing the reference through a properly published object is guaranteed to see the correctly-initialized <code>final</code> fields without extra synchronization. Thread confinement leans on the fact that each thread has its own stack — locals never escape — and on <code>ThreadLocal</code>, which on ART is backed by a per-<code>Thread</code> <code>ThreadLocalMap</code> keyed by weak references to the <code>ThreadLocal</code> object, so there is literally no shared storage to race on.</p>
+<hr>
 <h3 id="thread-safety-visibility-atomicity-ordering">Thread Safety, Visibility, Atomicity, Ordering</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;These are the four pillars. Thread safety means a class is correct under concurrent access with no extra caller synchronization. Visibility is whether one thread&#x27;s write is seen by another — not guaranteed without a happens-before edge, because the JMM lets threads cache values. Atomicity is whether an operation is indivisible — single int and reference reads/writes are atomic, but <code>long</code>/<code>double</code> on 32-bit aren&#x27;t, and <code>i++</code> never is. Ordering is that the compiler and CPU can reorder instructions unless volatile, locks, or final fields establish a happens-before edge.&quot;</blockquote>
 <p><strong>Thread safety</strong> means a class behaves correctly when accessed from multiple threads, regardless of scheduling, without additional synchronization by the caller.</p>
 <p><strong>Visibility</strong> is the guarantee that when thread A writes a variable, thread B actually sees that write. Without a happens-before relationship, the JMM allows threads to cache variables in registers or local CPU caches, so there is no such guarantee by default.</p>
 <p><strong>Atomicity</strong> means an operation completes in a single, indivisible step from the perspective of other threads. Reading or writing a 32-bit <code>int</code> or reference is atomic per JMM, but <code>long</code> and <code>double</code> on 32-bit JVMs are not guaranteed atomic because they require two separate 32-bit writes. Compound operations like <code>i++</code> are never atomic even for <code>int</code>.</p>
 <p><strong>Ordering</strong> is the rule that the JMM allows the compiler and CPU to reorder instructions, as long as the result is equivalent within a single thread. Another thread may observe a different order unless happens-before edges — from locks, <code>volatile</code>, or <code>final</code> fields — prevent it.</p>
+<p><strong>Under the hood</strong></p>
+<p>These four are formalized by the Java Memory Model, whose primitive is the happens-before partial order; visibility and ordering are really the same guarantee viewed from two angles. A <code>volatile</code> write is implemented with a <code>StoreStore</code>+<code>StoreLoad</code> barrier sequence (and the read with <code>LoadLoad</code>+<code>LoadStore</code>), which on ARM lowers to <code>dmb</code>/load-acquire/store-release instructions and prevents both compiler hoisting and CPU store-buffer reordering. The non-atomic <code>long</code>/<code>double</code> rule exists because the JLS only mandates atomic 32-bit accesses; a 64-bit value can be written as two 32-bit <code>putfield</code>-style stores, so a reader can observe a torn high/low half — declaring the field <code>volatile</code> forces a single atomic 64-bit access.</p>
+<hr>
 <h3 id="concurrency-vs-parallelism">Concurrency vs Parallelism</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;Concurrency is about structure — composing a program so multiple logical tasks can be in progress and overlap in time, even on one core via interleaving. Parallelism is about execution — tasks literally running simultaneously on multiple cores. The line interviewers like is Rob Pike&#x27;s: concurrency is dealing with many things at once, parallelism is doing many things at once. On a single-core phone you can be fully concurrent with async IO and Handler messages but never truly parallel.&quot;</blockquote>
 <p>Concurrency is about structure — designing a program so that multiple logical tasks can overlap in time. A single-core machine can run concurrent code by interleaving.</p>
 <p>Parallelism is about execution — two or more tasks literally running at the same moment on multiple cores.</p>
 <p>On Android, a single-core device can be fully concurrent (async IO, handler messages) but not parallel. A multi-core device can do both.</p>
+<p><strong>Under the hood</strong></p>
+<p>Whether concurrent code actually runs in parallel is decided below the language by the kernel scheduler and the number of online CPU cores it can dispatch runnable tasks onto. On a single core, &quot;concurrency&quot; is just time-slicing — the scheduler rotates tasks on context-switch boundaries so they interleave but never overlap. Higher-level constructs reflect this: a Kotlin coroutine dispatcher like <code>Dispatchers.Default</code> multiplexes many coroutines (concurrency) over a thread pool sized to <code>availableProcessors()</code> (the parallelism ceiling), while Android&#x27;s main <code>Looper</code> gives concurrency with zero parallelism — one thread draining a single <code>MessageQueue</code>.</p>
+<hr>
 <h3 id="why-does-a-bug-disappear-under-a-debugger">Why Does a Bug Disappear Under a Debugger?</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;Because the debugger changes timing. Breakpoints, single-stepping, and the trap instruction slow execution and effectively flush caches and serialize memory, so a race that only fires in a tiny timing window stops reproducing. That&#x27;s a Heisenbug — observing it changes it. The takeaway is that the bug isn&#x27;t gone; the cure is real synchronization that establishes happens-before, never relying on the lucky timing the debugger happened to introduce.&quot;</blockquote>
 <p>Debuggers slow thread execution, insert memory barriers via breakpoints (the <code>int3</code> trap flushes caches), and change timing. A race that only triggers in a narrow timing window often disappears when execution speed changes — that is a Heisenbug. The cure is proper synchronization, not relying on timing.</p>
+<p><strong>Under the hood</strong></p>
+<p>A breakpoint is implemented by patching the target instruction with a one-byte trap (<code>int3</code> / <code>0xCC</code> on x86, a <code>BRK</code> on ARM); hitting it raises an exception that transfers control to the debugger and parks the thread, which serializes execution and gives other threads time to &quot;catch up,&quot; masking the race window. On ART, attaching a debugger via JDWP also disables JIT optimizations and forces interpreted execution for affected methods, so aggressive reorderings and register caching that exposed the visibility bug no longer happen. Single-stepping additionally suspends all-but-one thread at safepoints, collapsing the interleavings that produced the failure.</p>
 <hr>
 <h2 id="32-locks-and-synchronization">3.2 Locks and Synchronization</h2>
 <h3 id="intrinsic-lock-monitor-lock">Intrinsic Lock (Monitor Lock)</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;Every Java object has exactly one intrinsic lock, also called its monitor. Entering a synchronized block or method acquires it and exiting — even via exception — releases it, so you get mutual exclusion: one thread at a time. Crucially it also gives a memory guarantee — acquiring establishes a happens-before edge with the previous release, so the writes the last holder made are visible to me. People remember the mutual exclusion and forget the visibility half, but both come from the same lock.&quot;</blockquote>
 <p>Every Java object has exactly one intrinsic lock, also called a monitor lock. When a thread enters a <code>synchronized</code> block or method on that object, it acquires the lock. When it exits — normally or via exception — it releases the lock. The lock has two effects. First, mutual exclusion: only one thread holds the lock at a time. Second, visibility: acquiring a lock flushes the thread&#x27;s local cache, and releasing it flushes writes back to main memory, creating a happens-before edge.</p>
+<p><strong>Under the hood</strong></p>
+<p>The intrinsic lock lives in the object header&#x27;s mark word — there is no separate lock object allocated up front. ART represents the lock state inline in that word and starts it as a lightweight &quot;thin lock&quot; holding the owning thread&#x27;s id plus a recursion count, acquired with a single CAS. Only under genuine contention does it inflate to a &quot;fat&quot; monitor: ART allocates a <code>Monitor</code> object backed by an OS-level mutex/condition variable (a Linux futex), and the mark word is rewritten to point at it. The happens-before/visibility guarantee comes from the acquire and release each emitting full memory barriers around that mark-word transition.</p>
+<hr>
 <h3 id="java-monitor">Java Monitor</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;A monitor is the construct that bundles three things onto an object: a mutex for mutual exclusion, a wait set where threads that called wait park until notified, and ownership tracking — which thread holds it and the reentry count. That ownership count is what makes the lock reentrant. wait/notify operate on the wait set, and the gotcha is they must be called while holding the monitor or you get IllegalMonitorStateException.&quot;</blockquote>
 <p>A monitor bundles three things: a mutex for mutual exclusion, a wait set for threads parked via <code>wait()</code>, and ownership tracking for which thread holds it and its reentry count.</p>
 <p>The JVM implements monitors using object headers (mark word). When uncontended, HotSpot uses biased locking — a single CAS. Under contention it inflates to a full OS mutex (futex on Linux).</p>
+<p><strong>Under the hood</strong></p>
+<p>The mark word doubles as the lock word, so the JVM avoids a per-object allocation for the common uncontended case. HotSpot historically used three tiers — biased (no atomics, just a stamped thread id), thin/lightweight (a CAS into a stack-allocated lock record), and fat/inflated (an <code>ObjectMonitor</code> with an OS mutex and the wait/entry queues); ART uses an analogous thin-to-fat scheme. Note that biased locking was deprecated and disabled by default in modern HotSpot (JDK 15+) because the cost of revoking a bias under unexpected contention outweighed the savings. <code>wait()</code>/<code>notify()</code> require the calling thread to own the monitor precisely because they manipulate that monitor&#x27;s internal wait set, which the JVM guards by checking ownership and throwing <code>IllegalMonitorStateException</code> otherwise.</p>
+<hr>
 <h3 id="synchronized-method-vs-block"><code>synchronized</code> Method vs Block</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;Both take the same intrinsic lock; the difference is what object and what scope. A synchronized method implicitly locks on <code>this</code> — or the Class object if it&#x27;s static — over the whole method. A synchronized block lets me choose the lock object and narrow the region. I prefer the block form with a private final lock object, because locking on <code>this</code> is a leak: any client holding my reference can synchronize on it and either deadlock me or starve my own threads.&quot;</blockquote>
 <pre><code>// Method — locks on `this` (or the Class object for static)
 public synchronized void deposit(int amount) {
     balance += amount;
@@ -104,9 +152,17 @@ public void deposit(int amount) {
     }
 }</code></pre>
 <p>Prefer the block form because there are three advantages. First, you can choose a more appropriate lock object — typically a private <code>Object lock = new Object()</code> rather than <code>this</code>. Second, you can narrow the synchronized region, keeping non-shared work outside the lock. Third, you avoid accidentally exposing the lock, since clients of <code>this</code> can also call <code>synchronized(account){}</code> and interfere.</p>
+<p><strong>Under the hood</strong></p>
+<p>The two forms compile differently. A <code>synchronized</code> block emits explicit <code>MONITORENTER</code> at the top and <code>MONITOREXIT</code> at the bottom, plus a compiler-generated exception handler that runs a second <code>MONITOREXIT</code> on any abnormal exit so the monitor is never leaked. A <code>synchronized</code> method emits no monitor opcodes at all — instead the <code>ACC_SYNCHRONIZED</code> flag is set in the method&#x27;s <code>access_flags</code>, and the JVM/ART acquires the receiver&#x27;s monitor (or the <code>Class</code> object&#x27;s monitor for <code>static</code>) implicitly on method entry and releases it on return or throw. Functionally identical lock, but the method form is invisible in the bytecode body and always spans the whole method.</p>
+<hr>
 <h3 id="mutual-exclusion">Mutual Exclusion</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;Mutual exclusion — mutex — is the property that at most one thread is inside a critical section at a time. In Java you get it by holding an object&#x27;s intrinsic lock: all synchronized blocks keyed on the same object are mutually exclusive with each other. The thing to be precise about is that exclusion is per-lock-object, not per-block — two synchronized blocks on different objects don&#x27;t exclude each other at all, which is a common source of &#x27;I added synchronized and it still races&#x27; bugs.&quot;</blockquote>
 <p>Mutual exclusion — mutex — guarantees that at most one thread executes a critical section at a time. In Java, holding the intrinsic lock of an object provides mutual exclusion over all <code>synchronized</code> blocks on that same object.</p>
+<p><strong>Under the hood</strong></p>
+<p>At the metal, mutual exclusion bottoms out in an atomic read-modify-write the CPU guarantees indivisible — a compare-and-swap (<code>cmpxchg</code>/<code>LDREX</code>/<code>STREX</code>) on the lock word. Only one core can win the CAS that flips the word from unlocked to owned; losers either spin briefly or, once the monitor inflates, block on a Linux futex (<code>FUTEX_WAIT</code>) so they consume no CPU while parked, and the releaser issues <code>FUTEX_WAKE</code>. Because exclusion is enforced on a specific lock word, two threads guarding the same invariant with different lock objects both win their respective CAS operations and proceed concurrently — the exclusion simply doesn&#x27;t apply across distinct monitors.</p>
+<hr>
 <h3 id="reentrant-locks">Reentrant Locks</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;Reentrant means a thread that already holds a lock can acquire it again without deadlocking, because the lock tracks an owner and a hold count instead of a simple boolean. Java&#x27;s intrinsic lock is reentrant, which is what lets one synchronized method call another on the same object. ReentrantLock is the explicit version with extras I actually reach for: tryLock with a timeout, lockInterruptibly, multiple Conditions per lock, and an optional fairness mode — at the cost of remembering to unlock in a finally.&quot;</blockquote>
 <p>Java&#x27;s intrinsic lock is reentrant: a thread that already holds a lock can acquire it again without deadlocking, because the JVM tracks a reentry count. This matters when a <code>synchronized</code> method calls another <code>synchronized</code> method on the same object.</p>
 <p><code>java.util.concurrent.locks.ReentrantLock</code> provides explicit, reentrant locking with extra features. There are four worth knowing: <code>tryLock(timeout)</code> to avoid blocking forever; <code>lockInterruptibly()</code> to respond to thread interruption while waiting; <code>Condition</code> objects for multiple wait sets per lock instead of the single wait set a monitor gives you; and a fairness option that queues waiting threads in FIFO order.</p>
 <pre><code>val lock = ReentrantLock()
@@ -123,7 +179,11 @@ fun produce(item: Int) {
         lock.unlock()  // always in finally
     }
 }</code></pre>
+<p><strong>Under the hood</strong></p>
+<p><code>ReentrantLock</code> does not use any object monitor — it&#x27;s built on <code>AbstractQueuedSynchronizer</code> (AQS), which holds a single <code>volatile int state</code> and a FIFO CLH-style wait queue of parked threads. Acquire is a CAS that bumps <code>state</code> from 0 to 1 and stamps the <code>exclusiveOwnerThread</code>; reentry just increments <code>state</code> (so the hold count can exceed 1), and <code>unlock</code> decrements it, only releasing when it returns to 0. Contended threads are parked/unparked with <code>LockSupport.park</code>/<code>unpark</code>, which on ART maps to futex waits — no busy spinning. Fairness is a tiny policy difference in <code>tryAcquire</code>: a fair lock checks <code>hasQueuedPredecessors()</code> and refuses to barge ahead of the queue, whereas the default unfair lock attempts an immediate CAS first. Each <code>Condition</code> is its own separate wait queue inside the same AQS, which is how one lock exposes multiple wait sets.</p>
+<hr>
 <h3 id="deadlock">Deadlock</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;Deadlock is when two or more threads are permanently blocked, each waiting on a lock the other holds. It requires all four Coffman conditions simultaneously — mutual exclusion, hold-and-wait, no preemption, and a circular wait — so breaking any one prevents it. In practice the cheapest break is global lock ordering: always acquire locks in the same order so a cycle can&#x27;t form. tryLock with a timeout breaks no-preemption, and not holding a lock while calling foreign code avoids the surprise cycles.&quot;</blockquote>
 <p>A deadlock occurs when two or more threads are permanently blocked, each waiting for a lock held by another.</p>
 <p>There are four necessary conditions — called the Coffman conditions — and all four must hold simultaneously. First, mutual exclusion: resources are held exclusively. Second, hold-and-wait: a thread holds a lock while waiting for another. Third, no preemption: locks cannot be forcibly taken away. Fourth, circular wait: A waits for B and B waits for A, or a longer cycle.</p>
 <p>Classic example:</p>
@@ -140,22 +200,49 @@ synchronized (lockB) { synchronized (lockA) { /* work */ } }</code></pre>
 <li>Single lock: if possible, use one coarse-grained lock.</li>
 <li>Avoid holding locks while calling foreign code (callbacks, listeners).</li>
 </ul>
+<p><strong>Under the hood</strong></p>
+<p>At runtime a deadlock is a cycle in the resource-allocation graph: each blocked thread sits in a futex wait owned by another, and the kernel will never wake them because the wake condition (the other&#x27;s release) can never occur — no thread is runnable, so the scheduler simply never schedules them. Intrinsic monitors offer no escape because <code>synchronized</code> provides no timeout or interruption; that &quot;no preemption&quot; property is baked into the opcode. This is exactly why <code>ReentrantLock.tryLock(timeout)</code> and <code>lockInterruptibly()</code> exist — they let a thread give up a futex wait and back off, attacking the no-preemption condition. The JVM&#x27;s thread dump (<code>jstack</code> / <code>Thread.getAllStackTraces</code>) can detect these cycles by inspecting each thread&#x27;s held-vs-waited monitors and explicitly reports &quot;Found one Java-level deadlock.&quot;</p>
+<hr>
 <h3 id="livelock">Livelock</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;Livelock is the cousin of deadlock where threads aren&#x27;t blocked — they&#x27;re actively running and changing state — but they keep responding to each other in a way that makes no forward progress. The corridor analogy is two people repeatedly stepping the same direction to let each other pass. It&#x27;s nastier than deadlock because CPU looks busy and a thread dump shows everyone RUNNABLE; the fix is to break the symmetry, usually with randomized backoff so the threads stop mirroring each other.&quot;</blockquote>
 <p>A livelock is when threads are not blocked but are continuously changing state in response to each other without making any progress. The analogy is two people in a corridor stepping aside simultaneously — each mirrors the other&#x27;s move and neither passes.</p>
+<p><strong>Under the hood</strong></p>
+<p>Livelock typically arises in optimistic / retry-based schemes rather than blocking locks — e.g. a CAS loop where two threads&#x27; compare-and-swaps keep failing because each invalidates the other&#x27;s snapshot, or a <code>tryLock</code>-then-release-and-retry deadlock-avoidance loop where both threads back off in lockstep. Unlike a futex-blocked deadlocked thread (kernel <code>S</code> state, 0% CPU), livelocked threads stay <code>RUNNABLE</code> and burn CPU, so it shows up as high utilization with no throughput. The standard cure is to inject asymmetry — randomized/exponential backoff (the same idea as Ethernet&#x27;s collision backoff) so the threads desynchronize and one wins.</p>
+<hr>
 <h3 id="starvation">Starvation</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;Starvation is when a thread perpetually loses the race for a resource because others are always preferred — by an unfair lock, by higher-priority threads monopolizing the CPU, or by repeated notify that keeps waking the wrong waiter. It&#x27;s a liveness failure but not a total stall; the system makes progress, just not for that thread. The mitigations are a fair lock to enforce FIFO ordering and preferring notifyAll over notify so no waiter is permanently skipped.&quot;</blockquote>
 <p>Starvation is when a thread cannot gain access to a resource because other threads are always preferred. Common causes are unfair schedulers, high-priority threads monopolizing a lock, or a caller that always uses <code>notify()</code> instead of <code>notifyAll()</code>.</p>
 <p>The fix is to use a fair lock (<code>ReentrantLock(fair=true)</code>) and always prefer <code>notifyAll()</code> over <code>notify()</code>.</p>
+<p><strong>Under the hood</strong></p>
+<p>Starvation is a side effect of how the underlying primitives choose a winner. A default unfair <code>ReentrantLock</code> (and the intrinsic monitor) lets a just-arriving thread barge ahead via an immediate CAS instead of joining the AQS queue tail — great for throughput, bad for the thread that keeps getting jumped. <code>notify()</code> wakes exactly one arbitrary thread from the monitor&#x27;s wait set (the JVM picks; order is unspecified), so a particular waiter can be skipped forever, whereas <code>notifyAll()</code> moves the whole wait set to the entry set so every thread eventually re-checks its condition. Thread-priority starvation comes from CFS: a higher-priority (lower <code>nice</code>) thread accumulates virtual runtime more slowly and is repeatedly chosen, so on a saturated core the low-priority thread rarely runs.</p>
+<hr>
 <h3 id="lock-contention-and-granularity">Lock Contention and Granularity</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;Contention is when many threads frequently fight for the same lock, so they queue up and throughput collapses. Granularity is how much state one lock protects — coarse-grained is one lock for the whole object: simple but contended; fine-grained splits state across many locks, like lock striping in ConcurrentHashMap: low contention but more complex and more deadlock-prone. My rule is start coarse, measure where the contention actually is, then split — premature lock splitting just buys you subtle bugs.&quot;</blockquote>
 <p>Contention occurs when multiple threads frequently try to acquire the same lock simultaneously, causing queueing and reduced throughput.</p>
 <p>Granularity is the scope of data protected by a single lock. A coarse-grained lock covers the whole object — simple but high contention. A fine-grained lock covers one data element (lock striping in <code>ConcurrentHashMap</code> is a good example) — low contention, but more complex and more prone to deadlock.</p>
 <p>The rule of thumb is: start coarse, measure, then refine. Premature lock splitting introduces bugs.</p>
+<p><strong>Under the hood</strong></p>
+<p>Contention has a concrete cost progression: an uncontended thin-lock CAS is nearly free, but once two threads collide the lock inflates to a fat OS monitor and losers block on a futex, paying syscall + context-switch + cache-coldness costs on every hand-off. Cache-coherence traffic matters too — the lock word and the guarded data bounce between cores&#x27; caches (MESI invalidations), so even brief critical sections serialize the memory bus. Lock striping (e.g. legacy <code>ConcurrentHashMap</code>&#x27;s segment array, or per-bin locking in the modern CAS-based implementation) spreads accesses across <code>N</code> independent lock words so threads hitting different keys win different CAS operations and never serialize — the trade-off being more lock words to reason about and a real risk of cross-stripe deadlock if you ever need two at once.</p>
 <hr>
 <h2 id="33-volatile-and-atomic-classes">3.3 Volatile and Atomic Classes</h2>
 <h3 id="volatile--visibility-not-compound-atomicity"><code>volatile</code> — Visibility, Not Compound Atomicity</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;<code>volatile</code> is about visibility and ordering, not atomicity. It guarantees that a write is flushed to main memory and that subsequent reads see the latest value, plus it sets up a happens-before edge — so it&#x27;s perfect for a single cancellation flag or a one-writer reference swap. But it does nothing for compound operations: <code>count++</code> is a read-modify-write, so two threads can both read the same value and clobber each other. The interview trap is claiming <code>volatile</code> makes <code>++</code> thread-safe — it doesn&#x27;t; you need an atomic or a lock for that.&quot;</blockquote>
 <p>The <code>volatile</code> keyword in Java/Kotlin does three things: it ensures every read comes from main memory rather than a register or cache; it ensures every write goes directly to main memory; and it establishes a happens-before relationship so that a write to a volatile field happens-before every subsequent read of that field. What it does NOT provide is atomicity for compound operations.</p>
 <p><code>volatile</code> is sufficient in two situations: a boolean flag written by one thread and read by others (such as <code>@Volatile var cancelled = false</code>), and a single-writer, multi-reader reference swap where you are swapping an immutable config object.</p>
 <p><code>volatile</code> is not enough when the operation is compound. <code>count++</code> is actually three steps — read, increment, write — so two threads can both read the same value and both write <code>oldValue + 1</code>, losing one increment. The same problem applies to check-then-act patterns like <code>if (!initialized) initialize()</code>, where two threads can both see <code>false</code> and both call <code>initialize()</code>. Any read-modify-write sequence has this hazard.</p>
+<p><strong>Under the hood</strong></p>
+<p>The compiler marks the field with the <code>ACC_VOLATILE</code> flag in the class file, which tells the JIT/runtime to surround accesses with memory barriers instead of caching the value in a register. On the typical JMM-to-hardware lowering, a volatile write is followed by a StoreLoad-style fence and a volatile read is preceded by a load-acquire fence:</p>
+<pre><code>volatile write x:
+    StoreStore barrier
+    store x
+    StoreLoad barrier      // most expensive; prevents reordering with later loads
+
+volatile read x:
+    load x
+    LoadLoad / LoadStore barrier   // acquire semantics</code></pre>
+<p>These fences disable both compiler reordering and CPU store-buffer/cache reordering, which is exactly what creates the happens-before edge. There is no lock and no read-modify-write atomicity — the hardware just refuses to reorder or stale-cache the single load/store.</p>
 <h3 id="atomicinteger-atomicboolean-atomicreference"><code>AtomicInteger</code>, <code>AtomicBoolean</code>, <code>AtomicReference</code></h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;The <code>java.util.concurrent.atomic</code> classes give me lock-free, thread-safe updates to a single variable using compare-and-swap under the hood. So <code>incrementAndGet()</code> is a genuinely atomic <code>++</code>, and <code>compareAndSet()</code> lets me do conditional updates without a mutex. The thing I&#x27;d flag is that each atomic protects exactly one variable — if I need several fields to stay mutually consistent, I still need a lock. And under really heavy contention I&#x27;d reach for <code>LongAdder</code>, which spreads writes across multiple cells instead of hammering one hot CAS location.&quot;</blockquote>
 <p><code>java.util.concurrent.atomic</code> classes use CAS — Compare-And-Swap — CPU instructions to achieve lock-free, thread-safe operations on single variables.</p>
 <pre><code>val counter = AtomicInteger(0)
 counter.incrementAndGet()           // atomic i++, returns new value
@@ -169,7 +256,15 @@ val ref = AtomicReference&lt;Config&gt;(initialConfig)
 ref.set(newConfig)                  // atomic reference swap</code></pre>
 <p><code>AtomicLong</code>, <code>AtomicIntegerArray</code>, and <code>AtomicReferenceArray</code> cover arrays.</p>
 <p><code>LongAdder</code> and <code>LongAccumulator</code> give better throughput under high contention because they maintain multiple cells that are summed on read, so there is no single hot CAS location.</p>
+<p><strong>Under the hood</strong></p>
+<p>The atomic&#x27;s value is stored in a <code>volatile</code> field, and the mutation methods route through <code>Unsafe</code>/<code>VarHandle</code> intrinsics that the JIT lowers to a single atomic CPU instruction. <code>incrementAndGet()</code> is implemented as a CAS retry loop, while raw <code>compareAndSet()</code> maps directly to one instruction:</p>
+<pre><code>AtomicInteger.value : volatile int        // visibility
+compareAndSet(e,u)  -&gt; Unsafe.compareAndSetInt
+                    -&gt; LOCK CMPXCHG (x86) or LDREX/STREX retry (ARM)
+incrementAndGet()   -&gt; do { v=getVolatile(); } while(!CAS(v, v+1)); return v+1</code></pre>
+<p><code>LongAdder</code> instead keeps a base value plus a striped <code>Cell[]</code> array padded to avoid false sharing; threads hash to different cells so concurrent writers rarely touch the same cache line, and <code>sum()</code> adds the base and all cells (a non-atomic snapshot, which is fine for statistics).</p>
 <h3 id="compare-and-swap-cas">Compare-And-Swap (CAS)</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;CAS is an optimistic, lock-free primitive: I read the current value, compute a new one, and atomically swap only if the location still holds what I expected — otherwise I retry. It maps to a single hardware instruction like <code>CMPXCHG</code>, so under low contention it beats a mutex because there&#x27;s no blocking or context switch. Under heavy contention the retry loop can burn CPU spinning. And the classic gotcha is the ABA problem — the value goes A→B→A and CAS can&#x27;t tell it changed — which you fix with a versioned reference like <code>AtomicStampedReference</code>.&quot;</blockquote>
 <p>CAS is a single CPU instruction (<code>CMPXCHG</code> on x86): if the memory location currently holds <code>expected</code>, replace it with <code>update</code> and return whether the swap succeeded.</p>
 <pre><code>CAS(addr, expected, update):
   if *addr == expected:
@@ -184,7 +279,19 @@ ref.set(newConfig)                  // atomic reference swap</code></pre>
   // else: another thread modified counter, retry</code></pre>
 <p>This is an optimistic spin loop. Under low contention it is faster than a mutex. Under very high contention the spin loops waste CPU — prefer <code>LongAdder</code>.</p>
 <p>The ABA problem is worth knowing: CAS only checks value equality, so if a value changes from A to B and back to A, CAS cannot detect the round trip. The solution is <code>AtomicStampedReference</code> or <code>AtomicMarkableReference</code>, both of which include a version stamp alongside the value.</p>
+<p><strong>Under the hood</strong></p>
+<p>The atomicity comes from the CPU, not software. On x86 the <code>CMPXCHG</code> instruction is made atomic with the <code>LOCK</code> prefix, which asserts cache-line ownership (cache-line locking via the MESI coherence protocol, or in the worst case a bus lock). On ARM/RISC there is no single compare-and-swap; the runtime emits a load-linked/store-conditional pair:</p>
+<pre><code>x86:   LOCK CMPXCHG   — one instruction, atomic compare-then-write
+
+ARM:   retry:
+         LDREX r, [addr]      ; load-exclusive, sets a monitor on the line
+         CMP   r, expected
+         BNE   fail
+         STREX status, update, [addr]  ; succeeds only if line untouched
+         CBNZ  status, retry           ; another writer raced → retry</code></pre>
+<p>Because the check is purely on the bit pattern, CAS is blind to A→B→A transitions — <code>AtomicStampedReference</code> works around this by CAS-ing a <code>(reference, stamp)</code> pair so the stamp increments even when the reference returns to its old value.</p>
 <h3 id="decision-matrix">Decision Matrix</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;My rule of thumb scales with the operation. A single flag with one writer is just <code>@Volatile</code>. A counter hit by many threads is an <code>AtomicInteger</code>, and a high-contention stats counter is <code>LongAdder</code>. A conditional reference swap is an <code>AtomicReference</code> with <code>compareAndSet</code>. The key dividing line: the moment I need <em>two or more</em> fields to stay mutually consistent, no single atomic covers that — I escalate to <code>synchronized</code> or a <code>ReentrantLock</code>, because atomics only protect one variable at a time.&quot;</blockquote>
 <table border="1" cellpadding="6" cellspacing="0">
 <thead><tr>
 <th>Scenario</th>
@@ -196,12 +303,26 @@ ref.set(newConfig)                  // atomic reference swap</code></pre>
 <tr><td>CAS-based conditional reference swap</td><td><code>AtomicReference</code></td></tr>
 <tr><td>Multiple related fields must be consistent</td><td><code>synchronized</code> or <code>ReentrantLock</code></td></tr>
 </tbody></table>
+<p><strong>Under the hood</strong></p>
+<p>The matrix is really ordered by escalating synchronization cost. <code>volatile</code> is the cheapest — just memory fences, no atomicity. Single-variable atomics add a CAS instruction (one hot cache line). <code>LongAdder</code> trades a slightly more expensive read for striped, contention-free writes. Locks are the heaviest because they can park the thread on a monitor (a kernel futex transition under contention), but they are the only option that can make a <em>multi-field</em> update appear atomic — atomics and <code>volatile</code> each guard exactly one memory location.</p>
 <hr>
 <h2 id="34-waitnotify-and-producer-consumer">3.4 Wait/Notify and Producer-Consumer</h2>
 <h3 id="the-monitor-wait-set">The Monitor Wait Set</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;<code>wait()</code> is how a thread voluntarily gives up the monitor and sleeps until another thread signals a condition. The critical detail is that you must already hold the object&#x27;s intrinsic lock to call <code>wait()</code>, and <code>wait()</code> atomically releases that lock as it parks the thread — that&#x27;s what lets the other thread make progress and eventually <code>notify()</code>. Contrast that with <code>sleep()</code>, which holds onto every lock it owns, so a sleeping thread inside a synchronized block blocks everyone else.&quot;</blockquote>
 <p>Every Java object has a wait set. Calling <code>wait()</code> on an object requires holding that object&#x27;s intrinsic lock. When called, there are four steps: the current thread releases the lock; the thread is placed in the object&#x27;s wait set and suspended; when another thread calls <code>notify()</code> or <code>notifyAll()</code>, the thread moves from the wait set back to the blocked state, competing for the lock again; and when the lock is re-acquired, <code>wait()</code> returns.</p>
 <p>The important contrast is with <code>sleep()</code>, which does NOT release any lock. A sleeping thread holds all its locks.</p>
+<p><strong>Under the hood</strong></p>
+<p>Each object header points (lazily, when contended) to a monitor structure with two distinct queues: an <strong>entry set</strong> (threads blocked trying to acquire the lock) and a <strong>wait set</strong> (threads that called <code>wait()</code>). <code>wait()</code> releases the monitor, moves the caller into the wait set, and parks it; <code>notify()</code> migrates one arbitrary waiter from the wait set into the entry set, and <code>notifyAll()</code> migrates all of them. Crucially, a notified thread does <strong>not</strong> run immediately — it must re-contend for the monitor in the entry set and only returns from <code>wait()</code> once it re-acquires the lock.</p>
+<pre><code>monitor:
+  owner       -&gt; current lock holder (one thread)
+  entry set   -&gt; [blocked threads competing for the lock]
+  wait set    -&gt; [parked threads that called wait()]
+
+wait():   release lock, add self to wait set, park
+notify(): move ONE waiter: wait set -&gt; entry set
+notifyAll(): move ALL waiters: wait set -&gt; entry set</code></pre>
 <h3 id="spurious-wakeups">Spurious Wakeups</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;The JVM spec explicitly permits <code>wait()</code> to return without any matching <code>notify()</code> — that&#x27;s a spurious wakeup. So I never guard a <code>wait()</code> with an <code>if</code>; I always loop: <code>while (!condition) wait()</code>. The loop matters for two reasons — spurious wakeups, and the fact that by the time a notified thread re-acquires the lock another thread may have already consumed the condition. Re-checking on every wakeup is the only correct pattern.&quot;</blockquote>
 <p>The JVM specification allows <code>wait()</code> to return even if no <code>notify()</code> was called — that is a spurious wakeup. Always check the condition in a loop:</p>
 <pre><code>// WRONG
 synchronized (lock) {
@@ -214,14 +335,20 @@ synchronized (lock) {
     while (!conditionMet()) lock.wait();
     // condition is definitely true now
 }</code></pre>
+<p><strong>Under the hood</strong></p>
+<p>Spurious wakeups are not a JVM bug — they leak through from the OS layer. JVM monitors are typically implemented on top of POSIX condition variables (<code>pthread_cond_wait</code>) or futexes, and those primitives are documented to wake occasionally without a signal (e.g. a thread can be woken by a signal-handler interruption and the kernel chooses to return rather than re-sleep). Rather than paying to suppress these, the spec pushes the cost onto the caller via the mandatory re-check loop. The loop also handles the legitimate race where a different woken thread consumed the condition first, so even a &quot;real&quot; notify can require waiting again.</p>
 <h3 id="guarded-block">Guarded Block</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;A guarded block is the canonical wait-loop idiom: acquire the monitor, <code>while</code> the condition isn&#x27;t satisfied, <code>wait()</code>; once it is, do the protected work and then <code>notifyAll()</code> so anyone blocked on the opposite condition can proceed. It&#x27;s the building block for producer-consumer — the guard prevents you from removing from an empty queue or adding to a full one, and the loop absorbs spurious wakeups and lost races.&quot;</blockquote>
 <p>A guarded block is a wait-in-a-loop pattern that protects a critical operation behind a condition check:</p>
 <pre><code>synchronized (queue) {
     while (queue.isEmpty()) queue.wait();
     Item item = queue.remove();
     queue.notifyAll();
 }</code></pre>
+<p><strong>Under the hood</strong></p>
+<p>The whole block executes while owning the queue&#x27;s monitor, so the <code>while</code>-check and the <code>remove()</code> are one indivisible critical section — no other thread can slip in between the check and the act. When the guard isn&#x27;t met, <code>wait()</code> atomically drops the lock and parks the thread in the wait set, so a producer can enter the same monitor and add an item. The trailing <code>notifyAll()</code> wakes threads waiting on <em>any</em> condition tied to this object (both &quot;not empty&quot; and &quot;not full&quot; waiters share one wait set), which is precisely why a single condition variable forces <code>notifyAll</code> rather than <code>notify</code>.</p>
 <h3 id="producer-consumer-with-waitnotify">Producer-Consumer with <code>wait</code>/<code>notify</code></h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;A bounded buffer is the textbook producer-consumer: producers <code>wait</code> while it&#x27;s full, consumers <code>wait</code> while it&#x27;s empty, and each side <code>notifyAll</code>s after it changes the buffer. I deliberately use <code>notifyAll</code> over <code>notify</code> here because producers and consumers share one monitor and one wait set — a plain <code>notify</code> could wake the wrong kind of thread and stall the system. In real code I&#x27;d skip all of this and use a <code>BlockingQueue</code>, which gets the locking and conditions right for me.&quot;</blockquote>
 <pre><code>class BoundedBuffer&lt;T&gt;(private val capacity: Int) {
     private val buffer = ArrayDeque&lt;T&gt;()
 
@@ -241,7 +368,10 @@ synchronized (lock) {
     }
 }</code></pre>
 <p>Use <code>notifyAll()</code> rather than <code>notify()</code> unless you know only one thread can act on the notification. The rule of thumb is: always use <code>notifyAll</code> to be safe, even if it is slightly less efficient.</p>
+<p><strong>Under the hood</strong></p>
+<p>There is exactly one monitor (the buffer instance) and therefore one wait set holding <em>both</em> blocked producers and blocked consumers. Because <code>notify()</code> wakes a single arbitrary waiter, it can wake a producer when only consumers can make progress (the &quot;lost wakeup&quot; / signal-hijacking hazard), leaving the system stuck. <code>notifyAll()</code> avoids this by waking everyone so each re-evaluates its own <code>while</code> guard, at the cost of a thundering-herd re-contention on the lock. This is exactly the limitation that <code>ReentrantLock</code> with <em>two</em> <code>Condition</code> objects (<code>notFull</code>, <code>notEmpty</code>) solves — you can then signal only the relevant queue, which is how <code>ArrayBlockingQueue</code> is actually built.</p>
 <h3 id="blockingqueue--prefer-this-over-manual-waitnotify"><code>BlockingQueue</code> — Prefer This Over Manual Wait/Notify</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;In practice I never hand-roll wait/notify — I use a <code>BlockingQueue</code>, which encapsulates the producer-consumer pattern correctly. <code>put()</code> blocks when full, <code>take()</code> blocks when empty, and the spurious-wakeup and condition handling is done for me. The decisions I actually make are which implementation and what bound: <code>ArrayBlockingQueue</code> for a fixed array with one lock, <code>LinkedBlockingQueue</code> for two-lock throughput, <code>SynchronousQueue</code> for direct handoff. The big trap is leaving it unbounded — that just relocates an overload into an <code>OutOfMemoryError</code>.&quot;</blockquote>
 <p><code>java.util.concurrent.BlockingQueue</code> encapsulates the producer-consumer pattern correctly, and you should prefer it over rolling your own wait/notify logic:</p>
 <pre><code>val queue = LinkedBlockingQueue&lt;Work&gt;(100)  // bounded
 
@@ -254,11 +384,20 @@ val work = queue.take()          // blocks if empty
 val work2 = queue.poll(500, TimeUnit.MILLISECONDS)</code></pre>
 <p>The main implementations are: <code>ArrayBlockingQueue</code> — fixed-size, backed by array, single lock; <code>LinkedBlockingQueue</code> — optionally bounded, with separate head and tail locks for higher throughput; <code>SynchronousQueue</code> — zero capacity, where each <code>put</code> must pair with a <code>take</code> (a handoff); <code>PriorityBlockingQueue</code> — unbounded, ordered by priority; and <code>DelayQueue</code> — elements only become available after a configured delay, useful for scheduled tasks.</p>
 <p><code>BlockingQueue</code> is preferred because it handles spurious wakeups, lock ordering, and condition management internally, so you cannot get those details wrong.</p>
+<p><strong>Under the hood</strong></p>
+<p>These implementations are built on <code>ReentrantLock</code> + <code>Condition</code>, not raw <code>wait</code>/<code>notify</code>. <code>ArrayBlockingQueue</code> uses one lock with two conditions (<code>notEmpty</code>, <code>notFull</code>), so <code>put</code> signals exactly the consumers and <code>take</code> signals exactly the producers. <code>LinkedBlockingQueue</code> gets higher throughput by using <strong>two separate locks</strong> — a <code>putLock</code> at the tail and a <code>takeLock</code> at the head — letting one producer and one consumer operate concurrently, coordinated by an <code>AtomicInteger</code> count. <code>SynchronousQueue</code> holds no elements at all; it parks the offerer and the taker and rendezvouses them via a Treiber-stack/queue of waiting threads, so a <code>put</code> literally hands the item to a <code>take</code>.</p>
+<pre><code>ArrayBlockingQueue:   1 lock, conditions { notEmpty, notFull }
+LinkedBlockingQueue:  putLock (tail) + takeLock (head), AtomicInteger count
+SynchronousQueue:     no storage; direct producer&lt;-&gt;consumer handoff</code></pre>
 <hr>
 <h2 id="35-executors-and-task-execution">3.5 Executors and Task Execution</h2>
 <h3 id="why-not-new-thread-per-task">Why Not <code>new Thread()</code> Per Task?</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;Spawning a raw thread per task doesn&#x27;t scale. Each thread costs a real OS kernel thread plus a stack (often ~512KB–1MB), there&#x27;s no upper bound so a burst can exhaust memory, and you get no lifecycle, exception handling, or monitoring. You also pay creation and teardown cost for work that&#x27;s often shorter than the thread setup itself. An executor amortizes all of that by reusing a bounded pool of worker threads fed from a queue.&quot;</blockquote>
 <p>There are four problems. First, thread creation overhead — stack allocation and an OS kernel thread. Second, there is no upper bound on concurrency, which means memory exhaustion under load. Third, there is no lifecycle management, no exception handling, and no monitoring. Fourth, there is thread teardown cost when the work is done.</p>
+<p><strong>Under the hood</strong></p>
+<p>A JVM thread is a thin wrapper over an OS-scheduled native thread (created via <code>pthread_create</code>/<code>clone</code> on Linux), and each reserves a contiguous stack region governed by <code>-Xss</code>. Creating one is a syscall plus page-table and scheduler bookkeeping; destroying one reclaims that. Beyond a few hundred threads the OS scheduler spends increasing time context-switching (saving/restoring registers and blowing CPU caches/TLBs), so throughput actually <em>drops</em> with more threads. A pool fixes this by paying the creation cost once and parking idle workers on the queue&#x27;s <code>take()</code> rather than tearing them down.</p>
 <h3 id="executor-and-executorservice"><code>Executor</code> and <code>ExecutorService</code></h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;<code>Executor</code> is the minimal interface — just <code>execute(Runnable)</code> — decoupling <em>what</em> runs from <em>how/where</em> it runs. <code>ExecutorService</code> extends it with results and lifecycle: <code>submit</code> returns a <code>Future</code>, and you get <code>shutdown()</code> for a graceful drain versus <code>shutdownNow()</code> which interrupts running tasks and returns the un-started queue. The detail I&#x27;d call out is that submitting after <code>shutdown()</code> triggers the rejection policy, and you should always <code>awaitTermination</code> to confirm the pool actually drained.&quot;</blockquote>
 <pre><code>interface Executor {
     void execute(Runnable command);
 }
@@ -270,7 +409,10 @@ interface ExecutorService extends Executor {
     List&lt;Runnable&gt; shutdownNow();  // interrupt in-progress, return queued
     boolean awaitTermination(long timeout, TimeUnit unit);
 }</code></pre>
+<p><strong>Under the hood</strong></p>
+<p><code>submit()</code> doesn&#x27;t hand your <code>Runnable</code>/<code>Callable</code> straight to a thread — it wraps it in a <code>FutureTask</code> (which holds the result/exception and a state machine) and enqueues that, returning the <code>FutureTask</code> as the <code>Future</code>. A worker later dequeues and runs it, storing the return value or any thrown exception inside the task; that&#x27;s why <code>future.get()</code> can re-throw the task&#x27;s exception wrapped in <code>ExecutionException</code>. <code>shutdown()</code> flips an internal state flag so the queue stops accepting work and drains naturally, whereas <code>shutdownNow()</code> additionally calls <code>Thread.interrupt()</code> on every worker and returns the still-queued tasks that never started.</p>
 <h3 id="thread-pool-types">Thread Pool Types</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;The <code>Executors</code> factories are presets over <code>ThreadPoolExecutor</code>. Fixed gives me N permanent threads, cached grows unboundedly and reaps idle threads after 60s, single serializes everything on one thread, and scheduled handles delays and periodic work. The catch I always mention: <code>newFixedThreadPool</code> and <code>newSingleThreadExecutor</code> use an <em>unbounded</em> <code>LinkedBlockingQueue</code>, and <code>newCachedThreadPool</code> has an unbounded <em>thread</em> count — both can OOM under load, which is why for production I configure <code>ThreadPoolExecutor</code> directly with a bounded queue and a rejection policy.&quot;</blockquote>
 <pre><code>// Fixed: exactly N threads, LinkedBlockingQueue (unbounded by default)
 val fixed = Executors.newFixedThreadPool(4)
 
@@ -293,7 +435,16 @@ scheduled.scheduleAtFixedRate(task, 0, 1, TimeUnit.SECONDS)</code></pre>
     threadFactory = { r -&gt; Thread(r, &quot;worker-${counter.incrementAndGet()}&quot;) },
     handler = ThreadPoolExecutor.CallerRunsPolicy()  // backpressure policy
 )</code></pre>
+<p><strong>Under the hood</strong></p>
+<p>Every factory is just a <code>ThreadPoolExecutor</code> (or <code>ScheduledThreadPoolExecutor</code>) with preset arguments, and the submit path follows one fixed algorithm:</p>
+<pre><code>on submit:
+  1. if poolSize &lt; corePoolSize       -&gt; start a new core thread
+  2. else if workQueue.offer(task)    -&gt; enqueue it
+  3. else if poolSize &lt; maximumPoolSize -&gt; start a new (non-core) thread
+  4. else                              -&gt; reject via RejectedExecutionHandler</code></pre>
+<p>This explains the presets&#x27; behavior: <code>newFixedThreadPool(N)</code> sets core == max == N with an <strong>unbounded</strong> <code>LinkedBlockingQueue</code>, so step 2 always succeeds and step 3 never fires — the queue grows forever. <code>newCachedThreadPool</code> sets core = 0, max = <code>Integer.MAX_VALUE</code> with a <code>SynchronousQueue</code> (zero capacity), so step 2 fails immediately and step 3 spawns a thread per task — unbounded threads. <code>ScheduledThreadPoolExecutor</code> swaps in a <code>DelayedWorkQueue</code> (a heap ordered by next-run time) so workers block until the earliest task is due.</p>
 <h3 id="callable-and-future"><code>Callable</code> and <code>Future</code></h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;<code>Callable</code> is like <code>Runnable</code> but it returns a value and can throw a checked exception; submitting one gives me a <code>Future</code> handle. <code>future.get()</code> blocks until the result is ready — I always use the timed overload so I can&#x27;t hang forever — and it re-throws the task&#x27;s failure wrapped in an <code>ExecutionException</code>, which I unwrap via <code>.cause</code>. I can also poll with <code>isDone()</code> or <code>cancel(true)</code> to interrupt. The nuance: the work runs whether or not anyone ever calls <code>get()</code>; <code>get()</code> only retrieves the already-computed outcome.&quot;</blockquote>
 <pre><code>val executor = Executors.newFixedThreadPool(4)
 val future: Future&lt;Int&gt; = executor.submit(Callable {
     heavyComputation()
@@ -308,12 +459,18 @@ try {
     throw e.cause!!      // unwrap the original exception
 }</code></pre>
 <p><code>isDone()</code>, <code>isCancelled()</code>, and <code>cancel(mayInterruptIfRunning)</code> are the non-blocking query methods.</p>
+<p><strong>Under the hood</strong></p>
+<p>The returned <code>Future</code> is concretely a <code>FutureTask</code> with an internal <code>volatile int state</code> machine (<code>NEW → COMPLETING → NORMAL/EXCEPTIONAL</code>, or <code>CANCELLED/INTERRUPTED</code>). When the worker runs it, the result or thrown exception is stored in an <code>outcome</code> field and the state is CAS-advanced. <code>get()</code> reads <code>state</code>; if the task isn&#x27;t finished it adds the calling thread to a Treiber-stack of waiters and parks it via <code>LockSupport.park()</code>. On completion the running worker walks that waiter stack and <code>unpark()</code>s everyone. If <code>outcome</code> holds a Throwable, <code>get()</code> wraps it in <code>ExecutionException</code> — the original is the <code>.cause</code>.</p>
 <h3 id="cancellation">Cancellation</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;Cancellation in Java is cooperative, not preemptive. <code>future.cancel(true)</code> just sets the interrupt flag on the running thread — the task has to actually notice it, either by checking <code>Thread.currentThread().isInterrupted()</code> in its loop or by calling a blocking method like <code>sleep</code>, <code>wait</code>, or <code>queue.take</code> that throws <code>InterruptedException</code>. A tight CPU loop that never checks the flag won&#x27;t stop. And a common bug is swallowing <code>InterruptedException</code> without restoring the interrupt status, which hides the cancellation from the rest of the stack.&quot;</blockquote>
 <p><code>future.cancel(true)</code> sets the interrupt flag on the executing thread. The task must cooperate by checking <code>Thread.interrupted()</code> or by calling methods that throw <code>InterruptedException</code> — such as <code>sleep</code>, <code>wait</code>, or <code>queue.take</code>.</p>
 <pre><code>while (!Thread.currentThread().isInterrupted()) {
     // process chunk
 }</code></pre>
+<p><strong>Under the hood</strong></p>
+<p>Each <code>Thread</code> carries a single boolean <em>interrupt status</em> flag. <code>cancel(true)</code> calls <code>Thread.interrupt()</code>, which sets that flag; if the thread is currently parked inside a blocking call registered with an interrupt (<code>sleep</code>, <code>wait</code>, <code>park</code>, <code>BlockingQueue.take</code>, lockInterruptibly), the runtime clears the flag and throws <code>InterruptedException</code> to unwind it. There is no asynchronous stop — the JVM removed <code>Thread.stop()</code> precisely because forcibly killing a thread leaves locks and shared state corrupted. That is why catching <code>InterruptedException</code> should normally re-set the flag with <code>Thread.currentThread().interrupt()</code> so callers higher up can still see it.</p>
 <h3 id="backpressure-and-queue-sizing">Backpressure and Queue Sizing</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;Backpressure is what happens when producers outrun consumers. With an unbounded queue the backlog just grows until you OOM, so I use a bounded queue and pick a rejection policy: <code>CallerRunsPolicy</code> is my favorite because it makes the submitting thread run the task, which naturally throttles the producer. For sizing, CPU-bound work wants about <code>cores + 1</code> threads since more just adds context-switch overhead, while IO-bound work scales with how long threads sit waiting — roughly <code>cores * (1 + wait/compute)</code>. When unsure, I profile rather than guess.&quot;</blockquote>
 <p>When producers submit tasks faster than consumers execute them, the queue grows. With an unbounded queue (<code>LinkedBlockingQueue()</code> no-arg), this eventually causes <code>OutOfMemoryError</code>. With a bounded queue, the chosen rejection policy kicks in:</p>
 <table border="1" cellpadding="6" cellspacing="0">
 <thead><tr>
@@ -331,32 +488,76 @@ try {
 <li>IO-bound tasks: <code>N_cores * (1 + wait_time / service_time)</code>. If threads spend 90% waiting, use roughly 10x cores.</li>
 <li>Mixed: profile first; start with <code>N_cores * 2</code> and tune from there.</li>
 </ul>
+<p><strong>Under the hood</strong></p>
+<p>The rejection handler is invoked synchronously on the submitting thread the moment the submit algorithm reaches step 4 (queue full <em>and</em> <code>maximumPoolSize</code> reached), or whenever a task is submitted after <code>shutdown()</code>. <code>CallerRunsPolicy</code> provides true backpressure because it executes <code>task.run()</code> inline on the caller, so while the caller is busy running that task it physically cannot submit more — the producer&#x27;s rate self-limits to the consumer&#x27;s rate. The sizing formulas come from Little&#x27;s Law: a CPU-bound task keeps a core busy ~100% of the time, so extra threads beyond <code>cores + 1</code> only add context-switch overhead, whereas an IO-bound task releases the core while blocked, so you need <code>cores * (1 + wait/compute)</code> threads to keep all cores doing useful work during those waits.</p>
 <h3 id="thread-starvation">Thread Starvation</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;Starvation is when tasks can&#x27;t get a thread to run on. The nasty version is thread-pool deadlock: if a task running in the pool calls <code>future.get()</code> on <em>another</em> task submitted to the same pool, it occupies a worker while waiting for a task that has no free worker to run on. In a fixed pool, enough of these and every thread is blocked waiting for work that can never be scheduled. The fix is to never have pool tasks block on other tasks in the same pool — use a separate pool, or restructure so dependent work composes asynchronously.&quot;</blockquote>
 <p>Starvation in an executor happens when a long-running task occupies a thread and shorter tasks wait indefinitely. In a single-thread executor, one hung task blocks everything. In a fixed pool, a thread that calls <code>future.get()</code> on another task submitted to the same pool can deadlock the entire pool — all threads end up waiting for tasks that have no available thread to execute them. This is thread-pool deadlock.</p>
+<p><strong>Under the hood</strong></p>
+<p>The deadlock arises because a blocked worker still <em>owns</em> its thread — parking inside <code>future.get()</code> does not return the thread to the pool. With a fixed pool of N, if N tasks all block waiting on subtasks, there are zero free workers, those subtasks sit in the queue forever, and the dependency cycle can never resolve. This is structurally identical to a classic resource deadlock where threads are the finite resource. Frameworks like <code>ForkJoinPool</code> mitigate it with <em>work-stealing</em> and a managed-blocker mechanism that can spin up a compensation thread when a worker blocks, which is also why coroutine and reactive models prefer composing dependent work asynchronously (<code>thenCompose</code>/<code>flatMap</code>) instead of blocking a pooled thread on another task&#x27;s result.</p>
 <hr>
 <h2 id="36-android-application-threads">3.6 Android Application Threads</h2>
 <h3 id="main-thread-ui-thread">Main Thread (UI Thread)</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;Every Android process starts with a single main thread, and it&#x27;s responsible for everything the user perceives — input dispatch, frame rendering via Choreographer, lifecycle callbacks, and broadcast delivery. The reason the UI toolkit is single-threaded is that making every view operation thread-safe would mean locking on every draw and measure, which would be slow and deadlock-prone; instead Android confines all UI work to one thread. So if I touch a view from a background thread, I get a <code>CalledFromWrongThreadException</code>, and the fix is to marshal the result back to the main thread.&quot;</blockquote>
 <p>Android apps start with one main thread per process. The main thread does five things: it runs the <code>Looper</code>&#x27;s message loop; dispatches <code>InputEvent</code>s; drives <code>Choreographer</code> for frame rendering (calling <code>View.draw</code>, <code>View.measure</code>, <code>View.layout</code>, and <code>onDraw</code>); delivers lifecycle callbacks like <code>onCreate</code> and <code>onResume</code>; and processes <code>BroadcastReceiver.onReceive</code>.</p>
 <p>The key constraint is that the UI toolkit is not thread-safe — only the thread that created a view hierarchy can update it. Calling <code>view.setText(...)</code> from a background thread causes <code>CalledFromWrongThreadException</code>.</p>
+<p><strong>Under the hood</strong></p>
+<p>The main thread isn&#x27;t special at the OS level — it&#x27;s an ordinary Linux thread. What makes it the &quot;UI thread&quot; is that <code>ActivityThread.main()</code> calls <code>Looper.prepareMainLooper()</code> and then <code>Looper.loop()</code>, turning it into a message-processing loop that never returns for the life of the process.</p>
+<pre><code>ActivityThread.main()
+   ├─ Looper.prepareMainLooper()   // creates Looper, stores in ThreadLocal&lt;Looper&gt;
+   └─ Looper.loop()                // infinite loop: MessageQueue.next() → dispatch</code></pre>
+<p>The thread-confinement check is enforced by <code>ViewRootImpl.checkThread()</code>, which compares <code>Thread.currentThread()</code> against the thread that created the <code>ViewRootImpl</code> and throws <code>CalledFromWrongThreadException</code> on mismatch. There&#x27;s no lock on the view hierarchy precisely because correctness is guaranteed by confinement instead.</p>
 <h3 id="anr-application-not-responding">ANR (Application Not Responding)</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;An ANR is the system telling the user the app&#x27;s main thread is stuck. The thresholds I keep in mind are roughly 5 seconds for an unprocessed input event, 10 seconds for a foreground broadcast&#x27;s <code>onReceive</code>, and 20 seconds for a service&#x27;s <code>onStartCommand</code>. Every one of these is really the same root cause — the main thread&#x27;s <code>MessageQueue</code> isn&#x27;t getting drained because something is blocking it: synchronous IO, a held lock, or a long loop. So the cure is always the same: get the blocking work off the main thread.&quot;</blockquote>
 <p>ANR triggers in three situations: the main thread does not process a user input event within 5 seconds; <code>onReceive()</code> does not complete within 10 seconds for a foreground broadcast or 60 seconds for background; or <code>Service.onStartCommand()</code> does not return within 20 seconds.</p>
 <p>All of these happen because the main thread&#x27;s <code>MessageQueue</code> is blocked. The common causes are synchronous network or disk IO on the main thread, large database queries, holding a lock that another thread is waiting for, a long <code>while</code> loop, or waiting for a Binder call to a dead process.</p>
 <p>For debugging, <code>adb shell kill -3 &lt;pid&gt;</code> dumps thread stacks to logcat, and <code>StrictMode.setThreadPolicy()</code> catches disk and network violations on the main thread in debug builds.</p>
+<p><strong>Under the hood</strong></p>
+<p>ANR detection lives in the system process, not in your app. When the framework hands work to your app (e.g. dispatches an input event or starts a broadcast), <code>ActivityManagerService</code> arms a delayed &quot;timeout&quot; message on its own handler. If your app posts back the &quot;I finished&quot; acknowledgement before that timeout fires, the system cancels the timeout; if not, the timeout message runs and triggers the ANR dialog plus a trace dump.</p>
+<pre><code>System server arms timeout ──► your main thread must drain its
+                                MessageQueue and ACK in time
+   ack received  → removeMessages(timeout)   // no ANR
+   timeout fires → dump /data/anr/, show &quot;App isn&#x27;t responding&quot;</code></pre>
+<p>The key insight: the watchdog isn&#x27;t measuring &quot;is the app busy,&quot; it&#x27;s measuring &quot;did the main thread&#x27;s loop service its queue fast enough.&quot; A main thread stuck inside one <code>Message</code>&#x27;s dispatch can&#x27;t pull the next message — including the framework&#x27;s own input messages — so it appears unresponsive.</p>
 <h3 id="binder-threads">Binder Threads</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;Binder is Android&#x27;s IPC mechanism, and incoming remote calls don&#x27;t land on my main thread — they arrive on one of the threads in a per-process Binder thread pool, which is around 15 threads. That has real consequences: AIDL implementations and <code>onBind</code> can run concurrently on Binder threads, so they must be thread-safe; and a synchronous Binder call I make from the main thread blocks the main thread until the remote side returns, which is a classic hidden ANR source.&quot;</blockquote>
 <p>Binder is Android&#x27;s high-performance IPC mechanism. Each process has a thread pool of roughly 15 Binder threads maintained by the Binder driver. Remote calls arrive on one of these threads, not the main thread. There are three implications: <code>Service.onBind()</code> may be called on a Binder thread; AIDL interface implementations run on Binder threads so they must be thread-safe; and synchronous Binder calls from the main thread block the main thread until the remote returns.</p>
+<p><strong>Under the hood</strong></p>
+<p>The Binder thread pool is managed by the kernel Binder driver together with <code>IPCThreadState</code> in native code. Threads block in an <code>ioctl(BINDER_WRITE_READ)</code> syscall waiting for incoming transactions; when a transaction arrives, the driver wakes an idle pool thread to execute the target&#x27;s <code>onTransact()</code>. The pool grows lazily up to a cap (<code>ProcessState::setThreadPoolMaxThreadCount</code>, default ~15) as concurrent requests demand.</p>
+<pre><code>Caller process              Kernel binder driver        Your process
+  transact() ───────────────► copy via mmap&#x27;d buffer ──► wake pool thread
+                                                          → onTransact()
+                                                          → AIDL stub.onCall()</code></pre>
+<p>Because any of these pool threads can run your stub concurrently, shared state touched in AIDL methods needs synchronization — the framework gives you no per-call serialization unless you add it (e.g. post onto a single <code>HandlerThread</code>).</p>
 <h3 id="background-threads">Background Threads</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;Background threads are everything that isn&#x27;t the main thread or a Binder thread — anything I spin up via <code>Thread</code>, an <code>Executor</code>, a <code>HandlerThread</code>, or a coroutine dispatcher. They can do any heavy lifting, but they can&#x27;t touch the view hierarchy. So the pattern is: do the work off-main, then hop back to the main thread to publish results — via <code>Handler.post</code>, <code>runOnUiThread</code>, <code>LiveData.postValue</code>, or <code>withContext(Dispatchers.Main)</code>.&quot;</blockquote>
 <p>Background threads are all threads other than main and Binder — any thread the app creates via <code>Thread</code>, <code>Executor</code>, <code>HandlerThread</code>, coroutines, and so on. They can perform any work but cannot touch UI directly. Results must be posted back to the main thread via <code>Handler</code>, <code>runOnUiThread</code>, <code>LiveData.postValue</code>, or <code>withContext(Dispatchers.Main)</code>.</p>
+<p><strong>Under the hood</strong></p>
+<p>&quot;Hopping back to the main thread&quot; is always implemented by enqueuing a <code>Message</code> (or a <code>Runnable</code> wrapped in one) onto the main thread&#x27;s <code>MessageQueue</code>. <code>Activity.runOnUiThread</code> checks whether you&#x27;re already on the main thread and runs the block inline if so, otherwise it calls <code>mHandler.post(action)</code>. <code>withContext(Dispatchers.Main)</code> resumes the continuation through <code>HandlerDispatcher</code>, which likewise posts to the main <code>Handler</code>. <code>LiveData.postValue</code> posts a single coalescing runnable, so a burst of <code>postValue</code> calls before the main thread drains the queue collapses into one delivery of the latest value.</p>
+<pre><code>bg thread  ──► mainHandler.post { … }  ──► main MessageQueue ──► main thread runs it</code></pre>
+<p>So there&#x27;s no magic cross-thread &quot;callback&quot; — every UI-thread handoff is just another message on the same queue the loop is already draining.</p>
 <h3 id="linux-process-and-scheduling">Linux Process and Scheduling</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;Under Android, every thread is a Linux task scheduled by the Completely Fair Scheduler, which allocates CPU by virtual runtime weighted by the thread&#x27;s nice value. Android exposes this through <code>Process.setThreadPriority</code>, mapping its priority constants to Linux nice values — background is +10, default 0, urgent display is around -8. The practical rule is to set my background threads to <code>THREAD_PRIORITY_BACKGROUND</code> so they get a smaller CPU share and don&#x27;t starve the UI thread during rendering.&quot;</blockquote>
 <p>Android runs on Linux, where each thread is a Linux task. The Linux CFS (Completely Fair Scheduler) assigns CPU time based on virtual runtime and nice value. Android maps thread priorities to Linux nice values:</p>
 <pre><code>Process.setThreadPriority(Process.THREAD_PRIORITY_BACKGROUND)  // nice +10
 Process.setThreadPriority(Process.THREAD_PRIORITY_DEFAULT)     // nice 0
 Process.setThreadPriority(Process.THREAD_PRIORITY_URGENT_DISPLAY) // nice -8</code></pre>
 <p>Background threads should use <code>THREAD_PRIORITY_BACKGROUND</code> or lower so they do not compete with the UI thread for CPU time.</p>
+<p><strong>Under the hood</strong></p>
+<p><code>Process.setThreadPriority</code> calls down to <code>setpriority(2)</code> (and, for some constants, into cgroup scheduling) on the calling or target tid. A higher nice value means lower priority: CFS tracks each task&#x27;s accumulated virtual runtime and always runs the task with the smallest vruntime, but vruntime accrues faster for high-nice (low-priority) tasks, so they&#x27;re scheduled less often.</p>
+<pre><code>nice -8  ──► large CPU weight  ──► vruntime grows slowly ──► runs more
+nice +10 ──► small CPU weight  ──► vruntime grows fast    ──► runs less</code></pre>
+<p>Android additionally places throttled work in the <code>bg_non_interactive</code> cgroup, which caps the total CPU share of all background-priority threads collectively — so a runaway background thread can&#x27;t starve the foreground even if you forget to tune individual priorities.</p>
 <h3 id="debugging-main-thread-freezes">Debugging Main-Thread Freezes</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;When the main thread freezes, I reach for a layered toolkit: StrictMode flags accidental disk or network IO on the main thread in debug builds; Systrace or Perfetto give me a frame timeline showing exactly where main-thread time goes; the Android Studio CPU profiler gives method traces; and if it&#x27;s already ANR&#x27;d, <code>/data/anr/anr_*</code> holds the captured thread dumps. For a live hang I can also force a dump without killing the process with <code>kill -3</code>.&quot;</blockquote>
 <p>There are five tools. StrictMode catches disk and network violations in debug builds. Systrace and Perfetto show the frame timeline and exactly where main thread time is spent. The Android Studio Profiler CPU view gives you the thread timeline and method traces. ANR traces at <code>/data/anr/anr_*</code> contain thread dumps captured at the moment of the ANR. And <code>adb shell kill -3 &lt;pid&gt;</code> forces a thread dump without killing the process.</p>
+<p><strong>Under the hood</strong></p>
+<p><code>kill -3</code> sends <code>SIGQUIT</code>, which the ART runtime installs a handler for; the handler walks every thread&#x27;s stack and writes a dump rather than terminating the process (the JVM&#x27;s traditional SIGQUIT behavior). StrictMode works by instrumenting framework entry points — <code>BlockGuard</code> policy hooks in the IO and Binder paths check the current thread&#x27;s StrictMode policy and log or crash on a violation. Systrace/Perfetto rely on <code>Trace.beginSection</code>/<code>endSection</code> (atrace) markers that the framework already emits around measure, layout, draw, and Binder transactions, which is why you can see exactly which phase stalled.</p>
+<pre><code>SIGQUIT ─► ART signal handler ─► dump all thread stacks ─► logcat / tombstone</code></pre>
 <hr>
 <h2 id="37-handler--looper--messagequeue">3.7 Handler / Looper / MessageQueue</h2>
 <h3 id="architecture-overview">Architecture Overview</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;The whole system is three cooperating pieces: a <code>Looper</code> owns a <code>MessageQueue</code> and spins in <code>loop()</code> pulling messages off it; a <code>Handler</code> is the producer-and-consumer endpoint bound to one Looper that you post work to; and the <code>MessageQueue</code> is the ordered buffer in between. Any thread can call <code>handler.post</code>, but the work always runs on the Looper&#x27;s thread — that&#x27;s how this safely serializes cross-thread communication onto a single thread like the UI thread.&quot;</blockquote>
 <pre><code>Thread A                Thread B (UI thread)
    │                         │
    │                     ┌───┴───┐
@@ -370,6 +571,7 @@ Process.setThreadPriority(Process.THREAD_PRIORITY_URGENT_DISPLAY) // nice -8</co
                            Handler.handleMessage()
                                or Runnable.run()</code></pre>
 <h3 id="looper">Looper</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;A <code>Looper</code> turns an ordinary thread into a message loop: it owns a <code>MessageQueue</code> and spins in <code>loop()</code>, pulling messages off and dispatching each to its target <code>Handler</code>. There&#x27;s exactly one Looper per thread, stored in a thread-local, and the main thread gets one created for free in <code>ActivityThread.main()</code>. A background thread has none by default — I&#x27;d have to call <code>Looper.prepare()</code> and <code>Looper.loop()</code> myself, though in practice I use <code>HandlerThread</code> so I don&#x27;t get that boilerplate wrong.&quot;</blockquote>
 <p>A <code>Looper</code> provides a message loop for a thread. There is only one Looper per thread. The main thread has one set up by the framework (<code>ActivityThread.main()</code>). Background threads do not have one by default.</p>
 <pre><code>// Manually set up a Looper on a background thread (rarely needed — use HandlerThread)
 class MyThread : Thread() {
@@ -384,10 +586,31 @@ class MyThread : Thread() {
     }
 }</code></pre>
 <p><code>Looper.loop()</code> blocks, dispatching messages one at a time. When a <code>Message</code> is available at or after its <code>when</code> timestamp, the Looper pops it and dispatches it to the <code>Handler</code> that sent it.</p>
+<p><strong>Under the hood</strong></p>
+<p><code>Looper.prepare()</code> constructs a <code>Looper</code> (which constructs its <code>MessageQueue</code>) and stores it in a static <code>ThreadLocal&lt;Looper&gt;</code> — that&#x27;s the mechanism enforcing one Looper per thread, and why <code>Looper.myLooper()</code> returns the calling thread&#x27;s instance. <code>Looper.loop()</code> is essentially an infinite loop calling <code>MessageQueue.next()</code> and then <code>msg.target.dispatchMessage(msg)</code>:</p>
+<pre><code>public static void loop() {
+    final Looper me = myLooper();          // from ThreadLocal
+    final MessageQueue queue = me.mQueue;
+    for (;;) {
+        Message msg = queue.next();        // blocks (may park in nativePollOnce)
+        if (msg == null) return;           // queue.quit() returned null → exit loop
+        msg.target.dispatchMessage(msg);   // target is the sending Handler
+        msg.recycleUnchecked();            // return Message to the object pool
+    }
+}</code></pre>
+<p><code>dispatchMessage</code> checks <code>msg.callback</code> first (a <code>post</code>-ed <code>Runnable</code>), else the Handler&#x27;s <code>mCallback</code>, else <code>handleMessage</code>. The loop only exits when <code>next()</code> returns null, which happens after <code>quit()</code>/<code>quitSafely()</code> — that&#x27;s why <code>loop()</code> &quot;blocks until quit.&quot;</p>
 <h3 id="messagequeue">MessageQueue</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;The <code>MessageQueue</code> is an ordered buffer of messages, sorted by their <code>when</code> delivery timestamp — internally a singly-linked list, not a heap. The clever part is <code>next()</code> doesn&#x27;t busy-wait: when the queue is empty or the head message isn&#x27;t due yet, it parks in <code>nativePollOnce</code>, which is an epoll wait on a native file descriptor with a timeout equal to the delay until the next message — so a sleeping app burns no CPU. There&#x27;s also an idle-handler hook that fires when the queue runs dry, which framework code uses for deferrable work.&quot;</blockquote>
 <p><code>MessageQueue</code> is a priority queue ordered by delivery time (<code>Message.when</code>). Under the hood it is a singly-linked list of <code>Message</code> objects sorted by timestamp. <code>Looper.loop()</code> calls <code>MessageQueue.next()</code>, which blocks via <code>nativePollOnce()</code> — epoll on Linux — until the next message is due.</p>
 <p><code>MessageQueue.addIdleHandler()</code> lets you register callbacks that fire when the queue is empty. Libraries like Glide and Choreographer use this for work that should not delay frames.</p>
+<p><strong>Under the hood</strong></p>
+<p><code>next()</code> computes how long until the head message is due (<code>when - SystemClock.uptimeMillis()</code>) and passes that as the timeout to <code>nativePollOnce(ptr, timeoutMillis)</code>. Native code blocks in <code>epoll_wait</code> on a Linux <code>eventfd</code>/pipe; the thread wakes either when the timeout expires (a delayed message is now due) or when <code>enqueueMessage</code> writes a byte to the fd via <code>nativeWake</code> (a new message jumped the head, so the wait must recompute).</p>
+<pre><code>empty queue            → timeout = -1 (infinite) → epoll_wait parks until wake
+head due in 500ms      → timeout = 500           → wakes when due or on enqueue
+head due now / past    → timeout = 0             → returns the head immediately</code></pre>
+<p>Idle handlers run inside <code>next()</code> only when there is no message ready to return; each <code>IdleHandler.queueIdle()</code> returning <code>false</code> is removed after one fire. Note &quot;priority queue ordered by time&quot; is a logical description — the implementation is an insertion-sorted singly-linked list keyed on <code>when</code> (FIFO among equal timestamps), plus a synchronization-barrier mechanism that lets async messages (used by <code>Choreographer</code> for vsync) skip ahead of normal ones.</p>
 <h3 id="handler">Handler</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;A <code>Handler</code> is bound to a specific Looper at construction — so whichever thread that Looper runs on is where the work executes, regardless of which thread calls <code>post</code>. That&#x27;s the bridge: a background thread builds a result and calls <code>mainHandler.post</code>, and the Runnable runs on the main thread. Under the covers <code>post(Runnable)</code> and <code>sendMessage(Message)</code> do the same thing — both enqueue a <code>Message</code> whose <code>target</code> is the Handler; <code>post</code> just stashes the Runnable in <code>Message.callback</code>.&quot;</blockquote>
 <p>A <code>Handler</code> is bound to a specific thread&#x27;s Looper at construction time, so posting from any thread enqueues work on that Looper&#x27;s thread.</p>
 <pre><code>// Posting from a background thread to the main thread
 val mainHandler = Handler(Looper.getMainLooper())
@@ -408,7 +631,17 @@ val handler = Handler(Looper.getMainLooper()) { message -&gt;
         else -&gt; false
     }
 }</code></pre>
+<p><strong>Under the hood</strong></p>
+<p>Every enqueue path funnels through one method: <code>post</code>, <code>postDelayed</code>, <code>sendMessage</code>, and <code>sendMessageDelayed</code> all compute an absolute <code>when = SystemClock.uptimeMillis() + delay</code> and call <code>enqueueMessage(queue, msg, when)</code>, which sets <code>msg.target = this</code> before inserting into the <code>MessageQueue</code> in <code>when</code> order.</p>
+<pre><code>// Handler.enqueueMessage (simplified)
+private boolean enqueueMessage(MessageQueue queue, Message msg, long when) {
+    msg.target = this;                 // so loop() knows where to dispatch
+    if (mAsynchronous) msg.setAsynchronous(true);
+    return queue.enqueueMessage(msg, when);  // inserts sorted; nativeWake if head changed
+}</code></pre>
+<p>The delay is always converted to an <strong>absolute uptime</strong> timestamp at enqueue time — it&#x27;s measured against <code>SystemClock.uptimeMillis()</code> (which does not advance during deep sleep), so <code>postDelayed</code> is not a wall-clock guarantee and can be pushed later if the thread is busy when the message comes due. <code>obtainMessage</code> pulls a <code>Message</code> from the recycling pool rather than allocating, which is why you should prefer it over <code>Message()</code>.</p>
 <h3 id="handlerthread"><code>HandlerThread</code></h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;<code>HandlerThread</code> is the idiomatic way to get a background thread that owns a message loop — it subclasses <code>Thread</code>, calls <code>Looper.prepare()</code> and <code>Looper.loop()</code> for me in <code>run()</code>, and exposes the <code>Looper</code> once it&#x27;s started. I build a <code>Handler</code> against <code>ht.looper</code> and now every task I post is serialized on that one thread, which is great for things that must not run concurrently. When I&#x27;m done I call <code>quitSafely()</code> so it drains pending work before stopping.&quot;</blockquote>
 <p><code>HandlerThread</code> is a <code>Thread</code> subclass that sets up a <code>Looper</code> for you and exposes it after <code>start()</code>. It is the idiomatic way to get a background thread with a message loop:</p>
 <pre><code>val ht = HandlerThread(&quot;network-callback&quot;)
 ht.start()
@@ -418,7 +651,13 @@ val bgHandler = Handler(ht.looper)
 ht.quitSafely()  // drains pending messages then stops
 // ht.quit()     // stops immediately, may drop messages</code></pre>
 <p>Android uses <code>HandlerThread</code> internally for <code>CameraDevice</code>, <code>Bluetooth</code>, and <code>IntentService</code> (now deprecated).</p>
+<p><strong>Under the hood</strong></p>
+<p><code>HandlerThread.run()</code> does <code>Looper.prepare()</code>, then synchronizes on the instance to publish <code>mLooper</code> and call <code>notifyAll()</code>, then runs <code>Looper.loop()</code>. The <code>getLooper()</code> accessor blocks on that same monitor (<code>wait()</code>) until <code>run()</code> has actually created and published the Looper — which is why you must call <code>start()</code> before touching <code>ht.looper</code>, and why accessing it is thread-safe despite the Looper being created on another thread.</p>
+<pre><code>start() → run(): prepare() → mLooper set → notifyAll() → loop()
+getLooper(): while (mLooper == null &amp;&amp; isAlive()) wait();  return mLooper</code></pre>
+<p><code>quit()</code> calls <code>MessageQueue.quit(false)</code>, which discards all pending messages and makes <code>next()</code> return null immediately. <code>quitSafely()</code> calls <code>quit(true)</code>, which removes only messages scheduled in the future and still delivers any already-due messages before <code>next()</code> returns null — that&#x27;s the &quot;drain then stop&quot; semantics.</p>
 <h3 id="memory-leaks-from-delayed-messages">Memory Leaks from Delayed Messages</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;This is the classic Handler leak. An anonymous or inner <code>Handler</code>/<code>Runnable</code> holds an implicit reference to the enclosing Activity. When I <code>postDelayed</code> something long-lived, the <code>MessageQueue</code> holds that <code>Message</code>, the message references the <code>Handler</code> as its target, and the Handler references the Activity — so the Activity can&#x27;t be garbage-collected until the message fires or I remove it. If the user leaves the screen before then, that&#x27;s a leaked Activity. The fix is <code>removeCallbacksAndMessages(null)</code> in <code>onDestroy</code>, or a <code>WeakReference</code>, or just lifecycle-scoped coroutines.&quot;</blockquote>
 <p>A very common leak pattern:</p>
 <pre><code>class MyActivity : AppCompatActivity() {
     // LEAK: non-static/anonymous handler holds implicit reference to Activity
@@ -436,14 +675,44 @@ ht.quitSafely()  // drains pending messages then stops
     handler.removeCallbacksAndMessages(null)  // remove ALL pending messages/runnables
 }</code></pre>
 <p>Alternatively, use a <code>WeakReference&lt;Activity&gt;</code> in the callback, or switch to lifecycle-aware coroutines which handle this automatically.</p>
+<p><strong>Under the hood</strong></p>
+<p>The retention chain is real and walkable: the <strong>main thread&#x27;s</strong> <code>Looper</code> is a process-lifetime GC root; its <code>MessageQueue</code> strongly references the queued <code>Message</code>; <code>Message.target</code> strongly references the <code>Handler</code>; and an anonymous <code>Handler</code>/<code>Runnable</code> declared inside the Activity holds a synthetic <code>this$0</code> field pointing at the enclosing Activity instance.</p>
+<pre><code>[main Looper]  (GC root, lives forever)
+   └─► MessageQueue
+        └─► Message (when = now + 60s)
+             ├─► target  ─► Handler (anonymous → outer Activity via this$0)
+             └─► callback ─► Runnable (lambda capturing Activity)
+                                └─► Activity  ← cannot be collected for 60s</code></pre>
+<p><code>removeCallbacksAndMessages(null)</code> walks the queue and unlinks every <code>Message</code> whose <code>target</code> is this Handler (the <code>null</code> token means &quot;match any&quot;), breaking the chain immediately. <code>removeCallbacks(runnable)</code> / <code>removeMessages(what)</code> remove specific entries. Note that messages already dequeued and mid-dispatch can&#x27;t be removed — so the safest scope is removing in <code>onDestroy</code> plus keeping delays short. Lifecycle-aware coroutines avoid the problem because cancelling the scope removes the pending continuations rather than leaving them parked in the queue.</p>
 <h3 id="communicating-with-the-ui-thread">Communicating with the UI Thread</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;In modern code I rarely use a raw <code>Handler</code> to get back to the UI thread — I reach for higher-level idioms that all sit on top of it. <code>runOnUiThread</code> posts to the main handler (or runs inline if I&#x27;m already there); <code>View.post</code> defers until the view is attached to a window, which is handy for measure-dependent work; <code>LiveData.postValue</code> is thread-safe and coalesces rapid updates; and <code>withContext(Dispatchers.Main)</code> is the coroutine way. They all ultimately enqueue a message on the main <code>MessageQueue</code>.&quot;</blockquote>
 <p>There are four modern idioms, all preferred over raw <code>Handler</code>. <code>Activity.runOnUiThread { }</code> internally posts to the main handler. <code>View.post { }</code> posts once the view&#x27;s window is attached. <code>LiveData.postValue()</code> is thread-safe and deduplicates rapid updates. And <code>withContext(Dispatchers.Main) { }</code> is the coroutine-based approach.</p>
+<p><strong>Under the hood</strong></p>
+<p>Each idiom resolves to a message on the main <code>MessageQueue</code>, but with a subtle difference in <em>when</em> it runs:</p>
+<pre><code>runOnUiThread{}        → if on main: run inline; else mHandler.post(r)
+View.post{}            → if attached: attachInfo.mHandler.post(r)
+                         else: queued in ViewRootImpl run-queue, flushed at next traversal
+LiveData.postValue(v)  → mainHandler.post(coalescing runnable); only latest v survives
+withContext(Main){}    → Dispatchers.Main (HandlerDispatcher) posts the continuation</code></pre>
+<p><code>View.post</code> before attachment is special: there&#x27;s no Looper association yet, so the Runnable is held in the view&#x27;s <code>HandlerActionQueue</code> and replayed once <code>dispatchAttachedToWindow</code> gives the view its handler — that&#x27;s why it&#x27;s the correct place to read a freshly-laid-out view&#x27;s dimensions. <code>LiveData.postValue</code>&#x27;s coalescing works by storing the pending value in a field guarded by a lock and only posting a runnable if one isn&#x27;t already pending, so N rapid <code>postValue</code> calls yield at most one (latest-wins) main-thread delivery — which is exactly why you can lose intermediate values compared to <code>setValue</code>.</p>
 <hr>
 <h2 id="38-kotlin-coroutines-on-android">3.8 Kotlin Coroutines on Android</h2>
 <h3 id="what-is-a-coroutine">What Is a Coroutine?</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;A coroutine is a suspendable computation — it&#x27;s not a thread. When it suspends, instead of blocking an OS thread it saves its state on the heap and frees the thread to do other work, then resumes later, possibly on a different thread. That&#x27;s why I can run thousands of coroutines on a handful of threads. Under the hood the compiler rewrites my suspend functions into a state machine using Continuation-Passing Style, so there&#x27;s no magic — just callbacks and saved state.&quot;</blockquote>
 <p>A coroutine is a suspendable computation. Unlike a thread, it does not block an OS thread when suspended — it saves its execution state (local variables, program counter) on the heap and releases the thread to do other work. When the suspension point completes, the coroutine is resumed, possibly on a different thread.</p>
 <p>Coroutines are implemented via Continuation Passing Style transformation: the compiler rewrites <code>suspend fun foo()</code> into a state machine that passes a <code>Continuation</code> callback at each suspension point.</p>
+<p><strong>Under the hood</strong></p>
+<p>The compiler transforms each <code>suspend fun</code> into a function that takes an extra <code>Continuation</code> parameter and returns <code>Any?</code> (it may return either the real result or the sentinel <code>COROUTINE_SUSPENDED</code>). The body becomes a state machine where every suspension point is a numbered label; local variables that must survive a suspension are hoisted into fields of a generated <code>ContinuationImpl</code> subclass.</p>
+<pre><code>suspend fun foo(): T
+        ↓ (CPS transform)
+Object foo(Continuation&lt;? super T&gt; $cont)
+  - $cont stores the current label and saved locals
+  - at each suspension point: save state, set next label,
+    if the callee returns COROUTINE_SUSPENDED, foo also returns it
+  - on resume, the saved $cont re-invokes foo(), the switch jumps
+    to the saved label, and execution continues from there</code></pre>
 <h3 id="suspend-functions"><code>suspend</code> Functions</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;A suspend function is just a function that&#x27;s allowed to pause at suspension points and resume later without blocking the thread. The big gotcha interviewers love is that <code>suspend</code> alone doesn&#x27;t move work off the calling thread — if I do synchronous CPU or blocking IO inside a suspend function, it blocks whatever thread called it. To actually offload, I wrap the work in <code>withContext(Dispatchers.IO)</code> or <code>Default</code>. The compiler enforces the rule that suspend functions can only be called from other suspend functions or a coroutine builder.&quot;</blockquote>
 <p>A <code>suspend</code> function can be paused at suspension points — calls to other <code>suspend</code> functions or to <code>suspendCoroutine</code>/<code>suspendCancellableCoroutine</code>. It can only be called from another <code>suspend</code> function or a coroutine builder.</p>
 <pre><code>suspend fun fetchUser(id: String): User {
     return withContext(Dispatchers.IO) {   // suspension point
@@ -451,7 +720,10 @@ ht.quitSafely()  // drains pending messages then stops
     }
 }</code></pre>
 <p>The key rule is that <code>suspend</code> by itself does NOT make a function non-blocking. A suspend function that does synchronous CPU work blocks whatever thread it runs on. Use <code>withContext(Dispatchers.Default)</code> or <code>Dispatchers.IO</code> to actually offload the work.</p>
+<p><strong>Under the hood</strong></p>
+<p>The <code>suspend</code> modifier is purely a compile-time contract that allows the CPS transform. At the bytecode level there&#x27;s no separate &quot;suspend&quot; call mechanism — <code>fetchUser(id)</code> compiles to <code>fetchUser(id, $continuation)</code>. The lowest-level primitive is <code>suspendCoroutine</code>/<code>suspendCancellableCoroutine</code>, which hands you the <code>Continuation</code>; calling <code>continuation.resumeWith(Result)</code> is what re-enters the state machine. If the callee actually suspends, it returns <code>COROUTINE_SUSPENDED</code> up the call chain so the thread can be released; if it completes synchronously, it returns the value and execution continues without ever yielding the thread.</p>
 <h3 id="coroutine-builders">Coroutine Builders</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;<code>launch</code> is fire-and-forget — it returns a <code>Job</code> and an uncaught exception propagates to the scope and cancels it. <code>async</code> is for concurrent results — it returns a <code>Deferred</code>, and its exception is held until I call <code>await()</code>. <code>runBlocking</code> bridges the blocking and suspending worlds by actually blocking the calling thread, so I only use it in <code>main()</code> or tests, never in production Android code. The nuance is exception timing: <code>launch</code> throws eagerly into the scope, <code>async</code> defers until <code>await</code>.&quot;</blockquote>
 <p>There are three builders. <code>launch</code> is fire-and-forget — it returns a <code>Job</code> and exceptions propagate to the scope&#x27;s exception handler. Uncaught exceptions crash the parent scope unless it is backed by a <code>SupervisorJob</code>.</p>
 <p><code>async</code> is for concurrent computation that returns a result — it returns <code>Deferred&lt;T&gt;</code>. Exceptions are stored and rethrown when you call <code>await()</code>.</p>
 <p><code>runBlocking</code> bridges blocking and suspending code by blocking the calling thread until the block completes. Use it only in <code>main()</code> or tests — never in production Android code, because it would block the calling thread.</p>
@@ -461,7 +733,10 @@ fun testFetch() = runBlocking {
     val result = repository.fetchUser(&quot;123&quot;)
     assertEquals(&quot;Alice&quot;, result.name)
 }</code></pre>
+<p><strong>Under the hood</strong></p>
+<p><code>launch</code> and <code>async</code> are extension functions on <code>CoroutineScope</code>. Each constructs a coroutine object (<code>StandaloneCoroutine</code> for <code>launch</code>, <code>DeferredCoroutine</code> for <code>async</code>) whose <code>Job</code> is registered as a child of the scope&#x27;s <code>Job</code>, then calls <code>start</code>, which schedules the initial continuation on the dispatcher. <code>launch</code> returns the <code>Job</code>; <code>async</code>&#x27;s <code>Deferred</code> extends <code>Job</code> and additionally stores the completion result. <code>runBlocking</code> creates a <code>BlockingCoroutine</code> with an event loop and parks the current thread (<code>LockSupport.park</code>) until the coroutine completes, draining queued continuations on that same thread — which is exactly why it must not run on the Android main thread.</p>
 <h3 id="coroutinescope"><code>CoroutineScope</code></h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;A <code>CoroutineScope</code> is the lifetime boundary for coroutines — every coroutine I launch is a child of the scope&#x27;s <code>Job</code>, so when the scope is cancelled all its children are cancelled. On Android I lean on <code>viewModelScope</code>, which auto-cancels in <code>onCleared</code>, and <code>lifecycleScope</code> tied to an Activity or Fragment. I avoid <code>GlobalScope</code> because it isn&#x27;t tied to any lifecycle, so it leaks coroutines and the work outlives the screen.&quot;</blockquote>
 <p>Every coroutine runs inside a <code>CoroutineScope</code>. The scope tracks all coroutines launched within it and provides cancellation propagation — when the scope is cancelled, all its children are cancelled.</p>
 <pre><code>// ViewModel provides viewModelScope
 class MyViewModel : ViewModel() {
@@ -474,12 +749,18 @@ class MyViewModel : ViewModel() {
     // viewModelScope is automatically cancelled in onCleared()
 }</code></pre>
 <p>There are three standard scopes on Android. <code>viewModelScope</code> is tied to the <code>ViewModel</code> lifecycle. <code>lifecycleScope</code> is tied to a <code>Lifecycle</code> owner like an Activity or Fragment. <code>GlobalScope</code> should be avoided because it is not tied to any lifecycle and will leak coroutines.</p>
+<p><strong>Under the hood</strong></p>
+<p>A <code>CoroutineScope</code> is essentially just a holder for a <code>CoroutineContext</code>, and the most important element in that context is its <code>Job</code>. When you call <code>scope.launch</code>, the new coroutine&#x27;s <code>Job</code> is attached to the scope&#x27;s <code>Job</code> via <code>attachChild</code>, building the parent-child tree. <code>scope.cancel()</code> calls <code>Job.cancel()</code>, which walks that tree cancelling every child. <code>viewModelScope</code> is a lazily-created <code>CloseableCoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)</code> stored on the <code>ViewModel</code>; <code>onCleared()</code> calls <code>coroutineContext.cancel()</code>. <code>GlobalScope</code> has no <code>Job</code> lifecycle owner, so nothing ever cancels its children.</p>
 <h3 id="coroutine-context">Coroutine Context</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;A <code>CoroutineContext</code> is an indexed set of elements — the <code>Job</code>, the <code>Dispatcher</code>, a <code>CoroutineName</code>, an exception handler — and you combine them with the <code>+</code> operator. Children inherit the parent&#x27;s context but can override individual elements. The subtlety is that the <code>Job</code> is special: the child gets a <em>new</em> child <code>Job</code>, not the parent&#x27;s, which is what wires up structured concurrency.&quot;</blockquote>
 <p>A <code>CoroutineContext</code> is a map of context elements — <code>Job</code>, <code>CoroutineDispatcher</code>, <code>CoroutineName</code>, <code>CoroutineExceptionHandler</code>. Child coroutines inherit the parent&#x27;s context but can override individual elements:</p>
 <pre><code>launch(Dispatchers.IO + CoroutineName(&quot;fetch-user&quot;)) {
     // runs on IO dispatcher, named for debugging
 }</code></pre>
+<p><strong>Under the hood</strong></p>
+<p><code>CoroutineContext</code> is an immutable, persistent map keyed by element <code>Key</code>s; each <code>Element</code> is itself a context with a single entry. The <code>+</code> operator builds a <code>CombinedContext</code> linked list and folds duplicate keys (right wins). Lookups use <code>get(key)</code>. When a builder runs, it computes the new child context as <code>parentContext + builderContext + Job</code>, where a fresh child <code>Job</code> is always installed — so the child never shares the parent&#x27;s <code>Job</code> object, only points to it as parent. The <code>Dispatcher</code> is found in this context as a <code>ContinuationInterceptor</code>, which the machinery uses to wrap each continuation before resuming it.</p>
 <h3 id="dispatchers">Dispatchers</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;A dispatcher decides which thread a coroutine runs and resumes on. <code>Main</code> is the Android UI thread, <code>IO</code> is a large elastic pool for blocking calls like network and disk, and <code>Default</code> is sized to the CPU cores for compute. Mechanically a dispatcher is just a <code>ContinuationInterceptor</code> that intercepts each continuation and posts its resume to the right thread. I always inject the dispatcher rather than hard-coding it, so tests can swap in a <code>TestDispatcher</code>.&quot;</blockquote>
 <table border="1" cellpadding="6" cellspacing="0">
 <thead><tr>
 <th>Dispatcher</th>
@@ -504,10 +785,16 @@ class MyViewModel : ViewModel() {
 
 // In tests:
 val repo = UserRepository(mockApi, StandardTestDispatcher(testScheduler))</code></pre>
+<p><strong>Under the hood</strong></p>
+<p>A <code>CoroutineDispatcher</code> is a <code>ContinuationInterceptor</code>: its <code>interceptContinuation</code> wraps the coroutine&#x27;s continuation in a <code>DispatchedContinuation</code>, and <code>dispatch(context, block)</code> posts the resume <code>Runnable</code> onto the target executor. <code>Dispatchers.Main</code> on Android dispatches via a <code>Handler</code> on the main <code>Looper</code>; <code>Default</code> and <code>IO</code> share one pool of worker threads (<code>CoroutineScheduler</code>) but with different parallelism limits — <code>IO</code> lets blocking tasks elastically grab more threads while <code>Default</code> is capped at CPU count. <code>Main.immediate</code> skips re-dispatch when already on the main thread. Because dispatching is just continuation interception, switching dispatchers with <code>withContext</code> is the act of resuming the next continuation on a different thread.</p>
 <h3 id="structured-concurrency">Structured Concurrency</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;Structured concurrency means a coroutine&#x27;s lifetime is bounded by the scope that launched it — the parent can&#x27;t complete until all its children complete. So cancelling the parent cancels the children, a child&#x27;s failure propagates up unless I&#x27;m using a <code>SupervisorJob</code>, and there&#x27;s no orphaned background work that outlives its scope. That&#x27;s the whole reason coroutines are easier to reason about than raw callbacks or thread pools: leaks and lost exceptions become structurally impossible.&quot;</blockquote>
 <p>Structured concurrency is the discipline that coroutines must complete before the scope that launched them completes. There are four consequences. A parent coroutine waits for all children before completing. Cancelling a parent cancels all children. A child failure propagates to the parent unless the scope uses a <code>SupervisorJob</code>. And coroutines cannot escape their scope&#x27;s lifetime.</p>
 <p>This makes reasoning about concurrent code dramatically simpler — there is no orphaned background work to worry about.</p>
+<p><strong>Under the hood</strong></p>
+<p>Structured concurrency is implemented entirely through the <code>Job</code> tree. Each launched coroutine&#x27;s <code>Job</code> is attached to its parent via <code>attachChild</code>, producing a <code>ChildHandle</code>. A parent <code>Job</code> cannot reach the <code>Completed</code> state until all child <code>Job</code>s complete — internally the <code>JobSupport</code> state machine counts active children and stays in a <code>Completing</code> state while any remain. Cancellation propagates downward (parent cancel → <code>cancelChildren</code>), while uncaught failures propagate upward (<code>childCancelled</code> → parent cancels), unless the parent is a <code>SupervisorJob</code>, whose <code>childCancelled</code> returns <code>false</code> to stop upward propagation.</p>
 <h3 id="job-vs-supervisorjob"><code>Job</code> vs <code>SupervisorJob</code></h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;With a regular <code>Job</code>, a child failure propagates up and cancels the parent and all siblings — one failure takes everything down. A <code>SupervisorJob</code> breaks that upward propagation, so each child fails independently without killing its siblings. I use a <code>SupervisorJob</code> for long-lived top-level scopes — like a screen scope running several independent operations — where one failing request shouldn&#x27;t tear down the others. That&#x27;s also exactly why <code>viewModelScope</code> uses a <code>SupervisorJob</code> internally.&quot;</blockquote>
 <p>With a regular <code>Job</code>, when a child fails, the exception propagates to the parent, which then cancels all siblings and itself — one failure kills all siblings.</p>
 <p>With a <code>SupervisorJob</code>, a child&#x27;s failure does not propagate to the parent or siblings. Each child is independent. Use a <code>SupervisorJob</code> for top-level scopes where independent operations should not kill each other.</p>
 <pre><code>// viewModelScope uses SupervisorJob internally
@@ -515,7 +802,10 @@ val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
 scope.launch { operationA() }  // if this throws, operationB keeps running
 scope.launch { operationB() }</code></pre>
+<p><strong>Under the hood</strong></p>
+<p>Both are <code>Job</code> implementations; the only behavioral difference is in the <code>childCancelled(cause)</code> hook. A regular <code>Job</code> (<code>JobImpl</code>) returns <code>true</code>, meaning &quot;I handled the child&#x27;s failure by cancelling myself&quot; — which then cancels all other children. <code>SupervisorJobImpl</code> overrides <code>childCancelled</code> to return <code>false</code>, signalling that the child must handle its own exception (via a <code>CoroutineExceptionHandler</code> or, for <code>async</code>, at <code>await</code>). Note this only works at the scope boundary: <code>supervisorScope</code>/<code>SupervisorJob</code> does NOT stop a failure from propagating if you nest a normal <code>launch</code> whose own child throws — the supervisor only governs its direct children.</p>
 <h3 id="coroutinescope-vs-supervisorscope"><code>coroutineScope</code> vs <code>supervisorScope</code></h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;Both are suspend functions that create a new child scope and suspend until every child inside finishes — so they&#x27;re how I do structured concurrency inside a single suspend function. The difference is failure semantics: with <code>coroutineScope</code>, if any child throws, all siblings are cancelled and the exception rethrows out of the block; with <code>supervisorScope</code>, children are independent so one failure doesn&#x27;t cancel the others. I reach for <code>coroutineScope</code> for all-or-nothing parallel work and <code>supervisorScope</code> when partial results are acceptable.&quot;</blockquote>
 <p>Both are suspend functions that create a new child scope and neither returns until all children complete.</p>
 <p>With <code>coroutineScope</code>, if any child throws, all siblings are cancelled and the exception propagates out. With <code>supervisorScope</code>, children are independent — one failure does not cancel siblings.</p>
 <pre><code>suspend fun loadDashboard() = coroutineScope {
@@ -529,7 +819,10 @@ suspend fun loadOptional() = supervisorScope {
     val secondary = async { fetchSecondary() }
     // handle each result independently
 }</code></pre>
+<p><strong>Under the hood</strong></p>
+<p><code>coroutineScope { }</code> is a suspend function that calls <code>suspendCoroutineUninterceptedOrReturn</code> and installs a <code>ScopeCoroutine</code> whose <code>Job</code> becomes the parent of everything launched inside. It inherits the caller&#x27;s context (and thus its dispatcher and <code>Job</code> as parent) and only resumes the outer continuation once all children have completed. <code>supervisorScope</code> does the same but installs a <code>SupervisorCoroutine</code> whose <code>childCancelled</code> returns <code>false</code>. Because the scope&#x27;s <code>Job</code> is a child of the calling coroutine&#x27;s <code>Job</code>, a failure that does propagate out of <code>coroutineScope</code> is rethrown synchronously at the call site rather than going to a <code>CoroutineExceptionHandler</code>.</p>
 <h3 id="withcontext"><code>withContext</code></h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;<code>withContext</code> switches the coroutine to a different context — usually a dispatcher — for the duration of the block, then switches back automatically when the block returns. It doesn&#x27;t start a new coroutine; it&#x27;s roughly <code>async { }.await()</code> but cheaper because it skips the <code>Deferred</code> allocation. The reason it doesn&#x27;t &#x27;leak&#x27; the dispatcher is structured: the context change is scoped to the block, so once it returns I&#x27;m back on the original dispatcher, and exceptions propagate straight to the caller.&quot;</blockquote>
 <p><code>withContext(context)</code> switches the coroutine to a new context — typically a different dispatcher — for the duration of the block, then switches back:</p>
 <pre><code>suspend fun saveToDb(item: Item) {
     withContext(Dispatchers.IO) {
@@ -538,7 +831,10 @@ suspend fun loadOptional() = supervisorScope {
     // back on the original dispatcher here
 }</code></pre>
 <p><code>withContext</code> does not start a new coroutine scope. It is semantically equivalent to <code>async { ... }.await()</code> but more efficient because it avoids the <code>Deferred</code> allocation.</p>
+<p><strong>Under the hood</strong></p>
+<p><code>withContext</code> computes a merged context (<code>oldContext + newContext</code>) and, if the dispatcher actually changed, allocates a <code>DispatchedCoroutine</code> and re-dispatches the continuation onto the new dispatcher; when the block completes it dispatches the result back onto the <em>original</em> dispatcher before resuming the caller. The reason the dispatcher doesn&#x27;t &quot;leak&quot; is that the caller&#x27;s own continuation still carries the original <code>ContinuationInterceptor</code> — <code>withContext</code> only re-routes the resume of its own block, so resumption after the block lands on the original thread. If the target context equals the current one, <code>withContext</code> has a fast path that runs the block inline with no dispatch at all.</p>
 <h3 id="exception-handling">Exception Handling</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;For <code>launch</code>-style code I either try/catch at the call site or install a <code>CoroutineExceptionHandler</code> as a last-resort handler at the top of the scope. The two traps interviewers probe: <code>async</code> does <em>not</em> invoke the exception handler — the exception is stored in the <code>Deferred</code> and only thrown at <code>await()</code>, so I wrap <code>await</code> in try/catch. And <code>CancellationException</code> is special — it&#x27;s how cancellation works, so if I catch a broad exception I must rethrow it, otherwise I break cooperative cancellation.&quot;</blockquote>
 <pre><code>// Option 1: try/catch at the call site
 viewModelScope.launch {
     try {
@@ -562,7 +858,10 @@ viewModelScope.launch(handler) { dangerousWork() }</code></pre>
     if (e is CancellationException) throw e  // re-throw!
     handleError(e)
 }</code></pre>
+<p><strong>Under the hood</strong></p>
+<p>When a coroutine completes exceptionally, <code>JobSupport</code> distinguishes <code>CancellationException</code> (normal cancellation — does not propagate to the handler) from other throwables (a real failure). For a real failure it calls <code>childCancelled</code> up the tree; if propagation reaches a root coroutine with no parent to handle it, the machinery looks up the <code>CoroutineExceptionHandler</code> element in the context and invokes it, falling back to a global handler / thread <code>UncaughtExceptionHandler</code>. <code>async</code>&#x27;s <code>DeferredCoroutine</code> instead stores the exception in its completed state and only re-throws it from <code>await()</code>&#x27;s <code>getCompletionExceptionOrNull</code>, which is why the handler never fires for <code>async</code>. Because cancellation is signalled <em>by throwing</em> <code>CancellationException</code> at suspension points, swallowing it leaves the <code>Job</code> thinking it&#x27;s still active and breaks structured cancellation.</p>
 <h3 id="cancellation-cooperation">Cancellation Cooperation</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;Coroutine cancellation is cooperative: cancelling sets the <code>Job</code> to a cancelling state, but the coroutine only actually stops when it hits a suspension point that checks for it. All the <code>kotlinx.coroutines</code> suspend functions like <code>delay</code> check automatically and throw <code>CancellationException</code>. But a tight CPU loop with no suspension points will keep running, so I have to cooperate manually — call <code>ensureActive()</code> or <code>yield()</code>, or check the <code>isActive</code> flag. That&#x27;s the classic &#x27;why won&#x27;t my coroutine cancel&#x27; bug.&quot;</blockquote>
 <p>Coroutines are cancelled cooperatively — the runtime sets a flag and the coroutine must check it. All <code>suspend</code> functions in <code>kotlinx.coroutines</code> check for cancellation automatically. CPU-intensive work must check manually:</p>
 <pre><code>suspend fun processLargeList(list: List&lt;Item&gt;) {
     list.forEach { item -&gt;
@@ -572,7 +871,10 @@ viewModelScope.launch(handler) { dangerousWork() }</code></pre>
     }
 }</code></pre>
 <p>The <code>isActive</code> property on <code>CoroutineScope</code> or <code>Job</code> is available for a non-throwing check.</p>
+<p><strong>Under the hood</strong></p>
+<p><code>Job.cancel()</code> transitions the <code>Job</code>&#x27;s state from <code>Active</code> to <code>Cancelling</code> and stores a <code>CancellationException</code> as the cancel cause. Cooperating suspend functions check this on resume: when a continuation backed by a cancellable coroutine is resumed, the machinery sees the cancelled state and throws the stored <code>CancellationException</code> instead of continuing — that&#x27;s why suspension points are the only places cancellation can take effect. <code>ensureActive()</code> is a non-suspending check that reads <code>Job.isActive</code> and throws the cancel cause if inactive; <code>yield()</code> additionally re-dispatches to give other work a turn. A loop with zero suspension points never reaches a check, so it runs to completion regardless of cancellation.</p>
 <h3 id="main-safety">Main-Safety</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;Main-safe means a suspend function can be called from the main thread without ever blocking it. The principle I follow is that each layer owns its own main-safety — the repository or data source wraps its blocking work in the right dispatcher via <code>withContext</code>, rather than making every caller remember to switch threads. So my ViewModel can just call the repository from <code>viewModelScope</code> and update state, and never has to think about dispatchers.&quot;</blockquote>
 <p>A function is main-safe if it can be called from the main thread without blocking it. The pattern is that every layer — ViewModel, Repository, DataSource — wraps its own heavy work in the appropriate dispatcher using <code>withContext</code>, rather than pushing that responsibility up to the caller.</p>
 <pre><code>// Repository is responsible for its own main-safety
 class PhotoRepository(private val db: PhotoDao, private val api: PhotoApi) {
@@ -587,7 +889,10 @@ class PhotoViewModel(private val repo: PhotoRepository) : ViewModel() {
         _photos.value = repo.getPhotos()   // main-safe: repo handles dispatcher
     }
 }</code></pre>
+<p><strong>Under the hood</strong></p>
+<p>Main-safety is just disciplined use of <code>withContext</code> dispatching. When <code>getPhotos()</code> is called on the main thread, execution runs inline until it hits <code>withContext(Dispatchers.IO)</code>, which re-dispatches the inner block&#x27;s continuation onto an IO worker thread (the main thread is freed at that suspension point). When the block completes, <code>withContext</code> dispatches the result back to <code>Dispatchers.Main</code> before resuming the caller, so <code>_photos.value = ...</code> runs on the main thread. Note that suspend-based libraries like Room and Retrofit are already main-safe internally — they perform their own dispatch — so wrapping their suspend APIs in another <code>withContext(IO)</code> is redundant; the manual <code>withContext</code> matters for your own blocking code.</p>
 <h3 id="testing-coroutines">Testing Coroutines</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;For testing I run inside <code>runTest</code>, which gives me a virtual clock so <code>delay</code> is skipped and I control time with <code>advanceUntilIdle</code> or <code>advanceTimeBy</code>. I swap <code>Dispatchers.Main</code> with a <code>TestDispatcher</code> via a JUnit rule that calls <code>Dispatchers.setMain</code>/<code>resetMain</code>. The choice is between <code>StandardTestDispatcher</code>, which queues tasks so I can assert ordering deterministically, and <code>UnconfinedTestDispatcher</code>, which runs eagerly when I just want to observe final state.&quot;</blockquote>
 <pre><code>@OptIn(ExperimentalCoroutinesApi::class)
 class UserViewModelTest {
     @get:Rule val mainDispatcherRule = MainDispatcherRule()
@@ -610,12 +915,18 @@ class MainDispatcherRule(
     override fun finished(description: Description) = Dispatchers.resetMain()
 }</code></pre>
 <p>There are two test dispatchers. <code>StandardTestDispatcher</code> does not run tasks until you explicitly call <code>advanceUntilIdle()</code> or <code>advanceTimeBy()</code>, which gives you precise control over execution order. <code>UnconfinedTestDispatcher</code> runs tasks eagerly on the calling thread, which makes it simpler for tests that just need to observe state.</p>
+<p><strong>Under the hood</strong></p>
+<p><code>runTest</code> runs the body on a <code>TestScope</code> backed by a <code>TestCoroutineScheduler</code> — a virtual clock with a priority queue of scheduled tasks keyed by virtual time. <code>delay(n)</code> doesn&#x27;t really sleep; it schedules a resumption at <code>currentTime + n</code>, and <code>advanceTimeBy</code>/<code>advanceUntilIdle</code> simply pop tasks off the queue and run them, advancing the virtual clock instantly. <code>TestDispatcher</code>s share that one scheduler so all coroutines stay coordinated. <code>StandardTestDispatcher</code> enqueues every task (nothing runs until you advance), whereas <code>UnconfinedTestDispatcher</code> runs each task eagerly until its first suspension. <code>Dispatchers.setMain</code> swaps the <code>Main</code> dispatcher factory for the test dispatcher so production code using <code>viewModelScope</code> (which is <code>Main.immediate</code>) runs on the test scheduler too.</p>
 <hr>
 <h2 id="39-flow-stateflow-sharedflow-channel">3.9 Flow, StateFlow, SharedFlow, Channel</h2>
 <h3 id="cold-vs-hot-streams">Cold vs Hot Streams</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;The split is about who controls execution. A cold stream like <code>Flow</code> doesn&#x27;t run its producer block until someone collects, and it re-runs fresh and independently for every collector — like calling a function each time. A hot stream like <code>StateFlow</code>, <code>SharedFlow</code>, or <code>Channel</code> produces values whether or not anyone is listening, and collectors share one source. The practical consequence interviewers probe is that two collectors on a cold flow hit the network twice, whereas on a hot flow they share emissions — so I pick cold for per-request pipelines and hot for shared state or events.&quot;</blockquote>
 <p>A cold stream — <code>Flow</code> — does nothing until collected. Each collector gets its own independent execution of the producer, like calling a function fresh each time.</p>
 <p>A hot stream — <code>StateFlow</code>, <code>SharedFlow</code>, <code>Channel</code> — produces values regardless of whether there are collectors. Multiple collectors share the same stream of values.</p>
+<p><strong>Under the hood</strong></p>
+<p>A cold <code>Flow</code> is essentially a suspend lambda wrapped in an object: its <code>collect</code> takes a <code>FlowCollector</code> and runs the producer block right then, calling <code>collector.emit(value)</code> for each item. Because nothing is stored, calling <code>collect</code> twice executes the block twice. Hot streams instead hold shared mutable state (a current value, a replay cache, or a queue) that lives independently of any collector, so emission and collection are decoupled.</p>
 <h3 id="flow--cold-stream"><code>Flow</code> — Cold Stream</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;A <code>Flow</code> built with the <code>flow { }</code> builder is sequential and cold — the block runs only on <code>collect</code>, and producer and collector share the same coroutine by default. The subtle part is backpressure: <code>emit</code> is a suspend call, so when I emit, the producer suspends until the collector finishes processing that value. That means I get implicit backpressure for free without any explicit buffering. If I want them to run concurrently I add a <code>buffer()</code> operator, which inserts a channel between them.&quot;</blockquote>
 <pre><code>fun fetchPages(): Flow&lt;Page&gt; = flow {
     var page = 1
     while (true) {
@@ -630,7 +941,11 @@ viewModelScope.launch {
     }
 }</code></pre>
 <p><code>Flow</code> is sequential by default — the producer and collector run in the same coroutine, and <code>emit</code> suspends until the collector processes the value.</p>
+<p><strong>Under the hood</strong></p>
+<p><code>emit</code> and <code>collect</code> are linked by suspension. <code>collect</code> invokes the producer block passing a <code>FlowCollector</code> whose <code>emit</code> directly invokes the supplied collector lambda; since <code>emit</code> is <code>suspend</code>, the producer cannot continue until the downstream lambda returns. This is why backpressure is implicit — there&#x27;s no buffer, the producer simply suspends at the <code>emit</code> point until the consumer is ready.</p>
+<pre><code>producer: emit(A) ──suspends──▶ consumer processes A ──returns──▶ producer resumes ──▶ emit(B) ...</code></pre>
 <h3 id="flow-operators">Flow Operators</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;Operators are intermediate and lazy — they wrap the upstream <code>Flow</code> and only do work once a terminal operator like <code>collect</code> runs. The ones interviewers dig into are the <code>flatMap</code> family — <code>flatMapLatest</code> cancels the previous inner flow, which is exactly what you want for typeahead search — and <code>flowOn</code>, which changes the dispatcher of the <em>upstream</em> only, not the collector. I&#x27;d also mention <code>stateIn</code>/<code>shareIn</code> for turning a cold flow hot with a sharing policy like <code>WhileSubscribed(5000)</code> so it survives config changes.&quot;</blockquote>
 <pre><code>flow
     .map { transform(it) }                   // 1:1 transform
     .filter { it.isValid }                   // conditional pass-through
@@ -657,7 +972,10 @@ viewModelScope.launch {
     }</code></pre>
 <p>The three <code>flatMap</code> variants differ in how they handle concurrent inner flows. <code>flatMapLatest</code> cancels the previous inner flow when a new value arrives — use this for search queries. <code>flatMapMerge</code> runs all inner flows concurrently up to the <code>concurrency</code> limit. <code>flatMapConcat</code> runs them sequentially, one at a time.</p>
 <p>For <code>stateIn</code>, there are three <code>SharingStarted</code> options. <code>Eagerly</code> starts immediately and never stops. <code>Lazily</code> starts on the first collector and never stops. <code>WhileSubscribed(stopTimeoutMillis)</code> stops N milliseconds after the last collector cancels and restarts when a new one arrives — for ViewModel-to-UI flows, 5000 ms is the recommended value because it survives a configuration change.</p>
+<p><strong>Under the hood</strong></p>
+<p>Intermediate operators return a new <code>Flow</code> that decorates the upstream — they don&#x27;t trigger execution, so the chain stays cold until a terminal operator collects it. <code>flowOn</code> works by inserting a channel boundary: upstream emissions run on the specified dispatcher and are passed through a channel to the downstream, so it changes context for everything <em>above</em> it only. <code>flatMapLatest</code> and <code>collectLatest</code> cancel and relaunch the inner/downstream coroutine when a new value arrives, while <code>stateIn</code>/<code>shareIn</code> launch a single sharing coroutine in the given scope that collects upstream once and fans out to a <code>StateFlow</code>/<code>SharedFlow</code>.</p>
 <h3 id="stateflow--hot-state-holder"><code>StateFlow</code> — Hot State Holder</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;<code>StateFlow</code> is a hot, conflated state holder that always has exactly one current value, which is why it needs an initial value at construction and is my go-to LiveData replacement for screen state. It conflates rapid updates and only emits when the new value isn&#x27;t equal to the previous one — so <code>distinctUntilChanged</code> is baked in, and a new collector instantly gets the current value. The gotcha that follows from <code>equals</code>-based dedupe is that mutating a list in place without producing a new object won&#x27;t emit, so I always emit immutable copies via <code>update { }</code>.&quot;</blockquote>
 <p><code>StateFlow</code> is a hot flow that always holds exactly one current value. It is the replacement for <code>LiveData</code> in Kotlin codebases.</p>
 <pre><code>private val _state = MutableStateFlow&lt;UiState&gt;(UiState.Loading)
 val state: StateFlow&lt;UiState&gt; = _state.asStateFlow()
@@ -669,7 +987,10 @@ _state.update { current -&gt; current.copy(...) } // atomic update
 // Collect in Compose
 val uiState by viewModel.state.collectAsStateWithLifecycle()</code></pre>
 <p>There are four key properties: it always has a current value (initial value required at construction); it only emits when the value actually changes, so <code>distinctUntilChanged</code> is baked in; new collectors immediately receive the current value since the replay is effectively 1; and the <code>value</code> setter is thread-safe using atomic CAS.</p>
+<p><strong>Under the hood</strong></p>
+<p><code>StateFlow</code> is a conflated state holder: it stores a single current value and, on every set, compares the new value to the old with <code>equals</code>. If they&#x27;re equal it emits nothing; if different it updates and signals collectors. Conceptually it behaves like a <code>SharedFlow</code> with <code>replay = 1</code>, <code>onBufferOverflow = DROP_OLDEST</code>, plus distinct-until-changed. Because conflation can collapse intermediate values, a fast <code>A → B → A</code> sequence may surface as just <code>A</code> to a slow collector — <code>StateFlow</code> guarantees the latest, not every intermediate, value. The <code>value</code> setter uses an atomic compare-and-set so updates are thread-safe.</p>
 <h3 id="sharedflow--hot-broadcast"><code>SharedFlow</code> — Hot Broadcast</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;<code>SharedFlow</code> is a fully configurable hot broadcast — no initial value, and I tune <code>replay</code>, <code>extraBufferCapacity</code>, and <code>onBufferOverflow</code>. It fans every emission out to all active collectors, which makes it the natural fit for one-shot events when I set <code>replay = 0</code> so a freshly subscribed collector doesn&#x27;t get stale events. The nuance is the difference between <code>emit</code>, which suspends when the buffer is full, and <code>tryEmit</code>, which is non-suspending and returns false rather than blocking — and that with <code>replay = 0</code> and no collectors, an event is simply dropped.&quot;</blockquote>
 <p><code>SharedFlow</code> is for events that should reach multiple collectors, with a configurable replay cache.</p>
 <pre><code>private val _events = MutableSharedFlow&lt;UiEvent&gt;(
     replay = 0,            // new collectors don&#x27;t get old events
@@ -683,7 +1004,10 @@ viewModelScope.launch { _events.emit(UiEvent.ShowSnackbar(&quot;Saved&quot;)) }
 // or tryEmit (non-suspending, drops if buffer full)
 _events.tryEmit(UiEvent.Navigate(Screen.Home))</code></pre>
 <p>For modeling one-time events: <code>SharedFlow(replay=0)</code> means the event fires once and only collectors active at that moment receive it. An alternative pattern is <code>consumeAsFlow()</code> via <code>Channel</code>. Avoid <code>StateFlow</code> for events because new collectors will replay the last event, which is almost never what you want for a navigation or snackbar command.</p>
+<p><strong>Under the hood</strong></p>
+<p><code>SharedFlow</code> maintains a replay cache (size <code>replay</code>) plus an extra buffer (<code>extraBufferCapacity</code>); a new collector first receives whatever is in the replay cache, then live emissions. When the buffer fills, behavior depends on <code>onBufferOverflow</code>: <code>SUSPEND</code> makes <code>emit</code> suspend the producer until space frees up (true backpressure), while <code>DROP_OLDEST</code>/<code>DROP_LATEST</code> discard a value so emission never suspends. <code>tryEmit</code> is the non-suspending entry point — it succeeds only if it can add without suspending (i.e. there&#x27;s buffer room or a drop policy applies), otherwise returns <code>false</code>. With <code>replay = 0</code> and no active collectors, emitted values have nowhere to go and are effectively dropped.</p>
 <h3 id="channel--one-to-one-communication"><code>Channel</code> — One-to-One Communication</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;A <code>Channel</code> is a hot, coroutine-safe queue where each element goes to exactly one receiver — unlike <code>SharedFlow</code>, which broadcasts the same value to every collector. The default <code>RENDEZVOUS</code> channel has zero buffer, so <code>send</code> suspends until a receiver is ready, giving precise hand-off backpressure. I&#x27;d reach for a <code>Channel</code> for producer-consumer work distribution or single-consumer events like a navigation command, and call out that it&#x27;s the building block hot flows use internally and that you should <code>close()</code> it to signal completion.&quot;</blockquote>
 <p><code>Channel</code> is a non-broadcast, coroutine-based primitive for producer-consumer patterns. Each value is consumed by exactly one collector — unlike <code>SharedFlow</code>, which broadcasts to all active collectors.</p>
 <pre><code>val channel = Channel&lt;Work&gt;(capacity = Channel.BUFFERED)
 
@@ -698,7 +1022,10 @@ launch { channel.consumeEach { process(it) } }
 channel.close()  // signals completion</code></pre>
 <p>There are four capacity modes. <code>RENDEZVOUS</code> (capacity 0) means the sender suspends until the receiver is ready — like <code>SynchronousQueue</code>. <code>BUFFERED</code> gives a small buffer of 64 by default. <code>UNLIMITED</code> never suspends on send. <code>CONFLATED</code> keeps only the last value.</p>
 <p>For the Channel versus SharedFlow decision: use <code>Channel</code> when exactly one consumer should handle each event, such as a navigation command consumed by one Fragment. Use <code>SharedFlow</code> when multiple UI components should all react, such as a toast that could be visible in two places.</p>
+<p><strong>Under the hood</strong></p>
+<p>A <code>Channel</code> is a hot queue with a configurable capacity. <code>send</code> adds an element and <code>receive</code> removes one, with each element delivered to exactly one receiver — there is no broadcast. With <code>RENDEZVOUS</code> (capacity 0) there is no storage at all: <code>send</code> suspends until a <code>receive</code> is waiting, so the two coroutines hand the value off directly. Buffered/unlimited modes store elements until received; <code>CONFLATED</code> keeps only the latest. Backpressure is explicit: <code>send</code> suspends when the buffer is full (except <code>UNLIMITED</code>/conflated). This rendezvous/queue machinery is exactly what <code>flowOn</code>, <code>buffer</code>, and <code>callbackFlow</code> use to bridge coroutines.</p>
 <h3 id="lifecycle-aware-collection">Lifecycle-Aware Collection</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;Collecting a flow in a plain <code>lifecycleScope.launch</code> keeps running while the UI is in the background, wasting work and updating invisible views. The fix is <code>repeatOnLifecycle(STARTED)</code>, which cancels the collection coroutine when the lifecycle drops below STARTED and restarts it when it comes back — so I get a fresh subscription each time the screen is visible. In Compose the equivalent is <code>collectAsStateWithLifecycle</code>. I&#x27;d note that <code>repeatOnLifecycle</code> cancels and re-collects, which is why a <code>WhileSubscribed(5000)</code> upstream is nice — it doesn&#x27;t tear down the shared pipeline during a quick rotation.&quot;</blockquote>
 <p>The problem with collecting a Flow inside a plain <code>lifecycleScope.launch</code> block is that collection continues when the UI is in the background (STOPPED), wasting resources and potentially updating invisible UI.</p>
 <p>The solution is <code>repeatOnLifecycle</code>:</p>
 <pre><code>// In Fragment or Activity
@@ -719,9 +1046,12 @@ fun MyScreen(viewModel: MyViewModel = hiltViewModel()) {
 }</code></pre>
 <p><code>collectAsStateWithLifecycle</code> is the Compose-specific equivalent of <code>repeatOnLifecycle(STARTED)</code> and requires <code>androidx.lifecycle:lifecycle-runtime-compose</code>.</p>
 <p>For the <code>launchIn</code> versus <code>repeatOnLifecycle</code> choice: <code>lifecycleScope.launchIn(this)</code> combined with <code>flowWithLifecycle()</code> is an alternative for single flows, while <code>repeatOnLifecycle</code> is preferred for multiple flows or more complex collection logic.</p>
+<p><strong>Under the hood</strong></p>
+<p><code>repeatOnLifecycle</code> is a suspend function that registers a lifecycle observer and, each time the lifecycle reaches the target state, launches a new coroutine running the block; when the state drops below the target it cancels that coroutine. So collecting inside it means a brand-new <code>collect</code> (and thus a fresh upstream subscription) on every STARTED transition — the old one is fully cancelled, not paused. <code>collectAsStateWithLifecycle</code> wraps the same machinery, calling <code>repeatOnLifecycle</code> internally and feeding emissions into a Compose <code>State</code>. Because each restart re-subscribes, pairing it with a <code>stateIn(WhileSubscribed(5000))</code> upstream keeps the shared producer alive across brief gaps like rotation instead of restarting it.</p>
 <hr>
 <h2 id="310-background-work">3.10 Background Work</h2>
 <h3 id="categorizing-work">Categorizing Work</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;The first thing I do is categorize the work, because the API falls out of that. If it must run <em>now</em> and can die with the process, it&#x27;s a coroutine in the right scope. If it&#x27;s deferrable but must run <em>eventually</em> — even across reboot — that&#x27;s WorkManager. If it&#x27;s user-visible and ongoing, like playback, that&#x27;s a foreground service. And if it needs exact timing, that&#x27;s AlarmManager, used sparingly. Picking the wrong category is the classic mistake — like using WorkManager for an exact alarm or a foreground service for a deferrable sync.&quot;</blockquote>
 <table border="1" cellpadding="6" cellspacing="0">
 <thead><tr>
 <th>Category</th>
@@ -734,7 +1064,10 @@ fun MyScreen(viewModel: MyViewModel = hiltViewModel()) {
 <tr><td>Exact timing</td><td>Must run at a specific time</td><td><code>AlarmManager</code> (with care)</td></tr>
 <tr><td>Ongoing user-visible</td><td>Long-running, user-visible progress</td><td>Foreground Service</td></tr>
 </tbody></table>
+<p><strong>Under the hood</strong></p>
+<p>Each category maps to a different framework mechanism. Coroutines live entirely in your process — nothing is persisted, so when the process dies the work is gone. WorkManager persists requests to a Room database and hands scheduling to the system, so the OS can run them later even after a restart. Foreground services keep the process at foreground priority so the OOM killer leaves it alone while a visible notification is shown. AlarmManager registers a wakeup with the <code>AlarmManagerService</code> in <code>system_server</code>, which is the only one of these that can wake a Doze-idle device at a precise time.</p>
 <h3 id="workmanager">WorkManager</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;WorkManager is the recommended API for deferrable, guaranteed background work — syncing, uploading, log shipping — work that must run eventually even if the app is killed or the device reboots. It persists the request in a database and, on modern APIs, schedules it through JobScheduler, honoring constraints like network or charging. The nuance interviewers probe is that it&#x27;s <em>not</em> for immediate or exact-time work — for that I&#x27;d reach for a coroutine, a foreground service, or rarely an exact alarm.&quot;</blockquote>
 <p>WorkManager is the recommended API for deferrable, persistent background work. It uses <code>JobScheduler</code> on API 23 and above, falling back to <code>AlarmManager</code> plus <code>BroadcastReceiver</code> on older devices. It survives process death and device restarts because constraints are re-registered at boot.</p>
 <pre><code>// Define a worker
 class SyncWorker(context: Context, params: WorkerParameters) : CoroutineWorker(context, params) {
@@ -774,7 +1107,23 @@ WorkManager.getInstance(context)
     .observe(lifecycleOwner) { info -&gt;
         if (info?.state == WorkInfo.State.SUCCEEDED) { /* done */ }
     }</code></pre>
+<p><strong>Under the hood</strong></p>
+<p>WorkManager is a layer on top of the platform scheduler, not a separate scheduler itself. When you enqueue a request it is written into an internal Room database (the <code>WorkSpec</code> table), which is what gives it durability across process death and reboot. A <code>Greedy</code>/<code>SystemJobScheduler</code> then translates the request into the appropriate framework primitive:</p>
+<pre><code>enqueue(request)
+   │
+   ▼
+[Room DB: WorkSpec persisted]   ← survives kill / reboot
+   │
+   ▼
+[WorkManager scheduler picks an implementation]
+   ├── API 23+  → JobScheduler (SystemJobScheduler)
+   └── API &lt;23  → AlarmManager + BroadcastReceiver (SystemAlarmScheduler)
+   │
+   ▼
+[Constraints met → JobSchedulerService runs the job → CoroutineWorker.doWork()]</code></pre>
+<p>A <code>RescheduleReceiver</code> listens for <code>BOOT_COMPLETED</code> (and similar) so unfinished work is re-registered with the scheduler after a reboot. The worker itself runs on a WorkManager-managed <code>Executor</code>; <code>CoroutineWorker</code> bridges that to a coroutine on <code>Dispatchers.Default</code>.</p>
 <h3 id="periodic-work">Periodic Work</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;Periodic work is for recurring background jobs — a roughly-every-15-minutes sync, say. The key nuance is the 15-minute floor is OS-enforced and the timing is approximate, not exact: the system batches periodic jobs with other apps&#x27; work and Doze to save battery, so the interval is a <em>minimum</em>, not a guarantee. If someone needs precise recurring timing they&#x27;re asking the wrong API — that&#x27;s a job for an alarm, not periodic work.&quot;</blockquote>
 <pre><code>val periodicRequest = PeriodicWorkRequestBuilder&lt;SyncWorker&gt;(15, TimeUnit.MINUTES)
     .setConstraints(networkConstraint)
     .build()
@@ -786,25 +1135,37 @@ WorkManager.getInstance(context)
         periodicRequest
     )</code></pre>
 <p>The minimum period is 15 minutes, OS-enforced. <code>KEEP</code> means the existing scheduled work is left alone and no new request is enqueued.</p>
+<p><strong>Under the hood</strong></p>
+<p>A periodic request becomes a recurring <code>JobScheduler</code> job with <code>setPeriodic()</code>, where the system clamps the period to its own minimum (15 minutes) and decides <em>when</em> within each interval to actually run, batching it with other deferred jobs. Because periodic work cannot be chained and its timing is approximate, the framework treats each run as an independent execution; WorkManager re-enqueues the next interval after <code>doWork()</code> returns. The Doze maintenance window and App Standby bucket both influence when the interval&#x27;s run is permitted to fire, which is why a &quot;15-minute&quot; job can drift well past 15 minutes on an idle, infrequently-used device.</p>
 <h3 id="chained-work">Chained Work</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;WorkManager lets me express a dependency graph — run these two in parallel, then this one, then notify — and it guarantees ordering and passes output <code>Data</code> from one worker into the next. The thing to call out is failure semantics: if any worker in the chain returns failure, the rest of the chain is cancelled, so chaining is really for steps that only make sense as an all-or-nothing pipeline.&quot;</blockquote>
 <pre><code>WorkManager.getInstance(context)
     .beginWith(listOf(cleanupRequest, prepareRequest))  // parallel first step
     .then(uploadRequest)                                // sequential second step
     .then(notifyRequest)                                // sequential third step
     .enqueue()</code></pre>
 <p>Output of one worker flows to the input of the next via <code>Data</code>. If any worker returns <code>Result.failure()</code>, the chain stops unless subsequent workers are configured to handle failure input.</p>
+<p><strong>Under the hood</strong></p>
+<p>A chain is stored as a dependency graph in the same Room database, with each <code>WorkSpec</code> recording its prerequisites in a <code>Dependency</code> table. WorkManager only schedules a worker with the underlying <code>JobScheduler</code> once all of its prerequisites have reached <code>SUCCEEDED</code>; the output <code>Data</code> of a prerequisite is persisted and merged (via an <code>InputMerger</code>, by default <code>OverwritingInputMerger</code>) into the next worker&#x27;s input. Because the graph lives in the database, a chain survives process death mid-way — already-completed nodes stay completed and only the remaining nodes are rescheduled. A <code>failure()</code> marks its dependents <code>FAILED</code> so they are never scheduled.</p>
 <h3 id="expedited-work">Expedited Work</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;Expedited work is for tasks that need to start almost immediately but still want WorkManager&#x27;s durability — think kicking off a critical upload right after a user action. On Android 12+ it runs against an expedited job quota; below that it falls back to a foreground service. The nuance is the quota is finite, so I have to provide an <code>OutOfQuotaPolicy</code> saying what happens when the quota is exhausted — either drop to a normal request or fail.&quot;</blockquote>
 <p>For time-sensitive tasks that must start immediately but still need to survive process death:</p>
 <pre><code>val expeditedRequest = OneTimeWorkRequestBuilder&lt;CriticalWorker&gt;()
     .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
     .build()</code></pre>
 <p>On Android 12 and above, the worker runs with expedited job quota. On older versions it falls back to running as a foreground service.</p>
+<p><strong>Under the hood</strong></p>
+<p>The mechanism differs by API level. On API 31+, expedited work maps to a JobScheduler <em>expedited job</em> (<code>setExpedited(true)</code>), which the system runs promptly but only while the app has remaining expedited-job quota — quota that replenishes based on the app&#x27;s standby bucket. When quota is exhausted, the <code>OutOfQuotaPolicy</code> decides between demoting to an ordinary deferrable request or failing outright. On older APIs WorkManager implements the same intent by promoting the worker into a short-lived foreground service (calling <code>setForeground</code>/<code>getForegroundInfo</code>), which is why an expedited worker generally must supply foreground info to avoid an exception.</p>
 <h3 id="cancellation-1">Cancellation</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;I can cancel work by id, by tag, or by unique name. With <code>CoroutineWorker</code> cancellation is cooperative — WorkManager cancels the worker&#x27;s coroutine scope, so the work unwinds through <code>CancellationException</code> at the next suspension point. The thing to remember is that blocking, non-cooperative code won&#x27;t stop on its own; you have to check <code>isStopped</code> or use suspending calls for cancellation to actually take effect.&quot;</blockquote>
 <pre><code>WorkManager.getInstance(context).cancelWorkById(request.id)
 WorkManager.getInstance(context).cancelAllWorkByTag(&quot;sync&quot;)
 WorkManager.getInstance(context).cancelUniqueWork(&quot;periodic-sync&quot;)</code></pre>
 <p>Workers receive cancellation through <code>CoroutineWorker</code>&#x27;s coroutine scope — the scope is cancelled, so all cooperative suspension points exit via <code>CancellationException</code>.</p>
+<p><strong>Under the hood</strong></p>
+<p>Cancellation flips the <code>WorkSpec</code> state to <code>CANCELLED</code> in the Room database and tells the underlying scheduler to drop the corresponding <code>JobScheduler</code> job (or AlarmManager alarm). For work already executing, WorkManager calls <code>ListenableWorker.onStopped()</code> and, for a <code>CoroutineWorker</code>, cancels the <code>Job</code> backing its <code>CoroutineScope</code>. That is why cancellation is cooperative: a coroutine only actually stops at a suspension point or an explicit <code>isStopped</code>/<code>isActive</code> check — tight CPU loops that never suspend keep running until they finish or the process is killed.</p>
 <h3 id="jobscheduler"><code>JobScheduler</code></h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;JobScheduler is the API 21+ framework scheduler that WorkManager sits on top of for API 23 and above. It registers jobs with the system server so they survive process death, and the system batches them with other apps&#x27; jobs to save battery. I&#x27;d rarely touch it directly — only for platform features WorkManager doesn&#x27;t expose — and one classic gotcha is that <code>onStartJob</code> runs on the main thread, so I still have to move real work off it myself.&quot;</blockquote>
 <p><code>JobScheduler</code> is the Android framework API that WorkManager is built on. You would interact with it directly only when you need platform-specific features not exposed by WorkManager, which is rare. Jobs survive process death because they are registered with the system server.</p>
 <pre><code>val jobScheduler = getSystemService(JobScheduler::class.java)
 val jobInfo = JobInfo.Builder(JOB_ID, ComponentName(this, SyncJobService::class.java))
@@ -813,7 +1174,10 @@ val jobInfo = JobInfo.Builder(JOB_ID, ComponentName(this, SyncJobService::class.
     .build()
 jobScheduler.schedule(jobInfo)</code></pre>
 <p>One gotcha: <code>JobService.onStartJob()</code> runs on the main thread, so you must offload work to a background thread manually.</p>
+<p><strong>Under the hood</strong></p>
+<p><code>JobScheduler.schedule()</code> is a binder call into the <code>JobSchedulerService</code> running in <code>system_server</code>, which owns all jobs across every app. That service stores <code>JobInfo</code> (persisting it to disk when <code>setPersisted(true)</code>, gated on the <code>RECEIVE_BOOT_COMPLETED</code> permission), evaluates each job&#x27;s constraints — network type, charging, idle, content URIs — and only when they are all satisfied does it bind to your <code>JobService</code> and invoke <code>onStartJob()</code> on your app&#x27;s main thread. Your service signals completion with <code>jobFinished()</code>, releasing the wakelock the system held for the run. The system deliberately batches eligible jobs together and aligns them with Doze maintenance windows to amortize the cost of waking the device.</p>
 <h3 id="foreground-services">Foreground Services</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;A foreground service is for long-running work the user is actively aware of — music playback, navigation, an in-progress upload — and it must post a persistent notification. It keeps the process at foreground priority so it isn&#x27;t killed. The modern nuance is the platform tightened this a lot: from Android 12 you declare a <code>foregroundServiceType</code>, and Android 14 enforces type-specific runtime permissions, so you can&#x27;t just spin one up for arbitrary deferrable work.&quot;</blockquote>
 <p>Use a Foreground Service for long-running work that must continue while the app is in the background and where the user must be aware it is running via a persistent notification:</p>
 <pre><code>class MusicService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -828,7 +1192,10 @@ jobScheduler.schedule(jobInfo)</code></pre>
 ContextCompat.startForegroundService(context, Intent(context, MusicService::class.java))</code></pre>
 <p>Android 12 and above require declaring <code>foregroundServiceType</code> in the manifest — for example <code>mediaPlayback</code>, <code>location</code>, or <code>camera</code>. Android 14 enforces type-specific runtime permissions on top of that.</p>
 <p>For the WorkManager versus Foreground Service decision: use WorkManager when the work is deferrable and the result can be delivered later or is network-triggered. Use a Foreground Service when the work is immediate and ongoing and the user is actively engaged — music playback, navigation, or an upload in progress.</p>
+<p><strong>Under the hood</strong></p>
+<p><code>startForegroundService()</code> tells <code>ActivityManagerService</code> to start the service with a grace window (about 5 seconds) within which you <em>must</em> call <code>startForeground()</code> and post a notification, or the system throws <code>ForegroundServiceDidNotStartInTimeException</code>. While in the foreground state the process is given foreground (or &quot;perceptible&quot;) OOM-adjustment priority, so the low-memory killer ranks it near the top and is unlikely to reap it. The mandatory notification is the OS&#x27;s way of keeping background work user-visible. From API 26, background execution limits forbid starting a <em>background</em> service from the background at all, which is exactly why <code>startForegroundService</code> plus a prompt <code>startForeground()</code> call became the required path; API 31 added the <code>foregroundServiceType</code> declaration and API 34 ties each type to its own runtime permission and allowed start-reasons.</p>
 <h3 id="alarmmanager"><code>AlarmManager</code></h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;AlarmManager is the API for work that must fire at a precise wall-clock or elapsed time, even through Doze — that&#x27;s <code>setExactAndAllowWhileIdle</code> or <code>setAlarmClock</code>. It is deliberately <em>not</em> for deferrable work because the system can&#x27;t batch exact alarms, so they cost battery. The nuance interviewers like is the permission story: Android 12 introduced <code>SCHEDULE_EXACT_ALARM</code> and Android 13 made it user-grantable, so exact alarms are now something you justify, not sprinkle around.&quot;</blockquote>
 <p>Use <code>AlarmManager</code> for work that must run at a precise time, even if the device is in Doze mode — use <code>setExactAndAllowWhileIdle</code> or <code>setAlarmClock</code>. It is not for deferrable work because the system cannot batch it.</p>
 <pre><code>val alarmManager = getSystemService(AlarmManager::class.java)
 val pendingIntent = PendingIntent.getBroadcast(
@@ -841,13 +1208,31 @@ alarmManager.setExactAndAllowWhileIdle(
     pendingIntent
 )</code></pre>
 <p>Android 12 and above require the <code>SCHEDULE_EXACT_ALARM</code> permission. Android 13 changes it to a user-grantable permission. Use exact alarms sparingly — they drain battery.</p>
+<p><strong>Under the hood</strong></p>
+<p>Alarms are held by the <code>AlarmManagerService</code> in <code>system_server</code>, which programs the kernel alarm timer (<code>/dev/alarm</code> historically, now <code>timerfd</code>/<code>CLOCK_BOOTTIME_ALARM</code>) so a <code>*_WAKEUP</code> alarm can wake the device from sleep. Inexact alarms are coalesced into batches and aligned with maintenance windows so the SoC wakes once for many alarms; exact alarms break that batching, which is the battery cost. During Doze the service suppresses ordinary alarms entirely and only releases <code>setExactAndAllowWhileIdle</code> (rate-limited to roughly once every 9 minutes per app) and <code>setAlarmClock</code> alarms. When an alarm fires the system holds a brief wakelock while it dispatches the <code>PendingIntent</code> — typically a broadcast — to your app.</p>
 <h3 id="broadcastreceiver-limitations"><code>BroadcastReceiver</code> Limitations</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;Since Android 8, manifest-declared receivers no longer get most implicit system broadcasts — that was the background-execution-limits crackdown — so for those you need a runtime-registered receiver while the app is alive. And <code>onReceive</code> runs on the main thread with about a 10-second budget before an ANR, so I never do real work there; I just enqueue a WorkManager job. <code>JobIntentService</code>, the old bridge for this, is deprecated.&quot;</blockquote>
 <p>Statically registered receivers in the manifest are subject to background execution limits from Android 8 onward. Most implicit broadcasts are no longer delivered to them. Runtime-registered receivers do receive broadcasts while the app is running.</p>
 <p><code>onReceive()</code> runs on the main thread and must complete in roughly 10 seconds or an ANR will fire. Never start long-running work directly from <code>onReceive</code> — instead kick off a WorkManager job. <code>JobIntentService</code> is deprecated; WorkManager is the correct replacement.</p>
+<p><strong>Under the hood</strong></p>
+<p>Broadcasts are dispatched by <code>ActivityManagerService</code>, which delivers each one to your receiver&#x27;s <code>onReceive()</code> on the main thread and holds a wakelock for the duration. If the call doesn&#x27;t return within roughly 10 seconds the system raises a broadcast-timeout ANR, so any real work must be handed off — <code>goAsync()</code> buys a little more time, but enqueuing a WorkManager job is the durable answer. The Android 8 background-execution limits changed delivery itself: the <code>AMS</code> no longer matches <em>implicit</em> broadcasts against manifest-registered receivers (with a short exemption list), because waking dozens of background processes for every system event was a major battery and memory drain. Explicit broadcasts and runtime-registered receivers are unaffected.</p>
 <h3 id="doze-mode-and-app-standby">Doze Mode and App Standby</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;Doze and App Standby are the two big battery-saving regimes. Doze kicks in when the device is unplugged, still, and screen-off — it suspends network and wakelocks and batches deferred jobs and alarms into periodic maintenance windows, with only <code>setExactAndAllowWhileIdle</code> and alarm-clock alarms allowed through. App Standby instead buckets apps by how often you use them and throttles a rarely-used app&#x27;s jobs harder. The takeaway is WorkManager respects all of this automatically, which is exactly why you don&#x27;t fight it with raw threads.&quot;</blockquote>
 <p>Doze mode activates when the device is off the charger, stationary, and screen off for a period. Android then restricts network access, <code>JobScheduler</code> jobs, alarms (except <code>setAlarmClock</code>), and sync adapters. Only <code>setExactAndAllowWhileIdle</code> alarms fire during Doze.</p>
 <p>App Standby Buckets bucket apps by usage frequency — Active, Working Set, Frequent, Rare, Restricted. Apps in the Rare bucket may have their jobs deferred significantly. WorkManager respects these buckets automatically.</p>
+<p><strong>Under the hood</strong></p>
+<p>Doze is driven by the <code>DeviceIdleController</code> in <code>system_server</code>, which uses signals like motion sensors, charging state, and screen state to step the device through light- and deep-idle states. In deep Doze it defers <code>JobScheduler</code> jobs and inexact alarms, holds network access, and ignores wakelocks, then periodically opens a <em>maintenance window</em> during which all the deferred work is allowed to run in one batch before the device drops back to idle — windows that grow less frequent the longer the device stays idle.</p>
+<pre><code>unplugged + stationary + screen off
+        │
+        ▼
+   [idle] ──► [maintenance window: deferred jobs/alarms/syncs run] ──► [idle] ──► ...
+                  (windows get rarer the longer idle lasts)
+
+Allowed through idle: setExactAndAllowWhileIdle (rate-limited), setAlarmClock,
+high-priority FCM messages.</code></pre>
+<p>App Standby is tracked separately: the system assigns each app a bucket (Active → Working Set → Frequent → Rare → Restricted) from usage patterns and applies progressively tighter quotas on jobs, alarms, and expedited-job allowance. WorkManager reads through to <code>JobScheduler</code>, so it inherits both the Doze deferral and the bucket quotas without extra code.</p>
 <h3 id="retry-and-backoff">Retry and Backoff</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;When a worker returns <code>Result.retry()</code>, WorkManager reschedules it according to the backoff policy I set — exponential or linear, with a 10-second minimum. Exponential doubles each attempt and both are capped at about 5 hours. The nuance is the retry isn&#x27;t immediate or guaranteed-on-time: the reschedule still goes through the system scheduler, so constraints, Doze, and standby buckets all gate when the next attempt actually runs.&quot;</blockquote>
 <p>Returning <code>Result.retry()</code> from a <code>Worker</code> schedules a retry using the configured backoff policy:</p>
 <pre><code>OneTimeWorkRequestBuilder&lt;MyWorker&gt;()
     .setBackoffCriteria(
@@ -857,7 +1242,10 @@ alarmManager.setExactAndAllowWhileIdle(
     )
     .build()</code></pre>
 <p><code>BackoffPolicy.EXPONENTIAL</code> doubles the delay each attempt, capped at 5 hours. <code>LINEAR</code> adds a fixed increment each time.</p>
+<p><strong>Under the hood</strong></p>
+<p>Each retry increments the persisted <code>runAttemptCount</code> on the <code>WorkSpec</code>, and WorkManager computes the next delay from the backoff policy and that count — <code>EXPONENTIAL</code> roughly as <code>initialDelay * 2^(attempt-1)</code>, <code>LINEAR</code> as <code>initialDelay * attempt</code>, both clamped between the 10-second minimum and the 5-hour maximum. The recomputed <code>WorkSpec</code> is re-handed to the underlying <code>JobScheduler</code> with that minimum-latency, so the retry is still a normal scheduled job: its constraints must be satisfied and Doze or a low standby bucket can push the actual execution later than the nominal backoff delay. Because the attempt count lives in the database, the backoff schedule survives process death.</p>
 <h3 id="workmanager-vs-coroutine-decision">WorkManager vs Coroutine Decision</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;My one-line rule: if the work must survive process death or reboot, it&#x27;s WorkManager; if it can safely die with the process, a coroutine in the right scope is simpler and cheaper. A <code>viewModelScope</code> network call for the current screen is a coroutine. An upload that has to retry across network drops, or a periodic background sync, is WorkManager. The mistake to avoid is reaching for WorkManager for in-screen async work — that adds a persisted, system-scheduled job where a coroutine would do.&quot;</blockquote>
 <p>The core decision rule is: if the work must survive process death or a device reboot, use WorkManager. If it can die with the process, a coroutine in the appropriate scope is simpler.</p>
 <table border="1" cellpadding="6" cellspacing="0">
 <thead><tr>
@@ -873,7 +1261,10 @@ alarmManager.setExactAndAllowWhileIdle(
 <tr><td>Upload file, retry if network drops</td><td>No</td><td>Yes</td></tr>
 <tr><td>Sync data in background periodically</td><td>No</td><td>Yes</td></tr>
 </tbody></table>
+<p><strong>Under the hood</strong></p>
+<p>The difference is entirely about <em>where the work&#x27;s state lives</em>. A coroutine&#x27;s continuation lives only in process memory tied to a <code>CoroutineScope</code> (like <code>viewModelScope</code>), so when the process is killed the continuation and any in-flight work vanish — there is nothing on disk to resume. WorkManager writes a <code>WorkSpec</code> to its Room database and registers a <code>JobScheduler</code> job with <code>system_server</code>, so the state outlives the process and a <code>BOOT_COMPLETED</code> receiver can reschedule it after a reboot. That durability has a cost — a database write, a binder call to the scheduler, and the worker running on a managed executor rather than your scope — which is why a coroutine is the right, lighter tool whenever the work doesn&#x27;t need to survive the process.</p>
 <h3 id="debugging-background-work">Debugging Background Work</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;For debugging I lean on a few adb tools: <code>dumpsys jobscheduler</code> to see the actual jobs and why they&#x27;re pending, and <code>dumpsys deviceidle force-idle</code> plus <code>am set-standby-bucket</code> to simulate Doze and a rare bucket so I can reproduce deferral instead of waiting for it. From code I observe <code>WorkInfo</code> via the LiveData/Flow APIs to watch state transitions. The point I&#x27;d make is that background work bugs are usually about <em>when</em> the system lets it run, so reproducing Doze and buckets locally is the key skill.&quot;</blockquote>
 <p>There are four useful <code>adb</code> commands:</p>
 <pre><code># Inspect WorkManager database
 adb shell content query --uri content://androidx.work.diagnostics.WorkDiagnosticsProvider
@@ -890,6 +1281,8 @@ adb shell am set-standby-bucket &lt;package&gt; rare</code></pre>
 <pre><code>WorkManager.getInstance(context).getWorkInfosByTagLiveData(&quot;sync&quot;)
 // or observe all work:
 WorkManager.getInstance(context).getWorkInfosLiveData(WorkQuery.fromStates(WorkInfo.State.RUNNING))</code></pre>
+<p><strong>Under the hood</strong></p>
+<p>These commands all read or poke <code>system_server</code> state. <code>dumpsys jobscheduler</code> prints the <code>JobSchedulerService</code>&#x27;s live registry — every app&#x27;s jobs, their unsatisfied constraints, quota, and last-run reasons — which is the ground truth for <em>why</em> a WorkManager job hasn&#x27;t run yet. <code>dumpsys deviceidle force-idle</code> drives the <code>DeviceIdleController</code> straight into deep Doze so you can observe deferral immediately, and <code>am set-standby-bucket</code> overrides the <code>UsageStatsService</code> bucket assignment to test throttling. The <code>WorkDiagnosticsProvider</code> and the <code>WorkInfo</code> observation APIs read WorkManager&#x27;s own Room database, so they reflect the persisted <code>WorkSpec</code> state — state, attempt count, output <code>Data</code> — rather than the framework scheduler&#x27;s view.</p>
 <hr>
 <h2 id="quick-reference-interview-cheat-sheet">Quick-Reference: Interview Cheat Sheet</h2>
 <h3 id="race-condition">Race Condition</h3>

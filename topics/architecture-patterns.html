@@ -68,23 +68,35 @@
 <hr>
 <h2 id="71-mvc-mvp-mvvm-mvi">7.1 MVC, MVP, MVVM, MVI</h2>
 <h3 id="mvc--and-massive-activity">MVC — and &quot;Massive Activity&quot;</h3>
+<blockquote><strong>🎤 Say it out loud (~30s):</strong> &quot;MVC splits responsibilities into Model, View, and Controller, but on Android the framework gives you nothing to enforce that split — the Activity ends up being the Controller, the View, and a dumping ground for everything else. The gotcha interviewers want is <em>why</em> it rots: there&#x27;s no protocol forcing a clean interface, so logic flows to the path of least resistance, which is always the Activity, and you get a 2,000-line &#x27;Massive Activity&#x27;.&quot;</blockquote>
 <h4 id="definition">Definition</h4>
 <p>Model-View-Controller is the oldest of the mainstream patterns. The <strong>Model</strong> holds data and business logic, the <strong>View</strong> renders the UI, and the <strong>Controller</strong> sits in the middle — it receives user input, tells the Model to change, and tells the View to update.</p>
 <h4 id="android-reality">Android Reality</h4>
+<blockquote><strong>🎤 Say it out loud (~30s):</strong> &quot;In practice the Activity or Fragment <em>is</em> the Controller, but it also inflates layouts, owns the view hierarchy, gets lifecycle callbacks, and does I/O. Because <code>setContentView()</code> and <code>onClick()</code> live in the same class, the View and Controller collapse into one. The nuance is that a giant Activity isn&#x27;t a skill problem — it&#x27;s the predictable end state of a pattern with no architectural constraint.&quot;</blockquote>
 <p>In a naive Android MVC implementation the Activity or Fragment plays the Controller role — but it also inflates the layout, receives lifecycle callbacks, handles permissions, starts animations, and does I/O. Nothing in the framework enforces separation, so everything funnels into the Activity. This is the <strong>&quot;Massive Activity&quot;</strong> anti-pattern.</p>
 <p>A 2,000-line Activity is not a sign of bad programmers; it is a sign that MVC has no architectural constraint preventing the Controller from absorbing its neighbours&#x27; responsibilities. The View and Controller collapse into a single class because <code>setContentView()</code> and <code>onClick()</code> live in the same place.</p>
+<p><strong>Under the hood</strong></p>
+<p>There is no &quot;Controller&quot; type in the Android SDK — the role is purely conceptual. <code>Activity</code> extends <code>Context</code> and is instantiated by the framework via <code>Instrumentation.newActivity()</code> (reflection on the class name from the manifest), then driven through <code>ActivityThread</code>&#x27;s message loop: <code>performLaunchActivity</code> → <code>onCreate</code> → <code>onStart</code> → <code>onResume</code>. Because the Activity is simultaneously a <code>Context</code>, a <code>Window</code> owner (<code>PhoneWindow</code>/<code>DecorView</code>), and a <code>LifecycleOwner</code>, it has direct field access to the view tree, system services, and resources. Nothing structurally separates &quot;handle input&quot; from &quot;render UI,&quot; so the compiler happily lets one class reference both — that&#x27;s the mechanism behind the Massive Activity.</p>
+<pre><code>ActivityThread.handleLaunchActivity
+  → Instrumentation.newActivity(cl, className, intent)   // reflective instantiation
+  → activity.attach(context, ...)                        // wires in Window, Context
+  → Instrumentation.callActivityOnCreate → onCreate()    // setContentView() inflates DecorView</code></pre>
 <h4 id="problems">Problems</h4>
+<blockquote><strong>🎤 Say it out loud (~30s):</strong> &quot;The big four are: it&#x27;s untestable because the Controller is an Activity needing a live runtime; it&#x27;s tightly coupled because the Controller directly references both Model and View; it has a lifecycle mismatch since the Controller dies on rotation and forces save/restore boilerplate; and there&#x27;s no clear ownership. The throughline is that every problem stems from the Activity being the Controller.&quot;</blockquote>
 <ul>
 <li><strong>Untestable</strong>: the Controller is an Activity, which requires a live Android runtime to run.</li>
 <li><strong>Tight coupling</strong>: the Controller directly references both Model and View; swapping either requires touching the Controller.</li>
 <li><strong>Lifecycle mismatch</strong>: the Controller is torn down on configuration change, forcing state restoration boilerplate.</li>
 <li><strong>No ownership</strong>: when everyone is responsible for everything, nothing has a clear owner.</li>
 </ul>
+<p><strong>Under the hood</strong></p>
+<p>The &quot;untestable&quot; problem is concrete at the JVM level: instantiating an <code>Activity</code> with <code>new</code> gives you an object whose <code>Context</code>, resources, and <code>Window</code> are all null because the framework&#x27;s <code>attach()</code> was never called — any method touching them throws <code>NullPointerException</code>. That&#x27;s why running Activity logic off-device requires either a real device/emulator (the full <code>ActivityThread</code> pipeline) or Robolectric, which ships a shadow object graph that fakes the <code>android.jar</code> stubs (the SDK <code>android.jar</code> you compile against contains only method stubs that <code>throw new RuntimeException(&quot;Stub!&quot;)</code> at runtime). The lifecycle mismatch is real teardown: on configuration change the framework calls <code>onDestroy()</code> and creates a brand-new instance, so any state held in Controller fields is garbage-collected unless serialized into the <code>Bundle</code> passed to <code>onSaveInstanceState</code>.</p>
 <h4 id="interview-angles">Interview Angles</h4>
 <p><strong>Q: Why does MVC become messy in Android?</strong> &quot;The framework offers no separation between View and Controller. The Activity is both the entry point for user events and the owner of the UI hierarchy, and there is no protocol forcing a clean interface between them. So logic migrates to the path of least resistance — and that path is always the Activity.&quot;</p>
 <p><strong>Q: What is &quot;Massive Activity&quot;?</strong> &quot;It&#x27;s an Activity that has grown to encompass networking, business logic, UI manipulation, persistence, and lifecycle handling — everything MVC left unassigned ends up there. It&#x27;s the natural end state of unconstrained MVC on Android.&quot;</p>
 <hr>
 <h3 id="mvp--passive-view-and-presenter">MVP — Passive View and Presenter</h3>
+<blockquote><strong>🎤 Say it out loud (~30s):</strong> &quot;MVP introduces a strict View interface so the Presenter holds pure presentation logic with no Android imports — that makes it JUnit-testable with a mocked view. The catch interviewers probe is the lifecycle leak: the Presenter holds a reference to the Activity, so an async callback returning after <code>onDestroy</code> will call methods on a dead view unless you null it out or detach in <code>onDestroy</code>.&quot;</blockquote>
 <h4 id="definition-1">Definition</h4>
 <p>Model-View-Presenter fixes MVC&#x27;s biggest problem by introducing a strict contract between the View and the Presenter via an interface. The <strong>View</strong> is deliberately passive — it forwards user events to the Presenter and blindly applies whatever the Presenter tells it to display. The <strong>Presenter</strong> owns all presentation logic and has no dependency on Android framework classes, which means it&#x27;s testable with plain JUnit.</p>
 <pre><code>// The View contract — implemented by the Activity/Fragment
@@ -129,7 +141,10 @@ class LoginActivity : AppCompatActivity(), LoginView {
     override fun showError(message: String) { Toast.makeText(this, message, Toast.LENGTH_SHORT).show() }
     override fun navigateToHome() { startActivity(Intent(this, HomeActivity::class.java)) }
 }</code></pre>
+<p><strong>Under the hood</strong></p>
+<p>The View interface is what decouples the Presenter at the bytecode level. When the Presenter calls <code>view.showLoading()</code>, the compiler emits an <code>invokeinterface</code> opcode against <code>LoginView</code>, not an <code>invokevirtual</code> against <code>LoginActivity</code> — so the concrete type is resolved by dynamic dispatch at runtime through the object&#x27;s vtable/itable. That indirection is precisely why a test can supply a Mockito/MockK proxy: the mock is a dynamically generated class implementing <code>LoginView</code>, and <code>invokeinterface</code> dispatches to it identically to a real Activity. The Presenter <code>.class</code> file carries zero references to <code>android.*</code>, so it loads and runs on a plain JVM with no <code>android.jar</code> on the classpath.</p>
 <h4 id="lifecycle-leak-risk">Lifecycle Leak Risk</h4>
+<blockquote><strong>🎤 Say it out loud (~30s):</strong> &quot;The Presenter strongly references the View, which is the Activity. If a network call returns during a rotation, the Presenter calls into an Activity that&#x27;s already destroyed — best case a wasted UI update, worst case it pins the destroyed Activity in memory, a classic leak. I fix it by nulling the view in <code>detachView()</code>/<code>onDestroy()</code> and using <code>view?.method()</code> so stale callbacks become silent no-ops.&quot;</blockquote>
 <p>The Presenter holds a direct reference to the View, which is the Activity. If an async operation completes after the Activity is destroyed — say a network call returns during a configuration change — the Presenter calls methods on a dead Activity. The three common mitigations are:</p>
 <ol>
 <li><strong>Nullable view</strong>: call <code>view?.showError(...)</code>. Null the reference in <code>onDestroy</code>.</li>
@@ -153,6 +168,8 @@ class LoginActivity : AppCompatActivity(), LoginView {
         }
     }
 }</code></pre>
+<p><strong>Under the hood</strong></p>
+<p>The leak is a GC-reachability problem. A destroyed Activity should become garbage once the framework drops its references, but if the Presenter (held by, say, a retained object or a static/singleton, or captured in an in-flight callback&#x27;s closure) keeps a strong field pointing at the Activity, that Activity stays reachable from a GC root and is never collected — along with its entire <code>DecorView</code> tree and bitmaps. The lambda <code>{ result -&gt; ... }</code> passed to <code>authRepository.login</code> is compiled into a synthetic class whose fields capture <code>this</code> (the Presenter), and the Presenter&#x27;s <code>view</code> field reaches the Activity; so until the network future completes, the closure is a live retention path. <code>WeakReference</code> breaks the path by letting the collector reclaim the referent and return <code>null</code> from <code>.get()</code>; explicit <code>detachView()</code> breaks it by overwriting the strong field with <code>null</code> at a deterministic point (<code>onDestroy</code>).</p>
 <h4 id="trade-offs">Trade-offs</h4>
 <table border="1" cellpadding="6" cellspacing="0">
 <thead><tr>
@@ -170,9 +187,11 @@ class LoginActivity : AppCompatActivity(), LoginView {
 <p><strong>Q: How do you avoid leaking the Activity?</strong> &quot;I null out the view reference in <code>detachView()</code> or <code>onDestroy()</code>, and I use <code>view?.method()</code> everywhere so calls on a null reference are silent no-ops. The alternative is storing the View in a <code>WeakReference</code>, which is slightly more ergonomic but slightly more fragile — I prefer the explicit null check.&quot;</p>
 <hr>
 <h3 id="mvvm--viewmodel-stateflow-immutable-state">MVVM — ViewModel, StateFlow, Immutable State</h3>
+<blockquote><strong>🎤 Say it out loud (~30s):</strong> &quot;MVVM puts all UI state in a lifecycle-aware ViewModel that exposes it as observable streams; the View just observes and re-renders, and crucially the ViewModel holds no reference to the View. The two things interviewers always probe: it survives config changes for free because it lives in a retained <code>ViewModelStore</code>, and you must never put a <code>Context</code> or <code>View</code> in it or you leak the Activity.&quot;</blockquote>
 <h4 id="definition-2">Definition</h4>
 <p>Model-View-ViewModel separates UI state management from the UI itself. The <strong>ViewModel</strong> owns all UI state and exposes it as observable streams. The <strong>View</strong> — whether that&#x27;s an Activity, Fragment, or Composable — observes state and re-renders; it never mutates state directly. The <strong>Model</strong> is the data and domain layer underneath.</p>
 <h4 id="why-viewmodel-survives-configuration-change">Why ViewModel Survives Configuration Change</h4>
+<blockquote><strong>🎤 Say it out loud (~30s):</strong> &quot;The ViewModel isn&#x27;t owned by the Activity instance — it lives in a <code>ViewModelStore</code> that the Activity hands off across re-creation via <code>onRetainNonConfigurationInstance</code>. So on rotation the Activity is destroyed and rebuilt, but it reattaches to the <em>same</em> store and gets the same ViewModel back. The nuance is that <code>onCleared()</code> only fires on a <em>real</em> finish — back press or <code>finish()</code> — not on a config change, which is exactly the distinction <code>isChangingConfigurations()</code> captures.&quot;</blockquote>
 <p><code>ViewModel</code> is stored in a <code>ViewModelStore</code> owned by the <code>ViewModelStoreOwner</code>, which is the Activity. That <code>ViewModelStore</code> is retained across configuration changes via <code>onRetainNonConfigurationInstance()</code> — the ViewModel instance stays alive in a store that outlives the Activity instance. Only when the Activity finishes permanently — through a back press or a call to <code>finish()</code> — does the <code>ViewModelStore</code> clear and <code>onCleared()</code> fire.</p>
 <pre><code>// The ViewModel — no Context, no View references
 class LoginViewModel(
@@ -237,14 +256,22 @@ fun LoginScreen(viewModel: LoginViewModel = hiltViewModel()) {
         is LoginUiState.Error -&gt; ErrorMessage((uiState as LoginUiState.Error).message)
     }
 }</code></pre>
+<p><strong>Under the hood</strong></p>
+<p><code>ComponentActivity</code> implements <code>ViewModelStoreOwner</code>. The <code>ViewModelStore</code> is just a <code>HashMap&lt;String, ViewModel&gt;</code> keyed by a canonical key (the ViewModel class name, or a Hilt/qualified key). On a configuration change the framework calls <code>Activity.retainNonConfigurationInstances()</code>, which packages the <code>ViewModelStore</code> into a <code>NonConfigurationInstances</code> blob; <code>ActivityThread</code> holds that blob while the old Activity is destroyed and the new one is constructed, then the new <code>ComponentActivity</code> retrieves it in <code>getLastNonConfigurationInstance()</code> and reinstalls the same store — same <code>ViewModel</code> objects, same identity. <code>ViewModelProvider.get()</code> does a <code>store.get(key)</code>: a hit returns the existing instance, a miss runs the <code>Factory</code> and <code>store.put</code>s it. On a genuine finish, <code>ComponentActivity</code> observes its own <code>Lifecycle</code> hitting <code>ON_DESTROY</code> while <code>isChangingConfigurations()</code> is <code>false</code>, and calls <code>viewModelStore.clear()</code>, which loops every entry calling <code>ViewModel.clear()</code> → your <code>onCleared()</code> and cancels <code>viewModelScope</code> (a <code>CoroutineScope</code> whose <code>Job</code> is cancelled here).</p>
+<pre><code>rotate:   onDestroy(isChangingConfigurations=true)  → store survives via NonConfigurationInstances → reattached
+back/finish: onDestroy(isChangingConfigurations=false) → viewModelStore.clear() → onCleared() + viewModelScope cancel</code></pre>
 <h4 id="immutable-state--why-it-matters">Immutable State — Why It Matters</h4>
+<blockquote><strong>🎤 Say it out loud (~30s):</strong> &quot;Exposing read-only <code>StateFlow</code> means the View physically cannot corrupt state — all writes funnel through one mutation point in the ViewModel. The payoff beyond safety is debuggability and Compose correctness: because each state is an immutable value, Compose can do structural equality to decide what to recompose, and every state transition is a self-contained snapshot I can log.&quot;</blockquote>
 <ul>
 <li>The View cannot accidentally corrupt ViewModel state because the exposed <code>StateFlow</code> is read-only.</li>
 <li>Every state transition happens in the ViewModel under controlled conditions — inside a coroutine, at a single mutation point.</li>
 <li>Compose can compare previous and new state to decide what to recompose, but that only works with value equality, which immutable data classes provide.</li>
 <li>You can log every state transition, and each log entry is a complete, self-contained picture of the UI at that moment — which makes debugging dramatically easier.</li>
 </ul>
+<p><strong>Under the hood</strong></p>
+<p><code>MutableStateFlow</code> deduplicates by comparing the incoming value to the current one with <code>equals()</code> before emitting — so for a <code>data class</code>, the auto-generated structural <code>equals()</code>/<code>hashCode()</code> (the compiler emits these from the constructor <code>val</code>s) means setting the same logical value is a no-op and won&#x27;t wake collectors. <code>asStateFlow()</code> returns a <code>ReadonlyStateFlow</code> wrapper that exposes only the read API, so the View has no <code>.value</code> setter at compile time. On the Compose side, recomposition skipping depends on parameters being <code>@Stable</code>/<code>@Immutable</code>: the Compose compiler plugin tags a class as stable when all its public properties are stable and immutable, then generates code that compares old vs new arguments with <code>equals()</code> and skips the recomposition if they&#x27;re equal. A <code>var</code> field or a raw <code>List</code> (vs <code>ImmutableList</code>) is inferred <em>unstable</em>, defeating that comparison and forcing recomposition every time.</p>
 <h4 id="what-should-not-be-in-a-viewmodel">What Should NOT Be in a ViewModel</h4>
+<blockquote><strong>🎤 Say it out loud (~30s):</strong> &quot;Nothing that carries a <code>Context</code> or touches the view tree — no Activity, Fragment, View, Binding, or NavController. The reason is concrete: the ViewModel outlives the Activity across rotation, so holding any of those pins a destroyed Activity in memory. The ViewModel should be pure Kotlin — repositories, use cases, and <code>viewModelScope</code> coroutines.&quot;</blockquote>
 <ul>
 <li><code>Context</code> (unless <code>AndroidViewModel</code> is justified — prefer passing primitives or injecting abstractions).</li>
 <li>References to <code>Activity</code>, <code>Fragment</code>, <code>View</code>, or <code>Binding</code>.</li>
@@ -252,7 +279,10 @@ fun LoginScreen(viewModel: LoginViewModel = hiltViewModel()) {
 <li>Heavy I/O done without a coroutine scope (use <code>viewModelScope</code>).</li>
 <li>Business logic that belongs in a Use Case / Interactor.</li>
 </ul>
+<p><strong>Under the hood</strong></p>
+<p>This is the inverse of the survival mechanism: because the same ViewModel object spans multiple Activity instances, a strong field referencing Activity #1 keeps it GC-reachable after rotation creates Activity #2 — you now have two <code>DecorView</code> trees alive, and LeakCanary will flag the retained instance. <code>AndroidViewModel</code> is the sanctioned exception because it stores the <code>Application</code> context, which is a process-lifetime singleton (<code>ContextImpl</code> for the app), so retaining it leaks nothing. <code>viewModelScope</code> is an extension property backed by a <code>CloseableCoroutineScope</code> stored in the ViewModel&#x27;s tag map with a <code>SupervisorJob() + Dispatchers.Main.immediate</code>; <code>ViewModel.clear()</code> invokes its <code>close()</code>, cancelling the <code>Job</code> so in-flight coroutines stop rather than continuing to touch released state.</p>
 <h4 id="stateflow-vs-livedata">StateFlow vs LiveData</h4>
+<blockquote><strong>🎤 Say it out loud (~30s):</strong> &quot;Both survive config changes inside a ViewModel and both conflate. <code>LiveData</code> is lifecycle-aware out of the box and tolerates nulls — a Java-era API; <code>StateFlow</code> is Kotlin-idiomatic, requires a non-null initial value, but isn&#x27;t lifecycle-aware on its own, so I collect it with <code>collectAsStateWithLifecycle</code> or <code>repeatOnLifecycle</code> to avoid wasting work while the UI is in the background. For new Kotlin/Compose code I default to <code>StateFlow</code>.&quot;</blockquote>
 <table border="1" cellpadding="6" cellspacing="0">
 <thead><tr>
 <th></th>
@@ -266,8 +296,13 @@ fun LoginScreen(viewModel: LoginViewModel = hiltViewModel()) {
 <tr><td>Lifecycle awareness</td><td>Manual (<code>collectAsStateWithLifecycle</code>)</td><td>Built-in</td></tr>
 <tr><td>Testability</td><td><code>kotlinx.coroutines.test</code> turbine</td><td><code>InstantTaskExecutorRule</code></td></tr>
 </tbody></table>
+<p><strong>Under the hood</strong></p>
+<p><code>LiveData</code> is lifecycle-aware because <code>observe(owner, observer)</code> registers a <code>LifecycleBoundObserver</code> that subscribes to the owner&#x27;s <code>Lifecycle</code>; it only dispatches when the owner is at least <code>STARTED</code> and auto-removes the observer at <code>ON_DESTROY</code>, and it tracks a per-observer version counter so a re-<code>STARTED</code> observer gets the latest value exactly once. <code>StateFlow</code> has none of that — it&#x27;s a plain hot flow that always has a value and emits on the collecting coroutine&#x27;s dispatcher; &quot;lifecycle awareness&quot; comes from <code>collectAsStateWithLifecycle</code>/<code>repeatOnLifecycle(STARTED)</code>, which <em>cancels and restarts</em> the collecting coroutine on stop/start so collection genuinely pauses. Conflation differs too: <code>StateFlow</code> conflates by definition (a slow collector skips intermediate values and only sees the latest), and it uses <code>equals()</code> to drop duplicate emissions, whereas <code>LiveData</code> posts via <code>postValue</code> which conflates by overwriting a pending value on the main-thread handler.</p>
 <h4 id="stateflow-vs-sharedflow-for-events">StateFlow vs SharedFlow for Events</h4>
+<blockquote><strong>🎤 Say it out loud (~30s):</strong> &quot;I model one-time events — navigation, toasts — as <code>SharedFlow</code> with <code>replay = 0</code>, never <code>StateFlow</code>. <code>StateFlow</code> always replays its latest value to any new collector, so after a rotation a new collector would re-fire &#x27;NavigateToHome&#x27; and bounce the user. <code>SharedFlow</code> with no replay fires once; the equally valid alternative is a <code>Channel</code> consumed as a flow, which gives single-delivery semantics.&quot;</blockquote>
 <p>Use <code>SharedFlow</code> — not <code>StateFlow</code> — for one-time events like navigation or toasts. The reason is that <code>StateFlow</code> replays its last value to every new collector, so a new collector after a config change would re-trigger a &quot;NavigateToHome&quot; event and send the user to the wrong screen. <code>SharedFlow</code> with <code>replay = 0</code> fires once and that&#x27;s it. The alternative is a <code>Channel&lt;Event&gt;</code> consumed as a <code>Flow</code>, which also gives you single-delivery semantics.</p>
+<p><strong>Under the hood</strong></p>
+<p><code>StateFlow</code> is conceptually a <code>SharedFlow</code> with <code>replay = 1</code> plus conflation and an always-present value — that mandatory replay buffer of 1 is exactly what re-emits the last event to a fresh collector. A plain <code>SharedFlow(replay = 0)</code> keeps no replay cache, so a value emitted while nobody is collecting is simply dropped, and a collector that subscribes later sees only values emitted <em>after</em> it subscribed — fan-out, not replay. The subtle gotcha: <code>MutableSharedFlow.emit()</code> <em>suspends</em> if there are no subscribers and no buffer (the event would otherwise be lost), so events are commonly given <code>extraBufferCapacity = 1</code> (with <code>tryEmit</code>) to make emission non-suspending. A <code>Channel</code> differs semantically: it&#x27;s a <em>fan-out queue with at-most-one receiver per element</em> (not broadcast), backed by a buffer with a configurable <code>onBufferOverflow</code>, which is why it naturally yields exactly-once delivery to a single consumer.</p>
 <h4 id="interview-angles-2">Interview Angles</h4>
 <p><strong>Q: Why ViewModel?</strong> &quot;Config-change survival without any manual save/restore plumbing. The ViewModel lives across Activity re-creation, so UI state — the search query, the scroll position, the in-flight network request — persists automatically. You don&#x27;t have to serialize anything into a <code>Bundle</code> and restore it in <code>onCreate</code>.&quot;</p>
 <p><strong>Q: What should not be inside ViewModel?</strong> &quot;Anything that carries a <code>Context</code> or a <code>View</code> — Activity, Fragment, View, Binding, NavController. Holding those creates a memory leak because the ViewModel outlives the Activity instance. The ViewModel should be pure Kotlin: repositories, use cases, and coroutines only.&quot;</p>
@@ -276,6 +311,7 @@ fun LoginScreen(viewModel: LoginViewModel = hiltViewModel()) {
 <p><strong>Q: How do you expose UI state?</strong> &quot;I use a single immutable <code>data class</code> or <code>sealed interface</code> representing the complete screen state, exposed as a <code>StateFlow&lt;UiState&gt;</code>. One-time events — navigation, toasts — go into a separate <code>SharedFlow&lt;Event&gt;</code>. The key thing I avoid is multiple independent <code>StateFlow</code> or <code>LiveData</code> fields that can produce contradictory combinations. If <code>isLoading</code> and <code>error</code> are separate fields, there&#x27;s nothing stopping a bug from setting both to true at once, which is a state the UI never has a consistent answer for.&quot;</p>
 <hr>
 <h3 id="mvi--udf--intent-reducer-state-side-effects">MVI / UDF — Intent, Reducer, State, Side Effects</h3>
+<blockquote><strong>🎤 Say it out loud (~30s):</strong> &quot;MVI enforces strict unidirectional data flow: View emits Intents, a reducer maps the current State plus an Intent to a new State, and the View renders that single source of truth. Because every change passes through one pure reducer, state is predictable and time-travel debuggable. The gotcha is side effects — navigation, toasts — can&#x27;t live in State because State replays, so they go through a separate one-shot effect stream.&quot;</blockquote>
 <h4 id="definition-3">Definition</h4>
 <p>Model-View-Intent and Unidirectional Data Flow are closely related ideas. The key principle is that data always flows in one direction: <strong>View → Intent/Action → Reducer → State → View</strong>. There is exactly one source of truth — the current State — and the only way to change it is to pass an Intent through the Reducer. That constraint is what makes the system predictable.</p>
 <pre><code>User gesture
@@ -291,6 +327,8 @@ fun LoginScreen(viewModel: LoginViewModel = hiltViewModel()) {
     │
     ▼
    View         (renders the State; generates new Intents)</code></pre>
+<p><strong>Under the hood</strong></p>
+<p>UDF maps cleanly onto <code>StateFlow</code> mechanics: the &quot;single source of truth&quot; is one <code>MutableStateFlow&lt;State&gt;</code> whose <code>.value</code> is replaced atomically. <code>MutableStateFlow.update { }</code> runs your reducer lambda inside a compare-and-set loop — it reads the current value, computes the new state via your pure function, and <code>compareAndSet</code>s it; if another thread changed the value in between, the CAS fails and the lambda re-runs, which is what makes concurrent dispatches safe without locks. Because the reducer returns a <em>new</em> immutable instance (via <code>copy()</code>), <code>StateFlow</code> then runs <code>equals()</code> against the old value and notifies collectors only on a real change. The &quot;one direction&quot; is enforced socially/structurally (the View only has the read-only flow + a <code>dispatch()</code> entry point), not by the runtime — there&#x27;s no opcode preventing a sloppy View from mutating, only the read-only <code>StateFlow</code> type.</p>
 <h4 id="kotlin-example-mvi-with-viewmodel">Kotlin Example: MVI with ViewModel</h4>
 <pre><code>// 1. Intents — everything the user can do
 sealed interface LoginIntent {
@@ -354,7 +392,10 @@ class LoginViewModel(
         _state.update { it.block() }
     }
 }</code></pre>
+<p><strong>Under the hood</strong></p>
+<p><code>dispatch()</code> compiles into a <code>tableswitch</code>/<code>when</code> over the sealed hierarchy; the Kotlin compiler knows the <code>sealed interface</code> subtypes at compile time, so an exhaustive <code>when</code> needs no <code>else</code> branch and emits an efficient type-dispatch. The <code>reduce { copy(...) }</code> call is where immutability is cheap: <code>data class</code> <code>copy()</code> generates a constructor call that shares references to unchanged fields and only swaps the named ones, so a &quot;new state&quot; is a shallow object whose unchanged <code>List</code>/<code>String</code> fields are the <em>same</em> references — no deep clone, so allocation cost is one small object per transition. <code>_state.update {}</code> wraps the reducer in the CAS loop described above, guaranteeing the read-modify-write is atomic even if <code>login()</code>&#x27;s coroutine and a <code>DismissError</code> dispatch interleave on different dispatchers.</p>
 <h4 id="what-is-a-reducer">What Is a Reducer?</h4>
+<blockquote><strong>🎤 Say it out loud (~30s):</strong> &quot;A reducer is a pure function — current State plus an Intent in, new State out, with no I/O, no mutation, no side effects. That purity is the whole point: it makes every transition deterministic and trivially unit-testable, because you just call <code>reduce(state, intent)</code> and assert on the return value with no coroutines or mocks. The async work stays <em>outside</em> the reducer — the reducer only ever computes the next state.&quot;</blockquote>
 <p>A reducer is a <strong>pure function</strong> — <code>(CurrentState, Intent) → NewState</code>. It takes the current state and an intent describing what happened, and returns the new state without mutating the old one, without side effects, and without any I/O. That purity is what makes every state transition predictable and trivially testable.</p>
 <pre><code>// Pure reducer (no side effects — async is handled outside)
 fun reduce(state: LoginState, intent: LoginIntent): LoginState = when (intent) {
@@ -362,12 +403,23 @@ fun reduce(state: LoginState, intent: LoginIntent): LoginState = when (intent) {
     is LoginIntent.LoginClicked -&gt; state.copy(isLoading = true, error = null)
     // ... etc
 }</code></pre>
+<p><strong>Under the hood</strong></p>
+<p>&quot;Pure&quot; has a precise bytecode consequence: the function reads only its two parameters and allocates one return value — it touches no fields outside its arguments, performs no <code>invoke</code> on I/O APIs, and has no observable effect besides the returned object. That referential transparency is why a test JVM can call it a million times with no setup: there&#x27;s no dispatcher, no <code>Context</code>, no mock graph, just stack frames in and an object out. It also means the function is thread-safe by construction (no shared mutable state), which is what lets the <code>update {}</code> CAS loop re-invoke it safely on retry. The deliberate separation — async happens in the coroutine, the reducer only computes — keeps the suspending machinery (the compiler-generated state machine and <code>Continuation</code>) out of the unit under test.</p>
 <h4 id="side-effects">Side Effects</h4>
+<blockquote><strong>🎤 Say it out loud (~30s):</strong> &quot;A side effect is anything that escapes the State→View loop — navigation, a toast, an analytics event, a file write. I can&#x27;t encode those as State because State is re-emitted to every new collector, so a rotation would replay it and re-navigate. I model them as a separate <code>SharedFlow</code> with <code>replay = 0</code> that fires once and is consumed once.&quot;</blockquote>
 <p>A side effect is anything that escapes the State → View cycle — navigation, showing a toast, triggering analytics, writing to a file. Side effects cannot be represented as State because State is re-emitted to every new collector, which means a config change would re-trigger navigation and send the user somewhere they didn&#x27;t ask to go. The right approach is to model them separately as a <code>SharedFlow&lt;SideEffect&gt;</code> that fires once and is consumed once.</p>
+<p><strong>Under the hood</strong></p>
+<p>The replay distinction is structural, as covered above: <code>StateFlow</code> carries a mandatory <code>replay = 1</code> buffer, so a fresh collector after a configuration change immediately receives the latest value — fatal for an effect like <code>NavigateToHome</code>. A <code>SharedFlow(replay = 0)</code> holds no replay cache, so a <code>NavigateToHome</code> emitted to an active collector is delivered to that collector and then forgotten; a collector that re-subscribes after rotation sees nothing. On the consumer side, collecting effects inside <code>LaunchedEffect(Unit)</code> ties the collecting coroutine to the composition&#x27;s lifecycle — it&#x27;s launched once when the node enters composition and cancelled when it leaves — so each emitted effect is handled exactly once rather than re-run on every recomposition.</p>
 <h4 id="predictable-state-and-easier-debugging">Predictable State and Easier Debugging</h4>
+<blockquote><strong>🎤 Say it out loud (~30s):</strong> &quot;Because every change funnels through one <code>reduce()</code>, I get three things cheaply: a full audit trail by logging each <code>(intent, before, after)</code> triple; deterministic tests that feed a sequence of intents and assert the sequence of states; and time-travel debugging, since replaying the recorded intents against the initial state reproduces any bug exactly. That determinism is the real reason teams pay MVI&#x27;s boilerplate tax.&quot;</blockquote>
 <p>Because every state change passes through a single <code>reduce()</code>, three things become straightforward that are hard in other patterns. First, you can log every <code>(intent, state_before, state_after)</code> triple and have a complete audit trail of how the UI got to where it is. Second, you can write a test that feeds a sequence of intents and asserts the sequence of states — it&#x27;s fully deterministic because the reducer is a pure function. And third, you can time-travel debug: record every intent that fired, replay them against the initial state, and reproduce any bug exactly.</p>
+<p><strong>Under the hood</strong></p>
+<p>Time-travel replay is sound only because the reducer is pure and the state is immutable: replaying intent list <code>[i0, i1, …, in]</code> from a captured <code>initialState</code> is a left-fold — <code>intents.fold(initialState) { acc, i -&gt; reduce(acc, i) }</code> — and a pure fold over the same inputs is guaranteed to produce the same outputs, because nothing in the reducer reads wall-clock time, random values, or external mutable state. Immutability is what makes the recorded <code>state_before</code> snapshots trustworthy: since <code>copy()</code> never mutates the prior instance, every logged state is a frozen value that can&#x27;t be retroactively changed by a later transition. The only thing that <em>can&#x27;t</em> be replayed deterministically is the side-effect channel (network results, timestamps) — which is precisely why MVI quarantines those outside the reducer.</p>
 <h4 id="mvi-boilerplate-warning">MVI Boilerplate Warning</h4>
+<blockquote><strong>🎤 Say it out loud (~30s):</strong> &quot;MVI&#x27;s cost is real ceremony — every action is a sealed type, every change is a <code>copy()</code>, every effect is another sealed type. For a one-toggle screen that&#x27;s pure overhead, so I don&#x27;t reach for it by default. I reserve it for screens with many interdependent state fields or where state consistency is critical enough to justify the structure.&quot;</blockquote>
 <p>MVI adds real ceremony: every user action becomes a sealed class, every state change is a <code>copy()</code>, every side effect is another sealed class. For a simple screen — one toggle, one button — that&#x27;s overkill. Reserve MVI for screens with many concurrent state transitions, or where state consistency is critical enough to justify the extra structure.</p>
+<p><strong>Under the hood</strong></p>
+<p>The ceremony has a measurable footprint. Each <code>sealed interface</code> subtype is its own <code>.class</code> file; a <code>data object</code> compiles to a singleton (a <code>INSTANCE</code> static field with private constructor), while a <code>data class</code> Intent generates a constructor plus synthetic <code>equals</code>/<code>hashCode</code>/<code>toString</code>/<code>componentN</code>/<code>copy</code> methods — so a screen with 15 intents and 8 effects is ~23 extra classes and their generated methods, which counts against the 64K-method DEX limit on large apps (mitigated by R8/multidex). The <code>copy()</code> per transition allocates a short-lived object that dies young, so it lands in the generational GC&#x27;s young space and is collected cheaply, but on a high-frequency stream (e.g., per-frame scroll state) that allocation churn is the thing to watch. None of this matters for a toggle — which is the point of the warning: the structure pays off only when the state space is genuinely complex.</p>
 <h4 id="interview-angles-3">Interview Angles</h4>
 <p><strong>Q: MVVM vs MVI — when do you choose MVI?</strong> &quot;MVVM is sufficient for most screens. I&#x27;d reach for MVI in three situations. First, when the screen has many interdependent state fields that can become inconsistent if updated independently — a form with cross-field validation or a multi-step wizard is a good example. Second, when I need strict auditability of state transitions, like in a finance or health context. And third, when I want time-travel debugging. MVI&#x27;s cost is boilerplate; its payoff is predictability at scale.&quot;</p>
 <p><strong>Q: How would you model loading/success/error?</strong> &quot;There are two clean approaches. The first is a sealed interface for the resource state:&quot;</p>
@@ -407,6 +459,7 @@ fun reduce(state: LoginState, intent: LoginIntent): LoginState = when (intent) {
 <hr>
 <h2 id="72-clean-architecture">7.2 Clean Architecture</h2>
 <h3 id="separation-of-concerns-and-the-dependency-rule">Separation of Concerns and the Dependency Rule</h3>
+<blockquote><strong>🎤 Say it out loud (~30s):</strong> &quot;Separation of concerns means each layer knows only what it must — the UI never touches the database directly. The Dependency Rule says source-code dependencies point inward only: outer layers depend on inner ones, never the reverse. The mechanism interviewers want is dependency inversion — the Domain <em>defines</em> the repository interface and the Data layer <em>implements</em> it, so the high-level policy never depends on the network or DB details.&quot;</blockquote>
 <p><strong>Separation of concerns</strong> means each layer knows only what it needs to know. The UI does not reach into the database. The database does not know ViewModels exist.</p>
 <p><strong>The Dependency Rule</strong> (Robert C. Martin): source code dependencies must point <strong>inward only</strong>. Inner circles know nothing about outer circles. Outer circles depend on inner circles — never the reverse.</p>
 <pre><code>      ┌─────────────────────────────────┐
@@ -424,9 +477,15 @@ fun reduce(state: LoginState, intent: LoginIntent): LoginState = when (intent) {
       │ (Repository impl, API, Room DB) │
       └─────────────────────────────────┘</code></pre>
 <p>The Data layer implements interfaces defined in the Domain layer — that&#x27;s dependency inversion in action. High-level policy, the Domain, does not depend on low-level detail like the network or the database; both the Domain and the Data layer depend on the abstractions that sit between them.</p>
+<p><strong>Under the hood</strong></p>
+<p>The Dependency Rule is enforceable at the <em>module</em> level, not just by convention. If Domain, Data, and Presentation are separate Gradle modules and Domain declares no dependency on Data in its <code>build.gradle</code>, then the compiler literally cannot resolve a Data type from Domain code — the symbol isn&#x27;t on the compilation classpath, so it&#x27;s a compile error, not a code-review nit. At runtime, dependency inversion works through the same <code>invokeinterface</code> dispatch as MVP: the Domain&#x27;s <code>UseCase</code> holds a field typed as the <code>Repository</code> <em>interface</em> it owns, and DI (Hilt/Dagger) binds the concrete <code>RepositoryImpl</code> from the Data module at the composition root. So the call <code>repository.getUser()</code> emits an <code>invokeinterface</code> against the Domain-owned abstraction and dispatches at runtime to the Data-layer implementation — the compiled Domain <code>.class</code> files contain zero references to Room, Retrofit, or any Data class, which is the literal meaning of &quot;dependencies point inward.&quot;</p>
+<pre><code>compile graph:   Presentation ──▶ Domain ◀── Data        (Domain has no outgoing edges)
+runtime binding:  UseCase → Repository(interface)  ⟵bound by DI⟶  RepositoryImpl(Room/Retrofit)</code></pre>
 <hr>
 <h3 id="layers-presentation-domain-data">Layers: Presentation, Domain, Data</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;I think of the app as three layers: presentation renders UI and holds lifecycle-safe state, domain holds framework-free business rules, and data implements the I/O. The key discipline is the dependency direction — presentation depends on domain, data depends on domain, but domain depends on nothing Android. The nuance an interviewer probes is that the domain layer is optional; Google&#x27;s own guidance says so, and I only add it when business logic is complex or reused, otherwise the ViewModel can talk to the repository directly.&quot;</blockquote>
 <h4 id="presentation-layer">Presentation Layer</h4>
+<blockquote><strong>🎤 Say it out loud (~30s):</strong> &quot;The presentation layer is just UI plus state — a ViewModel orchestrates use cases and maps domain models into UI models, and Composables or Fragments render that state and dispatch events. The gotcha I call out is that UI models are deliberately <em>not</em> domain entities: I pre-format strings and shape data for display so the UI stays dumb and survives configuration changes through the ViewModel.&quot;</blockquote>
 <p>Responsibility: render UI, handle user events, and manage lifecycle-safe state.</p>
 <ul>
 <li><code>ViewModel</code> — orchestrates use case calls, maps domain models to UI models.</li>
@@ -434,7 +493,15 @@ fun reduce(state: LoginState, intent: LoginIntent): LoginState = when (intent) {
 <li>UI models — different from domain entities; optimised for display, with things like pre-formatted strings already in place.</li>
 <li>Navigation logic.</li>
 </ul>
+<p><strong>Under the hood</strong></p>
+<p>A <code>ViewModel</code> survives configuration changes because <code>ViewModelStore</code> outlives the Activity instance. When an Activity is recreated, the framework retains the <code>ViewModelStore</code> via <code>NonConfigurationInstances</code> (returned from <code>onRetainNonConfigurationInstance()</code> / the <code>ComponentActivity</code> retained-instance machinery), so the <em>same</em> ViewModel object is handed to the new Activity. <code>ViewModelProvider</code> keys instances by class name in a <code>HashMap</code> inside the store; <code>onCleared()</code> only fires when the store itself is cleared (real finish, not rotation).</p>
+<pre><code>Activity (instance #1)  --rotation--&gt;  Activity (instance #2)
+        |                                       |
+        +----&gt; ViewModelStore (retained) &lt;------+
+                     |
+                     HashMap&lt;String key, ViewModel&gt;  // survives, onCleared() not called</code></pre>
 <h4 id="domain-layer">Domain Layer</h4>
+<blockquote><strong>🎤 Say it out loud (~30s):</strong> &quot;The domain layer is pure Kotlin — entities, use cases, and repository <em>interfaces</em> — with zero Android imports. The important inversion is that the contract lives here and the data layer implements it, so the domain dictates terms instead of depending on Retrofit or Room. The thing interviewers like to hear is <em>why</em> it&#x27;s pure: it makes business rules unit-testable on the JVM with no instrumentation, and it lets you swap the whole data stack without touching a single business rule.&quot;</blockquote>
 <p>Responsibility: encapsulate business rules independently of any framework or infrastructure detail.</p>
 <ul>
 <li><strong>Entities</strong> — core business models such as <code>Doctor</code> or <code>Appointment</code>. No Android imports — pure Kotlin.</li>
@@ -465,7 +532,13 @@ class GetDoctorsBySpecialtyUseCase(
             .map { doctors -&gt; doctors.sortedByDescending { it.rating } }
     }
 }</code></pre>
+<p><strong>Under the hood</strong></p>
+<p>&quot;Pure Kotlin, no Android imports&quot; is enforceable at the build-graph level, not just by convention. If the domain lives in a separate Gradle module that applies <code>kotlin(&quot;jvm&quot;)</code> (a plain JVM library) instead of <code>com.android.library</code>, then <code>android.*</code> classes aren&#x27;t even on its compile classpath — referencing <code>Context</code> or <code>Bundle</code> won&#x27;t compile. The <code>suspend</code> keyword on the interface methods compiles each function to take an extra hidden <code>Continuation</code> parameter (CPS transform) and return <code>Any?</code>, so the contract is async-ready without any RxJava/coroutine type leaking into the signature shape.</p>
+<pre><code>:domain  -&gt; apply kotlin(&quot;jvm&quot;)        // android.jar NOT on classpath
+:data    -&gt; apply com.android.library  // depends on :domain, has Retrofit/Room
+:app     -&gt; depends on :domain + :data // DI wires impl to interface</code></pre>
 <h4 id="data-layer">Data Layer</h4>
+<blockquote><strong>🎤 Say it out loud (~30s):</strong> &quot;The data layer implements the repository interfaces and owns every I/O concern — Retrofit, Room, DataStore — plus the DTOs and DB entities that are shaped for the wire and the schema. Its job is to coordinate sources and map them to domain models. The detail I always mention is that this is where caching and fallback policy lives: the repository decides network-first versus cache-first and hides that from everyone above it.&quot;</blockquote>
 <p>Responsibility: implement the repository contracts and manage all I/O concerns — networking, database, file system.</p>
 <ul>
 <li><strong>Repository implementations</strong> — implement the domain&#x27;s interfaces.</li>
@@ -496,14 +569,22 @@ class DoctorRepositoryImpl(
         }
     }
 }</code></pre>
+<p><strong>Under the hood</strong></p>
+<p>Retrofit doesn&#x27;t write the network code you&#x27;d expect — at runtime it builds a <code>java.lang.reflect.Proxy</code> (or invokes a generated <code>ServiceMethod</code>) for the interface, parses each method&#x27;s annotations and <code>@SerializedName</code> once, and caches the resulting <code>ServiceMethod</code> in a <code>ConcurrentHashMap</code>. Room&#x27;s <code>@Dao</code> is the opposite: its <code>kapt</code>/KSP annotation processor <em>generates</em> a concrete <code>XxxDao_Impl</code> at compile time that builds <code>SupportSQLiteStatement</code>s and binds parameters, so the SQL is validated against the schema during the build, not at runtime. The DTO-vs-entity split exists precisely because these two layers have different shape constraints — the JSON parser keys off serialization annotations and the SQLite codegen keys off <code>@ColumnInfo</code> — and the mapper is what keeps both sets of annotations out of the domain model.</p>
 <hr>
 <h3 id="use-cases--interactors">Use Cases / Interactors</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;A use case is one business operation — one class with a single public entry point, idiomatically <code>operator fun invoke</code>, so the call site reads like calling a function. I reach for them to keep ViewModels thin, to reuse a single operation across screens, and to get pure-JVM testability. The honest nuance is they&#x27;re a tool, not a mandate: a use case that just delegates straight to the repository is pure indirection, so I skip it for trivial passthroughs.&quot;</blockquote>
 <p>A use case is a <strong>single business operation</strong> — one class, one public method, conventionally <code>operator fun invoke()</code>. That&#x27;s not a hard rule from Clean Architecture; it&#x27;s an idiomatic Kotlin convention that makes use cases feel like callable functions, which keeps the call sites clean.</p>
 <h4 id="why-use-cases">Why Use Cases?</h4>
+<blockquote><strong>🎤 Say it out loud (~30s):</strong> &quot;There are four payoffs: they stop fat ViewModels from absorbing business logic, they let me reuse the same operation from a search and a profile ViewModel, they&#x27;re trivially testable with a mock repository and no Android runtime, and they enforce single responsibility — one operation per class. The one I&#x27;d flag is reusability is the strongest argument; if a piece of logic is only ever used in one place, the testability win alone may not justify the class.&quot;</blockquote>
 <p>There are four reasons to introduce use cases. First, they prevent fat ViewModels — without them, ViewModels orchestrate business logic directly, they grow, and they become hard to test and impossible to reuse. Second, reusability: <code>GetDoctorsBySpecialtyUseCase</code> can be called from a search screen ViewModel and a profile screen ViewModel without duplicating the logic in both. Third, testability: a use case takes plain Kotlin inputs, returns plain Kotlin outputs, and can be tested with a mock repository — no Android runtime needed. And fourth, single responsibility: one use case equals one business operation, which makes it easy to reason about and easy to change in isolation.</p>
+<p><strong>Under the hood</strong></p>
+<p><code>operator fun invoke</code> isn&#x27;t magic — the Kotlin compiler maps the expression <code>useCase(&quot;cardiology&quot;)</code> to a normal method call <code>useCase.invoke(&quot;cardiology&quot;)</code>, where <code>invoke</code> is just a method with a special name the resolver recognizes. Because it&#x27;s <code>suspend</code>, the compiler applies the CPS transform: <code>invoke</code> actually compiles to take a hidden <code>Continuation</code> and returns <code>Any?</code>, and the function body becomes a state machine class (an <code>invokeSuspend</code> with a <code>label</code> int) so each suspension point can resume without blocking a thread. That&#x27;s why a &quot;thin&quot; use case wrapping one repository call still allocates that state-machine object on each invocation — a real (if tiny) cost behind the &quot;pure delegation is free&quot; assumption.</p>
 <h4 id="when-are-use-cases-not-worth-it">When Are Use Cases Not Worth It?</h4>
+<blockquote><strong>🎤 Say it out loud (~30s):</strong> &quot;For a plain CRUD read with no rules — like fetching a static settings list — a use case is just a passthrough that adds a layer without earning it, so I let the ViewModel call the repository directly. Worth knowing on this team: we call them &#x27;Interactors,&#x27; which is just our synonym for use case — same concept, different label.&quot;</blockquote>
 <p>For a simple CRUD operation with no business logic — say, &quot;get a list of settings items,&quot; which is just a passthrough to the repository — the use case adds a layer of indirection without pulling its weight. The Zocdoc Android codebase uses &quot;Interactor&quot; as a synonym for use case; both terms describe the same concept.</p>
 <h4 id="testing-a-use-case">Testing a Use Case</h4>
+<blockquote><strong>🎤 Say it out loud (~30s):</strong> &quot;I test a use case as pure Kotlin: mock the repository with MockK, run inside <code>runTest</code>, and assert on the transformed output — here, that doctors come back sorted by rating. The detail I&#x27;d add is <code>runTest</code> gives me a virtual clock and a test dispatcher, so any delays inside the suspend function are skipped and the test is deterministic, not wall-clock-bound.&quot;</blockquote>
 <pre><code>class GetDoctorsBySpecialtyUseCaseTest {
     private val repository: DoctorRepository = mockk()
     private val useCase = GetDoctorsBySpecialtyUseCase(repository)
@@ -528,8 +609,11 @@ class DoctorRepositoryImpl(
         assertFailsWith&lt;IllegalArgumentException&gt; { useCase(&quot;&quot;) }
     }
 }</code></pre>
+<p><strong>Under the hood</strong></p>
+<p><code>runTest</code> installs a <code>TestCoroutineScheduler</code> backed by a <code>StandardTestDispatcher</code> and runs the body on a virtual clock: calls to <code>delay()</code> don&#x27;t sleep, they enqueue a resumption at a virtual time and the scheduler fast-forwards, so a &quot;1 second&quot; delay completes instantly. MockK&#x27;s <code>coEvery { ... }</code> works by generating a proxy/subclass of the interface (via its bytecode-generation backend) whose <code>getDoctors</code> records the stubbed answer; <code>coEvery</code> differs from <code>every</code> only in that it runs the matcher block inside a coroutine so it can match <code>suspend</code> calls. <code>runTest</code> also fails the test if any child coroutine is still unfinished when the body returns, which is what catches leaked or never-completing coroutines.</p>
 <hr>
 <h3 id="mappers">Mappers</h3>
+<blockquote><strong>🎤 Say it out loud (~30s):</strong> &quot;Mappers translate between each layer&#x27;s representation — DTO to domain, domain to DB entity, and back. The payoff is that my domain model stays clean of <code>@SerializedName</code> and <code>@ColumnInfo</code>, the translation is unit-testable on its own, and API field names like <code>providerId</code> never leak upward. The trade-off I acknowledge is the boilerplate, which is why I keep mappers as plain functions and reserve them for real shape mismatches, not identical 1:1 copies.&quot;</blockquote>
 <p>Mappers translate between the data representations of each layer. Having explicit mapper classes does three things: it keeps domain models free of serialization annotations like <code>@SerializedName</code> or <code>@ColumnInfo</code>; it makes the mapping logic testable in isolation; and it prevents API field names from leaking into the domain.</p>
 <pre><code>class DoctorMapper {
     fun toDomain(dto: DoctorDto): Doctor = Doctor(
@@ -554,9 +638,18 @@ class DoctorRepositoryImpl(
         rating = entity.rating
     )
 }</code></pre>
+<p><strong>Under the hood</strong></p>
+<p>The two <code>toDomain</code> overloads compile to distinct JVM methods — the bytecode signatures differ by parameter type (<code>toDomain(DoctorDto)</code> vs <code>toDomain(DoctorEntity)</code>), and Kotlin resolves the call statically at compile time, so there&#x27;s no runtime dispatch cost to the overloading. The string-template <code>&quot;${dto.firstName} ${dto.lastName}&quot;</code> doesn&#x27;t do repeated <code>+</code> concatenation; the compiler lowers it to a <code>StringBuilder.append(...)</code> chain (or an <code>invokedynamic</code> <code>makeConcat</code> call on newer toolchains). The reason annotations &quot;don&#x27;t leak&quot; is structural: <code>@SerializedName</code>/<code>@ColumnInfo</code> have <code>RetentionPolicy.RUNTIME</code> and live on the DTO/entity fields where Gson/Moshi and Room&#x27;s codegen read them via reflection or generated adapters — the mapper produces a <code>Doctor</code> whose fields carry none of that metadata, so reflection-based serializers have nothing to act on.</p>
 <hr>
 <h3 id="dependency-inversion">Dependency Inversion</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;Dependency inversion is the spine of this whole architecture: the domain owns the abstraction — the <code>DoctorRepository</code> interface — and the data layer depends on that abstraction by implementing it, so the high-level policy doesn&#x27;t depend on low-level detail. At runtime Hilt or Dagger binds the concrete impl to the interface. The practical wins are that the domain has zero knowledge of Retrofit or Room, swapping the network library only touches data, and tests inject a fake repository with no networking at all. The nuance is the &#x27;inversion&#x27; is about which module <em>owns</em> the interface — putting it in domain, not data, is what flips the arrow.&quot;</blockquote>
 <p>The Domain layer defines interfaces like <code>DoctorRepository</code>. The Data layer provides concrete implementations like <code>DoctorRepositoryImpl</code>. At runtime, the DI framework — Hilt or Dagger — wires the implementation to the interface. The practical consequences are that the Domain layer has zero knowledge of Retrofit, Room, or any data technology; swapping the network library requires changing only the Data layer; and tests can inject a fake repository without touching any networking code.</p>
+<p><strong>Under the hood</strong></p>
+<p>Dagger/Hilt resolve bindings entirely at compile time, not via runtime reflection. The annotation processor builds a directed graph of <code>@Provides</code>/<code>@Binds</code> declarations and <code>@Inject</code> constructors, validates it (missing or duplicate bindings are <em>build</em> errors), then generates <code>Factory</code> classes — e.g. <code>DoctorRepositoryImpl_Factory</code> with a static <code>create(...)</code> and <code>get()</code> — plus a <code>DaggerXxxComponent</code> that wires them together. A <code>@Binds</code> of <code>DoctorRepository</code> to <code>DoctorRepositoryImpl</code> generates no body at all; it just makes the component return the impl&#x27;s factory where the interface is requested. So the JVM-level dependency arrow from the call site points at the <em>interface</em> type, while the generated component is the only place that knows the concrete class — which is exactly the inversion, realized in generated code.</p>
+<pre><code>:domain   interface DoctorRepository      &lt;-- depended upon by everyone
+:data     class DoctorRepositoryImpl       --implements--&gt;  DoctorRepository
+:app      @Binds bind(impl): DoctorRepository
+          -&gt; DaggerComponent (generated) returns impl factory for the interface</code></pre>
 <hr>
 <h3 id="testability-per-layer">Testability Per Layer</h3>
 <table border="1" cellpadding="6" cellspacing="0">
@@ -572,19 +665,28 @@ class DoctorRepositoryImpl(
 </tbody></table>
 <hr>
 <h3 id="is-the-domain-layer-always-required">Is the Domain Layer Always Required?</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;No — and I&#x27;d point out Google&#x27;s own architecture guidance explicitly marks the domain layer as optional. I add it when business logic is genuinely complex, like eligibility or pricing, when the same operation is reused across ViewModels, or when team size demands clear ownership boundaries. I skip it for thin CRUD screens, prototypes, or any use case that would be a one-line delegate. The trap I name out loud is over-engineering: a pure passthrough use case has identical test coverage to the repository call it wraps, so it&#x27;s indirection with no payoff.&quot;</blockquote>
 <p>No — and Google&#x27;s official Android documentation explicitly calls the domain layer optional. It&#x27;s worth adding when the business logic is complex enough to warrant isolation, like eligibility checks or pricing calculations; when the same operation is reused across multiple ViewModels; or when the team is large enough that you need clear ownership boundaries.</p>
 <p>Skip it when the screen is a thin CRUD form and the ViewModel calls the repository directly, when you&#x27;re building a small app or a prototype, or when the use case would be a one-liner that just delegates straight to the repository.</p>
 <p><strong>Over-engineering warning</strong>: adding use cases that are pure delegation — <code>class GetDoctorsUseCase { suspend operator fun invoke() = repository.getDoctors() }</code> — creates indirection without any value. The test coverage of that use case is identical to the test coverage of the repository call in the ViewModel. Add a layer only when it pulls its weight.</p>
+<p><strong>Under the hood</strong></p>
+<p>The cost of an unnecessary domain layer is measurable beyond style. Each extra module participates in the build graph: Gradle must configure it, run kapt/KSP and <code>kotlinCompile</code> tasks for it, and Dagger must generate a factory and a binding for every use case — so a flood of pure-delegation use cases inflates annotation-processing time and the size of the generated <code>DaggerComponent</code>. At runtime each delegating <code>invoke</code> still allocates a coroutine state-machine object and adds a stack frame on every call. None of that buys additional behavior to test, which is why the over-engineering warning holds: the bytecode of <code>useCase()</code> -&gt; <code>repository.getDoctors()</code> is strictly more work than calling the repository directly, with no new branch to cover.</p>
 <hr>
 <h3 id="avoiding-over-engineering">Avoiding Over-Engineering</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;I start with two layers — a ViewModel and a Repository — and only introduce a Domain layer with use cases once business logic genuinely earns it. My heuristic is the rule of three: if the same logic shows up in three places, I extract it; if it&#x27;s used once, it stays in the ViewModel. The nuance interviewers probe is that abstraction isn&#x27;t free — every extra class is more indirection a new engineer has to trace, so I treat premature layering as a real cost, not a virtue.&quot;</blockquote>
 <ul>
 <li>Start with two layers: Presentation — the ViewModel — plus Data — the Repository. Add the Domain layer only when business logic complexity genuinely justifies it.</li>
 <li>Use the &quot;rule of three&quot;: if the same logic appears in three places, extract a use case. If it only appears once, leave it in the ViewModel.</li>
 <li>Complexity is a cost. Every class is one more file to navigate and one more abstraction to explain to a new engineer.</li>
 </ul>
+<p><strong>Under the hood</strong></p>
+<p>Each abstraction layer is not free at runtime either. A use case that just forwards to a repository compiles to an extra class with its own constructor, an extra megamorphic-prone virtual call, and — if DI-provided — an extra entry in the Dagger/Hilt object graph that must be instantiated. The JIT can often inline trivial single-call forwarders, but the bytecode, the DEX method-count contribution (relevant against the 64K method reference limit per DEX file), and the build-time annotation-processing cost are all real.</p>
+<pre><code>ViewModel -&gt; UseCase.invoke() -&gt; Repository.getX()   // 2 virtual dispatches + 2 objects in graph
+ViewModel -&gt; Repository.getX()                        // 1 virtual dispatch + 1 object</code></pre>
 <hr>
 <h2 id="73-repository-pattern">7.3 Repository Pattern</h2>
 <h3 id="abstraction-and-single-source-of-truth">Abstraction and Single Source of Truth</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;A repository hides every data source behind a domain-friendly API — the caller asks &#x27;give me doctors by specialty&#x27; and never knows if that&#x27;s network, cache, or DB. The single-source-of-truth idea is that one owner — usually the Room database — is canonical: I write all remote data into the DB and the UI reads only from the DB. The payoff is consistent reads with no network-vs-DB races, offline-by-default, and the network demoted to a sync mechanism. The gotcha is you must expose a reactive read — a Flow off the DAO — so writes automatically push fresh data to the UI.&quot;</blockquote>
 <p>A <strong>repository</strong> is a class that abstracts all data sources behind a domain-friendly API. The ViewModel or use case just asks &quot;give me doctors by specialty&quot; — it never knows or cares whether that comes from the network, a cache, a database, or some combination of all three.</p>
 <p><strong>Single source of truth</strong> means one canonical owner of data. For most apps, that&#x27;s the <strong>local database</strong>. The repository writes all remote data into the DB, and the UI reads exclusively from the DB. The three consequences of that are: the UI always sees consistent data with no race conditions between network and DB reads; offline reads just work because the DB always has something; and the network becomes a sync mechanism rather than a direct read path.</p>
 <pre><code>interface DoctorRepository {
@@ -610,8 +712,13 @@ class DoctorRepositoryImpl(
         // DB write triggers Flow emission above — UI updates automatically
     }
 }</code></pre>
+<p><strong>Under the hood</strong></p>
+<p>Room&#x27;s <code>Flow</code>-returning DAO query doesn&#x27;t poll. At compile time, the Room annotation processor generates an implementation that registers an <code>InvalidationTracker.Observer</code> against the tables the query touches. Room installs SQLite triggers on those tables that write into an internal <code>room_table_modification_log</code>; on any INSERT/UPDATE/DELETE the tracker is notified, it diffs the table-version set, and re-runs the query on the configured <code>Executor</code>, emitting a fresh list into the Flow. That&#x27;s why a write inside <code>refreshDoctors</code> automatically re-emits to collectors — the invalidation is table-scoped, not row-scoped.</p>
+<pre><code>saveDoctors() --INSERT--&gt; SQLite trigger --&gt; room_table_modification_log
+   --&gt; InvalidationTracker --&gt; re-run query --&gt; Flow.emit(newList) --&gt; UI</code></pre>
 <hr>
 <h3 id="repository-vs-data-source">Repository vs Data Source</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;A data source owns exactly one I/O concern — the remote source only knows networking, the local one only knows Room, and neither knows the other exists. The repository is the coordinator that makes policy: when to fetch, when to cache, how to map, what to return. So data sources do the raw I/O and the repository makes the decisions. The reason I keep them separate is testability — I can fake either data source independently, and the repository&#x27;s policy logic gets unit-tested without touching a real network or DB.&quot;</blockquote>
 <table border="1" cellpadding="6" cellspacing="0">
 <thead><tr>
 <th></th>
@@ -625,9 +732,12 @@ class DoctorRepositoryImpl(
 <tr><td>Called by</td><td>Use Case or ViewModel</td><td>Repository only</td></tr>
 </tbody></table>
 <p>Data sources are single-responsibility: <code>DoctorRemoteDataSource</code> knows how to make network calls and that&#x27;s all — it knows nothing about the local DB. <code>DoctorLocalDataSource</code> wraps Room and knows nothing about the network. The repository is the coordinator that decides which to call and when.</p>
+<p><strong>Under the hood</strong></p>
+<p>The boundary is enforced by the type system and DI graph, not by convention alone. The remote data source typically wraps a Retrofit interface — at runtime Retrofit builds a <code>java.lang.reflect.Proxy</code> whose <code>InvocationHandler</code> reads the method annotations (<code>@GET</code>, <code>@Query</code>), builds an OkHttp <code>Call</code>, and adapts the return type via the registered <code>CallAdapter</code> (e.g., the suspend adapter that bridges <code>Call</code> to a coroutine <code>Continuation</code>). The local data source wraps Room&#x27;s generated DAO <code>_Impl</code>. Because each is injected behind an interface, the repository holds only the interface reference, so the linker never couples the two concerns — swapping in a fake is just a different binding in the Dagger graph.</p>
 <hr>
 <h3 id="caching-and-refresh-strategies">Caching and Refresh Strategies</h3>
 <h4 id="cache-first">Cache-First</h4>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;Cache-first emits whatever I already have immediately, then fetches fresh data in the background and emits again, so the user sees something instantly and an update lands a moment later. The key gotcha is error handling: a network failure should only surface to the UI if I have nothing cached — otherwise I swallow it and let the stale-but-present data stand. In production I&#x27;d usually back this with the DB-as-source-of-truth so the second emission comes from a DB write rather than emitting the network result directly.&quot;</blockquote>
 <p>Return cached data immediately, refresh in the background, and let the UI observe the DB via Flow.</p>
 <pre><code>fun getDoctors(specialty: String): Flow&lt;List&lt;Doctor&gt;&gt; = flow {
     // 1. Emit cached data immediately
@@ -643,7 +753,10 @@ class DoctorRepositoryImpl(
         if (cached.isEmpty()) throw e  // rethrow only if no cached data
     }
 }</code></pre>
+<p><strong>Under the hood</strong></p>
+<p><code>flow { ... }</code> builds a cold <code>SafeFlow</code>; nothing runs until a terminal <code>collect</code>. When collected, the builder&#x27;s lambda runs as a suspending function whose <code>emit</code> calls invoke the collector&#x27;s <code>emitValue</code> on the <em>collector&#x27;s</em> coroutine context — that&#x27;s the basis of Flow&#x27;s sequential, back-pressure-free contract. Each suspension point (<code>fetchDoctors</code>, <code>saveDoctors</code>) is compiled by the Kotlin compiler into a state-machine <code>Continuation</code>: the function is split at suspend boundaries into states, locals are hoisted into the continuation object, and resumption re-enters via <code>invokeSuspend</code> with the prior label. If the collector&#x27;s scope is cancelled mid-fetch, a <code>CancellationException</code> propagates at the next suspension point.</p>
 <h4 id="network-first-with-fallback">Network-First (with fallback)</h4>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;Network-first hits the network first and only falls back to cache when the call fails — I use it when freshness matters more than instant render, like a detail screen. The subtle part is being precise about which exceptions trigger fallback: I catch <code>IOException</code> for genuine connectivity failures, not a blanket <code>Exception</code>, because an HTTP 4xx or a parse error is a real bug I don&#x27;t want masked by silently serving stale data.&quot;</blockquote>
 <p>Try the network first; if it fails, fall back to the cache.</p>
 <pre><code>suspend fun getDoctor(id: String): Doctor {
     return try {
@@ -657,7 +770,10 @@ class DoctorRepositoryImpl(
             ?: throw e
     }
 }</code></pre>
+<p><strong>Under the hood</strong></p>
+<p><code>IOException</code> here is the seam OkHttp uses to signal transport-level failure — socket timeouts, DNS failures, and connection resets all surface as <code>IOException</code> (or subclasses like <code>SocketTimeoutException</code>), whereas a completed HTTP response with a non-2xx code does <em>not</em> throw at the OkHttp layer; Retrofit&#x27;s converter or your code throws <code>HttpException</code> for that. So catching <code>IOException</code> specifically falls back only on &quot;couldn&#x27;t reach the server,&quot; and lets server-rejection errors propagate. The Kotlin <code>try/catch</code> around a suspend body compiles into the continuation state machine with the catch installed as an exception handler spanning the suspended states, so a failure resumed via <code>resumeWith(Result.failure)</code> lands in the catch correctly.</p>
 <h4 id="ttl-based-refresh">TTL-Based Refresh</h4>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;TTL-based refresh stamps each cache write with a timestamp and only re-fetches once the data is older than my time-to-live window — it&#x27;s a cheap way to bound staleness without refetching on every read. The gotcha is the clock: <code>System.currentTimeMillis()</code> is wall-clock time that can jump backward via NTP or user changes, so for strict elapsed-time decisions I&#x27;d lean toward a monotonic source like <code>elapsedRealtime</code>, and I&#x27;d make sure the timestamp is persisted alongside the data, not held in memory.&quot;</blockquote>
 <p>Cache results with a timestamp and re-fetch only when the cache is stale.</p>
 <pre><code>suspend fun getDoctors(specialty: String): List&lt;Doctor&gt; {
     val cacheAge = localDataSource.getCacheAge(specialty)
@@ -668,8 +784,11 @@ class DoctorRepositoryImpl(
     }
     return localDataSource.getDoctors(specialty).map(mapper::toDomain)
 }</code></pre>
+<p><strong>Under the hood</strong></p>
+<p><code>System.currentTimeMillis()</code> reads the wall clock (<code>CLOCK_REALTIME</code>), which is settable and can step in either direction; <code>SystemClock.elapsedRealtime()</code> reads a monotonic counter (<code>CLOCK_BOOTTIME</code>) that includes deep sleep and never goes backward — that&#x27;s why elapsed-time logic should prefer it. Persisting the timestamp matters because the cache and its TTL marker must be written atomically: in Room you&#x27;d do this in a single <code>@Transaction</code>, which wraps the SQLite statements in <code>BEGIN</code>/<code>COMMIT</code> so a crash between the data write and the timestamp write can&#x27;t leave the cache looking fresh-but-empty or stale-but-populated inconsistently.</p>
 <hr>
 <h3 id="model-mapping-dto--entity--domain">Model Mapping: DTO → Entity → Domain</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;I keep three distinct model types: a DTO that mirrors the API JSON, an Entity that mirrors the Room schema, and a pure-Kotlin domain model the rest of the app uses. Explicit mappers convert between them so a network field rename or a column change stays contained in one layer instead of rippling through the codebase. The pushback I get is &#x27;isn&#x27;t this boilerplate?&#x27; — and my answer is that the coupling you avoid is worth it; the domain model should never carry a <code>@SerializedName</code> or a <code>@ColumnInfo</code>, because the moment it does, your business logic is hostage to your wire format.&quot;</blockquote>
 <p>There are three distinct model types, each serving a distinct purpose:</p>
 <table border="1" cellpadding="6" cellspacing="0">
 <thead><tr>
@@ -683,8 +802,11 @@ class DoctorRepositoryImpl(
 <tr><td><strong>Domain Model</strong></td><td>Domain</td><td>Business concept</td><td>None — pure Kotlin</td></tr>
 </tbody></table>
 <p>Explicit mapper classes keep these types decoupled. The domain model never gains a <code>@SerializedName</code> annotation, and the DTO never gains a <code>@ColumnInfo</code> annotation — each type stays clean for its purpose.</p>
+<p><strong>Under the hood</strong></p>
+<p>These annotations drive code generation/reflection at different layers, which is exactly why mixing them couples your model to two masters. Moshi&#x27;s codegen (<code>@JsonClass(generateAdapter = true)</code>) produces a <code>JsonAdapter</code> at compile time via KSP/kapt that reads <code>@Json</code>/<code>@SerializedName</code>-style name mappings to map JSON keys to constructor parameters; Room&#x27;s processor reads <code>@Entity</code>/<code>@ColumnInfo</code> to emit <code>CREATE TABLE</code> SQL and <code>Cursor</code>-binding code in the DAO <code>_Impl</code>. A combined class would force one POJO&#x27;s field names and nullability to satisfy both the wire contract and the DB schema simultaneously. Mappers are usually trivial pure functions, so the JIT can inline them and escape-analysis can often stack-allocate the short-lived intermediates, making the runtime cost negligible.</p>
 <hr>
 <h3 id="offline-first-architecture">Offline-First Architecture</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;Offline-first means the app is fully usable with no connectivity and reconciles when it comes back. The backbone is Room as the canonical store with a Flow off the DAO so the UI reacts to DB changes, WorkManager for deferred background sync, optimistic local writes that roll back on failure, and an explicit conflict-resolution policy — last-write-wins, server-wins, or field-level merge. The hardest part interviewers dig into is conflict resolution: you have to decide deliberately, because &#x27;just let the server win&#x27; silently discards a user&#x27;s offline edits.&quot;</blockquote>
 <p>Offline-first means the app functions fully without connectivity and syncs when connectivity returns. There are five key components. First, the local DB as the canonical store — all reads come from Room; the network only populates or updates the DB. Second, observing the DB with Flow — <code>localDataSource.getDoctorsFlow()</code> emits whenever data changes, so the UI reacts to DB changes rather than to network responses directly. Third, WorkManager for background sync — it schedules periodic refreshes even when the app is in the background. Fourth, optimistic updates — write user actions to the DB immediately, show the result, sync to the server in the background, and roll back on failure. And fifth, conflict resolution — define a merge strategy such as last-write-wins, server-wins, or field-level merge for when offline writes collide with server state.</p>
 <pre><code>// WorkManager sync task — called by OS even when app is backgrounded
 class SyncDoctorsWorker(
@@ -702,6 +824,12 @@ class SyncDoctorsWorker(
         }
     }
 }</code></pre>
+<p><strong>Under the hood</strong></p>
+<p>WorkManager doesn&#x27;t keep your process alive or run a thread of its own — it persists each enqueued request as a row in its internal Room database (<code>androidx.work.*</code> tables) and delegates actual execution to a scheduler chosen at runtime: <code>JobScheduler</code> (the <code>JobService</code>/<code>JobInfo</code> API) on API 23+, or <code>AlarmManager</code> + a broadcast receiver as the fallback. Because requests are persisted, they survive process death and reboot (a <code>BOOT_COMPLETED</code> receiver re-registers pending jobs). <code>CoroutineWorker.doWork()</code> runs on <code>Dispatchers.Default</code> inside a coroutine bound to the worker&#x27;s lifecycle; returning <code>Result.retry()</code> increments the persisted <code>runAttemptCount</code> and reschedules per the configured <code>BackoffPolicy</code> (default exponential, 30s minimum), and constraints like network availability are evaluated by the underlying scheduler before <code>doWork</code> is ever invoked.</p>
+<pre><code>enqueue() -&gt; WorkManager Room DB (WorkSpec row)
+          -&gt; JobScheduler (API 23+) | AlarmManager (fallback)
+          -&gt; constraints met -&gt; CoroutineWorker.doWork() on Dispatchers.Default
+          -&gt; Result.retry() -&gt; runAttemptCount++ -&gt; backoff reschedule</code></pre>
 <h4 id="interview-angles-4">Interview Angles</h4>
 <p><strong>Q: What is a repository?</strong> &quot;It&#x27;s a class that abstracts all data sources behind a domain-friendly API. Callers ask &#x27;give me doctors by specialty&#x27; — they don&#x27;t know or care whether that comes from the network, the DB cache, or both.&quot;</p>
 <p><strong>Q: Repository vs data source — what is the difference?</strong> &quot;A data source has single responsibility for one I/O mechanism — network or database, not both. The repository is the coordinator: it decides when to fetch, when to cache, how to map, and what to return. The data sources do the raw I/O; the repository makes the policy decisions.&quot;</p>
@@ -710,7 +838,9 @@ class SyncDoctorsWorker(
 <hr>
 <h2 id="74-dependency-injection">7.4 Dependency Injection</h2>
 <h3 id="constructor-vs-field-injection">Constructor vs Field Injection</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;I default to constructor injection because it makes every dependency explicit, lets me hold them as <code>val</code>s, and means I can&#x27;t construct the object in an invalid state. Field injection is the exception, not a preference — I only reach for it on framework-instantiated classes like Activities and Fragments, where the OS calls the constructor so Hilt has to inject fields after the object already exists. The gotcha there is <code>lateinit var</code>: touch it before injection happens and you get an <code>UninitializedPropertyAccessException</code>.&quot;</blockquote>
 <h4 id="constructor-injection-preferred">Constructor Injection (Preferred)</h4>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;Constructor injection just means the dependencies come in as constructor parameters, so the compiler enforces that you can&#x27;t forget one. I get immutable <code>val</code> references that are safe to share across threads, and testing is trivial — I just pass mocks or fakes straight in, no framework needed. With Hilt I annotate the constructor with <code>@Inject</code> and the generated factory wires it up.&quot;</blockquote>
 <p>Dependencies are passed through the constructor — this is the purest form of DI:</p>
 <pre><code>class LoginViewModel(
     private val authRepository: AuthRepository,    // injected via constructor
@@ -724,7 +854,14 @@ class SyncDoctorsWorker(
 <li>Immutable references with <code>val</code> — thread-safe by construction.</li>
 <li>Works naturally with Hilt&#x27;s <code>@HiltViewModel</code>.</li>
 </ul>
+<p><strong>Under the hood</strong></p>
+<p>When you annotate a constructor with <code>@Inject</code>, Dagger/Hilt&#x27;s annotation processor (running at compile time via KSP or the legacy <code>kapt</code>) generates a <code>Factory</code> class that implements <code>Provider&lt;T&gt;</code>. That factory&#x27;s <code>get()</code> method calls the constructor directly, passing in each parameter by invoking <em>its</em> provider. There&#x27;s no reflection at runtime — it&#x27;s all plain generated Java/Kotlin calling <code>new LoginViewModel(...)</code>. These factories are linked together into the component&#x27;s directed acyclic graph, so resolving a dependency is just a chain of <code>get()</code> calls.</p>
+<pre><code>LoginViewModel_Factory.get()
+  └─ new LoginViewModel(
+         authRepositoryProvider.get(),   // resolves AuthRepository binding
+         analyticsLoggerProvider.get())  // resolves AnalyticsLogger binding</code></pre>
 <h4 id="field-injection">Field Injection</h4>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;Field injection is when the DI framework sets <code>@Inject lateinit var</code> fields after the object is built, instead of through the constructor. I only use it where I have no control over construction — Android system components the OS instantiates for me. The trade-offs are real: the dependencies are invisible in the signature, the fields are mutable <code>lateinit</code>, and you can hit an <code>UninitializedPropertyAccessException</code> if you read one before Hilt&#x27;s <code>inject()</code> call runs in <code>onCreate</code>.&quot;</blockquote>
 <p>Dependencies are annotated with <code>@Inject</code> on fields; the DI framework populates them after construction.</p>
 <pre><code>@AndroidEntryPoint
 class LoginActivity : AppCompatActivity() {
@@ -737,8 +874,15 @@ class LoginActivity : AppCompatActivity() {
 <li>Dependencies are not visible in the constructor signature, which makes the class harder to understand at a glance.</li>
 <li>Harder to use in unit tests because you have to manually set the field rather than just passing arguments.</li>
 </ul>
+<p><strong>Under the hood</strong></p>
+<p>Field injection requires a <code>MembersInjector&lt;T&gt;</code> instead of a <code>Factory&lt;T&gt;</code>. The processor generates a class with an <code>injectMembers(instance)</code> method that assigns each <code>@Inject</code> field by calling a generated <code>injectFieldName</code> static helper. For <code>@AndroidEntryPoint</code>, Hilt rewrites your class (via a Gradle bytecode-transform plugin) so it extends a generated <code>Hilt_LoginActivity</code> base, whose <code>onCreate</code> calls into the generated component to run <code>injectMembers</code> <em>before</em> <code>super.onCreate()</code>. The <code>lateinit var</code> compiles to a plain non-null field initialized to <code>null</code>; the generated getter inserts a null check that throws <code>UninitializedPropertyAccessException</code> if read before assignment — which is exactly why ordering relative to Hilt&#x27;s injection point matters.</p>
+<pre><code>OS → Activity.&lt;init&gt;()            // fields are null here
+Hilt_LoginActivity.onCreate()
+  └─ generatedComponent.inject(this)   // MembersInjector runs, fields assigned
+LoginActivity.onCreate()          // now safe to read analyticsLogger</code></pre>
 <hr>
 <h3 id="interface-binding">Interface Binding</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;Interface binding is how I keep callers depending on an abstraction instead of a concrete class — I declare an interface in the domain layer and bind the implementation with a <code>@Binds</code> method in a module. I prefer <code>@Binds</code> over <code>@Provides</code> here because it&#x27;s abstract, generates no factory body, and just tells the graph &#x27;when someone asks for <code>AuthRepository</code>, hand them the <code>Impl</code>.&#x27; The subtle bit is that the implementation still needs its own <code>@Inject</code> constructor so Hilt knows how to build it.&quot;</blockquote>
 <p>Interface binding wires a concrete implementation to an interface so that callers depend on the abstraction rather than the implementation. In Hilt, you do this with a <code>@Binds</code> method in a <code>@Module</code>.</p>
 <pre><code>// The interface (defined in Domain)
 interface AuthRepository {
@@ -761,8 +905,13 @@ abstract class AuthModule {
     @Singleton
     abstract fun bindAuthRepository(impl: AuthRepositoryImpl): AuthRepository
 }</code></pre>
+<p><strong>Under the hood</strong></p>
+<p><code>@Binds</code> is special precisely because it has no body. The processor doesn&#x27;t generate a factory that <em>creates</em> anything — instead it records a binding-graph edge that says &quot;the key <code>AuthRepository</code> is satisfied by the existing <code>AuthRepositoryImpl</code> provider.&quot; At resolution time the generated component just returns the <code>AuthRepositoryImpl_Factory.get()</code> result directly, with no extra wrapper allocation. That&#x27;s why <code>@Binds</code> methods must be <code>abstract</code> and live in an <code>abstract class</code> or <code>interface</code> module — there&#x27;s nothing to execute. Contrast with <code>@Provides</code>, where the processor generates a factory that actually invokes your method body. So <code>@Binds</code> is a pure compile-time aliasing operation: zero runtime cost beyond the underlying impl&#x27;s own creation.</p>
+<pre><code>key: AuthRepository  ──(alias)──▶  AuthRepositoryImpl_Factory
+                                       └─ needs AuthApiService, UserDao</code></pre>
 <hr>
 <h3 id="scopes">Scopes</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;A scope guarantees a single shared instance for the lifetime of a component — <code>@Singleton</code> for the whole app, <code>@ViewModelScoped</code> per ViewModel, and so on. Unscoped bindings hand out a fresh object on every injection. The classic mistake interviewers probe is scope mismatch: if a <code>@Singleton</code> holds something tied to an Activity, you leak the Activity for the life of the process. Hilt actually catches most of these at compile time because a component can only depend on bindings from itself or its parents.&quot;</blockquote>
 <p>A <strong>scope</strong> determines how long a provided dependency lives and ensures that all injections within that scope receive the <strong>same instance</strong> — rather than a new object on every injection.</p>
 <table border="1" cellpadding="6" cellspacing="0">
 <thead><tr>
@@ -804,8 +953,26 @@ object ViewModelModule {
 }</code></pre>
 <p><strong>Why scoping matters</strong>: without <code>@Singleton</code>, each injection creates a new instance. Two classes that both inject <code>OkHttpClient</code> would get different clients, wasting resources and breaking connection pooling. Scoping ensures shared resources are truly shared.</p>
 <p><strong>Common mistake</strong>: scoping a dependency to a wider scope than its own dependencies allow. If a <code>@Singleton</code> <code>NetworkModule</code> holds a reference to an <code>@ActivityScoped</code> dependency, the Activity leaks into the singleton and is never garbage-collected. Hilt catches this mistake at compile time.</p>
+<p><strong>Under the hood</strong></p>
+<p>A scope is implemented as a memoizing wrapper around the underlying factory. The processor wraps a scoped binding&#x27;s <code>Provider</code> in <code>DoubleCheck</code> — a double-checked-locking lazy holder that computes the value once on first <code>get()</code>, stores it in a <code>volatile</code> field, and returns that same reference forever after. Unscoped bindings get the raw factory with no <code>DoubleCheck</code>, so every <code>get()</code> allocates. The &quot;instance&quot; of a scope is literally the generated component object: <code>SingletonComponent</code> is created once in <code>Application</code>, <code>ActivityRetainedComponent</code> is stored in a retained <code>ViewModel</code> (which is how it survives config changes), and each scoped instance is a field cached inside its component. Compile-time scope validation comes from Dagger checking that a binding installed in a child component never gets cached in a longer-lived parent.</p>
+<pre><code>// Roughly what the processor generates for a @Singleton binding:
+private volatile Object okHttpClient = new MemoizedSentinel();
+OkHttpClient okHttpClient() {
+    Object local = okHttpClient;
+    if (local instanceof MemoizedSentinel) {
+        synchronized (local) {
+            local = okHttpClient;
+            if (local instanceof MemoizedSentinel) {
+                local = NetworkModule.provideOkHttpClient();  // runs ONCE
+                okHttpClient = local;
+            }
+        }
+    }
+    return (OkHttpClient) local;
+}</code></pre>
 <hr>
 <h3 id="qualifiers-and-modules">Qualifiers and Modules</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;Qualifiers solve the ambiguous-binding problem — when two providers share a type like <code>String</code>, I tag each with a custom <code>@Qualifier</code> annotation so Dagger can tell them apart by key. Without one you get a duplicate-binding compile error. Modules are just the containers that group binding declarations, and I organize them by concern — network, database, repository — so the graph stays readable and <code>@InstallIn</code> controls which component they live in.&quot;</blockquote>
 <p><strong>Qualifiers</strong> distinguish multiple bindings of the same type. Without them, Hilt would have no way to tell two <code>String</code> providers apart and the build would fail with an ambiguous binding error.</p>
 <pre><code>@Qualifier
 @Retention(AnnotationRetention.BINARY)
@@ -840,10 +1007,19 @@ DatabaseModule      — Room DB, DAOs
 RepositoryModule    — @Binds repository implementations
 UseCaseModule       — use case providers (if not using @Inject constructor)
 AnalyticsModule     — analytics loggers</code></pre>
+<p><strong>Under the hood</strong></p>
+<p>Dagger identifies every binding by a composite <em>key</em> of <code>(qualifier-annotation, type)</code>, not by type alone. So <code>@BaseUrl String</code> and <code>@ApiKey String</code> are two distinct keys in the graph — that&#x27;s why they don&#x27;t collide. The <code>@Retention(BINARY)</code> matters because the qualifier annotation must survive into the <code>.class</code> files for the annotation processor to read it during compilation, but it doesn&#x27;t need to be present at runtime via reflection (so <code>RUNTIME</code> is overkill). Modules themselves carry no runtime state for <code>@Provides object</code> modules — the processor reads each module&#x27;s methods to discover bindings and emits the corresponding factories; <code>@InstallIn</code> simply tells Dagger which generated component class should own those bindings. A duplicate-binding error is literally Dagger finding two entries hashing to the same key while building the graph.</p>
+<pre><code>graph keys:
+  (@BaseUrl, String)  → provideBaseUrl()
+  (@ApiKey,  String)  → provideApiKey()
+ApiClient_Factory.get():
+  new ApiClient(baseUrlProvider.get(), apiKeyProvider.get())</code></pre>
 <hr>
 <h3 id="testing-with-fakes">Testing with Fakes</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;DI is what makes testing clean — because dependencies come in from outside, I can swap real implementations for test doubles. For pure unit tests I just construct the class and pass fakes directly, no framework involved. For instrumented tests that go through Hilt, I use <code>@TestInstallIn</code> to replace a whole module. I lean toward fakes over mocks for DI replacement because a fake is a real working implementation, so it&#x27;s more stable; I reach for mocks when I specifically need to verify interactions.&quot;</blockquote>
 <p>DI enables replacing real implementations with fakes in tests. There are two strategies:</p>
 <h4 id="1-constructor-injection--pass-fakes-directly">1. Constructor injection — pass fakes directly</h4>
+<blockquote><strong>🎤 Say it out loud (~30s):</strong> &quot;With constructor injection I don&#x27;t need Hilt at all in a unit test — I just <code>new</code> up the class with fakes. That&#x27;s the biggest practical payoff of preferring constructor over field injection: my ViewModel test is plain JVM code with no instrumentation, no graph, no <code>@HiltAndroidTest</code> overhead.&quot;</blockquote>
 <pre><code>@Test
 fun `login success updates state to Success`() = runTest {
     val fakeRepo = FakeAuthRepository(shouldSucceed = true)
@@ -854,6 +1030,7 @@ fun `login success updates state to Success`() = runTest {
     assertEquals(LoginUiState.Success, viewModel.uiState.value)
 }</code></pre>
 <h4 id="2-hilt-test-modules--replace-binding-in-instrumented-tests">2. Hilt test modules — replace binding in instrumented tests</h4>
+<blockquote><strong>🎤 Say it out loud (~30s):</strong> &quot;When the test has to run through the real graph, I use <code>@TestInstallIn</code> with a <code>replaces</code> argument to swap out a production module for a fake one. Hilt regenerates a test component that uses my fake binding instead of the real one across the whole test. The nuance is <code>replaces</code> must point at the exact module being uninstalled, and this only works in <code>@HiltAndroidTest</code> instrumented or Robolectric tests, not plain JVM unit tests.&quot;</blockquote>
 <pre><code>// Replace the real AuthRepository binding in tests
 @Module
 @TestInstallIn(components = [SingletonComponent::class], replaces = [AuthModule::class])
@@ -863,8 +1040,11 @@ abstract class FakeAuthModule {
     abstract fun bindAuthRepository(impl: FakeAuthRepository): AuthRepository
 }</code></pre>
 <p><strong>Fake vs Mock</strong>: A <em>fake</em> is a simplified but working implementation of an interface — for example, an in-memory list standing in for a database. A <em>mock</em> is a test double that records calls and can be configured to return specific values. Fakes tend to be more stable for DI replacement because they have real behaviour; mocks are better when you specifically want to verify interaction sequences.</p>
+<p><strong>Under the hood</strong></p>
+<p><code>@TestInstallIn</code> works by generating a <em>separate</em> test component hierarchy at compile time. Hilt&#x27;s processor sees the <code>replaces</code> list and physically omits the named production modules from the generated <code>DaggerXxx_TestComponent</code>, splicing in the test module instead — so there&#x27;s no runtime monkey-patching; it&#x27;s a different generated graph that the test runner activates via <code>HiltTestApplication</code>. For per-test overrides, <code>@BindValue</code> is even more dynamic: the processor generates a field on the test class and a binding that reads that field, so the value is resolved when the component is built in the <code>@Before</code> injection step. Either way, the substitution is resolved before any of your code runs — Hilt never swaps bindings while the app is live.</p>
 <hr>
 <h3 id="hilt-basics">Hilt Basics</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;Hilt is a layer on top of Dagger 2 that gives you a standard set of components already wired to the Android lifecycle, so you skip the boilerplate of hand-writing components and injection calls. You annotate the <code>Application</code> with <code>@HiltAndroidApp</code> to generate the root, mark entry points like Activities with <code>@AndroidEntryPoint</code>, and use <code>@HiltViewModel</code> plus <code>hiltViewModel()</code> in Compose. It&#x27;s still fully compile-time and built on Dagger underneath — Hilt is opinion and convention, not a new runtime.&quot;</blockquote>
 <p>Hilt is built on Dagger 2 and eliminates the vast majority of its boilerplate by providing predefined components that are already tied to the Android lifecycle.</p>
 <pre><code>// 1. Add @HiltAndroidApp to Application
 @HiltAndroidApp
@@ -894,6 +1074,11 @@ object NetworkModule {
     @Singleton
     fun provideRetrofit(): Retrofit { ... }
 }</code></pre>
+<p><strong>Under the hood</strong></p>
+<p><code>@HiltAndroidApp</code> triggers generation of the entire Dagger component tree, rooted at a <code>SingletonComponent</code>, plus a generated base <code>Application</code> class that creates and holds it. <code>@AndroidEntryPoint</code> uses a Gradle plugin that performs bytecode transformation: it rewrites your class&#x27;s superclass at build time to a generated <code>Hilt_*</code> base that knows how to obtain its component (by walking up to the <code>Application</code> or parent entry point) and run member injection. <code>@HiltViewModel</code> registers a binding in the <code>ViewModelComponent</code> and generates a <code>ViewModelFactory</code> entry; <code>hiltViewModel()</code> resolves through the <code>ViewModelComponent</code> keyed by the ViewModel class, and the standard <code>ViewModelStore</code> handles retention across recomposition and config change. None of this uses runtime reflection on the hot path — it&#x27;s generated factories and a compile-time graph, which is what makes Hilt&#x27;s failures show up as build errors rather than runtime crashes.</p>
+<pre><code>@HiltAndroidApp  →  DaggerZocdocApplication_HiltComponents_SingletonC
+@AndroidEntryPoint (bytecode-transformed) → Hilt_LoginActivity → component.inject(this)
+@HiltViewModel  →  ViewModelComponent binding  →  hiltViewModel() resolves via ViewModelStore</code></pre>
 <h4 id="hilt-vs-dagger-2">Hilt vs Dagger 2</h4>
 <table border="1" cellpadding="6" cellspacing="0">
 <thead><tr>
@@ -910,6 +1095,7 @@ object NetworkModule {
 </tbody></table>
 <hr>
 <h3 id="di-vs-service-locator">DI vs Service Locator</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;Both decouple a class from concrete types, but the difference is who does the lookup. With DI the framework hands you dependencies through your constructor, so they&#x27;re visible in the signature and trivially swappable in tests. With a service locator the class reaches into a global registry itself — <code>ServiceLocator.get&lt;T&gt;()</code> — which hides its real dependencies and reintroduces global mutable state. The gotcha interviewers love is that service locator looks like DI but it&#x27;s actually the opposite of inversion of control: the dependency is still pulled, not pushed, so it&#x27;s generally treated as an anti-pattern.&quot;</blockquote>
 <p>Both patterns decouple consumers from concrete types, but they differ fundamentally in <em>who</em> performs the lookup.</p>
 <table border="1" cellpadding="6" cellspacing="0">
 <thead><tr>
@@ -924,8 +1110,13 @@ object NetworkModule {
 <tr><td>Example</td><td><code>class Foo @Inject constructor(val bar: Bar)</code></td><td><code>val bar = ServiceLocator.get&lt;Bar&gt;()</code></td></tr>
 </tbody></table>
 <p>Service locator is considered an anti-pattern in most contexts. It hides dependencies, makes classes harder to test, and creates implicit global state — all the things DI is designed to avoid.</p>
+<p><strong>Under the hood</strong></p>
+<p>A service locator is typically a singleton holding a <code>Map&lt;Class&lt;*&gt;, Provider&lt;*&gt;&gt;</code> (or <code>Map&lt;KClass, () -&gt; Any&gt;</code>); a <code>get&lt;T&gt;()</code> call hashes the type token and returns the registered provider&#x27;s result. Because that map is process-global mutable state, resolution failures surface only at <em>runtime</em> when the lookup misses. Dagger/Hilt instead resolve the graph at <em>compile time</em>: the annotation processor walks <code>@Inject</code> constructors, builds a directed acyclic graph, and code-generates concrete <code>Factory</code>/<code>Provider</code> classes (e.g. <code>Foo_Factory</code>) plus a component that wires them — so a missing or cyclic binding is a compilation error, not a <code>NullPointerException</code> in production.</p>
+<pre><code>Service Locator:  class --&gt; ServiceLocator.get(T) --&gt; Map&lt;KClass, Provider&gt; [runtime lookup, can miss]
+Dependency Inj.:  Component --&gt; Foo_Factory.get() --&gt; new Foo(bar)         [graph verified at compile time]</code></pre>
 <hr>
 <h3 id="hilt-vs-manual-dagger-vs-manual-di">Hilt vs Manual Dagger vs Manual DI</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;These are three points on a spectrum of automation. Manual DI is just hand-wiring constructors in an <code>AppContainer</code> — totally transparent, zero build cost, but it scales linearly with the graph and gives you no scoping. Dagger generates that wiring for you with compile-time validation and scoping, and Hilt is Dagger plus a set of opinionated, lifecycle-aware components for Android. My default is Hilt for any real app; the trade-off I&#x27;d call out is the kapt/KSP annotation-processing cost on build time, which is why a tiny prototype or a test container might just hand-wire fakes instead.&quot;</blockquote>
 <p><strong>Manual DI</strong> means hand-wired constructor injection with no framework at all:</p>
 <pre><code>// Application class manually wires the dependency graph
 class AppContainer(context: Context) {
@@ -942,6 +1133,11 @@ class AppContainer(context: Context) {
 <li><strong>Manual Dagger 2</strong> for large legacy codebases already invested in Dagger, or apps with unusual component graphs like multi-process setups or shared libraries.</li>
 <li><strong>Manual DI</strong> for small projects, prototypes, or when teaching. Also useful for test containers where you want to wire fakes without the overhead of the Hilt test infrastructure.</li>
 </ul>
+<p><strong>Under the hood</strong></p>
+<p>Hilt is a thin layer of code generation <em>on top of</em> Dagger, not a separate runtime. At compile time the Hilt processor generates a fixed hierarchy of Dagger components keyed to Android lifecycles — <code>SingletonComponent</code>, <code>ActivityRetainedComponent</code>, <code>ActivityComponent</code>, <code>ViewModelComponent</code>, etc. — and a generated <code>Hilt_MainActivity</code> base class that field-injects via a <code>getGeneratedComponentManager()</code> lookup. <code>@AndroidEntryPoint</code> rewrites your Activity&#x27;s superclass through a bytecode/Gradle transform so the OS-constructed class still receives injection. Dagger itself emits no reflection: every binding becomes a generated <code>Provider</code>, and <code>@Singleton</code>/scoped bindings are wrapped in <code>DoubleCheck</code> — a double-checked-locking memoizing provider — so the instance is created once and cached. Manual DI has none of this generation; the graph is literally the <code>val</code> initialization order in your container, resolved eagerly at object construction.</p>
+<pre><code>// Roughly what Dagger generates for a scoped binding
+private val authRepository = DoubleCheck.provider { AuthRepositoryImpl(apiProvider.get(), daoProvider.get()) }
+// .get() lazily creates once, then returns the cached instance on every later call</code></pre>
 <h4 id="interview-angles-5">Interview Angles</h4>
 <p><strong>Q: Why use DI?</strong> &quot;DI inverts control over dependency creation. The consumer doesn&#x27;t construct its own dependencies — they&#x27;re provided from outside. That decouples the consumer from the concrete type, enables substitution — fakes in tests, different implementations at runtime — and centralises configuration in one place rather than scattered across the codebase.&quot;</p>
 <p><strong>Q: Constructor injection vs field injection — which do you prefer?</strong> &quot;Constructor injection whenever possible. The dependency is explicit in the signature, enforced at compile time, and naturally <code>val</code> so it&#x27;s immutable. Field injection is unavoidable for Android framework classes like Activity and Fragment because the OS constructs them and you don&#x27;t control the constructor. Everywhere else — ViewModels, repositories, use cases, data sources — I use constructor injection.&quot;</p>
@@ -951,6 +1147,7 @@ class AppContainer(context: Context) {
 <hr>
 <h2 id="75-modularization">7.5 Modularization</h2>
 <h3 id="module-types-and-roles">Module Types and Roles</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;I organize a multi-module app into three tiers: a thin <code>:app</code> module that just wires everything together, <code>:feature</code> modules that are self-contained user-facing flows, and <code>:core</code> modules holding shared infrastructure like network, data, ui, and domain. The rule that keeps it healthy is one-directional dependencies — features depend on core, core never depends on features, and crucially features don&#x27;t depend on each other. The gotcha is keeping <code>:app</code> thin: it&#x27;s tempting to leak feature logic into it, but its only job is composition — navigation graph and DI component wiring.&quot;</blockquote>
 <p>A well-modularized Android app organises code into modules with clear, non-overlapping responsibilities and explicit dependency declarations.</p>
 <pre><code>:app                  — application module; ties everything together; thin
 :feature:search       — one user-facing feature
@@ -976,8 +1173,11 @@ class AppContainer(context: Context) {
 <tr><td><code>:core:domain</code></td><td>Entities, repository interfaces, use case base classes</td><td>Nothing — innermost layer</td></tr>
 <tr><td><code>:core:testing</code></td><td>Fakes, test rules, test builders</td><td>All modules under test</td></tr>
 </tbody></table>
+<p><strong>Under the hood</strong></p>
+<p>Each Gradle module compiles to its own artifact (an <code>.aar</code> for Android library modules, <code>.jar</code> for pure Kotlin/JVM ones) with its own classpath and its own <code>R</code> class. Gradle models the build as a task graph of per-module <code>compileKotlin</code>/<code>compileJava</code> tasks; module boundaries are what let it parallelize and cache those tasks independently. The <code>api</code> vs <code>implementation</code> configuration in a module&#x27;s <code>build.gradle.kts</code> decides what leaks downstream: <code>implementation</code> dependencies stay off the consumer&#x27;s <em>compile</em> classpath (they&#x27;re only on the runtime classpath), so a transitive change there can&#x27;t force a downstream recompile. That&#x27;s also why a feature module declaring <code>:core:domain</code> as <code>api</code> re-exposes those types, while <code>implementation</code> keeps them private — the choice directly shapes the compile-time dependency graph the build cache hashes against.</p>
 <hr>
 <h3 id="api-vs-implementation-separation">API vs Implementation Separation</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;For a big feature I split it into an <code>:api</code> module with just the public contract — interfaces, models, navigation routes — and an <code>:impl</code> module with the ViewModels, Composables, and data layer. Other features depend only on <code>:api</code>, and <code>:app</code> is the single thing that depends on <code>:impl</code> to wire DI. The payoff is twofold: I get a hard compile-time boundary so booking literally can&#x27;t call search&#x27;s internal ViewModel, and I get faster builds because changing search&#x27;s implementation never recompiles booking — only changing the <code>:api</code> contract does.&quot;</blockquote>
 <p>For large feature modules, split the module into <code>:feature:search:api</code> and <code>:feature:search:impl</code>.</p>
 <ul>
 <li><strong><code>:feature:search:api</code></strong>: the public contract — interfaces, domain models, navigation routes. Other features that need to navigate to search or consume search results depend only on <code>:api</code>.</li>
@@ -987,8 +1187,11 @@ class AppContainer(context: Context) {
 :app                  → :feature:search:impl  (to register DI module)
 :app                  → :feature:booking:impl</code></pre>
 <p>The benefits are: <code>booking</code> recompiles when <code>search:api</code> changes, but NOT when <code>search:impl</code> changes; changes to search&#x27;s internal implementation never force a recompile of <code>booking</code>; and the boundary is enforced — <code>booking</code> cannot call internal search ViewModel methods even if someone wants to.</p>
+<p><strong>Under the hood</strong></p>
+<p>The mechanism that makes this work is ABI-based incremental compilation keyed on the <em>application binary interface</em>. When <code>:search:impl</code> compiles, the Kotlin/Gradle infrastructure computes a hash of its public ABI — class signatures, method signatures, public constants — but not method bodies. Because <code>booking</code> only sees <code>:search:api</code> on its compile classpath, edits inside an <code>:impl</code> method body change the <code>.class</code> byte stream but leave the ABI hash that <code>booking</code> was compiled against untouched, so Gradle marks <code>:booking</code>&#x27;s compile task UP-TO-DATE and skips it. The boundary is enforced because <code>:impl</code>&#x27;s classes are simply never on <code>:booking</code>&#x27;s compile classpath — an attempt to reference an internal ViewModel is an unresolved-reference compile error, not a convention. (Kotlin <code>internal</code> visibility reinforces this at the module level: <code>internal</code> symbols are name-mangled in bytecode and invisible to other modules.)</p>
 <hr>
 <h3 id="dependency-direction-and-avoiding-cycles">Dependency Direction and Avoiding Cycles</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;The dependency rule maps straight onto modules: features point at core, core never points back, and features never point at each other directly. When two features genuinely need to talk, I don&#x27;t let them depend on each other — I either pull the shared concept down into <code>:core:domain</code>, define an interface there that one implements and the other calls, or wire the interaction up in <code>:app</code> since it already sees both. The thing to know is Gradle will hard-fail the build on a dependency cycle, so cycles never really survive — the real discipline is preventing the <em>accidental</em> edge with lint or a dependency-guard check.&quot;</blockquote>
 <p>The <strong>dependency rule</strong> maps directly to modules: feature modules depend on core modules; core modules never depend on feature modules; and feature modules never depend on each other, except through <code>:api</code> contracts wired by <code>:app</code>.</p>
 <pre><code>CORRECT:
 :feature:booking → :core:data → :core:domain
@@ -998,8 +1201,13 @@ WRONG — cycle:
 :feature:search  → :feature:booking   ← CYCLE</code></pre>
 <p><strong>How to prevent cycles</strong>: there are four approaches. First, architecture lint rules — Gradle or tools like Dependency Guard can fail the build on unexpected dependencies. Second, extract shared concepts to core — if <code>booking</code> and <code>search</code> share a domain concept, move it to <code>:core:domain</code>. Third, event bus or shared interface — if <code>search</code> must notify <code>booking</code>, define a <code>SearchCompletedListener</code> interface in <code>:core:domain</code>; <code>booking</code> implements it; <code>search</code> calls it; neither knows about the other&#x27;s implementation. And fourth, decouple via <code>:app</code> — the <code>:app</code> module can wire feature interactions directly because it depends on both features.</p>
 <p><strong>Detecting cycles</strong>: <code>./gradlew :app:dependencies</code> and tools like <code>gradle-dependency-graph-generator</code> visualise the full graph. Gradle will fail the build entirely on a cycle, so they rarely survive long.</p>
+<p><strong>Under the hood</strong></p>
+<p>Gradle builds an internal directed graph of project dependencies during the configuration phase and resolves each configuration (e.g. <code>compileClasspath</code>) by topological sort. A cycle makes a topological ordering impossible — there&#x27;s no module it can compile first — so Gradle throws a <code>CircularReferenceException</code>/circular-dependency error before any compilation starts. The &quot;interface in <code>:core:domain</code>&quot; trick works because it inverts the dependency edge using the Dependency Inversion Principle: both <code>search</code> and <code>booking</code> end up pointing <em>down</em> at the shared abstraction in core rather than sideways at each other, turning a would-be cycle into two acyclic edges.</p>
+<pre><code>Cycle (no valid build order):      booking → search → booking
+Inverted via core abstraction:     booking → core:domain ← search   (acyclic; both depend downward)</code></pre>
 <hr>
 <h3 id="build-speed">Build Speed</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;Modularization&#x27;s biggest concrete win is incremental compilation — Gradle only recompiles the modules whose inputs actually changed and pulls everything else from cache, so a one-feature edit can drop a build from minutes to under a minute. Under that sit four levers: the build cache hashing module inputs to reuse outputs, parallel compilation of independent modules, the configuration cache skipping the configuration phase, and ABI stability so dependents don&#x27;t recompile when only an implementation body changes. The nuance is that all of this depends on clean boundaries — one <code>api</code> dependency or one god-module quietly serializes the graph and the cache hit rate collapses.&quot;</blockquote>
 <p>Modularization&#x27;s primary concrete engineering benefit is <strong>incremental compilation</strong>. Gradle compiles a module only when its sources or its direct dependencies have actually changed.</p>
 <pre><code>Full app compile time without modules:  ~8 minutes
 After unrelated feature change:          ~8 minutes (entire :app recompiles)
@@ -1009,21 +1217,36 @@ Change in :feature:booking:               recompile :feature:booking + :app
 All other modules:                        cache hit — skipped
 Effective compile time:                  ~45 seconds</code></pre>
 <p>There are four key mechanisms. The <strong>Gradle build cache</strong> hashes module inputs and caches the output <code>.jar</code> — if nothing in <code>:core:domain</code> changed, the cached <code>.jar</code> is reused with no compilation at all. <strong>Parallel compilation</strong> lets independent modules compile at the same time via <code>org.gradle.parallel=true</code>. The <strong>configuration cache</strong> (<code>org.gradle.configuration-cache=true</code>) skips the Gradle configuration phase on repeated builds. And <strong>ABI stability</strong> means that if a module&#x27;s public API doesn&#x27;t change, none of its dependents recompile even when the module&#x27;s implementation changes internally.</p>
-<p><strong>Convention plugins</strong> (see below) ensure consistent Gradle configuration without copying boilerplate into every <code>build.gradle.kts</code>.</p>
+<p><strong>Under the hood</strong></p>
+<p>The build cache key is a SHA hash computed over a task&#x27;s complete set of declared inputs — source files, classpath artifacts, compiler args, and the JVM/Kotlin toolchain version. On a cache hit Gradle restores the task&#x27;s outputs from the local (<code>~/.gradle/caches</code>) or a shared remote cache and never invokes the compiler; this is why a task can be reported FROM-CACHE rather than UP-TO-DATE. Parallelism is bounded by the dependency graph and the worker count (<code>org.gradle.workers.max</code>): only modules with no unfinished dependency edge can run concurrently, so a single highly-depended-on module becomes a serialization bottleneck — every dependent must wait for it. The configuration cache goes further by serializing the resolved task graph itself to disk, letting Gradle skip re-running every <code>build.gradle.kts</code> script on the next invocation as long as no build inputs (env vars, files read at configuration time) changed.</p>
+<pre><code>Inputs → SHA cache key →  hit?  → FROM-CACHE (restore outputs, skip compiler)
+                          miss? → run compileKotlin, then store outputs under that key</code></pre>
 <hr>
 <h3 id="feature-based-vs-layer-based">Feature-Based vs Layer-Based</h3>
+<blockquote><strong>🎤 Say it out loud (~30s):</strong> &quot;These are two ways to slice a multi-module app. Feature-based gives each module a vertical slice — all the layers for one feature — which maximizes cohesion and team ownership. Layer-based slices horizontally by architectural layer, which reads cleanly but kills build parallelism and ownership. In practice I go hybrid: feature modules on top, shared <code>:core:*</code> modules underneath, because pure feature-based still forces you to extract shared infrastructure anyway.&quot;</blockquote>
 <h4 id="feature-based-vertical-slices">Feature-Based (Vertical Slices)</h4>
+<blockquote><strong>🎤 Say it out loud (~30s):</strong> &quot;In feature-based modularization each module owns the full stack for one feature — ViewModel, Composable, repository, data source. The win is cohesion: a change to search touches only <code>:feature:search</code>, and a team can own it end to end. The catch is shared infrastructure — network setup, the Room database — which you either duplicate or hoist into a <code>:core</code> module, so you almost never stay purely feature-based.&quot;</blockquote>
 <p>Each module contains all layers for one feature — ViewModel, Composable, repository, data source, DTO.</p>
 <pre><code>:feature:search     — SearchViewModel, SearchScreen, SearchRepository, SearchApiService
 :feature:booking    — BookingViewModel, BookingScreen, BookingRepository, BookingApiService</code></pre>
 <p><strong>Pros</strong>: high cohesion within the feature; natural team ownership; changing a feature touches one module. <strong>Cons</strong>: shared infrastructure like network setup and the Room database either duplicates across features or requires a <code>:core:*</code> module anyway.</p>
+<p><strong>Under the hood</strong></p>
+<p>Gradle models the build as a directed acyclic graph of project tasks. With vertical slices, sibling feature modules have no dependency edge between them, so Gradle&#x27;s task scheduler can compile <code>:feature:search</code> and <code>:feature:booking</code> in parallel across worker processes (<code>org.gradle.parallel</code>). Each module also produces its own compilation classpath, so a change confined to one feature only invalidates that module&#x27;s <code>compileKotlin</code> task outputs; the build cache restores everything else from prior outputs keyed by an input hash.</p>
+<pre><code>:feature:search ─┐
+                 ├─► :app   (no edge between the two features → parallel compile)
+:feature:booking ┘</code></pre>
 <h4 id="layer-based-horizontal-slices">Layer-Based (Horizontal Slices)</h4>
+<blockquote><strong>🎤 Say it out loud (~30s):</strong> &quot;Layer-based puts all ViewModels in <code>:presentation</code>, all use cases in <code>:domain</code>, all repositories in <code>:data</code>. It looks architecturally pure and the dependency direction is easy to police, but it creates a serial compile chain — presentation depends on domain depends on data — and nobody can really own &#x27;all the data sources for the entire app.&#x27; Adding one feature touches three modules, so I avoid it at scale.&quot;</blockquote>
 <p>Each module contains one architectural layer for all features.</p>
 <pre><code>:presentation   — all ViewModels and Composables
 :domain         — all use cases and entities
 :data           — all repositories and data sources</code></pre>
 <p><strong>Pros</strong>: clean separation of concerns by layer; architecture rules are easy to enforce. <strong>Cons</strong>: low cohesion — adding a feature touches three modules; poor ownership alignment (who owns <code>:data</code>?); and poor build parallelism because <code>:presentation</code> depends on <code>:domain</code> which depends on <code>:data</code>, creating a serial compilation chain.</p>
+<p><strong>Under the hood</strong></p>
+<p>Because the layer modules form a linear dependency chain, Gradle must topologically order their compile tasks: <code>:data</code>&#x27;s <code>compileKotlin</code> must finish before <code>:domain</code>&#x27;s can start (it needs the class files on its classpath), and <code>:domain</code> before <code>:presentation</code>. Even with <code>org.gradle.parallel=true</code>, the scheduler cannot overlap them — parallelism only helps independent nodes in the task graph. A change deep in <code>:data</code> also invalidates the ABI (the public API surface) seen by <code>:domain</code> and <code>:presentation</code>, so Kotlin&#x27;s incremental compiler must recheck both downstream modules.</p>
+<pre><code>:data ──► :domain ──► :presentation   (strictly serial — no overlap possible)</code></pre>
 <h4 id="hybrid-recommended-for-large-apps">Hybrid (Recommended for Large Apps)</h4>
+<blockquote><strong>🎤 Say it out loud (~30s):</strong> &quot;The hybrid is what I actually ship: feature modules at the top for ownership and parallel builds, with cross-cutting concerns pulled down into <code>:core:*</code> modules like network, UI, domain, and data. For big features I split <code>:api</code> from <code>:impl</code> so other modules compile against a stable contract and don&#x27;t recompile when the implementation changes. It&#x27;s the structure Now in Android uses, and it balances cohesion against shared-infrastructure reuse.&quot;</blockquote>
 <p>Feature-based at the top level, with shared core layers extracted into <code>:core:*</code> modules.</p>
 <pre><code>:feature:search:api / :feature:search:impl
 :feature:booking:api / :feature:booking:impl
@@ -1031,8 +1254,11 @@ Effective compile time:                  ~45 seconds</code></pre>
 :core:data
 :core:ui
 :core:network</code></pre>
+<p><strong>Under the hood</strong></p>
+<p>The <code>:api</code>/<code>:impl</code> split exploits Gradle&#x27;s distinction between the <em>compile classpath</em> and the <em>runtime classpath</em>. Other modules depend only on <code>:feature:search:api</code> (interfaces and data classes), so changes inside <code>:impl</code> don&#x27;t alter the ABI those modules compiled against — Gradle marks the downstream <code>compileKotlin</code> tasks UP-TO-DATE and skips them. The concrete <code>:impl</code> is added to the runtime classpath (or wired by <code>:app</code> via DI), and Gradle&#x27;s ABI-aware incremental compilation compares the extracted public-API fingerprint, not file timestamps, to decide what to recompile.</p>
 <hr>
 <h3 id="dynamic-feature-modules">Dynamic Feature Modules</h3>
+<blockquote><strong>🎤 Say it out loud (~30s):</strong> &quot;Dynamic Feature Modules let you ship part of the app on demand instead of in the base APK, downloaded later through Play&#x27;s <code>SplitInstallManager</code>. The thing interviewers probe is the inverted dependency — a DFM depends on <code>:app</code>, not the reverse — and the runtime cost: the code isn&#x27;t present until it&#x27;s installed, so every entry point has to check install state, and DI gets hairy because Hilt needs a custom component. I treat them as a last resort for large optional features, not a default.&quot;</blockquote>
 <p>Dynamic Feature Modules enable <strong>on-demand delivery</strong> — the user downloads and installs parts of the app after the initial install, which reduces the base APK size.</p>
 <pre><code>// In :feature:onboarding (a DFM):
 // build.gradle.kts
@@ -1040,8 +1266,15 @@ plugins { id(&quot;com.android.dynamic-feature&quot;) }
 android { ... }
 dependencies { implementation(project(&quot;:app&quot;)) }  // DFM depends on base app, reverse of normal</code></pre>
 <p>The implications are worth understanding before reaching for them. DFM code is not available at app start if it hasn&#x27;t been downloaded yet, so all calls must go through <code>SplitInstallManager</code>. Navigation to DFM screens requires checking install state first. DFMs complicate DI — Hilt supports them via <code>@DefineComponent</code> plus <code>@InstallIn(customComponent)</code>, but it&#x27;s non-trivial. They&#x27;re best suited to large optional features like AR try-on or full offline maps, where the size reduction justifies the significant added complexity. Testing DFM install flows also requires specific test infrastructure that most teams don&#x27;t already have.</p>
+<p><strong>Under the hood</strong></p>
+<p>A DFM is packaged as a separate split APK inside the Android App Bundle (<code>.aab</code>); the Play Store generates and serves it independently of the base split. When you request it, <code>SplitInstallManager</code> downloads the split and the framework calls <code>SplitCompat.install()</code>, which patches the running app&#x27;s <code>ClassLoader</code> and resource table so the new <code>classes.dex</code> and resources resolve at runtime — this is why a class reference into an uninstalled DFM throws <code>ClassNotFoundException</code> and why entry points must be reflective or interface-based. The reversed dependency edge (<code>implementation(project(&quot;:app&quot;))</code>) exists because the base APK is loaded first and is on the DFM&#x27;s classpath; the DFM cannot be on the base&#x27;s compile classpath or the base couldn&#x27;t build without it.</p>
+<pre><code>base.apk (app) ──loaded first──► ClassLoader
+        ▲                              │ SplitCompat.install() patches in:
+        │ implementation(project)      ▼
+feature-onboarding.apk (split, fetched on demand)  →  new dex + resources</code></pre>
 <hr>
 <h3 id="convention-plugins">Convention Plugins</h3>
+<blockquote><strong>🎤 Say it out loud (~30s):</strong> &quot;Convention plugins move shared Gradle setup — compileSdk, Kotlin options, common dependencies — into one reusable plugin so each module applies a single line instead of copy-pasting 50. The big win is consistency: I bump <code>compileSdk</code> in one place and every module follows, and no module can drift onto a stale SDK. People sometimes ask buildSrc versus an included <code>build-logic</code> build — I prefer the included build because changing it doesn&#x27;t invalidate the whole project&#x27;s build classpath.&quot;</blockquote>
 <p>Convention plugins — also called build logic plugins — centralise Gradle configuration and eliminate copy-paste across <code>build.gradle.kts</code> files.</p>
 <pre><code>// buildSrc/src/main/kotlin/AndroidFeatureConventionPlugin.kt
 class AndroidFeatureConventionPlugin : Plugin&lt;Project&gt; {
@@ -1076,10 +1309,15 @@ dependencies {
     implementation(project(&quot;:feature:search:api&quot;))  // feature-specific only
 }</code></pre>
 <p><strong>Benefits</strong>: version updates to <code>compileSdk</code>, <code>minSdk</code>, or Kotlin happen in one place; new modules get the correct configuration by applying a single plugin; and consistency is enforced — no module can accidentally slip onto a different SDK version.</p>
+<p><strong>Under the hood</strong></p>
+<p>A convention plugin is just a class implementing <code>Plugin&lt;Project&gt;</code>; at configuration time Gradle calls its <code>apply(target)</code> and the body imperatively mutates that project&#x27;s model — applying other plugins, configuring the <code>LibraryExtension</code>, and adding dependencies — exactly as if you&#x27;d typed it in the module&#x27;s own script. Code in <code>buildSrc</code> is compiled into a synthetic build automatically placed on every script&#x27;s classpath, so editing it invalidates the configuration cache for the <em>whole</em> build. An <code>includeBuild(&quot;build-logic&quot;)</code> composite build instead exposes the plugin through a <code>gradlePluginPortal</code>-style marker, so only modules that actually apply the plugin are affected — which is why large projects (and Now in Android) favor <code>build-logic</code> over <code>buildSrc</code>.</p>
 <hr>
 <h3 id="when-does-modularization-become-over-engineering">When Does Modularization Become Over-Engineering?</h3>
+<blockquote><strong>🎤 Say it out loud (~30s):</strong> &quot;Modularization is a tool with real costs — Gradle config overhead, DI wiring, interface indirection, navigation boilerplate — so it&#x27;s over-engineering when those costs exceed the payoff. The tells are modules with a handful of files, PRs that touch every module anyway, and a small team that doesn&#x27;t need ownership boundaries. On a small app, Gradle&#x27;s per-module configuration time can actually exceed the compile time you saved, so I start with three to five modules and split only when a real pressure — team boundary, compile pain, or on-demand delivery — shows up.&quot;</blockquote>
 <p>There are six signs you&#x27;ve over-modularized. First, modules with only 1–3 files — the boundary adds more cognitive overhead than it saves. Second, most changes touch all modules — if every PR reaches <code>:core:domain</code>, <code>:core:data</code>, <code>:feature:X</code>, and <code>:app</code>, the modules are too fine-grained and you should consider merging. Third, the team is small — 2 or 3 engineers don&#x27;t need module ownership boundaries. Fourth, circular dependency pressure — if you keep wanting to add cross-module dependencies, the boundary is in the wrong place. Fifth, the build is not bottlenecked on compilation — on small apps the Gradle configuration overhead can easily exceed the compilation time savings. And sixth, navigation becomes a maze — excessive api/impl splits, interface indirection for simple screen transitions, and Hilt component hierarchies for DFMs can add complexity that dwarfs any benefit on a small codebase.</p>
 <p><strong>Guideline</strong>: start with 3–5 modules — <code>:app</code>, <code>:core:network</code>, <code>:core:ui</code>, and one <code>:feature:*</code> — and split features into their own modules only when a team boundary emerges, compile times become painful, or a feature is a natural candidate for on-demand delivery.</p>
+<p><strong>Under the hood</strong></p>
+<p>Every Gradle module incurs fixed overhead in the <em>configuration phase</em>: the build script is evaluated, plugins are applied, and a task graph node set is created for that project — work that happens on every invocation unless the configuration cache hits. Past a few hundred modules this per-project cost grows linearly and can dominate wall-clock time on incremental builds, which is the mechanism behind &quot;the build is not bottlenecked on compilation.&quot; Modularization only pays off when it shrinks the set of <code>compileKotlin</code> tasks actually invalidated by a typical change; if most changes still fan out to every module, the dependency graph hasn&#x27;t reduced invalidation scope and you&#x27;ve added configuration overhead for no caching benefit.</p>
 <h4 id="interview-angles-6">Interview Angles</h4>
 <p><strong>Q: How would you modularize a large Android app?</strong> &quot;I&#x27;d start with a hybrid approach: feature modules for each user-facing feature — <code>:feature:search</code>, <code>:feature:booking</code> — shared <code>:core:*</code> modules for network, UI, domain, data, and testing, and a thin <code>:app</code> module that wires navigation and DI. Within large feature modules I&#x27;d separate <code>:api</code> — the public contract — from <code>:impl</code> — the private implementation — to keep recompilation scope as narrow as possible.&quot;</p>
 <p><strong>Q: Feature-based vs layer-based — which do you choose?</strong> &quot;Feature-based, with shared infrastructure extracted to core modules. Layer-based creates serial build chains and poor team ownership — nobody owns &#x27;all the data sources for the whole app.&#x27; Features are the natural unit of ownership, and they&#x27;re also the natural unit of on-demand delivery if you ever need Dynamic Feature Modules.&quot;</p>

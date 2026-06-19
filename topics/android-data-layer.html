@@ -70,6 +70,7 @@
 <hr>
 <h2 id="101-networking">10.1 Networking</h2>
 <h3 id="http-basics">HTTP Basics</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;HTTP is a stateless request/response protocol over TCP — each call carries everything the server needs, there&#x27;s no session memory between requests. On Android the thing I always call out is that networking can never touch the main thread or you get a <code>NetworkOnMainThreadException</code>, and that error status codes like 404 or 500 aren&#x27;t exceptions in OkHttp — the request succeeded, so I still have to check <code>isSuccessful</code>. The other nuance interviewers probe is idempotency: GET/PUT/DELETE are safe to retry, but POST isn&#x27;t, which is why retry logic has to be method-aware.&quot;</blockquote>
 <p>HTTP is a stateless request/response protocol running over TCP/IP — every call is independent, no session memory, and every Android network call goes over HTTP or HTTPS.</p>
 <p><strong>Methods and semantics</strong>:</p>
 <table border="1" cellpadding="6" cellspacing="0">
@@ -106,9 +107,18 @@
 <li><code>Connection: keep-alive</code> — persistent connections (HTTP/1.1 default)</li>
 </ul>
 <p><strong>HTTP/2 benefits</strong>: multiplexed streams over single TCP connection (no head-of-line blocking at HTTP layer), header compression (HPACK), server push. OkHttp supports HTTP/2 automatically when server supports it.</p>
+<p><strong>Under the hood</strong></p>
+<p>An HTTP request is fundamentally just text written onto a TCP socket — a request line, CRLF-delimited headers, a blank line, then the optional body. HTTP/1.1 keeps the socket open (<code>keep-alive</code>) so the next request reuses the same TCP+TLS handshake, but responses on one connection are strictly serialized, which is HTTP-layer head-of-line blocking. HTTP/2 fixes this by framing: the single connection is split into a binary frame layer carrying interleaved <code>HEADERS</code> and <code>DATA</code> frames tagged with stream IDs, so many logical requests multiplex concurrently, and HPACK compresses headers against a shared dynamic table so repeated headers (cookies, auth) cost only an index reference.</p>
+<pre><code>GET /users/42 HTTP/1.1\r\n
+Host: api.example.com\r\n
+Authorization: Bearer eyJ...\r\n
+Accept-Encoding: gzip\r\n
+\r\n                          &lt;- blank line ends headers, no body for GET</code></pre>
+<p>Because the gzip is transparent (OkHttp adds <code>Accept-Encoding: gzip</code> and inflates the response itself), <code>Content-Length</code> reflects the compressed bytes on the wire while your code sees the decompressed stream.</p>
 <p><strong>Android implications</strong>: All network operations must be off the main thread. <code>NetworkOnMainThreadException</code> is thrown if you try. OkHttp uses a thread pool internally; Retrofit bridges to coroutines/RxJava.</p>
 <hr>
 <h3 id="rest-principles">REST Principles</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;REST is an architectural style, not a protocol — Fielding&#x27;s six constraints, the big ones being statelessness, a uniform resource-oriented interface, and cacheability. In practice I model URIs as nouns and let HTTP verbs carry the action, so <code>GET /users/42</code> and <code>DELETE /users/42</code> instead of RPC-style endpoints. The honest nuance is that almost nobody implements HATEOAS — the hypermedia constraint — so most &#x27;RESTful&#x27; APIs are really REST-ish, and the real trade-off versus GraphQL is round-trips: REST gives you dead-simple HTTP caching but N+1 fetches for nested data.&quot;</blockquote>
 <p>REST is an architectural style, not a protocol — it&#x27;s Roy Fielding&#x27;s set of six constraints that, when followed, produce a scalable, loosely coupled web API. The constraints are:</p>
 <ol>
 <li><strong>Client-Server</strong>: Separation of UI from data storage</li>
@@ -130,8 +140,11 @@ GET    /users/{id}/orders   — sub-resource</code></pre>
 <li>REST: multiple round-trips for nested data (N+1), simple caching</li>
 <li>GraphQL: single round-trip, precise data fetching, complex caching (no HTTP caching by default)</li>
 </ul>
+<p><strong>Under the hood</strong></p>
+<p>REST isn&#x27;t enforced by any library — it&#x27;s a discipline layered on top of plain HTTP, so &quot;under the hood&quot; REST is just HTTP semantics used correctly. The constraints map directly to mechanics: statelessness means no server affinity, so a load balancer can route consecutive requests from the same client to different backend instances with no sticky-session table — that&#x27;s what makes horizontal scaling cheap. Cacheability is implemented entirely through HTTP headers (<code>Cache-Control</code>, <code>ETag</code>, <code>Last-Modified</code>), letting any intermediary — CDN, proxy, or OkHttp&#x27;s <code>Cache</code> — serve a <code>304 Not Modified</code> without hitting origin. The &quot;uniform interface&quot; is why a generic client like Retrofit can talk to any REST API: the contract is the HTTP method + URI + media type, not a per-server RPC stub. GraphQL breaks the caching constraint precisely because every query is a <code>POST</code> to a single <code>/graphql</code> endpoint, so the URL is no longer a cache key and HTTP intermediaries can&#x27;t reason about it.</p>
 <hr>
 <h3 id="json-serialization">JSON Serialization</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;JSON serialization converts between objects and JSON text, and on Android the modern choices are Moshi and kotlinx.serialization, with Gson as the legacy option I&#x27;m trying to migrate off. The key reason I avoid Gson is that it&#x27;s reflection-based and Kotlin-unaware — it&#x27;ll happily put <code>null</code> into a non-null Kotlin field and bypass the type system, blowing up later with an NPE. Moshi codegen and kotlinx.serialization both generate adapters at compile time, so they&#x27;re faster and respect nullability and default values, which is what actually protects me when an API adds or drops a field.&quot;</blockquote>
 <p>JSON serialization is the process of converting between Kotlin/Java objects and JSON strings — and on Android there are two dominant modern approaches, plus one legacy one to know about:</p>
 <p><strong>Gson</strong> (Google, legacy):</p>
 <pre><code>val gson = Gson()
@@ -166,8 +179,24 @@ val user = Json.decodeFromString&lt;User&gt;(json)</code></pre>
     .addConverterFactory(MoshiConverterFactory.create(moshi))
     .client(okHttpClient)
     .build()</code></pre>
+<p><strong>Under the hood</strong></p>
+<p>The split that explains everything is reflection vs codegen. Gson and Moshi&#x27;s <code>KotlinJsonAdapterFactory</code> walk your class at runtime with <code>java.lang.reflect</code>/<code>kotlin-reflect</code>, reading field metadata and using <code>Field.setAccessible(true)</code> to write values directly — which is why Gson can violate Kotlin&#x27;s non-null contract: it never calls the constructor, so the compiler-injected <code>Intrinsics.checkNotNull</code> null check never runs, and a JSON <code>null</code> silently lands in a non-null field. Moshi codegen (<code>@JsonClass(generateAdapter = true)</code>) and kotlinx.serialization instead run an annotation processor / compiler plugin at build time that emits a concrete adapter class (e.g. <code>UserJsonAdapter</code>) with hand-written <code>fromJson</code>/<code>toJson</code> that read tokens off a streaming <code>JsonReader</code> and call the real constructor — so nullability and default-parameter handling are baked in, and there&#x27;s no reflection cost per object.</p>
+<pre><code>// What Moshi codegen emits (simplified): a streaming, reflection-free reader
+override fun fromJson(reader: JsonReader): User {
+    var id: Int? = null; var name: String? = null
+    reader.beginObject()
+    while (reader.hasNext()) when (reader.selectName(NAMES)) {
+        0 -&gt; id = intAdapter.fromJson(reader)
+        1 -&gt; name = stringAdapter.fromJson(reader)
+        -1 -&gt; { reader.skipName(); reader.skipValue() }  // unknown field skipped
+    }
+    reader.endObject()
+    return User(id ?: throw JsonDataException(&quot;id missing&quot;), name ?: ...)
+}</code></pre>
+<p>kotlinx.serialization goes further: its compiler plugin generates a <code>KSerializer</code> plus an integer bitmask tracking which fields were present in the JSON, so it can distinguish &quot;absent&quot; (use the default) from &quot;explicit null&quot; without reflection at all.</p>
 <hr>
 <h3 id="okhttp">OkHttp</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;OkHttp is the actual HTTP engine under Retrofit — it owns the connection pool, the disk cache, and the interceptor chain. The two pieces I lean on are connection reuse, where it keeps a pool of warm TCP/TLS connections so I&#x27;m not paying handshake cost on every call, and the <code>Dispatcher</code>, which caps concurrency at 64 total and 5 per host. The gotcha I always mention is that a 4xx or 5xx response is still a successful <code>Response</code> object — OkHttp only throws for transport-level failures like timeouts or DNS, so I have to check <code>response.isSuccessful</code> myself.&quot;</blockquote>
 <p>OkHttp is the HTTP client that lives underneath Retrofit — it manages connections, the request/response lifecycle, and the interceptor chain that lets you inject middleware at every call.</p>
 <p><strong>Internals</strong>:</p>
 <ul>
@@ -201,8 +230,21 @@ val user = Json.decodeFromString&lt;User&gt;(json)</code></pre>
 <li><code>UnknownHostException</code> — DNS failure</li>
 <li>Response with error status code — NOT an exception in OkHttp; must check <code>response.isSuccessful</code></li>
 </ul>
+<p><strong>Under the hood</strong></p>
+<p>A <code>RealCall</code> runs the request through a fixed, ordered list of interceptors assembled in <code>getResponseWithInterceptorChain()</code>, ending with built-in ones you never see: the <code>RetryAndFollowUpInterceptor</code> (re-routes and follows redirects/auth challenges), <code>BridgeInterceptor</code> (adds <code>Host</code>, <code>Accept-Encoding: gzip</code>, cookies), <code>CacheInterceptor</code> (serves/validates from <code>DiskLruCache</code>), <code>ConnectInterceptor</code> (opens or borrows a socket from the pool), and finally <code>CallServerInterceptor</code> (writes the request bytes and reads the response). The <code>RealInterceptorChain</code> is the mechanism: each interceptor receives an immutable chain index and calls <code>proceed()</code>, which constructs the next chain node — that&#x27;s why every interceptor is guaranteed to run exactly one downstream <code>proceed()</code>.</p>
+<pre><code>RealCall.execute()
+ └─ RealInterceptorChain.proceed(request)   // index 0
+     ├─ [your application interceptors]      // see uncached request
+     ├─ RetryAndFollowUpInterceptor
+     ├─ BridgeInterceptor                     // gzip, cookies, Content-Length
+     ├─ CacheInterceptor                      // may short-circuit with 304/cached body
+     ├─ ConnectInterceptor                    // ConnectionPool: reuse or new socket
+     ├─ [your network interceptors]           // only run if we actually hit the wire
+     └─ CallServerInterceptor                 // socket write + read</code></pre>
+<p>The <code>ConnectionPool</code> keys idle connections by route (host + proxy + TLS config) and reaps them with a background cleanup task after the 5-minute keep-alive; HTTP/2 connections are special-cased so multiple concurrent calls to the same host share one socket via stream multiplexing instead of taking separate pool slots.</p>
 <hr>
 <h3 id="retrofit">Retrofit</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;Retrofit turns an annotated Kotlin interface into a working HTTP client — I describe endpoints declaratively and it generates the implementation at runtime via a dynamic proxy. Under the hood it&#x27;s a thin layer over OkHttp: a <code>Converter</code> handles serialization and a <code>CallAdapter</code> bridges OkHttp&#x27;s <code>Call</code> to coroutines or RxJava. The thing I&#x27;m deliberate about is the return type — a bare <code>User</code> makes Retrofit throw <code>HttpException</code> on any non-2xx, whereas <code>Response&lt;User&gt;</code> hands me the status code and headers so I can handle errors gracefully instead of catching exceptions.&quot;</blockquote>
 <p>Retrofit is a type-safe HTTP client that turns annotated Kotlin interfaces into working HTTP calls, using OkHttp as the transport layer underneath.</p>
 <p><strong>Interface definition</strong>:</p>
 <pre><code>interface UserApi {
@@ -251,8 +293,18 @@ val user = Json.decodeFromString&lt;User&gt;(json)</code></pre>
 <p><strong>Dynamic URLs</strong>:</p>
 <pre><code>@GET
 suspend fun getFromUrl(@Url url: String): SomeResponse</code></pre>
+<p><strong>Under the hood</strong></p>
+<p><code>Retrofit.create()</code> calls <code>Proxy.newProxyInstance</code>, which generates a synthetic class implementing your interface; every method call is funneled into a single <code>InvocationHandler.invoke()</code>. On first call for a method, Retrofit parses its annotations into a cached <code>ServiceMethod</code>/<code>HttpServiceMethod</code> (URL template, parameter handlers, the <code>Converter</code>, and the matching <code>CallAdapter</code>), so the reflection cost is paid once per method and memoized. The <code>suspend</code> support is a compiler trick, not magic: the Kotlin compiler rewrites a <code>suspend fun getUser(): User</code> into a JVM method with a hidden trailing <code>Continuation</code> parameter and an erased <code>Object</code> return type. Retrofit detects that last <code>Continuation</code> argument and adapts OkHttp&#x27;s async <code>enqueue</code> callback into <code>continuation.resume(...)</code> / <code>resumeWithException(...)</code>, which is how the coroutine is resumed off the OkHttp dispatcher thread.</p>
+<pre><code>api.getUser(&quot;42&quot;)
+  → Proxy InvocationHandler.invoke(method, args)
+  → loadServiceMethod(method)          // cached ServiceMethod (parsed once)
+  → HttpServiceMethod.invoke(args)
+  → builds okhttp3.Request via Converter + parameter handlers
+  → CallAdapter wraps Call; suspend variant suspendCancellableCoroutine { call.enqueue { resume } }</code></pre>
+<p>The <code>@Path</code>/<code>@Query</code>/<code>@Body</code> annotations become <code>ParameterHandler</code> objects that each know how to apply one argument to the <code>RequestBuilder</code> in order — <code>@Path</code> does URL-segment substitution with encoding, <code>@Query</code> appends to the query string, and <code>@Body</code> runs the argument through the response converter to produce the request <code>RequestBody</code>.</p>
 <hr>
 <h3 id="interceptors">Interceptors</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;Interceptors are middleware in OkHttp&#x27;s chain — each one gets the request, can mutate it, calls <code>chain.proceed()</code>, and can then inspect the response coming back. The distinction I always draw is application versus network interceptors: an application interceptor runs exactly once even if the response is served from cache, which makes it the right place for auth headers and logging, while a network interceptor only fires on actual wire traffic. The big gotcha is that interceptors are synchronous and run on OkHttp&#x27;s pool, so I never do blocking token refresh inside one — that&#x27;s what the <code>Authenticator</code> is for, since it reacts to a 401 and isn&#x27;t part of the chain.&quot;</blockquote>
 <p>Interceptors are middleware in the OkHttp chain — each one receives a <code>Chain</code>, can inspect or modify the request, calls <code>chain.proceed()</code> to pass it along, and can then inspect or modify the response on the way back.</p>
 <p><strong>Two types</strong>:</p>
 <ul>
@@ -295,8 +347,17 @@ suspend fun getFromUrl(@Url url: String): SomeResponse</code></pre>
     private fun isRetryable(code: Int) = code == 503 || code == 504 || code == 429
 }</code></pre>
 <p><strong>Order matters</strong>: Interceptors are called in the order added. Typical order: logging → auth → retry.</p>
+<p><strong>Under the hood</strong></p>
+<p>The &quot;chain&quot; is a linked walk through OkHttp&#x27;s interceptor list implemented by <code>RealInterceptorChain</code>: calling <code>chain.proceed(request)</code> builds a <em>new</em> chain instance with <code>index + 1</code> and invokes the next interceptor&#x27;s <code>intercept()</code>, returning its <code>Response</code> up the stack. This is why ordering is positional — your application interceptors sit at the front of the list (before the built-in cache and connect interceptors), so they see the logical request and the final response regardless of whether the body came from <code>DiskLruCache</code> or the network, while network interceptors are inserted after <code>ConnectInterceptor</code> and only execute when a real socket is in play. The chain is strictly synchronous and single-threaded per call — <code>intercept()</code> blocks the OkHttp dispatcher thread until <code>proceed()</code> returns — so a retry interceptor&#x27;s <code>Thread.sleep</code> parks a pooled worker, and any blocking I/O (like a network token refresh) inside an interceptor stalls that thread.</p>
+<pre><code>proceed(req) at index i  →  interceptors[i].intercept(chainAtIndex i+1)
+                                     │
+                                     └─ (interceptor body) ─ chain.proceed(req&#x27;) ─┐
+                                                                                  ▼
+                                                          proceed(req&#x27;) at index i+1 ...</code></pre>
+<p>Auth refresh is deliberately <em>not</em> done in the chain: OkHttp&#x27;s <code>Authenticator</code> is a separate callback the <code>RetryAndFollowUpInterceptor</code> invokes only after it sees a <code>401</code>, letting it attach fresh credentials and replay the request — which avoids racing multiple interceptor copies trying to refresh a token at once.</p>
 <hr>
 <h3 id="authentication-and-token-refresh">Authentication and Token Refresh</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;When an access token expires the server hands back a 401, and I want to silently refresh and replay the original request so the user never sees an error. I&#x27;d hang that off OkHttp&#x27;s <code>Authenticator</code>, because it&#x27;s the framework&#x27;s built-in 401 hook — it re-runs my code and lets me return a new request to retry. The gotcha interviewers always probe is the thundering-herd race: if several requests 401 at once you can fire several refreshes and burn a single-use refresh token, so I guard the refresh with a <code>Mutex</code> plus a double-check that compares the stored token against the one that failed, so only the first caller actually hits the auth endpoint.&quot;</blockquote>
 <p>Most APIs hand you a short-lived access token and a long-lived refresh token. When the access token expires and you get a 401, the client has to silently obtain a new one and replay the original request — all without the user noticing.</p>
 <p><strong>The race condition problem</strong>: If 3 requests fire simultaneously and all get 401, you don&#x27;t want 3 concurrent token refresh calls — that&#x27;s wasteful and may break some OAuth providers (refresh tokens are often single-use).</p>
 <p><strong>Safe single-flight token refresh with OkHttp <code>Authenticator</code></strong>:</p>
@@ -403,8 +464,18 @@ suspend fun getFromUrl(@Url url: String): SomeResponse</code></pre>
 <li>Infinite loop if the auth endpoint itself returns 401 → guard with separate <code>OkHttpClient</code> or check URL.</li>
 <li>Race condition if Mutex is not used → multiple refreshes, tokens overwritten with stale data.</li>
 </ul>
+<p><strong>Under the hood</strong></p>
+<p><code>Authenticator</code> is not an interceptor — it lives in a different stage of the call. OkHttp&#x27;s <code>RetryAndFollowUpInterceptor</code> runs the request, and only when it sees a <code>401</code> (or <code>407</code> for proxies, which routes to <code>proxyAuthenticator</code>) does it call <code>Authenticator.authenticate()</code> to <em>build a follow-up request</em>. If you return a non-null <code>Request</code>, OkHttp loops back and re-executes the entire interceptor chain with it; if you return <code>null</code>, the <code>401</code> response is returned to the caller untouched. OkHttp caps these follow-ups at <code>MAX_FOLLOW_UPS = 20</code>, which is the framework-level loop guard, but you should still add your own (the <code>Authorization-Retried</code> header above) because the auth endpoint itself could 401 and chew through all 20.</p>
+<p>The <code>Mutex</code> is the real mechanism behind single-flight. kotlinx.coroutines&#x27; <code>Mutex</code> is not a JVM monitor — it&#x27;s a suspending lock backed by a CAS on an internal state field plus a lock-free queue of waiting continuations. The first coroutine wins the CAS and runs the refresh; the others <em>suspend</em> (no thread blocked) and resume in FIFO order after <code>unlock()</code>, at which point the double-check sees the freshly stored token and skips the network call.</p>
+<pre><code>RealCall.execute()
+  └─ RetryAndFollowUpInterceptor   ← sees 401, calls authenticator, loops (max 20)
+       └─ BridgeInterceptor        ← adds Host, gzip, cookies
+            └─ CacheInterceptor
+                 └─ ConnectInterceptor
+                      └─ CallServerInterceptor  ← writes/reads socket → Response(code=401)</code></pre>
 <hr>
 <h3 id="timeouts">Timeouts</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;OkHttp doesn&#x27;t have one timeout — it has separate timeouts for each phase: connect to establish the TCP and TLS handshake, write to upload the body, and read which is the gap <em>between bytes</em> from the server, not the total response time. That last point trips people up: <code>readTimeout</code> resets on every chunk, so a slow trickle never trips it, which is why for a hard upper bound you want <code>callTimeout</code>, the end-to-end limit covering retries and redirects. I tune them per workload — long read timeout for streaming, long write timeout for file uploads — usually by spinning a dedicated client off <code>newBuilder()</code> so I don&#x27;t bloat the global one.&quot;</blockquote>
 <p>Timeouts are limits on how long OkHttp is willing to wait at each phase of an HTTP call — connect, read, and write are each configurable independently.</p>
 <p><strong>Three timeout types</strong>:</p>
 <ul>
@@ -427,8 +498,15 @@ val call = okHttpClient.newBuilder()
 <li>Setting timeouts too high → users wait forever; too low → flaky on slow connections</li>
 <li>File uploads need higher write timeout; video playback needs higher read timeout</li>
 </ul>
+<p><strong>Under the hood</strong></p>
+<p><code>connect</code>/<code>read</code>/<code>write</code> timeouts are pushed down to the underlying socket: OkHttp sets <code>Socket.setSoTimeout()</code> and uses Okio&#x27;s <code>Timeout</code>/<code>AsyncTimeout</code> on the source and sink. These are <em>per-I/O-operation</em> timers — each <code>read()</code> on the socket arms a timer for <code>readTimeout</code>, and a single byte arriving disarms and re-arms it. That&#x27;s why a server dribbling one byte every 9 seconds never trips a 10s read timeout: the clock is between bytes, not over the whole body.</p>
+<p><code>callTimeout</code> is implemented completely differently. It&#x27;s not a socket option — it&#x27;s an <code>AsyncTimeout</code> scheduled on a watchdog thread when <code>RealCall</code> starts. When that deadline elapses the watchdog calls <code>cancel()</code> on the call, which closes the connection and surfaces as an <code>InterruptedIOException</code> (&quot;timeout&quot;). Because it wraps the entire chain, it&#x27;s the only timeout that bounds redirects, the <code>Authenticator</code> retry loop, and connection acquisition combined.</p>
+<pre><code>// Conceptually, per-operation socket timeouts vs. a single wall-clock cap:
+socket.soTimeout = readTimeoutMillis      // re-armed on every read()
+AsyncTimeout.scheduleAt(now + callTimeout) // one-shot, cancels the whole RealCall</code></pre>
 <hr>
 <h3 id="retries">Retries</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;My rule is: retry only what&#x27;s transient and only what&#x27;s safe. Transient means 5xx, 429, and IOExceptions like dropped connections — never a 4xx like 400 or 401, because retrying a client error just hammers the server with the same broken request. Safe means idempotent: GET is fine to retry blindly, but a POST that creates a resource I won&#x27;t auto-retry unless the server honors a client-generated idempotency key, otherwise I create duplicates. And I always use exponential backoff with jitter — without the random jitter, a fleet of clients that all failed at once retries in lockstep and synchronizes into a thundering herd that takes the server down again.&quot;</blockquote>
 <p>Retries are automatic re-attempts of a failed request — the goal is to recover from transient failures transparently, without the user ever seeing an error.</p>
 <p><strong>What to retry</strong>:</p>
 <ul>
@@ -472,8 +550,16 @@ val call = okHttpClient.newBuilder()
 }</code></pre>
 <p><strong>Idempotency and retries</strong>: Only retry idempotent operations automatically. For POST (non-idempotent creates), require explicit user confirmation or use a client-generated idempotency key.</p>
 <p><strong>OkHttp built-in retries</strong>: OkHttp itself retries on connection failures (not on HTTP errors). This is controlled by <code>retryOnConnectionFailure(true)</code> (default). It does NOT retry on 5xx.</p>
+<p><strong>Under the hood</strong></p>
+<p>OkHttp&#x27;s native retry lives in <code>RetryAndFollowUpInterceptor</code> and only fires on <em>connection-level</em> <code>IOException</code>s, gated by <code>recover()</code>. <code>recover()</code> returns false (rethrows) for things that won&#x27;t get better by retrying: a <code>ProtocolException</code>, a non-<code>SocketTimeoutException</code> after the request body was already sent, certain TLS handshake failures (<code>SSLPeerUnverifiedException</code>), or when there&#x27;s no further <code>Route</code> to try. When there are multiple DNS results or proxy routes, <code>RouteSelector</code> hands the next candidate to the retry, which is why a single <code>enqueue()</code> can transparently fail over to a second IP — it never re-runs your application interceptors, so your code doesn&#x27;t see it.</p>
+<p>A custom <code>RetryInterceptor</code> like the one above sits in the <em>application</em> interceptor layer, so each <code>chain.proceed()</code> re-runs the whole network stack and is the only place you can retry on HTTP status codes. The bit-shift <code>1L shl (attempt - 1)</code> is just <code>2^(attempt-1)</code> — exponential growth — and <code>Random.nextLong(0, 100)</code> is the jitter that de-correlates clients. Note this implementation uses <code>Thread.sleep</code>, which is fine because OkHttp dispatches the call on its <code>Dispatcher</code>&#x27;s <code>ExecutorService</code> thread, never the main thread; doing the same in a coroutine should use <code>delay()</code> so it suspends instead of pinning a thread.</p>
+<pre><code>backoff:  100ms · 2^0 + jitter → ~100–200ms
+          100ms · 2^1 + jitter → ~200–300ms
+          100ms · 2^2 + jitter → ~400–500ms
+jitter prevents N clients that failed at T0 from all retrying at exactly T0+200ms</code></pre>
 <hr>
 <h3 id="caching">Caching</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;OkHttp ships a full HTTP cache that&#x27;s driven by response headers — <code>Cache-Control max-age</code> for freshness and <code>ETag</code>/<code>Last-Modified</code> for revalidation — and it&#x27;s completely transparent to the app, so a GET that&#x27;s still fresh never touches the network. The key distinction I draw is fresh vs. stale-but-revalidatable: when something expires, OkHttp doesn&#x27;t refetch blindly, it sends a conditional <code>If-None-Match</code> and the server can answer <code>304 Not Modified</code> with no body, saving bandwidth. The trap is using HTTP caching for mutable data like a user feed — for offline-first I reach for Room as the source of truth instead, because HTTP caching is opaque and I can&#x27;t query or selectively invalidate it.&quot;</blockquote>
 <p>HTTP caching means storing responses locally so you can skip the network entirely for data you&#x27;ve already fetched recently.</p>
 <p><strong>HTTP cache headers</strong>:</p>
 <ul>
@@ -526,8 +612,19 @@ request.newBuilder()
 <li>For mutable data (feed, user profile), prefer Room as the cache (offline-first) over HTTP cache</li>
 <li>HTTP cache is transparent to the app; Room cache is explicit and controllable</li>
 </ul>
+<p><strong>Under the hood</strong></p>
+<p>The cache is a <code>DiskLruCache</code> on disk: each entry is keyed by an MD5 hash of the request URL and stored as two files — one for the serialized headers/metadata, one for the raw response body — with a <code>journal</code> file tracking the LRU ordering so eviction stays under <code>maxSize</code>. <code>CacheInterceptor</code> is the decision point. On each call it runs <code>CacheStrategy</code>, which compares the cached response&#x27;s freshness lifetime (from <code>max-age</code>/<code>Expires</code> minus current age) against now and produces one of three outcomes: serve the cached response directly (a cache hit, network request is <code>null</code>), make a conditional network request, or go fully to the network.</p>
+<p>The 304 path is where the savings come from. When an entry is stale but carries a validator, <code>CacheStrategy</code> builds a request with <code>If-None-Match: &lt;etag&gt;</code> (or <code>If-Modified-Since</code>). If the server replies <code>304 Not Modified</code>, OkHttp discards the empty network body, <em>merges</em> the new headers onto the stored entry, refreshes its timestamps, and returns the cached body — so the bytes never re-download. <code>FORCE_CACHE</code> sets <code>onlyIfCached</code> and synthesizes a <code>504 Unsatisfiable Request</code> if nothing is cached; <code>FORCE_NETWORK</code> sets <code>no-cache</code> so the validation/serve-from-disk branch is skipped entirely.</p>
+<pre><code>CacheStrategy outcomes:
+  networkRequest == null &amp;&amp; cacheResponse != null  → HIT, return from DiskLruCache
+  networkRequest != null &amp;&amp; cacheResponse != null  → CONDITIONAL GET (If-None-Match)
+                                                       └─ 304 → return cached, refresh headers
+                                                       └─ 200 → replace entry
+  networkRequest != null &amp;&amp; cacheResponse == null   → MISS, full network fetch
+  networkRequest == null &amp;&amp; cacheResponse == null   → 504 (onlyIfCached, nothing stored)</code></pre>
 <hr>
 <h3 id="pagination">Pagination</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;Pagination fetches a big list in chunks instead of all at once. The decision I always call out is offset vs. cursor: offset/limit is simple and lets you jump to an arbitrary page, but it&#x27;s unstable — if rows are inserted or deleted while the user scrolls, items shift and you get duplicates or skips. Cursor-based (keyset) pagination encodes the last item&#x27;s sort key, so it&#x27;s stable for live feeds at the cost of not being able to random-access a page. On Android I&#x27;d reach for Paging 3 with a <code>PagingSource</code>, and <code>RemoteMediator</code> when I want it backed by Room for offline; the library handles prefetch, in-flight de-duplication, and exposing load states to the UI so I&#x27;m not reinventing that.&quot;</blockquote>
 <p>Pagination is the pattern of fetching a large dataset in manageable chunks rather than pulling everything at once — critical for feeds, search results, or any list that could grow unbounded.</p>
 <p><strong>Three pagination strategies</strong>:</p>
 <p><strong>1. Offset/Limit (page-based)</strong>:</p>
@@ -587,8 +684,17 @@ LazyColumn {
         }
     }
 }</code></pre>
+<p><strong>Under the hood</strong></p>
+<p>Paging 3 is built around a <code>PageFetcher</code> that owns the active <code>PagingSource</code> and emits a stream of <code>PagingData</code>. As the UI scrolls, <code>collectAsLazyPagingItems()</code> reports the accessed index back through a <code>PagingDataPresenter</code>; when that index gets within <code>prefetchDistance</code> of either edge of the loaded window, the fetcher invokes your <code>suspend load()</code> with <code>LoadParams.Append</code> or <code>LoadParams.Prepend</code>, carrying the <code>nextKey</code>/<code>prevKey</code> you returned from the previous page. It serializes these so only one append and one prepend are ever in flight, which is the in-flight de-duplication you get for free. With <code>enablePlaceholders = true</code>, it knows total count and emits <code>null</code> items for unloaded positions; with it off, the list simply grows.</p>
+<p><code>cachedIn(viewModelScope)</code> is what makes the stream survive configuration changes: it multicasts the <code>PagingData</code> through a <code>SharedFlow</code>-style operator tied to the scope, so a rotation re-collects the already-loaded pages instead of re-hitting the network from page one. Invalidation (a Room write, or you calling <code>invalidate()</code>) tears down the current <code>PagingSource</code>, calls <code>getRefreshKey()</code> to find an anchor near the user&#x27;s scroll position, and constructs a fresh source loading around that key — which is why <code>getRefreshKey</code> returns the <em>item id</em> near <code>anchorPosition</code> rather than a page number.</p>
+<pre><code>scroll near end (index ≥ loaded - prefetchDistance)
+   → PageFetcher.load(Append, key = lastPage.nextKey)
+        → your PagingSource.load()  → LoadResult.Page(data, nextKey)
+              → appended to PagingData → diffed → emitted to LazyColumn
+invalidate() → getRefreshKey(state) → new PagingSource centered on that key</code></pre>
 <hr>
 <h3 id="error-mapping">Error Mapping</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;Error mapping is about not letting networking internals leak into the UI. Raw <code>HttpException</code>, <code>IOException</code>, <code>SocketTimeoutException</code> are transport details — my ViewModel and UI should reason about a domain <code>sealed class</code> like <code>NoInternet</code>, <code>Timeout</code>, <code>Unauthorized</code>, <code>ServerError</code>. So at the repository boundary I catch and map exceptions into that sealed type, usually wrapped in a <code>Result</code>. The detail I make sure to handle is parsing the error <em>body</em>: Retrofit&#x27;s <code>HttpException</code> only gives you the status code and a generic message, so to surface the server&#x27;s actual validation message I have to read <code>errorBody().string()</code> — and that stream can only be consumed once, so I read it carefully and tolerate it being empty.&quot;</blockquote>
 <p>Error mapping is the practice of converting raw HTTP and network exceptions into domain-specific sealed class errors that the UI layer can actually reason about. Without it, ViewModels receive raw <code>HttpException</code>, <code>IOException</code>, <code>SocketTimeoutException</code> — networking implementation details that have no business in the UI.</p>
 <p><strong>Domain error model</strong>:</p>
 <pre><code>sealed class NetworkError {
@@ -636,8 +742,18 @@ suspend fun getUser(id: String): Result&lt;User&gt; = try {
     Result.Error(e.toNetworkError())
 }</code></pre>
 <p>Alternatively, Kotlin&#x27;s built-in <code>kotlin.Result&lt;T&gt;</code> or Arrow&#x27;s <code>Either&lt;Error, Success&gt;</code> serve the same purpose.</p>
+<p><strong>Under the hood</strong></p>
+<p>A Retrofit <code>HttpException</code> is thrown by Retrofit itself, not by OkHttp: when a suspend Retrofit method or a <code>Call</code> returns a response with a non-2xx code, Retrofit wraps the failed <code>retrofit2.Response</code> in <code>HttpException</code>, copying out <code>code()</code> and <code>message()</code> (the HTTP status line reason phrase) eagerly while keeping a reference to the full <code>Response</code>. The body of a failed call is held as <code>errorBody()</code>, an OkHttp <code>ResponseBody</code> backed by a <code>BufferedSource</code> reading from the socket. Calling <code>.string()</code> reads the whole buffer and then <em>closes</em> it — the source is one-shot, so a second <code>.string()</code> throws <code>IllegalStateException: closed</code>. That&#x27;s the subtlety the parsing helper above is guarding against by reading exactly once.</p>
+<p>The connectivity exceptions map cleanly because they come from distinct layers: <code>UnknownHostException</code> is thrown by the DNS resolver (<code>InetAddress.getAllByName</code>) when a hostname can&#x27;t resolve, <code>ConnectException</code> from the TCP <code>connect()</code> syscall when there&#x27;s no route or the port is refused, and <code>SocketTimeoutException</code> from the socket read/write timers described earlier. Because Kotlin&#x27;s <code>sealed class</code> is closed at compile time, the <code>when</code> over <code>NetworkError</code> in the UI is exhaustive without an <code>else</code>, so adding a new error variant forces every consumer to handle it — the compiler turns &quot;did I handle this failure?&quot; into a build error rather than a runtime surprise.</p>
+<pre><code>socket read → 503 status line
+  → OkHttp Response(code=503, body=ResponseBody)
+    → Retrofit sees !isSuccessful → throw HttpException(response)
+      → repository catch → toNetworkError() → NetworkError.ServerError(503, ...)
+        → ViewModel exhaustive `when` → UI state
+errorBody().string() consumes + closes the BufferedSource (one read only)</code></pre>
 <hr>
 <h3 id="idempotency">Idempotency</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;Idempotency means doing the operation N times lands you in the same state as doing it once, which is exactly the property that tells me whether a retry is safe. GET, PUT, and DELETE are idempotent by definition; POST and PATCH aren&#x27;t, so I never blindly retry them. The trick for making a POST safe to retry is a client-generated idempotency key — a UUID per logical operation that the server dedupes on — so if the network drops after the server committed but before I got the response, I retry with the same key and get the original result instead of a second order.&quot;</blockquote>
 <p>An operation is idempotent when performing it multiple times produces exactly the same result as performing it once — which determines whether it&#x27;s safe to automatically retry on failure.</p>
 <p><strong>HTTP idempotency</strong>:</p>
 <ul>
@@ -672,8 +788,13 @@ suspend fun createOrder(
         }
     }
 }</code></pre>
+<p><strong>Under the hood</strong></p>
+<p>Idempotency isn&#x27;t enforced by the HTTP protocol — it&#x27;s a contract the server must honor. With an idempotency key, the server typically persists a record keyed by <code>(key, request-fingerprint)</code> inside the same transaction that commits the side effect. On a retry it looks up that key: if a completed result exists it short-circuits and replays the stored response, and if a request with that key is still in flight it returns a 409/conflict or blocks. The hard part is atomicity — the key record and the business write must commit together, otherwise a crash between them reopens the duplicate window.</p>
+<pre><code>1st POST  ──► server: BEGIN TX; insert order; insert idem_key=K; COMMIT ──► 201 (lost on network)
+retry POST(K) ──► server: SELECT idem_key=K → HIT ──► replay stored 201, no new order</code></pre>
 <hr>
 <h3 id="tls-basics">TLS Basics</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;TLS is the layer that gives HTTPS confidentiality, integrity, and server authentication. The handshake negotiates a cipher suite, the server presents a certificate chain that the client validates back to a trusted root CA, and then an ephemeral key exchange like ECDHE derives the symmetric session keys. On Android 9+ cleartext HTTP is blocked by default, so HTTPS is effectively mandatory, and the thing interviewers probe is that the chain has to validate to the system trust store — a self-signed or expired cert fails validation even though the bytes are still encrypted.&quot;</blockquote>
 <p>TLS is the encryption layer that turns HTTP into HTTPS — and on Android 9 and above, cleartext HTTP is blocked by default via <code>android:usesCleartextTraffic=&quot;false&quot;</code>, so HTTPS is effectively mandatory.</p>
 <p><strong>TLS handshake steps</strong> (simplified):</p>
 <ol>
@@ -713,8 +834,13 @@ val client = OkHttpClient.Builder()
         &lt;/pin-set&gt;
     &lt;/domain-config&gt;
 &lt;/network-security-config&gt;</code></pre>
+<p><strong>Under the hood</strong></p>
+<p>The asymmetric crypto (the certificate&#x27;s RSA/ECDSA key) is used only to authenticate the server and protect the key exchange — it never encrypts the bulk traffic. ECDHE has both sides exchange ephemeral public keys and independently compute the same shared secret, which is then fed through a key-derivation function (HKDF in TLS 1.3) to produce the symmetric AEAD keys used for the rest of the session; because the DH keys are ephemeral, capturing the server&#x27;s private key later still can&#x27;t decrypt a recorded session — that&#x27;s forward secrecy. On Android, certificate validation runs through the platform&#x27;s <code>X509TrustManager</code> (via Conscrypt, Android&#x27;s BoringSSL-backed JSSE provider), which walks the chain checking signatures, validity dates, and hostname, terminating at a root in the system store. TLS 1.3 also collapses the handshake to a single round trip by having the client guess the key-share in the <code>ClientHello</code>.</p>
+<pre><code>ECDHE:  client (a, g^a)  ⇄  server (b, g^b)   →  both derive g^ab  →  HKDF → AEAD session keys
+auth:   server signs handshake transcript with cert private key; client verifies chain → system root CA</code></pre>
 <hr>
 <h3 id="certificate-pinning">Certificate Pinning</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;Pinning means I hard-code the expected public-key hash of my server and reject any TLS connection that doesn&#x27;t match, even if the cert is otherwise valid and CA-signed — that defends against a compromised CA or a corporate MITM proxy. I always pin the public key, not the whole certificate, so it survives cert renewals as long as the key pair is reused, and I ship at least two pins plus a backup. The big gotcha is operational: a pin mismatch is an app-wide outage, so I pin with an expiration, rotate ahead of renewal, and keep a remote kill switch. I prefer declaring it in network_security_config so it&#x27;s framework-enforced and survives obfuscation.&quot;</blockquote>
 <p>Certificate pinning means hard-coding the expected public key hash of your server into the app and refusing any TLS connection that doesn&#x27;t match — even if the certificate is otherwise valid and CA-signed.</p>
 <p><strong>Why it matters</strong>: Prevents man-in-the-middle attacks where an attacker has compromised a CA or installed a corporate proxy certificate. Critical for apps handling financial or health data.</p>
 <p><strong>Two types</strong>:</p>
@@ -751,6 +877,11 @@ val client = OkHttpClient.Builder()
 <li>Use <code>network_security_config.xml</code> for declarative pinning (framework enforced, survives ProGuard)</li>
 </ul>
 <p><strong>Debug builds</strong>: Typically disable pinning or add the debug certificate pin to avoid blocking local proxies.</p>
+<p><strong>Under the hood</strong></p>
+<p>The pin is a SHA-256 hash of the certificate&#x27;s SubjectPublicKeyInfo (SPKI) — the DER-encoded public key plus its algorithm identifier, not the whole certificate — which is why a renewed cert that reuses the same key pair keeps the same pin. Pinning runs as an extra check layered on top of normal chain validation: OkHttp&#x27;s <code>CertificatePinner</code> lets the standard <code>X509TrustManager</code> validate the chain to a system root first, then for the matched hostname it hashes the SPKI of each cert in the verified chain and requires at least one to equal a configured pin, throwing <code>SSLPeerUnverifiedException</code> otherwise. Because any cert in the chain can satisfy a pin, teams often pin an intermediate CA&#x27;s key for safer rotation. When declared in <code>network_security_config.xml</code>, the framework&#x27;s <code>NetworkSecurityTrustManager</code> enforces the same check for every HTTPS stack in the process (OkHttp, HttpURLConnection, WebView), which is why declarative pinning survives ProGuard renaming of your code.</p>
+<pre><code>verified chain: [leaf]→[intermediate]→[root]
+for each cert: SHA-256( DER(SubjectPublicKeyInfo) ) → base64
+connection OK iff ∃ cert whose hash ∈ configured pin-set, else SSLPeerUnverifiedException</code></pre>
 <hr>
 <h3 id="interview-angles-networking">Interview Angles: Networking</h3>
 <p><strong>Q: How do you handle token refresh safely?</strong></p>
@@ -766,6 +897,7 @@ val client = OkHttpClient.Builder()
 <hr>
 <h2 id="102-persistence">10.2 Persistence</h2>
 <h3 id="sqlite-basics">SQLite Basics</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;SQLite is a serverless, embedded relational database — it&#x27;s just a single file in the app&#x27;s private storage accessed in-process, with full ACID transactions. The two things I always call out: it&#x27;s single-writer, so write contention serializes, though WAL mode lets readers run concurrently with a writer; and its typing is dynamic — columns have type affinity rather than strict enforcement, so a TEXT column can actually hold an integer. In practice I never touch raw SQLite directly because of manual cursor management and no compile-time query checking — I let Room sit on top.&quot;</blockquote>
 <p>SQLite is a lightweight relational database embedded directly in every Android device — a single on-disk file, accessed through the <code>android.database.sqlite</code> package, with no separate server process.</p>
 <p><strong>Key characteristics</strong>:</p>
 <ul>
@@ -785,8 +917,14 @@ cursor.use {
     }
 }</code></pre>
 <p>Problems with raw SQLite: manual cursor management, no compile-time query validation, no type safety, tedious migrations.</p>
+<p><strong>Under the hood</strong></p>
+<p>SQLite stores the whole database as a tree of fixed-size pages (default 4 KB) in one file; tables and indexes are B-trees rooted at page numbers tracked in the <code>sqlite_master</code> schema table, so a primary-key lookup is a B-tree descent rather than a scan. A <code>Cursor</code> doesn&#x27;t materialize all rows up front — <code>SQLiteCursor</code> backs a <code>CursorWindow</code>, a chunk of shared (ashmem) memory holding a window of rows, and <code>moveToNext()</code> past the window&#x27;s edge re-queries to fill the next batch; that&#x27;s why leaking a cursor leaks native memory and why you wrap it in <code>use {}</code>. In the default rollback-journal mode a writer copies original pages into a <code>-journal</code> file and takes an exclusive lock, blocking everyone; WAL inverts this — the writer appends new page images to a <code>-wal</code> file while readers keep reading the last committed snapshot from the main file, and a periodic checkpoint folds the WAL back in. Type affinity means the declared column type is only a <em>preference</em>: SQLite stores each value with its own storage class and coerces toward the column&#x27;s affinity, so strictness is the application&#x27;s job (or <code>STRICT</code> tables in newer SQLite).</p>
+<pre><code>file = [page 1: sqlite_master B-tree root][page 2..N: table/index B-tree pages]
+read path: rawQuery → compile to bytecode (VDBE) → B-tree walk → rows into CursorWindow (ashmem)
+WAL: writer appends to db-wal; readers see last-committed snapshot; checkpoint merges wal→db</code></pre>
 <hr>
 <h3 id="room">Room</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;Room is Jetpack&#x27;s persistence library sitting on top of SQLite, and its headline feature is that it verifies your SQL at compile time — the annotation processor actually parses every <code>@Query</code> against the schema, so a typo&#x27;d column name is a build error, not a runtime crash. You declare <code>@Entity</code>, <code>@Dao</code>, and <code>@Database</code>, and Room generates the implementation that does the cursor-to-object mapping for you. The nuance I mention is that returning a <code>Flow</code> from a DAO gives you observable queries that re-emit on table changes, and that <code>fallbackToDestructiveMigration</code> is a dev-only convenience — in production you ship real <code>Migration</code> objects, because destructive migration drops the user&#x27;s data.&quot;</blockquote>
 <p>Room is the Jetpack persistence library — it sits on top of SQLite and gives you compile-time query verification, type-safe DAOs, migration scaffolding, and first-class support for <code>Flow</code> and <code>LiveData</code>.</p>
 <p><strong>Setup</strong>:</p>
 <pre><code>// build.gradle.kts
@@ -827,8 +965,14 @@ abstract class AppDatabase : RoomDatabase() {
     }
 }</code></pre>
 <p><strong>Room compilation</strong>: The <code>@Database</code> annotation processor generates <code>AppDatabase_Impl</code>, validates all <code>@Query</code> annotations at compile time (SQL syntax, column names, return types), generates efficient boilerplate. This compile-time validation is the single biggest advantage over raw SQLite.</p>
+<p><strong>Under the hood</strong></p>
+<p>The <code>room-compiler</code> is a KSP/annotation processor that, at build time, actually compiles each <code>@Query</code> string against an in-memory model of your schema (it bundles SQLite&#x27;s own grammar), so column and table names are resolved before the app ever runs — that&#x27;s the compile-time verification. For each abstract class it generates concrete code: <code>AppDatabase_Impl</code> wires up the DAOs and a <code>RoomOpenHelper</code> that checks the stored <code>user_version</code> pragma against the <code>@Database(version=…)</code> and runs the matching <code>Migration</code> objects (each migration is raw SQL you write; Room only verifies the resulting schema matches the exported JSON). <code>UserDao_Impl</code> contains the hand-rolled cursor code — bind args, run the query, read each <code>CursorWindow</code> column by index into your entity. Observable <code>Flow</code>/<code>LiveData</code> queries are backed by the <code>InvalidationTracker</code>: Room installs SQLite triggers on the relevant tables that write into an internal <code>room_table_modification_log</code>, and after any write transaction commits it checks that log and re-runs affected queries, which is how a <code>Flow</code> re-emits when the underlying table changes.</p>
+<pre><code>build time:  @Query &quot;SELECT * FROM users WHERE id=:id&quot;  ──parse vs schema──► UserDao_Impl (cursor mapping) or COMPILE ERROR
+runtime open: RoomOpenHelper reads PRAGMA user_version → runs Migration_1_2, Migration_2_3 → validates schema == exported JSON
+observe:     write COMMIT → triggers update room_table_modification_log → InvalidationTracker → re-run Flow query → re-emit</code></pre>
 <hr>
 <h3 id="entity">Entity</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;An entity is just a Kotlin data class annotated with <code>@Entity</code> — Room&#x27;s annotation processor reads it at compile time and generates the actual <code>CREATE TABLE</code> DDL, so each property becomes a column. The thing interviewers probe is type mapping: SQLite only stores a handful of primitive affinities, so anything richer than a String or number needs a <code>@TypeConverter</code>, and an <code>@Embedded</code> object gets flattened into the parent table&#x27;s columns rather than getting its own table.&quot;</blockquote>
 <p>An <code>@Entity</code> is a Kotlin data class that maps directly to a SQLite table — each property becomes a column, and Room&#x27;s annotation processor generates all the schema DDL at compile time.</p>
 <pre><code>@Entity(
     tableName = &quot;users&quot;,
@@ -867,8 +1011,20 @@ data class UserEntity(
     @PrimaryKey val id: String,
     @Embedded val address: Address  // columns: street, city stored directly in users table
 )</code></pre>
+<p><strong>Under the hood</strong></p>
+<p>Room runs as a <code>kapt</code>/KSP annotation processor during compilation. It reflects over the entity&#x27;s properties (using the Kotlin metadata / <code>javax.lang.model</code> element model), maps each Kotlin type to one of SQLite&#x27;s four storage classes via column affinity (<code>INTEGER</code>, <code>REAL</code>, <code>TEXT</code>, <code>BLOB</code> — there is no native date or boolean type), and emits the <code>CREATE TABLE</code> string. A <code>Boolean</code> is stored as <code>INTEGER</code> 0/1; a <code>Long</code> epoch is stored as <code>INTEGER</code>. The non-null Kotlin types become <code>NOT NULL</code> constraints in the DDL. At read time, the generated DAO code pulls values out of an <code>android.database.Cursor</code> by column index and invokes your registered <code>@TypeConverter</code> to rehydrate complex types. <code>@Embedded</code> produces no nesting — the processor splices the embedded class&#x27;s columns directly into the parent table.</p>
+<pre><code>@Entity data class User(id: String, premium: Boolean, createdAt: Long)
+        │  (kapt/KSP at compile time)
+        ▼
+CREATE TABLE `users` (
+  `id` TEXT NOT NULL,        -- TEXT affinity
+  `premium` INTEGER NOT NULL,-- Boolean -&gt; 0/1
+  `createdAt` INTEGER NOT NULL, -- Long epoch
+  PRIMARY KEY(`id`)
+)</code></pre>
 <hr>
 <h3 id="dao">DAO</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;A DAO is an interface or abstract class annotated with <code>@Dao</code> where I declare queries as method signatures, and Room generates the implementation at compile time — including parsing and verifying my SQL against the real schema so a typo&#x27;d column name is a build error, not a crash. The gotcha I watch for is the return type: a <code>suspend</code> function runs the query once, but returning a <code>Flow</code> makes it observable — Room sets up an invalidation tracker so the flow re-emits whenever any row in the touched tables changes.&quot;</blockquote>
 <p>A DAO (Data Access Object) is an interface annotated with <code>@Dao</code> where you declare your SQL operations as abstract Kotlin functions — Room generates the entire implementation at compile time.</p>
 <pre><code>@Dao
 interface UserDao {
@@ -934,8 +1090,16 @@ interface UserDao {
 <li><code>IGNORE</code>: keep old row, ignore new (returns -1 for the rowId)</li>
 <li><code>ABORT</code> (default): throw exception</li>
 </ul>
+<p><strong>Under the hood</strong></p>
+<p>Room generates a <code>UserDao_Impl</code> class that implements the interface. Each <code>@Query</code> is parsed and type-checked at compile time against the schema, then compiled into a <code>RoomSQLiteQuery</code> (a prepared <code>SQLiteStatement</code> with bound <code>?</code> parameters — your <code>:id</code> becomes a positional bind argument, which is also why Room is injection-safe). For a one-shot <code>suspend</code> function, the generated code wraps the cursor read in <code>CoroutinesRoom.execute(...)</code>, hopping onto the database&#x27;s <code>Executor</code> (a dedicated background dispatcher) so it never touches the SQLite connection on the main thread. For a <code>Flow</code> return, Room registers an <code>InvalidationTracker.Observer</code> on the tables the query reads. SQLite triggers (installed on those tables) write into a shadow <code>room_table_modification_log</code>; on the next transaction commit, the tracker compares table versions and, if a watched table changed, re-runs the query and emits the fresh result downstream. That is table-level granularity — any write to <code>users</code> re-emits, even if the specific row you care about didn&#x27;t change.</p>
+<pre><code>@Query(&quot;SELECT * FROM users WHERE id = :id&quot;) -&gt; compile time
+  ├─ SQL parsed &amp; validated vs schema (bad column = build error)
+  ├─ becomes RoomSQLiteQuery: &quot;SELECT * FROM users WHERE id = ?&quot;  bind(1, id)
+  └─ Flow variant: InvalidationTracker observer on table &quot;users&quot;
+       writes -&gt; SQLite trigger -&gt; modification log -&gt; re-query -&gt; emit</code></pre>
 <hr>
 <h3 id="transactions">Transactions</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;A transaction groups several operations so they commit or roll back as one atomic unit — I annotate a DAO method with <code>@Transaction</code>, or for work spanning multiple DAOs I use <code>db.withTransaction { }</code>. Two things I always mention: it&#x27;s not just about atomicity, it&#x27;s a huge performance win because batching inserts means one <code>fsync</code> to the journal instead of one per row; and the suspend-aware <code>withTransaction</code> pins the whole block to a single connection on a transaction-scoped dispatcher, so you must not switch dispatchers or do unrelated suspending I/O inside it or you can deadlock or lose the transaction context.&quot;</blockquote>
 <p>A database transaction groups multiple operations into one atomic unit — they all succeed together or all roll back together. Room provides the <code>@Transaction</code> annotation to declare this, plus <code>database.withTransaction {}</code> for cross-DAO operations.</p>
 <pre><code>@Dao
 interface UserDao {
@@ -968,8 +1132,17 @@ interface UserDao {
 <li><strong>Performance</strong>: Inserting 1000 rows in a single transaction is 10–50x faster than 1000 individual inserts (avoids 1000 journal writes)</li>
 <li><strong>Consistency</strong>: Foreign key constraints are checked at transaction commit, not per-insert</li>
 </ul>
+<p><strong>Under the hood</strong></p>
+<p>Underneath, Room calls SQLite&#x27;s <code>beginTransaction()</code> / <code>setTransactionSuccessful()</code> / <code>endTransaction()</code>. With Write-Ahead Logging (WAL, Room&#x27;s default journal mode), each transaction appends changed pages to a <code>-wal</code> file and only forces a durability <code>fsync</code> at commit — so 1000 inserts in one transaction is one durability barrier instead of 1000, which is where the order-of-magnitude speedup comes from. The coroutine <code>withTransaction</code> extension is the subtle part: it acquires a connection, stores it in a <code>TransactionElement</code> inside the coroutine context, and dispatches the block on a transaction-scoped dispatcher backed by that single connection&#x27;s thread. Every suspending DAO call inside inherits that element and reuses the same connection, which is mandatory because SQLite transactions are per-connection. If you <code>withContext(Dispatchers.IO)</code> to a different thread/connection mid-block, those statements execute outside the transaction. Because Room&#x27;s transaction executor is a bounded pool, blocking inside the block while also trying to start a nested transaction can exhaust it and deadlock.</p>
+<pre><code>withTransaction {
+  BEGIN (connection C, thread T) ── stored as TransactionElement in coroutine ctx
+    insert(teams)   ┐ all run on C/T, pages appended to -wal
+    insert(users)   ┘
+  success -&gt; COMMIT -&gt; single fsync of -wal
+}  (exception anywhere -&gt; endTransaction without success -&gt; ROLLBACK)</code></pre>
 <hr>
 <h3 id="migrations">Migrations</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;A migration is how I evolve the schema across app versions without nuking user data: I bump the <code>@Database</code> version and supply a <code>Migration</code> object with the raw <code>ALTER</code>/<code>CREATE</code> SQL. The safety net is that Room exports a JSON schema snapshot at build time and, after my migration runs, validates the live schema against the expected one — so a mismatched column type or a forgotten index fails loudly instead of silently corrupting data. The classic gotcha is <code>fallbackToDestructiveMigration</code>, which drops and recreates everything — fine in dev, catastrophic in production.&quot;</blockquote>
 <p>A migration is how you evolve the database schema across app versions without losing user data — Room validates every migration against a generated schema snapshot, so if your SQL is wrong you find out at build time, not in production.</p>
 <p><strong>Room migration mechanics</strong>:</p>
 <ol>
@@ -1040,8 +1213,16 @@ class MigrationTest {
     }
 }</code></pre>
 <p><strong><code>fallbackToDestructiveMigration()</code></strong>: Only for development. In production, a missing migration drops and recreates the database — all user data is lost. Never use in production.</p>
+<p><strong>Under the hood</strong></p>
+<p>The <code>user_version</code> PRAGMA is an integer stored in the SQLite file header; SQLite itself does nothing with it, but Room reads it on open to decide whether to migrate. When the on-disk <code>user_version</code> is lower than the <code>@Database</code> version, Room&#x27;s <code>RoomOpenHelper</code> looks up a path through the registered migrations (a graph search — it picks a direct edge like 1→3 if one exists, otherwise chains 1→2→3), runs each migration&#x27;s <code>migrate()</code> inside a transaction, then bumps <code>user_version</code>. The validation step compares an <code>identityHash</code> of the live schema against the hash baked into the build-time schema JSON (the file Room exports when you set <code>room.schemaLocation</code>); a mismatch throws <code>IllegalStateException</code>. Auto-migrations are simply <code>Migration</code> objects whose body Room generates at compile time by diffing two exported schema JSONs — which is why anything ambiguous (a rename looks like a drop+add to a diff) needs an <code>@AutoMigrationSpec</code> to disambiguate. The table-recreate dance in <code>MIGRATION_2_3</code> exists because legacy SQLite (pre-3.35 / API &lt; 35) had no <code>DROP COLUMN</code>, so the only safe rewrite is create-new, copy, drop-old, rename.</p>
+<pre><code>open db -&gt; read PRAGMA user_version (e.g. 1), target = 3
+  find migration path: [1-&gt;3] if present else [1-&gt;2, 2-&gt;3]
+  for each migration: BEGIN; migrate(); COMMIT
+  validate: identityHash(live schema) == hash(schema_3.json) ? ok : crash
+  set PRAGMA user_version = 3</code></pre>
 <hr>
 <h3 id="indexes">Indexes</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;An index is a separate B-tree keyed on one or more columns that lets SQLite binary-search to matching rows instead of scanning the whole table — so it turns an O(n) filter into roughly O(log n). The trade-off is that every insert, update, and delete now has to maintain that extra tree and it costs storage, so I index the columns I actually filter, sort, or join on — and critically, foreign keys, because SQLite, unlike Postgres, does not auto-index them. I verify with <code>EXPLAIN QUERY PLAN</code> that I see <code>SEARCH ... USING INDEX</code> rather than <code>SCAN</code>.&quot;</blockquote>
 <p>A database index is a B-tree structure that speeds up queries on specific columns — the trade-off is extra storage and slightly slower writes, because each insert or update has to maintain the index tree as well as the table.</p>
 <pre><code>@Entity(
     tableName = &quot;posts&quot;,
@@ -1076,8 +1257,17 @@ data class PostEntity(
 <pre><code>val cursor = db.query(&quot;EXPLAIN QUERY PLAN SELECT * FROM posts WHERE user_id = &#x27;1&#x27;&quot;, null)
 // Output should show &quot;SEARCH posts USING INDEX idx_posts_user_id&quot;
 // Not &quot;SCAN posts&quot; which is a full table scan</code></pre>
+<p><strong>Under the hood</strong></p>
+<p>In SQLite, both the table and each index are stored as B-tree pages inside the same database file. A normal <code>rowid</code> table is a B-tree keyed by the integer <code>rowid</code>; an index is a separate B-tree whose keys are the indexed column values followed by the row&#x27;s <code>rowid</code>, so a lookup binary-searches the index tree, finds the <code>rowid</code>, then does a second seek into the table tree to fetch the full row. That second hop is why a covering composite index — one that contains every column the query needs — can be faster: SQLite reads everything straight from the index and skips the table entirely. The query planner picks an index using <code>sqlite_stat1</code> statistics (populated by <code>ANALYZE</code>); without stats it falls back to heuristics, which is occasionally why it ignores an index you expected. Composite indexes obey the left-prefix rule: an index on <code>(user_id, created_at)</code> accelerates filters on <code>user_id</code> alone or <code>user_id</code> + <code>created_at</code>, but does nothing for a query that filters only on <code>created_at</code>. A <code>unique</code> index additionally enforces the constraint by rejecting a duplicate key insert at write time.</p>
+<pre><code>INDEX idx(user_id, created_at):
+  B-tree keyed [user_id, created_at, rowid]
+  query: WHERE user_id=&#x27;1&#x27; ORDER BY created_at
+    -&gt; SEARCH using index (binary search to user_id=&#x27;1&#x27;, already sorted by created_at)
+    -&gt; for each match: seek rowid into table tree for SELECT *  (skipped if covering)
+  query: WHERE created_at &gt; X  -&gt; left-prefix not satisfied -&gt; SCAN</code></pre>
 <hr>
 <h3 id="foreign-keys-and-relations">Foreign Keys and Relations</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;Foreign keys enforce referential integrity at the database level — a child can&#x27;t point at a parent that doesn&#x27;t exist, and I can declare <code>onDelete = CASCADE</code> or <code>SET_NULL</code> so the DB cleans up automatically. The number-one gotcha is that SQLite has foreign keys off by default, so you must enable <code>PRAGMA foreign_keys = ON</code> per connection. For reading related data, Room doesn&#x27;t hydrate JOINs into object graphs — I use <code>@Relation</code> with <code>@Embedded</code>, and that method must be <code>@Transaction</code> because Room runs separate queries per relation and stitches them in memory.&quot;</blockquote>
 <p>Foreign keys enforce referential integrity at the database level — a child row simply cannot reference a parent that doesn&#x27;t exist, and Room can cascade deletes or set nulls automatically when a parent is removed.</p>
 <pre><code>// Enable foreign keys — not enabled by default in SQLite!
 val db = Room.databaseBuilder(...)
@@ -1122,8 +1312,17 @@ data class UserWithTags(
     )
     val tags: List&lt;TagEntity&gt;
 )</code></pre>
+<p><strong>Under the hood</strong></p>
+<p>Foreign key enforcement is a runtime SQLite feature gated by the <code>foreign_keys</code> PRAGMA, which is connection-scoped and defaults to OFF for backward compatibility — that&#x27;s why it goes in <code>onOpen</code> (which fires per connection) rather than being declared once. When enabled, on a parent delete SQLite walks the child tables and applies the declared action (<code>CASCADE</code> deletes children, <code>SET_NULL</code> nulls the FK column), and it checks constraints; with WAL/immediate enforcement a violating write fails immediately. For <code>@Relation</code>, Room generates code that does <em>not</em> emit a JOIN — a JOIN would duplicate the parent row once per child, which doesn&#x27;t map cleanly to a <code>User</code> owning a <code>List&lt;Post&gt;</code>. Instead it runs the parent query, collects the parent keys, then issues a second <code>SELECT ... WHERE user_id IN (?, ?, ...)</code> for the children and buckets them into a <code>LongSparseArray</code>/<code>HashMap</code> keyed by the relation column before assembling the objects in memory. Wrapping both queries in <code>@Transaction</code> guarantees they observe a single consistent snapshot, so a concurrent insert can&#x27;t make the parent and child sets disagree. A many-to-many <code>Junction</code> adds a third query against the cross-ref table to resolve the key mapping.</p>
+<pre><code>getUserWithPosts(userId):  (no JOIN)
+  Q1: SELECT * FROM users WHERE id = ?          -&gt; parent rows + keys {id}
+  Q2: SELECT * FROM posts WHERE user_id IN (?)  -&gt; children
+      bucket children into map&lt;user_id, List&lt;Post&gt;&gt;
+  assemble UserWithPosts in memory
+  (@Transaction =&gt; Q1 and Q2 see one consistent snapshot)</code></pre>
 <hr>
 <h3 id="flow-from-room">Flow from Room</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;When a Room DAO returns a Flow, I get the query result immediately and then an automatic re-emission every time any tracked table changes — so the UI never polls, it just collects and stays current. The nuance interviewers like to probe is that Room observes at table granularity, not row granularity, so a write to an unrelated row in the same table still triggers a re-query; that&#x27;s why you keep queries lean and let <code>distinctUntilChanged</code> filter out no-op emissions downstream.&quot;</blockquote>
 <p>When a Room DAO method returns <code>Flow&lt;T&gt;</code>, it emits the current query result immediately and then automatically re-emits every time the underlying table changes — which means the UI never has to poll; it just collects and stays current.</p>
 <pre><code>@Dao
 interface UserDao {
@@ -1153,8 +1352,20 @@ interface UserDao {
 <li><code>Flow&lt;T&gt;</code> DAO functions: reactive, long-lived observation</li>
 <li>Use <code>Flow</code> for anything the UI displays live; use <code>suspend fun</code> for write operations</li>
 </ul>
+<p><strong>Under the hood</strong></p>
+<p>The generated DAO implementation wraps the query in <code>CoroutinesRoom.createFlow(...)</code>, which builds a <code>Flow</code> backed by a <code>callbackFlow</code>/channel and registers an <code>InvalidationTracker.Observer</code> for the tables named in the query. The tracker doesn&#x27;t watch rows — it installs temporary SQLite triggers (<code>AFTER INSERT/UPDATE/DELETE</code>) that write the modified table&#x27;s id into an internal <code>room_table_modification_log</code> table. After each transaction commits, <code>InvalidationTracker.refreshVersionsAsync()</code> runs a query against that log on the I/O executor, computes the set of invalidated table ids, and fires the matching observers, which send a signal down the channel that causes the collector to re-run the query suspendingly.</p>
+<pre><code>INSERT INTO users ...                 -- app write
+  → AFTER INSERT trigger fires
+      → INSERT INTO room_table_modification_log (table_id=&lt;users&gt;)
+  → txn commits
+      → refreshVersionsAsync(): SELECT changed table_ids from log
+          → observer for &quot;users&quot; notified
+              → channel.trySend(Unit)
+                  → Flow collector re-executes SELECT, emits new List</code></pre>
+<p>Because invalidation is table-scoped, any write to <code>users</code> re-triggers the Flow even if the visible result is identical — chaining <code>.distinctUntilChanged()</code> collapses those into a single emission downstream.</p>
 <hr>
 <h3 id="datastore">DataStore</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;DataStore is the modern replacement for SharedPreferences — same key-value job, but coroutine- and Flow-based, so all I/O is async, off the main thread, and errors surface through the Flow instead of being silently swallowed. The detail I always mention is that it&#x27;s not a drop-in: there&#x27;s no synchronous read, every read is a Flow and every write a suspend function, and it serializes all writes through a single actor so you get transactional, last-write-wins consistency. I reach for Preferences DataStore for loose key-value and Proto DataStore when the shape evolves and I want compile-time type safety.&quot;</blockquote>
 <p>DataStore is the modern replacement for <code>SharedPreferences</code> — it does the same key-value job but uses coroutines and <code>Flow</code> throughout, so all I/O is async, off the main thread, and errors surface properly instead of silently failing.</p>
 <p><strong>Two variants</strong>:</p>
 <p><strong>Preferences DataStore</strong> — for untyped key-value data (analogous to SharedPreferences):</p>
@@ -1227,8 +1438,20 @@ suspend fun setDarkMode(enabled: Boolean) {
 <li><code>Proto DataStore</code>: Structured settings that evolve over time; need type safety and schema.</li>
 <li><code>Room</code>: Anything with relational structure, queries, or collections.</li>
 </ul>
+<p><strong>Under the hood</strong></p>
+<p>DataStore is built on a <code>SingleProcessDataStore</code> that funnels every read and write through one internal actor coroutine (a <code>SimpleActor</code> draining a message queue), which is what guarantees ordering and atomicity without locks on the caller. The <code>data</code> Flow is a <code>flow { ... }</code> that emits the in-memory cached state plus updates broadcast over an internal <code>MutableStateFlow</code>/channel; on first collection it reads the file once. A write via <code>updateData</code> reads current state, applies your transform, and then writes to a <strong>temporary file</strong> that is <code>fsync</code>&#x27;d and atomically <code>rename()</code>d over the real file — so a crash mid-write can&#x27;t corrupt the store (rename is atomic at the filesystem level). Cross-process changes are detected via a file lock plus checking the file&#x27;s version, which is why the default <code>SingleProcessDataStore</code> is explicitly single-process.</p>
+<pre><code>updateData { transform }
+  → actor enqueues the write
+      → read current data (from cache)
+      → newData = transform(current)
+      → serializer.writeTo(newData, tmpFile)
+      → tmpFile.fsync()
+      → tmpFile.renameTo(realFile)   // atomic swap
+      → downstreamFlow.emit(newData) // all collectors observe new value</code></pre>
+<p>Because the file is rewritten in full on every write, DataStore is meant for small payloads — not large or high-frequency data, which belongs in Room.</p>
 <hr>
 <h3 id="sharedpreferences-legacy">SharedPreferences Legacy</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;SharedPreferences is the original key-value store backed by an XML file. The thing I flag is that the entire file is parsed into an in-memory <code>HashMap</code> on first access, and that first load can block — <code>getSharedPreferences</code> returns immediately but the first getter blocks on the load latch. <code>apply()</code> writes the in-memory map synchronously then flushes to disk on a background thread, while <code>commit()</code> blocks the caller on disk I/O and can ANR. It&#x27;s fine to maintain in legacy code, but I migrate to DataStore when I touch it.&quot;</blockquote>
 <p>SharedPreferences is the original Android key-value store — it writes to XML files and is still common in legacy codebases, but it has enough problems that all new code should use DataStore instead.</p>
 <pre><code>val prefs = context.getSharedPreferences(&quot;app_prefs&quot;, Context.MODE_PRIVATE)
 
@@ -1257,8 +1480,21 @@ val Context.dataStore by preferencesDataStore(
         listOf(SharedPreferencesMigration(context, &quot;old_prefs_name&quot;))
     }
 )</code></pre>
+<p><strong>Under the hood</strong></p>
+<p>The framework implementation is <code>SharedPreferencesImpl</code>. On creation it spawns a background thread that parses the XML file into a <code>HashMap&lt;String, Object&gt;</code> held in memory; getters block on a <code>loaded</code> latch until that parse finishes, then read straight from the map. An <code>edit()</code> returns an <code>EditorImpl</code> that buffers your changes in a local map. On <code>apply()</code>, it first commits the changes to the in-memory map synchronously (so subsequent reads see them immediately), then enqueues the disk write to a single background thread via <code>QueuedWork</code> — and that pending write is force-drained on <code>Activity.onPause</code>/<code>Service</code> lifecycle transitions, which is a hidden source of jank if many <code>apply()</code> calls are queued. <code>commit()</code> does the same memory update but performs the disk write on the calling thread and returns its boolean success.</p>
+<pre><code>apply():
+  memoryMap.putAll(editedValues)   // synchronous, visible to readers now
+  QueuedWork.enqueue { writeToDiskAtomically() }   // background thread
+  → write to &lt;name&gt;.xml.bak, fsync, rename over &lt;name&gt;.xml
+
+commit():
+  memoryMap.putAll(editedValues)
+  writeToDiskAtomically()          // ON CALLING THREAD → ANR if main
+  return success</code></pre>
+<p>The disk write itself is atomic via a backup file (<code>.bak</code>) and rename, but there is no transactional read API and no built-in coroutine observation — which is precisely what DataStore adds.</p>
 <hr>
 <h3 id="file-storage-and-scoped-storage">File Storage and Scoped Storage</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;File APIs are for binary blobs — images, PDFs, audio — that don&#x27;t fit a table or key-value store. The big shift to know is scoped storage in Android 10: apps lost broad access to external storage and are now confined to their own app-specific directory, shared media via <code>MediaStore</code>, or user-picked files through the Storage Access Framework. And whenever I hand a file to another app I never pass a raw <code>file://</code> URI — that throws <code>FileUriExposedException</code> since Android 7 — I go through a <code>FileProvider</code> with a temporary <code>content://</code> grant.&quot;</blockquote>
 <p>Android&#x27;s file storage APIs are for persisting binary data — images, PDFs, downloads, audio — that doesn&#x27;t fit neatly into a relational table or a key-value store.</p>
 <p><strong>Storage locations</strong>:</p>
 <ul>
@@ -1298,6 +1534,15 @@ val query = contentResolver.query(
     null, null,
     &quot;${MediaStore.Images.Media.DATE_TAKEN} DESC&quot;
 )</code></pre>
+<p><strong>Under the hood</strong></p>
+<p>Scoped storage is enforced by the platform&#x27;s <code>MediaProvider</code> and the lower-level filesystem-in-userspace (FUSE) layer: in Android 11+, the external volume is mounted through a FUSE daemon so that even raw <code>File</code> access to other apps&#x27; media is intercepted and permission-checked against <code>MediaStore</code> rather than relying on the old <code>READ/WRITE_EXTERNAL_STORAGE</code> permission. <code>FileProvider</code> works by translating a <code>File</code> path into an opaque <code>content://&lt;authority&gt;/&lt;root-name&gt;/&lt;relative-path&gt;</code> URI; when the receiving app opens it, the system routes the <code>openFile</code> call back through your provider&#x27;s <code>ContentProvider</code>, and the <code>FLAG_GRANT_READ_URI_PERMISSION</code> adds a temporary, per-grant entry in <code>ActivityManager</code>&#x27;s URI-grant table that is revoked when the target task finishes. This is why a bare <code>file://</code> URI fails: <code>StrictMode</code> throws <code>FileUriExposedException</code> because there&#x27;s no grant and no provider mediating access.</p>
+<pre><code>FileProvider.getUriForFile(ctx, authority, file)
+  → maps /data/.../files/report.pdf  →  content://com.app.fileprovider/files/report.pdf
+Intent.addFlags(FLAG_GRANT_READ_URI_PERMISSION)
+  → ActivityManager records a temporary grant: (targetUid, uri, READ)
+target app: contentResolver.openInputStream(uri)
+  → binder call → your FileProvider.openFile() → ParcelFileDescriptor
+grant auto-revoked when target activity/task completes</code></pre>
 <hr>
 <h3 id="interview-angles-persistence">Interview Angles: Persistence</h3>
 <p><strong>Q: Room migration strategy.</strong></p>
@@ -1318,6 +1563,7 @@ val query = contentResolver.query(
 <hr>
 <h2 id="103-offline-first-design">10.3 Offline-First Design</h2>
 <h3 id="single-source-of-truth">Single Source of Truth</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;Single source of truth means one place — usually Room — is the definitive source the UI reads from, and the network is just a mechanism to push updates into that place, never something the UI reads directly. The payoff is that cache invalidation becomes free: I write fresh data to the DB, the DB Flow notifies every observer, and the UI updates with no explicit notification wiring. The anti-pattern interviewers want me to call out is the ViewModel holding its own copy and overwriting it with a network result — that creates two sources of truth and a race between the cached value and the fresh one.&quot;</blockquote>
 <p>The single source of truth is the principle that one place — typically Room — is the definitive data source for the UI, and the network is just a mechanism to push updates into that place, never a direct source.</p>
 <p><strong>Why it matters</strong>:</p>
 <ul>
@@ -1339,8 +1585,18 @@ viewModelScope.launch {
     _state.update { it.copy(users = fresh) }          // overwrite with network
 }</code></pre>
 <p>The SSOT approach instead: write fresh data to DB, let the DB Flow update the state.</p>
+<p><strong>Under the hood</strong></p>
+<p>There&#x27;s no special framework machinery here — SSOT is an architectural discipline that leans on the reactive primitives underneath. The mechanism that makes it work is Room&#x27;s <code>InvalidationTracker</code> firing the observing <code>Flow</code> after a committed write, combined with <code>stateIn</code>/<code>StateFlow</code> in the ViewModel acting as the conflation point so the UI only ever holds one current value. Because every mutation path terminates in a single DB write and every read path originates from a single DB Flow, the data forms a unidirectional cycle with exactly one writer surface and one observable source — eliminating the two-writer race the anti-pattern creates.</p>
+<pre><code>                 write
+network ──► repo ──────► Room (the ONE source)
+                          │ InvalidationTracker fires
+                          ▼
+                        Flow ──► stateIn() ──► StateFlow ──► UI
+       (no UI→network read path; UI only collects the StateFlow)</code></pre>
+<p>The conceptual guarantee: state changes are serialized through the DB transaction log, so &quot;latest committed write wins&quot; is the only ordering the UI can ever observe — there is no second in-memory copy to drift out of sync.</p>
 <hr>
 <h3 id="cache-invalidation">Cache Invalidation</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;Cache invalidation is deciding when local data is stale enough to refetch, and there&#x27;s no single right answer — I usually combine strategies. TTL is cheap and client-only; ETag/Last-Modified lets the server tell me &#x27;nothing changed&#x27; with a 304 so I save bandwidth; event-driven via push lets me invalidate the instant something changes server-side. The gotcha interviewers probe is that with Room I lean on stale-while-revalidate — I render the cached data immediately and refresh in the background, because making the user stare at a spinner defeats the point of caching.&quot;</blockquote>
 <p>Cache invalidation is the problem of knowing when locally cached data is stale enough to warrant a fresh network fetch — and it turns out there are several complementary strategies, each appropriate in different situations.</p>
 <p><strong>Strategies</strong>:</p>
 <p><strong>1. TTL (Time-To-Live)</strong>:</p>
@@ -1385,8 +1641,14 @@ class PushNotificationHandler {
 }</code></pre>
 <p><strong>4. Manual pull-to-refresh</strong>: User-initiated invalidation. Always appropriate as a fallback.</p>
 <p><strong>Stale-while-revalidate pattern</strong>: Show cached data immediately; trigger refresh in background; update UI when new data arrives (Room Flow handles the update automatically).</p>
+<p><strong>Under the hood</strong></p>
+<p>ETag-based revalidation is conditional-request HTTP defined in RFC 7232. The server computes a validator (an opaque ETag string — typically a hash or version of the representation) and the client echoes it back in <code>If-None-Match</code>. The origin compares it to the current validator and, if they match, returns <code>304 Not Modified</code> with empty body — saving payload transfer but still costing a round trip. OkHttp&#x27;s <code>Cache</code> automates this entirely: it stores responses keyed by URL on disk (a journaled <code>DiskLruCache</code>), and on a cache hit that&#x27;s stale it issues the conditional request for you, splicing the cached body onto a fresh 304&#x27;s headers.</p>
+<pre><code>1st request:  GET /feed                          → 200, ETag: &quot;abc123&quot;, body stored on disk
+later (stale): GET /feed  If-None-Match: &quot;abc123&quot; → 304 (no body)  → OkHttp serves disk copy</code></pre>
+<p>The Room &quot;Flow auto-updates&quot; mechanism is separate: Room registers an <code>InvalidationTracker</code> that installs SQLite triggers on the queried tables. On any write, the trigger flips a bit in an internal <code>room_table_modification_log</code> table; the tracker polls/observes that, then re-runs the query and emits the new list to the Flow&#x27;s collector.</p>
 <hr>
 <h3 id="sync-strategy">Sync Strategy</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;A sync strategy is how I keep local and server data consistent, and I split it into read sync — server to local, which is basically fetch-and-overwrite — and write sync, which is harder because offline mutations have to reach the server eventually and survive failures. For small datasets I&#x27;ll do a full sync; for anything large I want delta sync where the server returns only what changed since a timestamp. The nuance interviewers want is the trigger story: I don&#x27;t just sync on a timer — WorkManager periodic work is capped at 15 minutes, so I also sync on app foreground, on FCM push, and on a ConnectivityManager network-available callback.&quot;</blockquote>
 <p>A sync strategy is how you keep local data in sync with the server — especially important when the user has made mutations while offline that now need to reach the server.</p>
 <p>Read sync — server to local — is straightforward: fetch and overwrite. Write sync — local to server — is more complex because local changes need to reach the server eventually, and failures have to be handled.</p>
 <p><strong>Full sync</strong> (simple, high bandwidth):</p>
@@ -1429,8 +1691,14 @@ val networkCallback = object : ConnectivityManager.NetworkCallback() {
     }
 }
 connectivityManager.registerDefaultNetworkCallback(networkCallback)</code></pre>
+<p><strong>Under the hood</strong></p>
+<p><code>database.withTransaction { }</code> is what makes a sync atomic. Room opens a SQLite transaction (<code>BEGIN</code>), runs your block, then <code>COMMIT</code>s — or <code>ROLLBACK</code>s if the block throws. Critically, it uses a coroutine-aware transaction: it acquires a dedicated thread from the transaction executor and pins the suspending block to it via a <code>TransactionElement</code> in the coroutine context, so all the DAO calls inside run on the same connection that holds the lock. Without this, a <code>deleteAll()</code> followed by a crashing <code>insertAll()</code> would wipe your cache and leave it empty.</p>
+<p>The 15-minute floor on <code>PeriodicWorkRequest</code> is a hard JobScheduler constraint, not a WorkManager choice — <code>MIN_PERIODIC_INTERVAL_MILLIS</code> is 900000ms. WorkManager persists each request as a row in its own Room database (<code>androidx.work.workdb</code>), so jobs survive process death and reboot; on boot it re-registers pending work with JobScheduler. <code>registerDefaultNetworkCallback</code> is backed by <code>ConnectivityService</code> in <code>system_server</code>, which watches the kernel netlink socket for interface state changes and posts <code>onAvailable</code> to your handler when a network satisfying the default request comes up.</p>
+<pre><code>WorkManager → JobScheduler (system) → wakes process → CoroutineWorker.doWork()
+   ^ constraints (network, charging, etc.) gate the dispatch</code></pre>
 <hr>
 <h3 id="conflict-resolution">Conflict Resolution</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;A conflict is when the same resource was edited both locally offline and on the server, so the two diverged. Detection is usually optimistic locking — each entity carries a version or updatedAt, the client sends the version it last saw, and the server returns 409 if its stored version moved on. For resolution I pick a policy by domain: last-write-wins for preferences, server-wins for anything authoritative like payments, field-level merge when edits touch different fields, and user-assisted for documents. The thing I call out is that LWW silently drops data — it&#x27;s only acceptable when losing a write is genuinely fine.&quot;</blockquote>
 <p>A conflict exists when a resource has been modified both locally while offline and independently on the server — and the two versions are now inconsistent with each other.</p>
 <p><strong>Conflict detection</strong>:</p>
 <ul>
@@ -1475,8 +1743,15 @@ suspend fun sync() {
         }
     }
 }</code></pre>
+<p><strong>Under the hood</strong></p>
+<p>Optimistic locking is enforced atomically on the server with a compare-and-swap, not a read-then-write. The canonical implementation is a conditional <code>UPDATE</code>: <code>UPDATE items SET ..., version = version + 1 WHERE id = ? AND version = ?</code>. SQL row locking makes that single statement atomic, so the affected-row count tells you whether you won: 1 row means success, 0 rows means someone else already incremented the version — that&#x27;s the 409. Doing a separate <code>SELECT version</code> then <code>UPDATE</code> would re-introduce a race window between the two.</p>
+<p>True field-level merge needs more than timestamps because wall-clock comparison across devices is unreliable (clock skew, no global ordering). CRDTs solve this with data structures whose merge operation is commutative, associative, and idempotent — e.g., a Last-Writer-Wins register tagged with a Lamport/hybrid-logical clock, or an OR-Set for collections — so any two replicas that have seen the same set of updates converge to the same state regardless of arrival order. Operational Transformation (the older Google Docs approach) instead transforms each incoming operation against concurrent ones so intent is preserved.</p>
+<pre><code>Lamport clock: each node keeps a counter; on any event counter++ ;
+on receiving a message, counter = max(local, received) + 1
+→ gives a total order that respects causality without synced wall clocks</code></pre>
 <hr>
 <h3 id="optimistic-updates">Optimistic Updates</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;An optimistic update means I write the user&#x27;s action to the local DB and UI immediately, before the server confirms, then reconcile when the response lands. It kills perceived latency for likes, bookmarks, deletes — the UI feels instant. The whole game is the failure path: I have to remember the previous state so I can roll back on a network error or a 403, and if the server returns a different state than I assumed I overwrite local with the server&#x27;s truth. I keep it for single idempotent actions — for multi-step things like booking a slot, the rollback gets hairy, so I&#x27;d use an explicit loading state instead.&quot;</blockquote>
 <p>An optimistic update means applying a user action immediately to the local database and UI before the server has confirmed it — then reconciling once the server responds. The reason to do this is that it eliminates perceived latency for common operations like likes, bookmarks, and deletes. The UI feels instantaneous.</p>
 <p><strong>Pattern</strong>:</p>
 <pre><code>class BookmarkViewModel(
@@ -1518,8 +1793,16 @@ suspend fun syncBookmark(postId: String, bookmarked: Boolean) {
 <li>Server returns different state (e.g., post was deleted) → update local DB with server response</li>
 </ul>
 <p><strong>Complex operations</strong>: For multi-step operations (booking a slot), optimistic updates are riskier. Use explicit loading states instead.</p>
+<p><strong>Under the hood</strong></p>
+<p>What makes the UI flip &quot;instantly&quot; is the Room → Flow → recomposition pipeline, and it&#x27;s worth knowing where the latency actually goes. The DAO write hits SQLite, Room&#x27;s <code>InvalidationTracker</code> fires the table-modification trigger, the observing Flow re-queries and emits on a background dispatcher, and <code>collectAsStateWithLifecycle</code> writes the new value into a Compose <code>MutableState</code>. That state write calls into the Snapshot system, which records the change and notifies the Recomposer; the affected composables are scheduled and re-run on the next frame. So &quot;immediate&quot; is really &quot;next frame&quot; (~16ms at 60fps) — fast enough to feel instant, but it is still asynchronous, which is why the rollback must re-issue another write rather than mutate UI directly.</p>
+<p>The rollback correctness hinges on capturing <code>currentlyBookmarked</code> as a value before the optimistic write. If you instead re-read state inside the catch block, a second concurrent toggle could have changed it, and you&#x27;d roll back to the wrong value. This is the classic compare-the-snapshot-you-saw pattern.</p>
+<pre><code>toggle() → DAO write (new) ──┐
+                            ├─ Flow emits → Compose State → recompose (frame N)
+network fails ──────────────┘
+catch → DAO write (old, captured) → Flow emits → recompose (frame N+k)</code></pre>
 <hr>
 <h3 id="retry-queue">Retry Queue</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;A retry queue is a durable list of failed mutations I replay once connectivity comes back. The word that matters is durable — if I keep it in memory and the process gets killed while offline, those writes are gone, so the queue lives in Room to survive process death. I record an operation type, a serialized payload, and an attempt count, cap retries with a max-attempts so I don&#x27;t loop forever on a poison message, and drain it from a WorkManager job gated on a network constraint. The subtlety is that handlers must be idempotent, because a retry can fire after the server already succeeded but the response was lost.&quot;</blockquote>
 <p>A retry queue is a persistent store of failed mutations that should be retried once connectivity is restored. The key word is persistent — if the app is killed while offline, any in-memory queue is lost, so the queue must live in Room to survive process death.</p>
 <pre><code>@Entity(tableName = &quot;pending_operations&quot;)
 data class PendingOperationEntity(
@@ -1566,8 +1849,14 @@ interface PendingOperationDao {
     }
 }</code></pre>
 <p><strong>WorkManager integration</strong> (see below): The queue processor is triggered by WorkManager on network availability.</p>
+<p><strong>Under the hood</strong></p>
+<p>Durability here is really SQLite&#x27;s write-ahead-log guarantee. When Room commits the <code>@Insert</code>, SQLite (in WAL mode, Room&#x27;s default) appends the change to the <code>-wal</code> file and fsyncs; once that fsync returns the row survives a process kill or power loss, because on next open SQLite replays the WAL into the main db. That&#x27;s why the queue outlives process death where an in-memory <code>ArrayList</code> would not.</p>
+<p>The retry cadence is driven by WorkManager&#x27;s own backoff machinery. When a <code>CoroutineWorker</code> returns <code>Result.retry()</code>, WorkManager reschedules with exponential (or linear) backoff starting at <code>WorkRequest.MIN_BACKOFF_MILLIS</code> (10s), and JobScheduler only dispatches it when the attached <code>NetworkType.CONNECTED</code> constraint is satisfied — so you&#x27;re not polling, the system wakes you when a network appears. The <code>MAX_ATTEMPTS</code> guard plus monotonically increasing <code>attempts</code> column is what prevents a &quot;poison&quot; payload (e.g., a permanently-rejected 400) from being retried forever. Idempotency is the unstated requirement: the client-generated <code>id</code> (a UUID) doubles as an idempotency key the server can dedupe on, so a replay after a lost-but-successful response doesn&#x27;t create a duplicate.</p>
+<pre><code>worker fails → Result.retry() → backoff = 10s, 20s, 40s... (capped)
+              ↑ JobScheduler holds until NetworkType.CONNECTED is met</code></pre>
 <hr>
 <h3 id="local-first-ui">Local-First UI</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;Local-first means every interaction writes to local storage immediately and the UI reads its state purely from that store — never directly from the network. Three rules: user actions never block on the network, all displayed data comes from a Room Flow, and sync runs in the background and tolerates failure. So the database is the single source of truth and the network is just a background replicator. The piece people forget is surfacing sync status — a small idle/syncing/error/last-synced indicator — so the user trusts that their offline edits will eventually land without ever being blocked.&quot;</blockquote>
 <p>Local-first UI is the pattern where every user interaction writes to local storage immediately, the UI derives all its state purely from that local storage, and network sync happens transparently in the background. There are three principles that define it: user actions never wait for the network, all displayed data comes from a Room <code>Flow</code>, and sync is background, transparent, and resilient to failure.</p>
 <p><strong>Architecture</strong>:</p>
 <pre><code>User Action → ViewModel → Repository
@@ -1588,8 +1877,17 @@ data class FeedUiState(
     val syncState: SyncState = SyncState.Idle
 )</code></pre>
 <p>The UI shows items immediately from Room; a sync indicator in the corner shows background sync progress. The user can always see and interact with content.</p>
+<p><strong>Under the hood</strong></p>
+<p>The single-source-of-truth guarantee is structural: because the UI subscribes to a Room <code>Flow</code> and never reads the network response directly, there is exactly one path by which data reaches the screen — a DB write. The <code>InvalidationTracker</code> (SQLite triggers on the observed tables plus an observer thread) re-runs the query on any commit and pushes a fresh list down the Flow, so a background sync writing to the DB is indistinguishable to the UI from a user action writing to it. That&#x27;s the whole reason the architecture diagram has only one arrow into the UI.</p>
+<p>Combining <code>items</code> and <code>syncState</code> into one <code>FeedUiState</code> typically uses <code>combine</code>, which keeps a latest-value cache for each upstream Flow and re-emits the merged state whenever either changes — so a sync transitioning Idle→Syncing re-renders the indicator without touching the item list. Conflating that whole state into the UI usually rides on <code>StateFlow</code>, which is conflated by design: it keeps only the most recent value and drops intermediate ones a slow collector missed, which is exactly right for UI state where only the latest matters.</p>
+<pre><code>Room write (user OR sync) → InvalidationTracker → query re-runs → Flow emit
+                                                                     │
+itemsFlow ─┐                                                         ▼
+           ├─ combine → StateFlow&lt;FeedUiState&gt; → collectAsStateWithLifecycle → recompose
+syncFlow ──┘</code></pre>
 <hr>
 <h3 id="networkboundresource-pattern">NetworkBoundResource Pattern</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;NetworkBoundResource is the classic Google pattern for coordinating cache and network behind a single Flow — it emits the local data immediately, decides whether the cache is stale, fetches in the background if so, writes the result back to the DB, and then re-emits from the DB so the database stays the single source of truth. The subtle part is that the UI subscribes only to the DB query, not the network — the network write is what drives the emission, so you never bind directly to the fetch result. The gotcha interviewers love is error handling: on a failed fetch you still emit the stale cached data alongside the error, rather than dropping the user into an empty error screen.&quot;</blockquote>
 <p><code>NetworkBoundResource</code> is a pattern from the Google Architecture Blueprints — pre-Paging-3 era — that coordinates cache and network in a single Flow: it always shows local data first, fetches fresh data from the network in parallel if needed, and writes the result back to the local cache.</p>
 <p><strong>Modern Kotlin implementation using Flow</strong>:</p>
 <pre><code>fun &lt;LocalType, RemoteType&gt; networkBoundResource(
@@ -1655,8 +1953,22 @@ sealed class Resource&lt;T&gt;(val data: T? = null, val error: Throwable? = null
         }
     }
     .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), FeedUiState())</code></pre>
+<p><strong>Under the hood</strong></p>
+<p>The whole pattern is built on cold <code>Flow</code> semantics and the <code>flow { }</code> builder. <code>flow { }</code> returns a cold flow whose <code>block</code> runs anew inside each collector&#x27;s coroutine when <code>collect</code> is called — nothing executes until collection. Inside that block, <code>query().first()</code> opens the DB flow, suspends until the first value arrives, then cancels the upstream subscription, giving you a one-shot read of the current cache. The terminal <code>emitAll(flow)</code> is the key mechanism: it forwards every emission of the inner <code>query().map { ... }</code> flow into the outer collector. Because that inner flow is a Room-observable query, Room&#x27;s <code>InvalidationTracker</code> registers an <code>Observer</code> on the affected tables; when <code>saveFetchResult</code> commits its <code>withTransaction</code>, Room&#x27;s update hook fires, the tracker marks the tables dirty, and the observable query re-runs and re-emits — which is exactly how the post-fetch DB write &quot;pushes&quot; a fresh <code>Resource.Success</code> to the UI without the collector ever touching the network result directly.</p>
+<pre><code>collect()
+  └─ flow { } block starts (per-collector)
+       emit(Loading)               -&gt; reaches collector immediately
+       query().first()             -&gt; reads current cache, then cancels query
+       if shouldFetch:
+         emit(Loading(cache))
+         fetch() (suspends on network)
+         saveFetchResult()         -&gt; DB transaction commit
+                                      -&gt; Room InvalidationTracker marks table dirty
+         emitAll(query().map{...})  -&gt; observable query re-runs on each table change</code></pre>
+<p>Suspension is cooperative: <code>fetch()</code> parks the coroutine at a suspension point (a state-machine <code>COROUTINE_SUSPENDED</code> return from the compiler-generated continuation) without blocking the underlying thread, so the dispatcher&#x27;s thread is free while the network is in flight.</p>
 <hr>
 <h3 id="workmanager-for-sync">WorkManager for Sync</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;WorkManager is the right tool for deferrable, guaranteed background work — sync that has to eventually run even across process death and reboots. It gives you constraints like network-connected or charging, exponential backoff retry, and unique work de-duplication, all in one API. Under the hood it picks the best scheduler for the OS version — JobScheduler on modern Android — and persists the work graph in a Room database so it survives a kill. The gotcha is that it&#x27;s deferrable, not exact: the system batches it for Doze and battery, so if you need an exact time you want AlarmManager, and if you need immediate user-visible work you want a foreground service.&quot;</blockquote>
 <p>WorkManager is the Jetpack library for deferrable, guaranteed background work — work that must survive process death and device reboots and still run eventually. It is the right choice for sync because it gives you four things that nothing else provides together: guaranteed execution even if the app is killed, respect for battery optimization and Doze mode, constraint support (run only when connected to the network, charging, etc.), and built-in exponential backoff retry.</p>
 <p><strong>Sync worker</strong>:</p>
 <pre><code>class SyncWorker(
@@ -1736,8 +2048,20 @@ WorkManager.initialize(
 <li><code>Foreground Service</code>: For immediate, user-aware long-running work (music playback, location tracking); not appropriate for silent sync</li>
 <li><code>CoroutineScope</code> in Application: Not guaranteed to survive process kill</li>
 </ul>
+<p><strong>Under the hood</strong></p>
+<p>WorkManager is a façade over a persisted work graph plus a platform scheduler. When you <code>enqueue</code>, it serializes the request into its own Room database (<code>androidx.work.workdb</code>) — the <code>WorkSpec</code> table holds the worker class name, constraints, backoff policy, current <code>State</code>, and <code>run_attempt_count</code>; dependency rows model <code>beginWith().then()</code> chains. Persisting to Room is what makes work survive process death and reboot: a <code>BOOT_COMPLETED</code> <code>RescheduleReceiver</code> re-reads the DB on restart. WorkManager then delegates to a <code>Scheduler</code> chosen by API level — <code>JobScheduler</code> on API 23+ (each <code>WorkSpec</code> becomes a <code>JobInfo</code> whose constraints map onto <code>JobScheduler</code> constraints), and the <code>GreedyScheduler</code> for in-process, unconstrained immediate work. Constraints are watched by <code>ConstraintController</code>/<code>ConstraintTracker</code> objects (network via <code>ConnectivityManager</code> callbacks, charging via battery broadcasts); the work only moves to <code>RUNNING</code> once all controllers report satisfied.</p>
+<pre><code>enqueue(request)
+  └─ WorkSpec row written to Room (workdb)  ── survives kill / reboot
+       └─ Scheduler chosen by API:
+            API 23+  -&gt; JobScheduler (WorkSpec -&gt; JobInfo + constraints)
+            in-proc  -&gt; GreedyScheduler (immediate, ProcessLifecycle-aware)
+       └─ ConstraintTrackers gate RUNNING (network/charging/idle/storage)
+       └─ Result.retry() -&gt; state RETRY, run_attempt_count++,
+                            next run = backoff(policy, attempt) [10s..5h clamp]</code></pre>
+<p>A <code>CoroutineWorker</code> runs <code>doWork()</code> on a <code>Job</code> tied to a <code>Dispatchers.Default</code>-backed scope; <code>Result.retry()</code> flips the <code>WorkSpec</code> to <code>ENQUEUED</code>/<code>RETRY</code>, increments <code>run_attempt_count</code>, and computes the next delay from the <code>BackoffPolicy</code> (linear or exponential), clamped between a 10-second floor and a 5-hour ceiling. Periodic work is never &quot;exactly&quot; periodic — <code>JobScheduler</code> batches and defers jobs to honor Doze maintenance windows and App Standby buckets, with an enforced minimum interval of 15 minutes.</p>
 <hr>
 <h3 id="pagination-with-local-cache">Pagination with Local Cache</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;Paging 3 with RemoteMediator is how you do offline-capable infinite scroll where Room is the single source of truth. The PagingSource reads pages straight out of Room, and RemoteMediator&#x27;s only job is to keep Room topped up — Paging calls its <code>load</code> with APPEND when the user scrolls near the end, and I fetch the next page and write it back in a transaction. The cursor for &#x27;what page is next&#x27; lives in a RemoteKeys table because the network page numbers are separate from Room&#x27;s positional keys. The gotcha is that there are two independent load states — <code>loadState.source</code> for Room and <code>loadState.mediator</code> for the network — so an offline error surfaces in the mediator state while the source keeps happily serving cached pages.&quot;</blockquote>
 <p><code>RemoteMediator</code> is Paging 3&#x27;s mechanism for combining a Room-backed <code>PagingSource</code> with network fetching — Room is the source of truth for what the UI displays, and <code>RemoteMediator</code> is responsible for populating and refreshing Room as the user scrolls.</p>
 <p><strong>Architecture</strong>:</p>
 <pre><code>UI → PagingData (from Room PagingSource)
@@ -1824,6 +2148,19 @@ interface FeedDao {
 }</code></pre>
 <p><strong>RemoteKey table</strong>: Stores the page cursor for each list type, so <code>RemoteMediator.load(APPEND)</code> knows what page to fetch next. Can also store <code>nextCursor</code> for cursor-based pagination.</p>
 <p><strong>Offline behavior</strong>: When the network is unavailable, <code>RemoteMediator.load()</code> returns <code>MediatorResult.Error</code>. The <code>PagingSource</code> still serves Room data. The UI should handle the <code>LoadState.Error</code> in <code>loadState.mediator</code> vs <code>loadState.source</code> separately.</p>
+<p><strong>Under the hood</strong></p>
+<p><code>Pager.flow</code> is a cold flow of <code>PagingData</code>; each <code>PagingData</code> wraps a <code>PageFetcherSnapshot</code> driven by a <code>PageFetcher</code>. When you annotate a DAO method to return <code>PagingSource&lt;Int, FeedItemEntity&gt;</code>, Room&#x27;s annotation processor generates a <code>LimitOffsetPagingSource</code> subclass — its <code>load()</code> issues a <code>SELECT ... LIMIT ? OFFSET ?</code> plus a <code>COUNT(*)</code> query, and it registers with Room&#x27;s <code>InvalidationTracker</code> so that any write to <code>feed_items</code> invalidates the active source. Invalidation is the linchpin: when <code>RemoteMediator</code> commits its <code>withTransaction</code>, the tracker fires, the current <code>PagingSource</code> is marked invalid, the <code>PageFetcher</code> tears it down and asks the <code>pagingSourceFactory</code> for a fresh one, and the new pages flow to the UI — that&#x27;s why writing to Room is all the mediator has to do. The two <code>LoadState</code> machines (<code>source</code> from the <code>PagingSource</code>, <code>mediator</code> from <code>RemoteMediator</code>) are combined into a <code>CombinedLoadStates</code> so the UI can distinguish a DB read error from a network refresh error.</p>
+<pre><code>list scrolled near end (within prefetchDistance)
+  └─ PageFetcherSnapshot detects boundary
+       └─ source PagingSource.load(APPEND)  -&gt; SELECT ... LIMIT/OFFSET from Room
+       └─ if near end of cached data: RemoteMediator.load(APPEND)
+             reads RemoteKeys -&gt; next page number
+             api.getFeed(page) -&gt; network
+             withTransaction { insertAll; remoteKeys.insert }
+             -&gt; InvalidationTracker fires
+             -&gt; PagingSource invalidated -&gt; factory builds new source
+             -&gt; fresh pages emitted via PagingData</code></pre>
+<p><code>load()</code> is suspending and is called sequentially by the paging machinery — Paging will not issue a second <code>load</code> for the same <code>LoadType</code> while one is in flight, which is why the mediator doesn&#x27;t need its own mutex around the page cursor. <code>cachedIn(viewModelScope)</code> makes the otherwise-cold <code>PagingData</code> flow a multicast, shareable conflated stream so a config change (re-collection) replays the already-loaded pages instead of refetching from page 1.</p>
 <hr>
 <h3 id="interview-angles-offline-first">Interview Angles: Offline-First</h3>
 <p><strong>Q: Design an offline-first feed.</strong></p>

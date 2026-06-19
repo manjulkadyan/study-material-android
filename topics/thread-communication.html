@@ -37,6 +37,7 @@
 <hr>
 <h2 id="41-pipes">4.1 Pipes</h2>
 <h3 id="definition">Definition</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;A pipe is a one-way, buffer-backed channel between exactly two threads — a producer writes one end, a consumer reads the other, and the JVM handles backpressure for you: the writer blocks when the buffer fills and the reader blocks when it&#x27;s empty. In Java we get <code>PipedOutputStream</code>/<code>PipedInputStream</code> for bytes and <code>PipedWriter</code>/<code>PipedReader</code> for chars. The gotcha is that because both ends block, you can never use both ends on the same thread — do that and the producer fills the buffer and deadlocks before the consumer ever runs.&quot;</blockquote>
 <p>A pipe is a <strong>unidirectional, buffer-backed channel</strong> that connects exactly two threads: a producer writes into the write-end and a consumer reads from the read-end. The channel owns a fixed internal buffer, and the JVM manages flow control automatically — the producer blocks when the buffer is full and the consumer blocks when it is empty.</p>
 <p>In Java/Kotlin the standard classes are:</p>
 <ul>
@@ -63,7 +64,15 @@
         }
     }.start()
 }</code></pre>
+<p><strong>Under the hood</strong></p>
+<p>A <code>PipedReader</code>/<code>PipedInputStream</code> holds a plain <code>char[]</code>/<code>byte[]</code> circular buffer plus two integer cursors, <code>in</code> (next write position) and <code>out</code> (next read position), where <code>in == -1</code> encodes &quot;empty&quot; and <code>in == out</code> encodes &quot;full&quot;. Read and write don&#x27;t talk to each other directly — the <em>writer</em> simply calls <code>receive()</code> on the connected <em>reader</em>, and all the coordination happens inside the reader object&#x27;s monitor. Blocking is implemented with the classic <code>synchronized</code>/<code>wait()</code>/<code>notifyAll()</code> pattern on that reader instance: <code>receive()</code> <code>wait()</code>s while the buffer is full, <code>read()</code> <code>wait()</code>s while it&#x27;s empty, and each one calls <code>notifyAll()</code> after touching the buffer to wake the other side. There is also a periodic 1-second timed wait that re-checks whether the peer thread is still alive, which is how a dead reader eventually surfaces as a broken pipe.</p>
+<pre><code>buffer:  [ h e l l o _ _ _ ]   capacity = 1024 (default)
+                ^out      ^in
+read()  -&gt; blocks (wait) while in == -1   (empty)
+receive -&gt; blocks (wait) while in == out  (full)
+both wake the peer via notifyAll() on the reader&#x27;s monitor</code></pre>
 <h3 id="internals">Internals</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;Connecting the ends wires both to a shared circular buffer that defaults to 1024 bytes or chars. From there it&#x27;s pure blocking flow control — full buffer blocks the writer, empty buffer blocks the reader, and closing the write-end is what signals EOF so the reader sees -1 and can stop. The subtle failure mode is the broken pipe: if the reader thread dies, the next write throws an <code>IOException</code>, so a producer always has to be ready to handle that.&quot;</blockquote>
 <ol>
 <li><code>PipedWriter.connect(PipedReader)</code> links both ends to a shared circular char buffer (default</li>
 </ol>
@@ -81,7 +90,10 @@
 <li><strong>Broken pipe:</strong> if the reader thread dies, the next producer write throws</li>
 </ol>
 <p><code>IOException(&quot;Pipe broken&quot;)</code>.</p>
+<p><strong>Under the hood</strong></p>
+<p>The &quot;broken pipe&quot; detection isn&#x27;t magic — each pipe end caches a reference to the peer <code>Thread</code> at first read/write (<code>readSide</code>/<code>writeSide</code>). On every blocking loop iteration the code checks <code>peer.isAlive()</code>; if the cached writer or reader thread has terminated and no data remains, it throws <code>IOException(&quot;...broken&quot;)</code> rather than waiting forever. That&#x27;s also why a pipe end is effectively single-writer/single-reader: the implementation assumes one producer thread and one consumer thread, so sharing an end across many threads breaks the liveness checks. EOF is distinct from a break — <code>close()</code> on the write-end sets a <code>closedByWriter</code> flag and calls <code>notifyAll()</code>; the reader drains whatever bytes remain, then returns <code>-1</code> on the next read once <code>in == -1</code> and <code>closedByWriter</code> is set.</p>
 <h3 id="blocking-behavior-and-thread-design-implications">Blocking Behavior and Thread-Design Implications</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;Every wait here is a real <code>Object.wait()</code>, not a spin — a blocked producer or consumer is descheduled by the OS and burns no CPU, which is what makes pipes a clean backpressure mechanism. The design constraint that trips people up: the two ends must live on separate threads. If you write and read on one thread, the producer fills the buffer, calls <code>wait()</code>, and there&#x27;s no other thread to ever drain it, so you deadlock yourself.&quot;</blockquote>
 <table border="1" cellpadding="6" cellspacing="0">
 <thead><tr>
 <th>Condition</th>
@@ -94,10 +106,15 @@
 <tr><td>Reader thread dead</td><td><code>write()</code> throws <code>IOException</code></td><td>Producer must handle exception</td></tr>
 </tbody></table>
 <p>Because both ends block, the two threads must run on <strong>separate threads</strong> — connecting both ends on the same thread is a classic deadlock: the producer fills the buffer and blocks before the consumer ever gets CPU time.</p>
+<p><strong>Under the hood</strong></p>
+<p>&quot;Descheduled; no busy-wait&quot; is precisely what <code>Object.wait()</code> buys you: it atomically releases the monitor lock and parks the thread, moving it from RUNNABLE to the WAITING state on that monitor&#x27;s wait set. At the OS level the thread is off the run queue entirely — it consumes no scheduler quanta until a matching <code>notifyAll()</code> moves it to the <em>entry</em> set, where it must reacquire the monitor before returning. The single-thread deadlock is the degenerate case of this: a self-pipe write that hits a full buffer parks the only thread that could ever call <code>notifyAll()</code>, so the thread waits on a condition nothing can satisfy. The JVM can&#x27;t detect this as a deadlock (it&#x27;s a single thread waiting on a monitor, not a lock cycle), so it just hangs.</p>
 <h3 id="pipelines">Pipelines</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;You can chain pipes so each intermediate thread reads from an upstream pipe and writes to a downstream one — exactly like a Unix <code>cmd1 | cmd2 | cmd3</code>. The elegant part is that backpressure flows end-to-end automatically: if the last stage stalls, its buffer fills, which blocks the stage feeding it, and that ripples all the way back to the source without any explicit signaling.&quot;</blockquote>
 <p>Multiple pipes can be chained:</p>
 <pre><code>Thread-A --&gt; PipedWriter/Reader --&gt; Thread-B --&gt; PipedWriter/Reader --&gt; Thread-C</code></pre>
 <p>This is analogous to Unix <code>cmd1 | cmd2 | cmd3</code>. Each intermediate thread is both a consumer (of the upstream pipe) and a producer (of the downstream pipe).</p>
+<p><strong>Under the hood</strong></p>
+<p>Each stage is an independent buffer + monitor, so a pipeline is really N separate producer/consumer handshakes running concurrently — there&#x27;s no global coordinator. Backpressure propagates transitively: if Thread-C stalls, its inbound buffer fills, which blocks Thread-B&#x27;s writes, which lets Thread-B&#x27;s inbound buffer fill, which eventually blocks Thread-A. This is the same end-to-end flow control the kernel gives Unix shell pipes (each <code>|</code> is a fixed-size kernel pipe buffer, typically 64 KB on Linux), except here the buffers live on the JVM heap and the blocking is monitor-based rather than syscall-based. Throughput is gated by the slowest stage, and each intermediate thread spends its life alternating between <code>read()</code> (waiting on the upstream monitor) and <code>write()</code> (waiting on the downstream monitor).</p>
 <h3 id="android-implications">Android Implications</h3>
 <p><code>PipedInputStream/OutputStream</code> are standard Java and work on Android, but they are rarely used in modern Android code. The more idiomatic equivalents are:</p>
 <ul>
@@ -118,21 +135,34 @@
 <tr><td>No explicit lock management</td><td>1 KB default buffer; may need tuning</td></tr>
 </tbody></table>
 <h3 id="failure-modes">Failure Modes</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;The three classic pipe failure modes all come from the blocking contract. Deadlock happens when you put both ends on the same thread — the producer blocks waiting for the consumer to drain, but the consumer never runs because it&#x27;s the same thread. Broken pipe is when the consumer thread dies and the producer&#x27;s next write throws <code>IOException</code>. And starvation is when the consumer can&#x27;t keep up, so the producer blocks more and more and the whole pipeline runs at the speed of the slowest stage. The thing interviewers want to hear is that these aren&#x27;t bugs in the pipe — they&#x27;re the direct consequence of synchronous backpressure.&quot;</blockquote>
 <ul>
 <li><strong>Deadlock:</strong> both ends on the same thread.</li>
 <li><strong>Broken pipe:</strong> consumer thread dies; producer gets <code>IOException</code>.</li>
 <li><strong>Starvation:</strong> consumer is too slow and producer keeps blocking — pipeline throughput limited by slowest stage.</li>
 </ul>
+<p><strong>Under the hood</strong></p>
+<p>A <code>PipedInputStream</code>/<code>PipedOutputStream</code> pair shares a single circular byte buffer (default 1024 bytes) guarded by <code>synchronized</code> methods and <code>wait()</code>/<code>notifyAll()</code>. On <code>write</code>, if the buffer is full the producer calls <code>wait()</code> inside a loop; the consumer&#x27;s <code>read</code> calls <code>notifyAll()</code> after freeing space, and vice versa. The &quot;broken pipe&quot; <code>IOException</code> is raised because each stream records the <code>Thread</code> reference of its connected peer and periodically checks <code>peer.isAlive()</code> — if the reader thread is dead, the writer throws rather than blocking forever.</p>
+<pre><code>PipedOutputStream.write(b):
+  synchronized(sink):
+    while (buffer full):           # producer parks here
+      checkStateForReceive()        # throws IOException if reader thread dead
+      notifyAll(); wait(1000)       # wakes periodically to re-check liveness
+    buffer[in++] = b; notifyAll()  # wake a blocked reader</code></pre>
 <h3 id="interview-angles">Interview Angles</h3>
 <p><strong>What is a pipe?</strong></p>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;A pipe is a one-directional, buffer-backed channel between exactly two threads — one writes bytes or chars in, the other reads them out. The producer blocks when the buffer fills up and the consumer blocks when it&#x27;s empty. The point I&#x27;d make to an interviewer is that the blocking is the feature, not a limitation: it gives you backpressure for free, so a fast producer can&#x27;t run away and exhaust memory, and you never have to write your own locks or condition variables.&quot;</blockquote>
 <p>&quot;A pipe is a unidirectional, buffer-backed byte or character channel between exactly two threads. The producer blocks when the buffer is full; the consumer blocks when it is empty. That blocking behavior is actually the feature — it gives you natural backpressure without any manual synchronization.&quot;</p>
 <p><strong>When would pipe-style communication be useful?</strong></p>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;I&#x27;d reach for a pipe when I&#x27;m streaming data through transformation stages — log parsing, transcoding, compression — where I want backpressure but don&#x27;t want to hand-roll synchronization. The other big use case is bridging to legacy APIs that only speak <code>InputStream</code> or <code>OutputStream</code>; a pipe lets me feed one component&#x27;s output into another&#x27;s input as a stream. On modern Android, though, I&#x27;d usually prefer a coroutine <code>Channel</code> because it suspends instead of blocking a whole thread.&quot;</blockquote>
 <p>&quot;Pipes are most useful for streaming data processing — things like log parsing, transcoding, or compression pipelines — where you want natural backpressure and you don&#x27;t want to write manual synchronization. They&#x27;re also the right tool when you need to interface with legacy APIs that speak <code>InputStream</code> or <code>OutputStream</code>, because those APIs expect a stream, and a pipe gives you exactly that.&quot;</p>
 <p><strong>How does blocking affect thread design?</strong></p>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;Because each end blocks, you need a dedicated thread per pipeline stage — a blocked thread is asleep, so it&#x27;s not burning CPU, but it&#x27;s also occupied and can&#x27;t do anything else. That doesn&#x27;t scale: ten stages means ten threads parked most of the time. The senior answer is to replace pipes with coroutine <code>Channel&lt;T&gt;</code>, where the producer and consumer suspend instead of blocking, so dozens of logical stages can multiplex onto a small dispatcher pool without any of them starving.&quot;</blockquote>
 <p>&quot;The key constraint is that each end of the pipe must live on its own thread, because blocking puts the thread to sleep — no busy-wait — but it also means that thread is stuck waiting. So you need one thread per pipeline stage. In modern Android the better answer is to replace pipes with <code>Channel&lt;T&gt;</code> from coroutines, which suspends instead of blocking, so many logical stages can share a small thread pool without starving each other.&quot;</p>
 <hr>
 <h2 id="42-shared-memory">4.2 Shared Memory</h2>
 <h3 id="definition-1">Definition</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;Shared memory is just the default in Java and Kotlin — every thread shares the same heap, so any thread can read or write a field with no copying. That zero-copy access is exactly why it&#x27;s fast, but it&#x27;s also why it&#x27;s dangerous: the moment two threads touch the same mutable field and at least one writes, you&#x27;ve got a potential race unless you&#x27;ve established a happens-before edge. So the whole game with shared memory is correctness, not performance.&quot;</blockquote>
 <p>Shared memory is the <strong>default communication model in Java and Kotlin</strong> — all threads share the heap, so any thread can read or write the same field directly without copying anything. That zero-copy access is what makes it fast, but it also means every concurrent read-write pair is a potential race condition unless you establish a happens-before relationship.</p>
 <pre><code>// Unsynchronized shared counter — DATA RACE
 class SharedCounter {
@@ -145,7 +175,14 @@ val t2 = Thread { repeat(100_000) { counter.count++ } }
 t1.start(); t2.start()
 t1.join();  t2.join()
 // counter.count is NOT reliably 200_000</code></pre>
+<p><strong>Under the hood</strong></p>
+<p>The JVM places object fields in heap memory, but each CPU core has its own register file and L1/L2 caches. Without a memory barrier, a write to <code>count</code> may sit in a core&#x27;s store buffer and never be flushed to the cache line another core reads. The <code>count++</code> itself compiles to roughly three bytecodes — <code>getfield</code>, <code>iadd</code> (after an <code>iconst_1</code>), <code>putfield</code> — which are not atomic, so two threads can both read the same value, both add one, and both write back the same result, losing an increment.</p>
+<pre><code>count++  ≈   getfield count   ; load current value to operand stack
+             iconst_1
+             iadd             ; +1
+             putfield count   ; store back — another thread may have written between load and store</code></pre>
 <h3 id="synchronization-need">Synchronization Need</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;The JVM memory model deliberately does <em>not</em> promise that one thread&#x27;s write is visible to another — that freedom is what lets the CPU cache and reorder for speed. To get a guarantee you have to establish a happens-before edge: entering and leaving a <code>synchronized</code> block, a volatile write followed by a volatile read, <code>Thread.start</code>, <code>Thread.join</code>, or unlocking then locking a <code>Lock</code>. The subtlety I&#x27;d flag is that happens-before is transitive and pairwise — a volatile write only publishes to a thread that subsequently does a volatile <em>read</em> of that same field; it&#x27;s not a global flush.&quot;</blockquote>
 <p>The JVM memory model (JMM, JSR-133) does <strong>not</strong> guarantee that writes by one thread are immediately visible to another unless a <strong>happens-before</strong> relationship exists. Happens-before is established by:</p>
 <ul>
 <li><code>synchronized</code> block/method entry and exit</li>
@@ -155,7 +192,15 @@ t1.join();  t2.join()
 <li><code>Lock.unlock()</code> → subsequent <code>Lock.lock()</code></li>
 </ul>
 <p>Without happens-before, a thread may see a stale cached value from its CPU register or L1 cache.</p>
+<p><strong>Under the hood</strong></p>
+<p>Happens-before is implemented as memory barriers (fences) the JIT emits at synchronization points. A monitor exit / volatile write emits a StoreStore + StoreLoad barrier so pending stores are flushed and made visible; a monitor enter / volatile read emits a LoadLoad + LoadStore barrier that invalidates stale cached reads. On x86 most of these are cheap because the hardware is already strongly ordered (the volatile write becomes a locked instruction acting as a full fence), whereas on ARM — i.e. real Android devices — the JIT must emit explicit <code>dmb</code> barrier instructions, which is why concurrency bugs that hide on a desktop JVM surface on a phone.</p>
+<pre><code>volatile store x = 1:        normal store y = 1:
+   ... store buffer ...          ... store buffer ...
+   [StoreStore barrier]          (no barrier — may be reordered/delayed)
+   write x
+   [StoreLoad barrier]  &lt;-- ensures global visibility before next load</code></pre>
 <h3 id="race-conditions">Race Conditions</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;A race condition is when correctness depends on the timing of the scheduler — the same code can pass a thousand times and then corrupt state once. The two patterns I always look for are check-then-act, like <code>containsKey</code> followed by <code>get</code>, where the key can vanish between the two calls, and read-modify-write, like <code>count++</code>, which is three separate steps. The fix isn&#x27;t <code>volatile</code> — that only gives visibility. You need atomicity: a lock, a <code>synchronized</code> block, or an atomic compound operation like <code>compute</code> or <code>compareAndSet</code>.&quot;</blockquote>
 <p>A <strong>race condition</strong> occurs when the correctness of the program depends on the relative timing of thread scheduling. The classic example is check-then-act:</p>
 <pre><code>// BAD: check-then-act without atomicity
 if (map.containsKey(key)) {          // check
@@ -165,7 +210,14 @@ if (map.containsKey(key)) {          // check
 <p>Read-modify-write is another common pattern:</p>
 <pre><code>// count++ is actually: read count, add 1, write count — three non-atomic steps
 counter.count++</code></pre>
+<p><strong>Under the hood</strong></p>
+<p>A race is the result of the scheduler being free to interleave bytecodes from different threads at any non-atomic boundary. The OS scheduler can preempt a thread between <em>any</em> two bytecodes (and even mid-bytecode for compound operations), so the window between the <code>getfield</code>/<code>containsKey</code> and the <code>putfield</code>/<code>get</code> is a real interleaving point. Atomic compound APIs close the window by doing the check-and-act under a single lock or as one hardware compare-and-swap (<code>CAS</code>) so no other thread can observe an intermediate state.</p>
+<pre><code>// Closing the check-then-act window atomically:
+map.compute(key) { _, v -&gt; v?.also(::process) }   // whole block holds the bin lock
+// or for the counter, a single CAS retry loop:
+atomicCount.incrementAndGet()                      // lock-free CAS under the hood</code></pre>
 <h3 id="visibility-issues">Visibility Issues</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;<code>@Volatile</code> solves visibility: every read goes to main memory, every write is published, and the compiler can&#x27;t reorder accesses around it — so a flag like <code>running = false</code> is seen by other threads promptly without it I might spin forever on a stale cached <code>true</code>. The critical caveat is that volatile does <em>not</em> give atomicity. A plain assignment is one write, so volatile is enough there, but <code>count++</code> is read-modify-write — three steps — so volatile won&#x27;t save you; that needs <code>AtomicInteger</code> or <code>synchronized</code>.&quot;</blockquote>
 <p><code>@Volatile</code> on a JVM field forces every read/write to go to main memory (disables CPU caching of that field) and prevents instruction reordering around it:</p>
 <pre><code>@Volatile var running = true        // other threads see the update immediately
 
@@ -175,7 +227,13 @@ fun stop() { running = false }
 // Reader thread
 while (running) { /* work */ }      // will observe running=false without @Volatile delay</code></pre>
 <p><code>@Volatile</code> solves visibility but <strong>not atomicity</strong>. <code>running = false</code> is a single write, so <code>@Volatile</code> is sufficient. <code>count++</code> (read-modify-write) still needs <code>AtomicInteger</code> or <code>synchronized</code>.</p>
+<p><strong>Under the hood</strong></p>
+<p><code>@Volatile</code> in Kotlin maps to the JVM&#x27;s <code>ACC_VOLATILE</code> field flag, which tells the JIT to bracket every access with the barriers described above and to never hoist the read out of a loop. Without it, the JIT is allowed to cache <code>running</code> in a register and turn <code>while (running)</code> into <code>if (running) while (true)</code> — an infinite loop that never re-reads the field. Volatile defeats that hoisting by forcing a fresh load each iteration, but because each load/store is independent there&#x27;s no lock held across them, so a read-modify-write still has the interleaving window that only <code>AtomicInteger</code> (a <code>CAS</code> retry loop) or <code>synchronized</code> (a monitor) can eliminate.</p>
+<pre><code>without @Volatile, JIT may transform:        with @Volatile:
+  if (running)         // read once            while (running)   // re-read each loop
+    while (true) { }   // never re-reads          { ... }         // sees running=false</code></pre>
 <h3 id="protecting-shared-mutable-state">Protecting Shared Mutable State</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;When two threads touch the same mutable field, I need to guarantee both atomicity and visibility — and the choice depends on the shape of the data. For a single counter or flag I reach for atomics or <code>@Volatile</code> because they&#x27;re a single CAS or memory barrier with no monitor overhead; for a multi-field invariant I need a real lock or <code>synchronized</code> so the whole critical section is consistent. The gotcha interviewers probe is that <code>@Volatile</code> alone is not enough for read-modify-write — <code>volatile count++</code> is still a race because the increment isn&#x27;t atomic; you need <code>AtomicInteger.incrementAndGet()</code> for that.&quot;</blockquote>
 <table border="1" cellpadding="6" cellspacing="0">
 <thead><tr>
 <th>Mechanism</th>
@@ -196,7 +254,17 @@ class SafeCounter {
     fun increment() = count.incrementAndGet()
     fun get() = count.get()
 }</code></pre>
+<p><strong>Under the hood</strong></p>
+<p>Each Java object header has a few bits reserved for its monitor (the &quot;mark word&quot;). An uncontended <code>synchronized</code> is acquired via a thin/biased lock using a single CAS on that word; only when threads actually contend does the JVM inflate it into a heavyweight <code>ObjectMonitor</code> that parks waiters at the OS level. <code>@Volatile</code> doesn&#x27;t lock at all — the compiler emits memory-barrier instructions (e.g. an <code>mfence</code>/<code>dmb</code>-style fence and prevents reordering) so a write is published to main memory and reads can&#x27;t be cached in a register. Atomics compile down to a hardware compare-and-swap (<code>lock cmpxchg</code> on x86, <code>ldrex/strex</code> loop on ARM); <code>incrementAndGet</code> is a retry loop around CAS, which is why it&#x27;s atomic where <code>volatile x++</code> is not.</p>
+<pre><code>volatile x++           AtomicInteger.incrementAndGet()
+─────────────          ──────────────────────────────
+read x   (load)        do {
+inc      (not atomic)      old = x            // volatile read
+write x  (store)           new = old + 1
+↑ another thread can      } while (!CAS(x, old, new))   // hardware atomic
+  interleave here          return new</code></pre>
 <h3 id="immutability-reduces-risk">Immutability Reduces Risk</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;Immutability sidesteps the whole problem — if an object never changes after construction, there&#x27;s nothing to synchronize, so any number of threads can read it freely. In Kotlin I lean on <code>val</code>, data classes with all-<code>val</code> fields, and read-only collection views, and when state has to evolve I create a new instance and swap it atomically with an <code>AtomicReference</code>. The subtlety is that a <code>final</code>/<code>val</code> field also gives you a safe-publication guarantee under the JMM — once the constructor finishes, other threads are guaranteed to see the fully-initialized field, which you don&#x27;t get with a plain mutable field.&quot;</blockquote>
 <p>An <strong>immutable</strong> object&#x27;s state cannot change after construction. Any thread can read it freely because there are no concurrent writes to race with. In Kotlin, prefer:</p>
 <ul>
 <li><code>val</code> over <code>var</code> wherever possible.</li>
@@ -210,6 +278,14 @@ class SafeCounter {
 
 // thread-safe update
 configRef.updateAndGet { old -&gt; old.copy(port = 9090) }</code></pre>
+<p><strong>Under the hood</strong></p>
+<p>The Java Memory Model gives <code>final</code> fields a special &quot;freeze&quot; guarantee: at the end of a constructor, a freeze action ensures that any thread which sees the object reference (without a data race on the reference itself) is guaranteed to see the correct, fully-constructed values of its <code>final</code> fields — no extra synchronization required. Kotlin <code>val</code> properties compile to <code>final</code> fields, so a <code>data class</code> of <code>val</code>s is genuinely safe to publish. <code>data class</code> itself generates <code>equals</code>/<code>hashCode</code>/<code>copy</code>/<code>componentN</code> from the primary-constructor properties; <code>copy()</code> is just a constructor call with defaulted arguments, allocating a fresh object rather than mutating. <code>AtomicReference.updateAndGet</code> is the same hardware-CAS retry loop as the integer atomics, except the compared value is the object reference, so the swap of the new immutable instance is a single atomic pointer publish.</p>
+<pre><code>// what `data class Config(val host: String, val port: Int)` roughly compiles to:
+final class Config {
+    final String host;   // JMM freeze on constructor exit ⇒ safe publication
+    final int port;
+    Config copy(host = this.host, port = this.port) = Config(host, port)
+}</code></pre>
 <h3 id="android-implications-1">Android Implications</h3>
 <ul>
 <li><strong>Main thread</strong> holds <code>View</code> state. Only the main thread should read/write <code>View</code> properties.</li>
@@ -255,6 +331,7 @@ configRef.updateAndGet { old -&gt; old.copy(port = 9090) }</code></pre>
 <h2 id="43-signaling">4.3 Signaling</h2>
 <p>Signaling is about threads <strong>notifying</strong> each other — &quot;I am done&quot;, &quot;a slot is available&quot;, &quot;N workers have reached the rendezvous&quot; — and it is distinct from sharing data. You can signal without transferring any payload at all.</p>
 <h3 id="waitnotify">wait/notify</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;<code>wait</code>/<code>notify</code> is the lowest-level signaling primitive on the JVM — every object has an intrinsic monitor, so a thread holding that monitor can call <code>wait()</code> to atomically release the lock and suspend, and another thread calls <code>notify()</code> or <code>notifyAll()</code> to wake it. The two things an interviewer wants to hear: you must call them inside a <code>synchronized</code> block on the same object, and you must re-check your condition in a <code>while</code> loop, not an <code>if</code>, because the spec permits spurious wakeups and because <code>notifyAll</code> can wake threads waiting on different conditions. In practice I&#x27;d never write this by hand today — I&#x27;d reach for a <code>CountDownLatch</code>, <code>Semaphore</code>, or a coroutine channel instead.&quot;</blockquote>
 <p><code>wait</code>/<code>notify</code> is the lowest-level JVM signaling mechanism. Every object has an intrinsic monitor, and a thread that holds that monitor can call <code>wait()</code> to release it and suspend. Another thread then calls <code>notify()</code> or <code>notifyAll()</code> to wake the waiting thread or threads back up.</p>
 <pre><code>val lock = Object()
 var ready = false
@@ -288,8 +365,18 @@ Thread {
 </ol>
 <p>wait for different conditions.</p>
 <p><strong>Limitations:</strong> <code>wait</code>/<code>notify</code> is fragile, verbose, and hard to compose. In practice you should always prefer the higher-level utilities below.</p>
+<p><strong>Under the hood</strong></p>
+<p><code>wait()</code> is a native method that requires the calling thread to already own the object&#x27;s monitor (otherwise it throws <code>IllegalMonitorStateException</code>). When inflated, the monitor (<code>ObjectMonitor</code> in HotSpot) maintains two queues: an <code>_EntryList</code> of threads blocked trying to acquire the lock, and a <code>_WaitSet</code> of threads parked in <code>wait()</code>. Calling <code>wait()</code> fully releases the monitor (including all reentrant acquisitions), moves the thread into the <code>_WaitSet</code>, and parks it at the OS level (<code>pthread_cond_wait</code>/<code>futex</code>). <code>notify()</code> moves one thread from the <code>_WaitSet</code> back to the <code>_EntryList</code>; <code>notifyAll()</code> moves all of them. A notified thread does not run immediately — it must re-contend for and re-acquire the monitor before returning from <code>wait()</code>, which is exactly why the condition can change between wakeup and resumption, mandating the <code>while</code>-loop re-check.</p>
+<pre><code>ObjectMonitor
+ ├─ _owner      → thread currently holding the lock
+ ├─ _EntryList  → blocked on synchronized entry      (notify moves waiters here)
+ └─ _WaitSet    → parked in wait()                   (wait() puts you here, lock released)
+
+wait():    own monitor → release lock → enqueue _WaitSet → park
+notify():  move 1 _WaitSet → _EntryList   (still must re-acquire lock to proceed)</code></pre>
 <hr>
 <h3 id="countdownlatch">CountDownLatch</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;A <code>CountDownLatch</code> is a one-shot gate: I initialize it with a count, each worker calls <code>countDown()</code> when it finishes, and any thread that calls <code>await()</code> blocks until the count hits zero. I reach for it when I need to fan out N parallel tasks and wait for all of them before proceeding. The gotcha interviewers probe is that it&#x27;s non-resettable — once it reaches zero it stays there, so if I need to coordinate repeated phases I&#x27;d use a <code>CyclicBarrier</code> instead.&quot;</blockquote>
 <p>A <code>CountDownLatch</code> lets one or more threads <strong>wait</strong> until a set of operations in other threads completes. You initialize it with a count; each worker calls <code>countDown()</code> when it finishes; and any waiter calls <code>await()</code>, which blocks until the count reaches zero.</p>
 <p><strong>Key property: one-shot, non-resettable.</strong></p>
 <pre><code>import java.util.concurrent.CountDownLatch
@@ -310,9 +397,15 @@ fun parallelInit() {
     println(&quot;All workers done, proceeding&quot;)
 }</code></pre>
 <p>Timed variant: <code>latch.await(5, TimeUnit.SECONDS)</code> returns <code>false</code> if it times out.</p>
+<p><strong>Under the hood</strong></p>
+<p><code>CountDownLatch</code> is built on <code>AbstractQueuedSynchronizer</code> (AQS), where the count is stored in AQS&#x27;s single <code>volatile int state</code>. <code>countDown()</code> performs a CAS loop to decrement state; when it transitions to zero it signals AQS to release all parked waiters at once. <code>await()</code> uses AQS&#x27;s <em>shared</em> acquire mode — <code>tryAcquireShared</code> returns success only when <code>state == 0</code>, otherwise the thread is wrapped in a node, enqueued on the CLH wait queue, and parked via <code>LockSupport.park</code> (no busy-spin). Because state only ever moves down and is never reset, the latch is inherently one-shot.</p>
+<pre><code>state: 3 --countDown--&gt; 2 --countDown--&gt; 1 --countDown--&gt; 0
+                                                          |
+                                  releaseShared() unparks ALL queued awaiters</code></pre>
 <p><strong>Android use:</strong> waiting for multiple parallel API calls before showing a screen; waiting for analytics SDK init before logging events.</p>
 <hr>
 <h3 id="semaphore">Semaphore</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;A <code>Semaphore</code> holds a set of permits — <code>acquire()</code> takes one and blocks if none are left, <code>release()</code> gives one back. I use it to cap concurrency, like limiting parallel image downloads to three at a time. The subtle thing is that a binary semaphore looks like a mutex but isn&#x27;t: it&#x27;s not re-entrant, and any thread can release a permit it never acquired — so it&#x27;s a signaling primitive, not an ownership lock.&quot;</blockquote>
 <p>A <code>Semaphore</code> maintains a count of <strong>permits</strong>. <code>acquire()</code> decrements the count and blocks if it is already zero; <code>release()</code> increments it. The whole point is to control how many threads can access a bounded resource pool at the same time.</p>
 <pre><code>import java.util.concurrent.Semaphore
 
@@ -330,9 +423,12 @@ fun queryDatabase(query: String) {
 }</code></pre>
 <p><strong>Binary semaphore (permits=1):</strong> behaves like a mutex, but with two important differences — it is not re-entrant, and it can be released by a different thread than the one that acquired it. That is unlike <code>synchronized</code>, which is re-entrant and is always released by its owning thread.</p>
 <p><strong>Fair semaphore:</strong> <code>Semaphore(n, true)</code> grants permits in FIFO order, preventing starvation.</p>
+<p><strong>Under the hood</strong></p>
+<p>Like <code>CountDownLatch</code>, <code>Semaphore</code> is an AQS subclass and stores the permit count in AQS&#x27;s <code>volatile int state</code>. <code>acquire()</code> calls <code>acquireSharedInterruptibly</code>, whose <code>tryAcquireShared</code> CAS-loops to subtract a permit and returns the remaining count; if it goes negative the thread parks on the CLH queue. The fairness flag selects a different <code>tryAcquireShared</code>: the unfair (default) <code>NonfairSync</code> lets a newly arriving thread <em>barge</em> and grab a permit ahead of already-queued waiters, while <code>FairSync</code> first checks <code>hasQueuedPredecessors()</code> and refuses to barge, enforcing FIFO. Because <code>release()</code> simply CAS-increments state, no thread identity is recorded — that is exactly why any thread can release and why it isn&#x27;t re-entrant (re-acquiring consumes a second permit rather than bumping an owner count).</p>
 <p><strong>Android use:</strong> throttling parallel image downloads; limiting concurrent network requests.</p>
 <hr>
 <h3 id="cyclicbarrier">CyclicBarrier</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;A <code>CyclicBarrier</code> makes N threads rendezvous: everyone calls <code>await()</code> and blocks, the last arrival can run a barrier action, and then all threads are released together. Unlike a latch it&#x27;s reusable — it resets automatically for the next phase, which is why it suits multi-phase parallel work. The gotcha is the all-or-nothing semantics: if one waiting thread is interrupted or times out, the barrier &#x27;breaks&#x27; and every other waiter throws <code>BrokenBarrierException</code>.&quot;</blockquote>
 <p>A <code>CyclicBarrier</code> makes N threads <strong>rendezvous</strong> at a common point. Each thread calls <code>await()</code>; the last one to arrive optionally triggers a barrier action, and then all threads are released together. The key difference from <code>CountDownLatch</code> is that a <code>CyclicBarrier</code> is resettable — you can reuse it for multiple phases of work.</p>
 <pre><code>import java.util.concurrent.CyclicBarrier
 
@@ -348,9 +444,12 @@ repeat(3) { i -&gt;
         println(&quot;Thread $i doing phase 2 work&quot;)
     }.start()
 }</code></pre>
+<p><strong>Under the hood</strong></p>
+<p>Unlike latch and semaphore, <code>CyclicBarrier</code> is <em>not</em> built on AQS — it uses a <code>ReentrantLock</code> plus a single <code>Condition</code> (<code>trip</code>). Each <code>await()</code> acquires the lock, decrements an internal <code>count</code>, and if it isn&#x27;t the last arrival, calls <code>trip.await()</code> (releasing the lock and parking). The last thread to arrive runs the optional barrier <code>Runnable</code> <em>on its own thread</em>, then calls <code>nextGeneration()</code>, which signals the condition to wake everyone and resets <code>count</code> back to the party size — that auto-reset is the &quot;cyclic&quot; part. State is tracked by a <code>Generation</code> object holding a <code>broken</code> flag; a timeout, interrupt, or exception in the barrier action flips <code>broken = true</code> and calls <code>signalAll()</code>, so all other waiters detect it and throw <code>BrokenBarrierException</code>.</p>
 <p><strong>Android use:</strong> coordinating multiple parallel data-fetch coroutines before merging results (more idiomatic: <code>awaitAll()</code> in coroutines).</p>
 <hr>
 <h3 id="mutex--reentrantlock">Mutex / ReentrantLock</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;<code>ReentrantLock</code> is the explicit-lock version of <code>synchronized</code> — same thread can re-lock it without deadlocking because it keeps an acquisition count tied to the owning thread. I&#x27;d choose it over <code>synchronized</code> when I need <code>tryLock</code> with a timeout, interruptible locking, or fairness. In coroutines I use <code>kotlinx.coroutines.sync.Mutex</code> instead, because it <em>suspends</em> the coroutine rather than parking an OS thread — but note that one is non-re-entrant, so re-locking it from the same coroutine deadlocks.&quot;</blockquote>
 <p><code>ReentrantLock</code> is the explicit-lock equivalent of <code>synchronized</code>. &quot;Re-entrant&quot; means the same thread can lock it multiple times without deadlocking — it just keeps an internal acquisition count and only releases when that count drops to zero.</p>
 <pre><code>import java.util.concurrent.locks.ReentrantLock
 
@@ -388,8 +487,11 @@ suspend fun safeUpdate() {
         // only one coroutine runs this at a time
     }
 }</code></pre>
+<p><strong>Under the hood</strong></p>
+<p><code>ReentrantLock</code> wraps an AQS where <code>state</code> is the <em>hold count</em> and AQS&#x27;s <code>exclusiveOwnerThread</code> records the owner. <code>lock()</code> CAS-sets state from 0→1; if it&#x27;s already held by the current thread it just increments state (re-entrancy), and <code>unlock()</code> decrements until state hits 0 before releasing ownership and unparking the next CLH-queue node. <code>synchronized</code>, by contrast, compiles to <code>monitorenter</code>/<code>monitorexit</code> bytecode backed by the object header&#x27;s mark word, where the JVM applies biased/thin (CAS spin) → fat (OS monitor) lock inflation. Kotlin&#x27;s coroutine <code>Mutex</code> is entirely different: it has no OS thread affinity, holds an atomic state plus a lock-free queue of suspended continuations, and <code>lock()</code> resumes the next continuation instead of unparking a thread — which is why it is <em>not</em> re-entrant (re-locking suspends a continuation that can never be resumed).</p>
 <hr>
 <h3 id="condition-variables">Condition Variables</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;A <code>Condition</code> is bound to a <code>Lock</code> and gives you separate wait queues on one lock — so in a bounded buffer I can have a &#x27;not full&#x27; condition for producers and a &#x27;not empty&#x27; condition for consumers, and signal exactly the right group. Plain <code>synchronized</code> only has one wait-set per object, so you can&#x27;t do that without spurious wakeups. The non-negotiable detail is that you always <code>await()</code> inside a <code>while</code> loop, never an <code>if</code>, to guard against spurious wakeups and lost-signal races.&quot;</blockquote>
 <p>A <code>Condition</code> is associated with a <code>Lock</code> and lets you have <strong>multiple wait queues</strong> on a single lock. That is something plain <code>synchronized</code> cannot do — every <code>synchronized</code> object has only one wait-set, so you cannot separately signal &quot;not full&quot; and &quot;not empty&quot;. With two <code>Condition</code> objects you can.</p>
 <pre><code>import java.util.concurrent.locks.ReentrantLock
 
@@ -418,6 +520,11 @@ fun consume(): Int {
     } finally { lock.unlock() }
 }</code></pre>
 <p>This pattern is exactly how <code>LinkedBlockingQueue</code> is implemented internally.</p>
+<p><strong>Under the hood</strong></p>
+<p>Each <code>Condition</code> from <code>lock.newCondition()</code> is an AQS <code>ConditionObject</code> holding its <em>own</em> singly-linked wait queue, distinct from AQS&#x27;s main lock (CLH) queue. <code>await()</code> does three things atomically: it adds the current thread as a node to the condition queue, <em>fully releases</em> the lock (saving the hold count so re-entrancy survives), and parks. <code>signal()</code> doesn&#x27;t run the woken thread immediately — it <em>transfers</em> one node from the condition queue onto the lock&#x27;s main acquire queue, so the signaled thread still has to re-contend for the lock before returning from <code>await()</code>. That transfer-then-reacquire design, combined with the JVM&#x27;s allowance for spurious wakeups, is precisely why the wait must sit in a <code>while</code> loop re-checking the predicate.</p>
+<pre><code>notFull.await():  [release lock] -&gt; park on notFull&#x27;s condition queue
+notEmpty.signal(): move 1 node  notEmpty-queue --&gt; lock&#x27;s main AQS queue
+                   (woken thread re-acquires lock, re-checks while-condition)</code></pre>
 <hr>
 <h3 id="countdownlatch-vs-semaphore">CountDownLatch vs Semaphore</h3>
 <table border="1" cellpadding="6" cellspacing="0">
@@ -437,6 +544,7 @@ fun consume(): Int {
 <p>The rule of thumb is: reach for <code>CountDownLatch</code> when you want &quot;wait until done&quot;, and reach for <code>Semaphore</code> when you want &quot;allow at most N concurrent&quot;.</p>
 <hr>
 <h3 id="signal-vs-shared-data">Signal vs Shared Data</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;When two threads coordinate, I either signal — wake the other thread when something happens — or I poll a shared flag in a loop. Signaling is event-driven, so the waiting thread sleeps and costs zero CPU and wakes with low latency, while polling either burns CPU spinning or adds latency if I sleep between checks. The gotcha interviewers love is the lost-wakeup: if <code>notify()</code> fires before the other thread reaches <code>wait()</code>, the signal is gone forever, so I always wait inside a <code>while</code> loop on a condition predicate, never a bare <code>if</code>.&quot;</blockquote>
 <p>When two threads need to communicate, there are two broad approaches — you signal the other thread, or you poll a shared flag — and the table below shows where each wins:</p>
 <table border="1" cellpadding="6" cellspacing="0">
 <thead><tr>
@@ -451,8 +559,13 @@ fun consume(): Int {
 <tr><td><strong>Missed signals</strong></td><td>Risk if <code>notify()</code> fires before <code>wait()</code> — use condition loop</td><td>N/A — flag stays set</td></tr>
 <tr><td><strong>Verdict</strong></td><td>Prefer for event-driven handoffs</td><td>Only for simple termination flags (<code>@Volatile running</code>)</td></tr>
 </tbody></table>
+<p><strong>Under the hood</strong></p>
+<p>Signaling on the JVM bottoms out in the object monitor. Every Java object has a header word that, under contention, points to a monitor (an <code>ObjectMonitor</code> in the HotSpot/ART runtime) holding an owner, an entry list of threads blocked on the lock, and a wait set of threads parked by <code>wait()</code>. <code>notify()</code> moves one thread from the wait set to the entry list; it does NOT hand it the lock — the woken thread must still re-acquire the monitor, which is exactly why a missed <code>notify()</code> (signal sent while no thread is in the wait set) is unrecoverable. Polling, by contrast, never touches the monitor; a <code>@Volatile</code> flag compiles to a load with a memory barrier (<code>acquire</code>/<code>release</code> semantics) so the reading thread sees the writer&#x27;s store, but nothing parks or wakes a thread — the CPU keeps executing the loop.</p>
+<pre><code>notify():   waitSet --[move one]--&gt; entryList   (still must win the lock)
+@Volatile:  store(flag) + StoreLoad barrier; reader load(flag) sees it — no scheduler involvement</code></pre>
 <hr>
 <h3 id="android-implications-for-signaling">Android Implications for Signaling</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;On Android I reach for <code>kotlinx.coroutines</code> primitives — <code>Mutex</code>, <code>Channel</code>, <code>Job.join()</code>, <code>async/await</code> — instead of the raw Java ones, because they suspend instead of block and they respect coroutine cancellation. The big trap is <code>CountDownLatch.await()</code>: it blocks the calling thread, so if I call it on the main thread I freeze the UI and can ANR. When I just need to wait for a value to appear, the coroutine-native answer is <code>Flow.first()</code> or observing a <code>StateFlow</code>, which suspends without holding a thread hostage.&quot;</blockquote>
 <ul>
 <li>Prefer <code>kotlinx.coroutines</code> primitives (<code>Mutex</code>, <code>Channel</code>, <code>Job.join()</code>, <code>async/await</code>) over</li>
 </ul>
@@ -462,15 +575,23 @@ fun consume(): Int {
 <li>Use <code>Flow.first()</code> or <code>StateFlow</code> as a coroutine-native alternative to <code>CountDownLatch</code> for</li>
 </ul>
 <p>&quot;wait for a value to become available&quot;.</p>
+<p><strong>Under the hood</strong></p>
+<p>A coroutine <code>Mutex</code> or <code>Channel</code> never parks an OS thread the way a Java monitor does. When a coroutine cannot proceed, the suspend function returns the sentinel <code>COROUTINE_SUSPENDED</code> up the call stack; the dispatcher&#x27;s worker thread is released to run other coroutines, and the suspended coroutine&#x27;s <code>Continuation</code> is stored in the primitive&#x27;s internal wait queue (an atomic lock-free linked list, e.g. the segment-based queue inside <code>Mutex</code>/<code>Semaphore</code>). Resumption just calls <code>continuation.resumeWith(...)</code>, re-dispatching the coroutine — no thread ever blocked. Java&#x27;s <code>CountDownLatch</code>, in contrast, parks the calling thread via <code>LockSupport.park()</code> on an <code>AbstractQueuedSynchronizer</code>, so on the main thread the Looper stops draining its <code>MessageQueue</code> and the watchdog fires an ANR after ~5s.</p>
 <hr>
 <h2 id="44-blockingqueue">4.4 BlockingQueue</h2>
 <h3 id="definition-2">Definition</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;A <code>BlockingQueue</code> is a thread-safe queue whose operations block instead of failing when they can&#x27;t proceed — <code>put</code> blocks while the queue is full, <code>take</code> blocks while it&#x27;s empty. That blocking contract is what makes it the canonical producer-consumer tool, because I don&#x27;t hand-roll any <code>wait</code>/<code>notify</code> myself. The subtlety is that it only blocks on the bounded variants and only on the blocking methods — there&#x27;s a parallel non-blocking API (<code>offer</code>/<code>poll</code>) when I&#x27;d rather time out or fail fast than wait forever.&quot;</blockquote>
 <p>A <code>BlockingQueue&lt;E&gt;</code> is a <strong>thread-safe queue that blocks the caller</strong> whenever the operation cannot complete immediately. There are two key operations: <code>put(e)</code> blocks if the queue is full until space becomes available, and <code>take()</code> blocks if the queue is empty until an element is added. That blocking contract is what makes it the foundational building block for the producer-consumer pattern — no manual <code>wait</code>/<code>notify</code> required.</p>
 <pre><code>Producer Thread(s)              BlockingQueue              Consumer Thread(s)
       |                      +------------------+                |
       |---- put(item) -----&gt; |  [ ][ ][ ][ ]    | &lt;-- take() ---|
       |  (blocks if full)    +------------------+  (blocks if empty)</code></pre>
+<p><strong>Under the hood</strong></p>
+<p>The blocking is implemented with a lock plus <code>Condition</code> objects, not with <code>Object.wait()</code>. A <code>Condition</code> is obtained from a <code>ReentrantLock</code> (<code>lock.newCondition()</code>) and backed by the lock&#x27;s <code>AbstractQueuedSynchronizer</code> (AQS) — an <code>int</code> state word plus a CLH-style FIFO queue of parked threads. <code>take()</code> acquires the lock, then loops <code>while (count == 0) notEmpty.await()</code>; <code>await()</code> atomically releases the lock and parks the thread via <code>LockSupport.park()</code>. A <code>put()</code> increments the count and calls <code>notEmpty.signal()</code>, which moves one waiter from the condition queue onto the lock&#x27;s queue so it re-acquires the lock and rechecks the predicate. The <code>while</code> loop (not <code>if</code>) guards against spurious wakeups and the multi-consumer race where another <code>take()</code> drains the element first.</p>
+<pre><code>take():  lock(); while(count==0) notEmpty.await();  x=dequeue(); count--; notFull.signal(); unlock()
+put():   lock(); while(count==cap) notFull.await(); enqueue(e); count++; notEmpty.signal(); unlock()</code></pre>
 <h3 id="producer-consumer-example">Producer-Consumer Example</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;In the classic setup, producers <code>put</code> onto a bounded queue and consumers <code>take</code> from it, and the bound gives me automatic backpressure — a fast producer just blocks when the buffer fills until a consumer drains it. The detail I always call out is termination: blocked consumers won&#x27;t ever return on their own, so I signal end-of-stream either with a poison-pill sentinel like I do here, or by interrupting the threads — otherwise a consumer parked in <code>take()</code> hangs forever.&quot;</blockquote>
 <pre><code>import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
 
@@ -502,7 +623,10 @@ fun producerConsumerDemo() {
     producer.join()
     consumer.join()
 }</code></pre>
+<p><strong>Under the hood</strong></p>
+<p>The poison pill works because the queue preserves FIFO ordering under its locks, so the <code>-1</code> sentinel can never overtake the real items a producer enqueued before it — the consumer is guaranteed to process all real values first. With a single consumer one sentinel suffices; with N consumers you must enqueue N sentinels, because each <code>take()</code> of the pill consumes it and only one consumer sees it. The alternative termination strategy is <code>thread.interrupt()</code>, which sets the thread&#x27;s interrupt flag and causes the parked <code>take()</code> to throw <code>InterruptedException</code> out of <code>LockSupport.park()</code> — note that catching it clears the flag, so a clean shutdown must break the loop rather than swallow and continue.</p>
 <h3 id="internals-1">Internals</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;<code>LinkedBlockingQueue</code> uses a two-lock design — a separate lock and condition for the head versus the tail — so a <code>put</code> and a <code>take</code> can run truly concurrently, which is why it has high throughput. <code>ArrayBlockingQueue</code> uses one lock for both ends, slightly lower throughput, but it pre-allocates a fixed array so there&#x27;s no per-node allocation and less GC pressure. The picking rule I give is: linked for high contention and throughput, array for bounded, predictable, low-garbage workloads.&quot;</blockquote>
 <p><code>LinkedBlockingQueue</code> uses two separate <code>ReentrantLock</code>s — one guarding the head for takes, one guarding the tail for puts — plus two <code>Condition</code> variables (<code>notEmpty</code>, <code>notFull</code>). That &quot;two-lock&quot; design is what lets puts and takes happen simultaneously at full concurrency.</p>
 <p><code>ArrayBlockingQueue</code> uses a single lock instead, which is slightly lower throughput, but it pre-allocates its array so it uses less memory overall.</p>
 <table border="1" cellpadding="6" cellspacing="0">
@@ -518,7 +642,10 @@ fun producerConsumerDemo() {
 <tr><td><code>SynchronousQueue</code></td><td>No storage</td><td>Effectively 0</td><td>Each put blocks until a take, and vice versa</td></tr>
 <tr><td><code>DelayQueue</code></td><td>Heap</td><td>Unbounded</td><td>Items become available only after their delay</td></tr>
 </tbody></table>
+<p><strong>Under the hood</strong></p>
+<p>The two-lock split in <code>LinkedBlockingQueue</code> only works because head and tail almost never touch the same node — the queue keeps a sentinel/dummy head node so producers append at the tail and consumers unlink at the head without contending. The element count is an <code>AtomicInteger</code> rather than a plain <code>int</code>, precisely because two different locks mutate it, so it needs a CAS-based update that&#x27;s visible across both locks. <code>SynchronousQueue</code> has no buffer at all: internally it&#x27;s a lock-free Treiber-style stack/queue of waiting threads (a &quot;dual queue&quot;), where a <code>put</code> and a <code>take</code> rendezvous and hand the element off directly thread-to-thread — it&#x27;s the backing structure behind a cached thread pool. <code>DelayQueue</code> and <code>PriorityBlockingQueue</code> are both binary heaps; <code>DelayQueue</code> additionally peeks the head&#x27;s remaining delay and parks the consumer until the soonest element&#x27;s deadline using a &quot;leader&quot; thread optimization to avoid a thundering herd of timed waits.</p>
 <h3 id="blocking-vs-non-blocking-operations">Blocking vs Non-Blocking Operations</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;<code>BlockingQueue</code> actually exposes three flavors of each operation: blocking (<code>put</code>/<code>take</code>) that wait indefinitely, special-value (<code>offer</code>/<code>poll</code>) that return immediately with <code>false</code> or <code>null</code>, and timed (<code>offer</code>/<code>poll</code> with a duration) that wait then give up. I pick based on what failure means — <code>put</code>/<code>take</code> for pure backpressure, <code>offer</code>/<code>poll</code> when I need fail-fast or a fallback, and the timed variants when I want a bounded wait so a stuck producer or consumer can&#x27;t hang my thread forever.&quot;</blockquote>
 <table border="1" cellpadding="6" cellspacing="0">
 <thead><tr>
 <th>Method</th>
@@ -531,7 +658,10 @@ fun producerConsumerDemo() {
 <tr><td><code>offer(e, time, unit)</code></td><td>Times out if still full after duration</td></tr>
 <tr><td><code>poll(time, unit)</code></td><td>Times out if still empty after duration</td></tr>
 </tbody></table>
+<p><strong>Under the hood</strong></p>
+<p>All three flavors share the same lock and <code>Condition</code>; the difference is purely how they wait on the predicate. <code>put</code>/<code>take</code> call <code>condition.await()</code>, which parks until signalled. <code>offer</code>/<code>poll</code> (the special-value forms) check the predicate once under the lock and return without ever calling <code>await()</code> — no parking, no <code>InterruptedException</code>. The timed forms call <code>condition.awaitNanos(nanos)</code>, which parks with a deadline via <code>LockSupport.parkNanos()</code> and returns the remaining nanos; the implementation loops, subtracting elapsed time on each spurious wakeup, and bails out returning <code>false</code>/<code>null</code> once the budget hits zero. This is why only the blocking and timed variants are interruptible and the special-value variants are not.</p>
 <h3 id="bounded-vs-unbounded-queues">Bounded vs Unbounded Queues</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;A bounded queue caps how many items can sit in the buffer, so when it fills up the producer&#x27;s <code>put()</code> blocks — that gives me backpressure for free and a predictable memory footprint. An unbounded queue never blocks the producer, which sounds nicer but is really a memory leak waiting to happen: if the producer is faster than the consumer the queue grows until you OOM. So in production I always reach for a bounded queue, and the gotcha is that the &#x27;default&#x27; fixed thread pool actually uses an unbounded <code>LinkedBlockingQueue</code>.&quot;</blockquote>
 <p><strong>Bounded queue (e.g., <code>ArrayBlockingQueue(100)</code> or <code>LinkedBlockingQueue(100)</code>):</strong></p>
 <ul>
 <li>Finite memory footprint — predictable and safe.</li>
@@ -544,10 +674,24 @@ fun producerConsumerDemo() {
 <li>There is no backpressure — a fast producer and a slow consumer will grow the queue without limit.</li>
 <li>Risk: <code>OutOfMemoryError</code> if the producer is consistently faster than the consumer.</li>
 </ul>
+<p><strong>Under the hood</strong></p>
+<p>The two implementations differ structurally. <code>ArrayBlockingQueue</code> is a fixed circular buffer (a single <code>Object[]</code> with <code>putIndex</code>/<code>takeIndex</code> cursors) guarded by one <code>ReentrantLock</code> with two <code>Condition</code>s — <code>notEmpty</code> and <code>notFull</code>; <code>put()</code> parks the thread on <code>notFull.await()</code> when <code>count == items.length</code>, and a <code>take()</code> signals <code>notFull</code> to wake it. <code>LinkedBlockingQueue</code> uses two separate locks (<code>putLock</code>, <code>takeLock</code>) over a linked node chain so puts and takes can proceed concurrently; its &quot;bound&quot; is just an <code>AtomicInteger count</code> compared against <code>capacity</code>, where the unbounded form sets <code>capacity = Integer.MAX_VALUE</code>. &quot;Blocking&quot; here means the thread is genuinely descheduled via <code>LockSupport.park</code>, not spinning.</p>
+<pre><code>ArrayBlockingQueue(2):  [ A | B ]  count==2  → put(C) parks on notFull
+                         take() → removes A, signals notFull → put(C) resumes
+LinkedBlockingQueue():   capacity = Integer.MAX_VALUE  → put never parks on &quot;full&quot;
+                         → nodes accumulate on heap until OutOfMemoryError</code></pre>
 <h3 id="backpressure">Backpressure</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;Backpressure is just the consumer telling a fast producer to slow down. The cleanest way to get it is a bounded <code>BlockingQueue</code> — a full queue blocks the producer&#x27;s <code>put()</code>, so the system self-throttles with zero extra code. If I don&#x27;t want hard blocking I&#x27;ll use timed <code>offer()</code> and drop or back off on timeout, and in coroutines a <code>Channel</code> with a finite capacity does the same thing by suspending the producer instead of blocking a thread.&quot;</blockquote>
 <p><strong>Backpressure</strong> is the mechanism by which a slow consumer signals to a fast producer to slow down. With a bounded <code>BlockingQueue</code>, backpressure is built-in — a full queue simply blocks the producer thread until the consumer processes some items, and no extra code is needed.</p>
 <p>With an unbounded queue, you have to implement backpressure yourself. Two options: check <code>queue.size</code> and slow the producer when it crosses a threshold, or use a <code>SynchronousQueue</code> where every <code>put</code> must be matched by a <code>take</code> — zero buffering, maximum backpressure.</p>
 <p>In Kotlin coroutines, <code>Channel&lt;T&gt;</code> with a finite <code>capacity</code> achieves the same effect with suspension instead of blocking.</p>
+<p><strong>Under the hood</strong></p>
+<p><code>BlockingQueue</code> backpressure is implemented entirely through the producer thread being parked on a <code>Condition</code> until a consumer removes an item and signals — there is no callback or signal channel, the OS scheduler simply doesn&#x27;t run the producer. <code>SynchronousQueue</code> has no internal storage at all; it&#x27;s a <code>Transferer</code> (a Treiber-style lock-free stack/queue of waiting threads) where a <code>put</code> and a <code>take</code> must rendezvous, so each side parks until its counterpart arrives. Coroutine <code>Channel</code> backpressure is fundamentally different: instead of blocking an OS thread, a full rendezvous/buffered channel&#x27;s <code>send</code> suspends the coroutine — it saves the continuation and frees the thread, and the channel resumes that continuation only after a <code>receive</code> opens a slot, so backpressure costs no thread.</p>
+<pre><code>// Bounded channel: send() suspends (not blocks) when buffer is full
+val ch = Channel&lt;Int&gt;(capacity = 64)
+// producer
+ch.send(x)   // if 64 items buffered, this suspends the coroutine,
+             // its thread is released to other work, resumes after a receive()</code></pre>
 <h3 id="android-implications-2">Android Implications</h3>
 <ul>
 <li><code>ThreadPoolExecutor</code> accepts a <code>BlockingQueue&lt;Runnable&gt;</code> as its work queue:</li>
@@ -598,9 +742,16 @@ fun producerConsumerDemo() {
 <hr>
 <h2 id="45-message-passing--android-handlerloopermessagequeue">4.5 Message Passing — Android Handler/Looper/MessageQueue</h2>
 <h3 id="definition-3">Definition</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;Message passing means threads talk by handing off discrete, self-contained messages through a queue instead of poking at each other&#x27;s memory. The sender packages the data, drops it on the receiver&#x27;s queue, and the receiver processes it serially on its own thread — so ownership transfers with the message. The nuance interviewers like is that this only buys you safety if the message is truly self-contained; the moment you stuff a shared mutable reference into it, you&#x27;re back to shared-state concurrency with all its races.&quot;</blockquote>
 <p>Message passing is a communication model where threads exchange <strong>discrete, self-contained messages</strong> rather than sharing mutable state. The sender packages data into a message and dispatches it into a queue; the receiver picks it up and processes it on its own thread. The key point is that threads never directly touch each other&#x27;s memory — data is owned by one thread at a time and transferred via the message.</p>
 <p>This is the model behind Erlang actors, Go channels, and Android&#x27;s own <code>Handler</code>/<code>Looper</code>/<code>MessageQueue</code> system.</p>
+<p><strong>Under the hood</strong></p>
+<p>There&#x27;s no magic isolation enforced by the language — message passing is a discipline layered on ordinary shared memory plus a synchronized handoff point. The queue itself is the only truly shared structure, and it&#x27;s guarded by a lock (or a lock-free CAS in some implementations). The &quot;transfer of ownership&quot; is a convention: the runtime can&#x27;t stop you from keeping a reference to an object you sent, so safety depends on the message being immutable or a value copy. The synchronized enqueue/dequeue also establishes a happens-before edge, so writes the sender made before enqueuing are visible to the receiver after dequeuing — that memory barrier is what makes the handoff safe, not the message abstraction itself.</p>
+<pre><code>sender:   write fields  ──►  lock(queue) ─ enqueue ─ unlock   (release barrier)
+receiver: lock(queue) ─ dequeue ─ unlock  ──►  read fields    (acquire barrier)
+                          └── happens-before edge established ──┘</code></pre>
 <h3 id="avoids-shared-mutable-state">Avoids Shared Mutable State</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;The win here is that races are eliminated structurally, not with locks. Because every message lands on exactly one thread&#x27;s queue and gets processed one at a time, there&#x27;s never a concurrent read-write on the same piece of data — so there&#x27;s nothing to lock. The gotcha is that &#x27;no locks&#x27; doesn&#x27;t mean &#x27;no contention&#x27;: the queue itself is still a synchronized chokepoint, and the serial processing model means a slow handler head-of-line blocks everything behind it.&quot;</blockquote>
 <p>Because each message is delivered to exactly one thread&#x27;s queue and processed serially, there is never a concurrent read-write on the same data. Races are eliminated by design — not by adding locks, but because the ownership model makes them structurally impossible.</p>
 <pre><code>Thread A owns data-A         Thread B owns data-B
      |                             |
@@ -608,6 +759,8 @@ fun producerConsumerDemo() {
      |-----------------------------&gt;
                                    | processes message serially
                                    | never races with Thread A</code></pre>
+<p><strong>Under the hood</strong></p>
+<p>Serial processing collapses the concurrency problem to a single-threaded one per consumer: the consumer thread runs a <code>while(true) { msg = queue.take(); handle(msg); }</code> loop, so only one message is ever in flight on that thread. The classic data-race triad — two threads, shared location, at least one write, no ordering — can&#x27;t form because there&#x27;s only one writer/reader of the consumed data. The remaining shared mutable state is just the queue&#x27;s internal links/array, and that&#x27;s protected by the queue&#x27;s own lock. This is why actor frameworks describe each actor as having a &quot;single logical thread of control&quot; even when many actors share a small thread pool: a dispatcher guarantees one message per actor at a time.</p>
 <h3 id="android-handlerloopermessagequeue-architecture">Android Handler/Looper/MessageQueue Architecture</h3>
 <p>Android&#x27;s main thread has run inside a <code>Looper</code> loop since <code>ActivityThread.main()</code>. Every component lifecycle event — <code>onCreate</code>, <code>onStart</code>, button clicks, draw frames — is a <code>Message</code> or <code>Runnable</code> dispatched through the main <code>MessageQueue</code>. There is no special fast path; it all goes through the same queue.</p>
 <pre><code>           ┌─────────────────────────────────────────┐
@@ -624,6 +777,17 @@ fun producerConsumerDemo() {
            ┌─────────────────────────────────────────┐
            │         Background Thread               │
            └─────────────────────────────────────────┘</code></pre>
+<p><strong>Under the hood</strong></p>
+<p><code>ActivityThread.main()</code> calls <code>Looper.prepareMainLooper()</code>, which stores a <code>Looper</code> in a <code>ThreadLocal</code> (<code>sThreadLocal</code>) so the main thread can find its own loop, then calls <code>Looper.loop()</code> which never returns for the life of the process. <code>Looper.loop()</code> spins <code>MessageQueue.next()</code>, which blocks in the native layer via <code>nativePollOnce</code> — an <code>epoll_wait</code> on the queue&#x27;s wake file descriptor — until either a message&#x27;s <code>when</code> is due or the fd is written to (<code>nativeWake</code>). Lifecycle callbacks aren&#x27;t called directly: the system server sends transactions over Binder, the binder thread posts a <code>Message</code> (e.g. <code>LAUNCH_ACTIVITY</code> / <code>EXECUTE_TRANSACTION</code>) to the main <code>MessageQueue</code>, and <code>Handler.dispatchMessage</code> runs it on the main thread. That&#x27;s why everything is serialized through one queue — there is literally one consumer loop.</p>
+<pre><code>MessageQueue.next():
+  for (;;) {
+    nativePollOnce(ptr, timeoutMillis)   // epoll_wait, sleeps if idle
+    synchronized (this) {
+      now = SystemClock.uptimeMillis()
+      if (msg != null &amp;&amp; now &gt;= msg.when) { remove &amp; return msg }
+      else timeoutMillis = msg.when - now  // sleep until next due
+    }
+  }</code></pre>
 <h4 id="core-classes">Core Classes</h4>
 <table border="1" cellpadding="6" cellspacing="0">
 <thead><tr>
@@ -636,6 +800,7 @@ fun producerConsumerDemo() {
 <tr><td><code>Message</code></td><td>Lightweight data carrier: <code>what</code> (int), <code>obj</code> (Object), <code>arg1</code>/<code>arg2</code>, <code>data</code> (Bundle)</td></tr>
 </tbody></table>
 <h4 id="typical-background-to-main-thread-communication">Typical Background-to-Main Thread Communication</h4>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;The standard pattern is: grab a <code>Handler</code> tied to the main <code>Looper</code>, do the heavy work on a background thread, then <code>post</code> a <code>Runnable</code> back to that handler to touch the UI on the main thread. The reason this is safe is that the posted <code>Runnable</code> is dequeued and run by the main thread&#x27;s own loop, so the UI mutation happens on the right thread. The thing to watch is that the handler doesn&#x27;t know about your component&#x27;s lifecycle — if the Activity is gone by the time the message runs, you&#x27;ll either leak it or touch a dead view.&quot;</blockquote>
 <pre><code>class MyActivity : AppCompatActivity() {
 
     private val mainHandler = Handler(Looper.getMainLooper())
@@ -650,7 +815,10 @@ fun producerConsumerDemo() {
         }.start()
     }
 }</code></pre>
+<p><strong>Under the hood</strong></p>
+<p><code>Handler(Looper.getMainLooper())</code> captures a reference to the main thread&#x27;s <code>Looper</code> and its <code>MessageQueue</code> — the handler is just a thin facade over that queue plus a <code>Callback</code>. <code>post(runnable)</code> calls <code>getPostMessage(r)</code> which does <code>Message.obtain()</code>, sets <code>msg.callback = runnable</code> and <code>msg.target = this</code> (the handler), then <code>enqueueMessage</code> inserts it into the queue ordered by <code>when</code> and calls <code>nativeWake</code> if the queue was blocked. On the main thread, <code>Looper.loop()</code> pulls the message and calls <code>msg.target.dispatchMessage(msg)</code>; <code>dispatchMessage</code> checks <code>msg.callback</code> first — if it&#x27;s a <code>Runnable</code> it just calls <code>handleCallback(msg)</code> → <code>msg.callback.run()</code>. So <code>post</code> runs on the main thread purely because the message&#x27;s <code>target</code> handler is bound to the main <code>Looper</code>, not because of anything special about the <code>Runnable</code>.</p>
 <h4 id="creating-a-background-looper-thread">Creating a Background Looper Thread</h4>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;To give a background thread a queue, you call <code>Looper.prepare()</code> on it to create and stash a Looper in a thread-local, build a <code>Handler</code> bound to it, then call <code>Looper.loop()</code> which blocks and processes messages until you <code>quit()</code>. The subtle bug everyone hits is a race: the thread that posts work needs the <code>Handler</code> reference, but the handler isn&#x27;t created until the worker thread runs <code>prepare()</code> — so you have to synchronize, with a latch or <code>HandlerThread</code>, or you&#x27;ll NPE on a not-yet-assigned handler.&quot;</blockquote>
 <pre><code>class WorkerThread : Thread(&quot;worker&quot;) {
     lateinit var handler: Handler
     private val ready = CountDownLatch(1)
@@ -674,7 +842,10 @@ val worker = WorkerThread().start()
 worker.handler.post { /* runs on WorkerThread */ }
 worker.quit()</code></pre>
 <p><code>HandlerThread</code> is Android&#x27;s convenience wrapper that does exactly the above.</p>
+<p><strong>Under the hood</strong></p>
+<p><code>Looper.prepare()</code> enforces one looper per thread: it throws <code>RuntimeException(&quot;Only one Looper may be created per thread&quot;)</code> if <code>sThreadLocal.get() != null</code>, otherwise it does <code>sThreadLocal.set(new Looper(quitAllowed=true))</code>. The <code>Looper</code> constructor allocates the <code>MessageQueue</code>, which in turn creates the native message queue object and its wake fd. <code>Looper.myLooper()</code> is just <code>sThreadLocal.get()</code> — that&#x27;s why it must be called from the worker thread, not the creator. The latch closes the publication race two ways: <code>CountDownLatch</code> uses AQS, so <code>await()</code> returning establishes a happens-before edge that safely publishes the <code>handler</code> field written before <code>countDown()</code>. <code>HandlerThread</code> does the same thing but synchronizes on the thread object and <code>wait()</code>/<code>notifyAll()</code> inside <code>getLooper()</code> instead of an explicit latch. <code>quit()</code> posts a sentinel that makes <code>next()</code> return <code>null</code>, ending the <code>loop()</code>.</p>
 <h4 id="sendmessage-vs-post">sendMessage vs post</h4>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;<code>post</code> is just sugar — it wraps your <code>Runnable</code> in a <code>Message</code> whose callback is that runnable. <code>sendMessage</code> sends a structured <code>Message</code> with a <code>what</code> code and <code>arg1</code>/<code>arg2</code>/<code>obj</code>, which you handle in the handler&#x27;s <code>handleMessage</code> switch. Functionally they ride the exact same queue; the choice is stylistic — <code>post</code> for fire-and-forget lambdas, <code>sendMessage</code> when you want typed message codes you can also cancel or filter by <code>what</code>. Both have delayed variants that just set the <code>when</code> timestamp.&quot;</blockquote>
 <pre><code>// post: Runnable wrapped in a Message
 handler.post { doWork() }
 
@@ -686,12 +857,28 @@ handler.sendMessage(msg)
 // delayed
 handler.postDelayed({ doWork() }, 2000L)
 handler.sendMessageDelayed(msg, 2000L)</code></pre>
+<p><strong>Under the hood</strong></p>
+<p>Both paths funnel into <code>Handler.enqueueMessage(queue, msg, uptimeMillis)</code>, which sets <code>msg.target = this</code> and inserts by <code>when</code>. The only difference is what <code>dispatchMessage</code> does on the way out:</p>
+<pre><code>dispatchMessage(msg):
+  if (msg.callback != null)      handleCallback(msg)     // post path: run the Runnable
+  else {
+    if (mCallback != null &amp;&amp; mCallback.handleMessage(msg)) return
+    handleMessage(msg)                                   // sendMessage path: your switch on msg.what
+  }</code></pre>
+<p><code>post*</code> sets <code>msg.callback</code>; <code>sendMessage*</code> leaves <code>callback</code> null and relies on <code>msg.what</code>. <code>postDelayed</code>/<code>sendMessageDelayed</code> just compute <code>when = SystemClock.uptimeMillis() + delay</code> and insert at the right position — note <code>uptimeMillis()</code> excludes deep sleep, so a delayed message does not fire while the device is dozing. <code>Message.obtain()</code> pulls from the recycled pool (see below) rather than allocating.</p>
 <h3 id="messages-should-be-small">Messages Should Be Small</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;Keep messages small — pass an ID or a tiny value object, not a fat bitmap or a deep object graph. Two reasons: stuffing a big mutable object into <code>Message.obj</code> just shares a reference, which reintroduces exactly the ownership and visibility races message passing was supposed to kill; and if that message ever crosses a process via Binder, a large <code>Bundle</code> gets serialized and blows the ~1MB Binder transaction buffer. The senior move is to send a handle and let the consumer fetch the heavy data itself.&quot;</blockquote>
 <p><code>Message</code> objects are pooled — <code>Message.obtain()</code> retrieves from a recycled pool to avoid allocation. Passing large objects (large bitmaps, deep object graphs) via <code>Message.obj</code> or <code>Bundle</code> is an anti-pattern for two reasons. First, it defeats the purpose of message passing, because you are really just sharing the same object reference, which reintroduces all the ownership and visibility problems you were trying to avoid. Second, large <code>Bundle</code>s cause IPC overhead when crossing process boundaries via <code>Binder</code>. The right approach is to pass an identifier or a lightweight value object and let the consumer fetch the full data itself.</p>
+<p><strong>Under the hood</strong></p>
+<p><code>Message</code> maintains a static free list — a singly-linked stack of recycled <code>Message</code> objects (<code>sPool</code>, capped at <code>MAX_POOL_SIZE = 50</code>) guarded by <code>sPoolSync</code>. <code>obtain()</code> pops the head and clears its fields; <code>recycleUnchecked()</code> (called automatically after a message is dispatched and removed from the queue) wipes the fields and pushes it back. That&#x27;s why holding a reference to a <code>Message</code> after sending it is dangerous — it may be recycled and reused under you. For the IPC angle: when a <code>Message</code>/<code>Bundle</code> crosses processes, it&#x27;s flattened via <code>Parcel</code> into the kernel Binder driver&#x27;s per-process transaction buffer, which is roughly 1MB shared across all in-flight transactions; oversize payloads throw <code>TransactionTooLargeException</code>. In-process there&#x27;s no parceling — <code>obj</code> is a live reference — which is exactly why sharing a big mutable object reintroduces visibility/ownership hazards.</p>
 <h3 id="message-ordering">Message Ordering</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;The queue is ordered by each message&#x27;s <code>when</code> timestamp in <code>uptimeMillis</code>, and ties within the same time go FIFO. <code>sendMessageAtFrontOfQueue</code> jumps the line by giving <code>when = 0</code>, which you should almost never do because it can starve everything else. The subtlety interviewers like is that ordering is only guaranteed within a single conceptual stream — different <code>Handler</code>s posting to the same <code>Looper</code> interleave purely by timestamp, so don&#x27;t assume cross-handler ordering.&quot;</blockquote>
 <p><code>MessageQueue</code> orders messages by their <code>when</code> timestamp (wall-clock <code>SystemClock.uptimeMillis()</code>). Within the same delivery time, messages are processed FIFO. <code>sendMessageAtFrontOfQueue()</code> bypasses that ordering — use it sparingly, because it can starve other messages.</p>
 <p>Two subtleties worth knowing: ordering is not guaranteed across different <code>Handler</code> instances even if they post to the same <code>Looper</code>, and <code>Looper.myLooper().setMessageLogging()</code> can measure dispatch times — which is the basis for <code>BlockCanary</code> and <code>Choreographer</code> jank detection.</p>
+<p><strong>Under the hood</strong></p>
+<p><code>MessageQueue</code> isn&#x27;t a heap — it&#x27;s a singly-linked list sorted by <code>when</code>, with <code>mMessages</code> pointing at the head. <code>enqueueMessage</code> walks the list to find the first node whose <code>when</code> is greater than the new message&#x27;s <code>when</code> and splices in before it; equal <code>when</code> values land after existing ones, which is what produces FIFO-within-timestamp. <code>sendMessageAtFrontOfQueue</code> sets <code>when = 0</code>, so it sorts to the head. The list also holds <em>barriers</em> — special target-less messages inserted by <code>postSyncBarrier()</code> — which cause <code>next()</code> to skip all synchronous messages and only return <em>async</em> messages until the barrier is removed; this is how <code>Choreographer</code> guarantees the vsync/animation callback runs ahead of normal posts during a frame. <code>setMessageLogging</code>/the <code>Looper</code>&#x27;s <code>Printer</code> wraps each dispatch with <code>&gt;&gt;&gt;&gt;&gt; Dispatching</code> / <code>&lt;&lt;&lt;&lt;&lt; Finished</code> log lines, and tools time the gap between them to detect main-thread jank.</p>
 <h3 id="delayed-message-lifecycle-leaks">Delayed-Message Lifecycle Leaks</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;A delayed <code>post</code> is one of the classic Android leaks. The <code>Message</code> sits in the main <code>Looper</code>&#x27;s queue holding your <code>Runnable</code>, the lambda captures <code>this</code> Activity, and the <code>Looper</code> outlives the Activity — so the Activity can&#x27;t be collected until the delay elapses, even after <code>finish()</code>. The fix is to cancel pending callbacks in <code>onDestroy</code> with <code>removeCallbacks</code>, or use a static <code>Runnable</code> with a <code>WeakReference</code>. The modern answer is to drop the handler entirely and use <code>lifecycleScope.launch { delay(...) }</code>, which auto-cancels on destroy.&quot;</blockquote>
 <p>Delayed messages are one of the most common sources of Android memory leaks:</p>
 <pre><code>// LEAKS the Activity
 class MyActivity : AppCompatActivity() {
@@ -732,6 +919,8 @@ class MyActivity : AppCompatActivity() {
     }
 }</code></pre>
 <p><code>lifecycleScope</code> is bound to the <code>Lifecycle</code> and is automatically cancelled on <code>onDestroy</code> — no manual cleanup needed at all.</p>
+<p><strong>Under the hood</strong></p>
+<p>The leak chain is concrete in the heap: a non-static lambda or anonymous <code>Runnable</code> compiles to a class with a synthetic field holding the outer <code>MyActivity</code> instance (<code>this$0</code>), so a GC root walk reaches it as <code>Looper</code> (referenced from the thread&#x27;s <code>ThreadLocalMap</code>) → <code>MessageQueue.mMessages</code> → <code>Message.callback</code> → lambda → <code>Activity</code>. Because that path of strong references is reachable from a live thread, the Activity is ineligible for collection until the message is dequeued and <code>recycleUnchecked()</code> nulls <code>msg.callback</code>. <code>removeCallbacks(r)</code> unlinks every <code>Message</code> whose <code>callback == r</code> from the list and recycles them, severing the chain immediately — note it matches by object identity, which is why the fix stores the <code>Runnable</code> in a field instead of re-creating a fresh lambda. <code>lifecycleScope</code> is a <code>CoroutineScope</code> whose <code>Job</code> is cancelled by the <code>Lifecycle</code> observer on <code>ON_DESTROY</code>; <code>delay()</code> is a suspending function that schedules a resume on the dispatcher and, on cancellation, throws <code>CancellationException</code> instead of resuming — so nothing keeps the Activity alive past <code>onDestroy</code>.</p>
 <h3 id="android-implications-summary">Android Implications Summary</h3>
 <table border="1" cellpadding="6" cellspacing="0">
 <thead><tr>

@@ -63,6 +63,7 @@
 <hr>
 <h2 id="141-startup-performance">14.1 Startup Performance</h2>
 <h3 id="cold-start">Cold Start</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;A cold start is the worst case: the process doesn&#x27;t exist, so the system has to fork it from zygote, run my Application class, then build and render the first Activity. Everything in <code>Application.onCreate()</code> is on the critical path because the main thread is blocked until it returns. The nuance interviewers probe is the difference between TTID — the first frame drawn — and TTFD, which is when the screen is actually usable; I report the latter with <code>reportFullyDrawn()</code> so my metrics reflect real perceived performance, not just a skeleton.&quot;</blockquote>
 <p><strong>Definition</strong>: A cold start is what happens when the app process does not exist in memory at all and the system has to spin up a brand-new process from scratch.</p>
 <p><strong>How it works</strong>:</p>
 <ol>
@@ -76,6 +77,18 @@
 <li><strong>Time To Initial Display (TTID)</strong>: Time until the first frame is drawn. This is what <code>Displayed</code> in logcat measures.</li>
 <li><strong>Time To Full Display (TTFD)</strong>: Time until the app&#x27;s content is fully loaded and interactive (can be reported with <code>reportFullyDrawn()</code>).</li>
 </ul>
+<p><strong>Under the hood</strong></p>
+<p>The zygote process is started by <code>init</code> at boot and preloads the core framework classes and shared resources, then sits blocked in a <code>select</code>/socket loop. When ActivityManagerService needs a new app, it asks zygote to <code>fork()</code> — the child inherits the already-warmed heap via copy-on-write memory pages, which is why apps don&#x27;t pay to reload <code>android.*</code> classes. After the fork, <code>ActivityThread.main()</code> sets up the main <code>Looper</code>, calls <code>bindApplication</code> (which instantiates your <code>Application</code>), then drives the activity lifecycle through the <code>H</code> handler. The &quot;Displayed&quot; log is emitted by ActivityManagerService when it receives the first <code>dispatchWindowsDrawn</code> callback from the window&#x27;s <code>ViewRootImpl</code> after the first <code>Choreographer</code> frame completes.</p>
+<pre><code>init → zygote (preloaded classes, blocked on socket)
+         │ fork() + COW pages
+         ▼
+ActivityThread.main() → Looper.prepareMainLooper()
+         │ bindApplication → new Application(); onCreate()
+         ▼
+handleLaunchActivity → Activity onCreate/onStart/onResume
+         │ ViewRootImpl.performTraversals → first Choreographer frame
+         ▼
+dispatchWindowsDrawn → AMS logs &quot;Displayed&quot;</code></pre>
 <p><strong>Android implications</strong>:</p>
 <ul>
 <li>Cold start is measured from when the user taps the launcher icon to when the first frame appears.</li>
@@ -109,6 +122,7 @@ adb shell am start-activity -W com.example.app/.MainActivity
 <pre><code>I/ActivityManager: Displayed com.example.app/.MainActivity: +1s203ms</code></pre>
 <hr>
 <h3 id="warm-start">Warm Start</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;A warm start is when the process is still alive but the Activity was destroyed — so <code>Application.onCreate()</code> is skipped, but the Activity gets fully recreated from <code>onCreate</code> through <code>onResume</code>, restoring any saved <code>Bundle</code>. It&#x27;s typically two to three times faster than cold because class loading and the app graph are already warm. The gotcha is that it lulls you into assuming your in-memory state is always there; in production a user can always hit a true cold start after process death, so my code has to render correctly from null or empty initial state.&quot;</blockquote>
 <p><strong>Definition</strong>: A warm start is when the app process is already alive in memory, but the Activity itself was destroyed — for example, the user navigated away and the system reclaimed it, or the user killed the Activity without killing the whole process.</p>
 <p><strong>How it works</strong>:</p>
 <ul>
@@ -116,6 +130,8 @@ adb shell am start-activity -W com.example.app/.MainActivity
 <li>The system recreates the <code>Activity</code> from scratch: <code>onCreate()</code> → <code>onStart()</code> → <code>onResume()</code>.</li>
 <li>Saved instance state (<code>Bundle</code>) is restored if available.</li>
 </ul>
+<p><strong>Under the hood</strong></p>
+<p>In a warm start the process&#x27;s main <code>Looper</code> is still running and the JVM has already loaded and verified the relevant classes, so there&#x27;s no zygote fork or class-loading cost. ActivityManagerService simply schedules a new <code>LaunchActivityItem</code> on the existing <code>ActivityThread</code>&#x27;s <code>H</code> handler. The saved <code>Bundle</code> was captured earlier in <code>onSaveInstanceState</code> (which serializes via <code>Parcel</code> into native memory held by the system_server&#x27;s <code>ActivityRecord</code>, not your process), and it&#x27;s handed back into <code>onCreate</code>/<code>onRestoreInstanceState</code>. Because that state lives in system_server, it survives the Activity object being garbage-collected — but it does NOT survive the process being killed, since the <code>ActivityRecord</code> is also torn down.</p>
 <p><strong>Android implications</strong>:</p>
 <ul>
 <li>Warm starts are typically 2–3x faster than cold starts because process + class loading is already done.</li>
@@ -125,12 +141,15 @@ adb shell am start-activity -W com.example.app/.MainActivity
 <p><strong>Common warm-start failure mode</strong>: Assuming ViewModel data is always populated because warm start is common during development. In production, users can always encounter a cold start; code must handle null/empty initial state gracefully.</p>
 <hr>
 <h3 id="hot-start">Hot Start</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;A hot start is the best case — both the process and the Activity are still in memory, the app was just backgrounded, so the system only runs <code>onRestart → onStart → onResume</code> and brings the existing window forward. No object creation happens, so it&#x27;s usually under a hundred milliseconds and isn&#x27;t really an optimization target. What I do watch for is staleness: in-memory caches can be old if the user was gone a while, and memory pressure while backgrounded can get the process killed, silently demoting the next launch to a cold start.&quot;</blockquote>
 <p><strong>Definition</strong>: A hot start is the best case — the app process and the Activity both already exist in memory, and the user has simply backgrounded the app and come back.</p>
 <p><strong>How it works</strong>:</p>
 <ul>
 <li>The system simply brings the existing Activity to the foreground: <code>onRestart()</code> → <code>onStart()</code> → <code>onResume()</code>.</li>
 <li>No new object creation occurs for the Application or Activity.</li>
 </ul>
+<p><strong>Under the hood</strong></p>
+<p>On a hot start the Activity&#x27;s <code>Window</code>, <code>ViewRootImpl</code>, and the whole decor view hierarchy are still attached and the rendered surface is still allocated in SurfaceFlinger — nothing needs re-inflation or re-measure unless something changed. The system_server&#x27;s WindowManagerService just changes the window&#x27;s visibility and z-order, and the existing <code>Surface</code>&#x27;s buffers can often be composited straight away. The lifecycle callbacks fire through the same <code>H</code> handler, but no <code>performTraversals</code> re-layout is forced, which is why the cost is dominated by callback dispatch rather than rendering work.</p>
 <p><strong>Android implications</strong>:</p>
 <ul>
 <li>Hot starts are extremely fast (&lt; 100 ms typically) and are not a meaningful startup optimization target.</li>
@@ -139,6 +158,7 @@ adb shell am start-activity -W com.example.app/.MainActivity
 </ul>
 <hr>
 <h3 id="applicationoncreate">Application.onCreate()</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;<code>Application.onCreate()</code> runs exactly once when the process is created, and the main thread is blocked until it returns — so every millisecond here is paid on every cold start. The discipline is to only do work that genuinely must be ready before any code runs, like crash reporting, and defer everything else: no disk reads, no network, no eager Dagger graph. The trap interviewers love is multi-process apps — <code>onCreate</code> runs once per process, so a background <code>:remote</code> process for push or Bluetooth will redundantly build your whole UI graph unless you guard it by checking the process name.&quot;</blockquote>
 <p><strong>Definition</strong>: <code>Application.onCreate()</code> is the single entry point that runs once when the app process is first created. It&#x27;s the place every library, SDK, and framework gravitates toward for global initialization, which is exactly what makes it the most important location for startup optimization.</p>
 <p><strong>What happens here (and why it matters)</strong>:</p>
 <ul>
@@ -176,8 +196,16 @@ adb shell am start-activity -W com.example.app/.MainActivity
     private fun isMainProcess(): Boolean =
         packageName == getProcessName()
 }</code></pre>
+<p><strong>Under the hood</strong></p>
+<p><code>Application.onCreate()</code> is invoked synchronously by <code>ActivityThread.handleBindApplication()</code>, which runs as message <code>BIND_APPLICATION</code> on the main <code>Looper</code> before any Activity launch message is processed. Crucially, <code>ContentProvider.onCreate()</code> for every provider declared in the manifest runs even earlier — between <code>Application</code> instantiation (the constructor and <code>attachBaseContext</code>) and <code>Application.onCreate()</code> — which is exactly the hook auto-init libraries exploit. Each process gets its own forked copy of the runtime, so static initializers and the <code>Application</code> singleton are per-process; <code>getProcessName()</code> reads the process name the system assigned at fork time (backed by <code>ActivityThread.currentProcessName()</code> on API 28+, or <code>/proc/self/cmdline</code> historically).</p>
+<pre><code>ActivityThread.handleBindApplication():
+   makeApplication()        → new Application(); attachBaseContext()
+   installContentProviders() → every &lt;provider&gt;.onCreate()   ← auto-init runs here
+   mInstrumentation.callApplicationOnCreate(app) → onCreate()  ← main thread blocked
+   ... only now can ActivityThread process LAUNCH_ACTIVITY ...</code></pre>
 <hr>
 <h3 id="lazy-initialization">Lazy Initialization</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;Lazy initialization means I defer constructing an expensive object until the first access, so I keep it off the startup critical path. In Kotlin <code>by lazy</code> is thread-safe by default — it synchronizes the first read — and I can drop to <code>LazyThreadSafetyMode.NONE</code> for single-threaded access to skip that locking. The nuance is that lazy doesn&#x27;t make the cost disappear, it just moves it; if that first access lands on the main thread during a user interaction it becomes jank or even an ANR, so for things I know I&#x27;ll need I preload them on a background thread after startup.&quot;</blockquote>
 <p><strong>Definition</strong>: Lazy initialization means deferring object construction or expensive operations until the first time they are actually needed, rather than paying the cost upfront at startup.</p>
 <p><strong>How it works in Kotlin</strong>:</p>
 <pre><code>// Property-level lazy — thread-safe by default (SYNCHRONIZED mode)
@@ -196,6 +224,15 @@ val cache: LruCache&lt;String, Bitmap&gt; by lazy(LazyThreadSafetyMode.NONE) {
 fun trackEvent(event: String) {
     expensiveService.get().track(event)  // constructed only here
 }</code></pre>
+<p><strong>Under the hood</strong></p>
+<p><code>by lazy</code> desugars to a synthetic backing field holding a <code>Lazy&lt;T&gt;</code> instance — by default <code>SynchronizedLazyImpl</code>. Its <code>value</code> getter checks a field against a sentinel (<code>UNINITIALIZED_VALUE</code>); on a miss it acquires a lock (double-checked locking) and runs your initializer lambda exactly once, then caches the result so subsequent reads are a plain field read. <code>LazyThreadSafetyMode.NONE</code> uses <code>UnsafeLazyImpl</code>, which is just an unsynchronized field check with no lock and no <code>volatile</code> — fast, but two threads racing can both run the initializer and see torn state. Dagger&#x27;s <code>Lazy&lt;T&gt;</code> is a different mechanism: it generates a <code>DoubleCheck</code> provider wrapper that memoizes the result of the underlying <code>Provider.get()</code> factory, also via double-checked locking.</p>
+<pre><code>// Conceptually, what SynchronizedLazyImpl.value does:
+val v1 = _value
+if (v1 !== UNINITIALIZED) return v1 as T   // fast path: already set
+return synchronized(lock) {
+    if (_value === UNINITIALIZED) { _value = initializer() }
+    _value as T
+}</code></pre>
 <p><strong>Android implications</strong>:</p>
 <ul>
 <li><code>by lazy</code> is ideal for singletons that are expensive to construct but used infrequently.</li>
@@ -210,6 +247,7 @@ fun trackEvent(event: String) {
 </ul>
 <hr>
 <h3 id="app-startup-library">App Startup Library</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;App Startup is the Jetpack library that replaces the old per-library <code>ContentProvider</code> auto-init trick with a single shared <code>InitializationProvider</code>. I write <code>Initializer&lt;T&gt;</code> classes that declare their dependencies, and the library topologically sorts them into a DAG and runs them in order. The key trade-off interviewers want me to name is that everything still runs on the main thread before the first frame by default — so it&#x27;s about ordering and de-duplicating ContentProviders, not about moving work off the critical path; anything not needed at first frame I&#x27;d lazily initialize instead.&quot;</blockquote>
 <p><strong>Definition</strong>: The App Startup library (<code>androidx.startup</code>) is a Jetpack library that gives you a structured, dependency-aware way to initialize components at startup, replacing the scattered <code>ContentProvider</code> initialization tricks that libraries historically relied on.</p>
 <p><strong>Background — the ContentProvider trick</strong>: Many libraries (WorkManager, Firebase, etc.) historically used a <code>ContentProvider</code> to auto-initialize without requiring app code. A <code>ContentProvider</code> with <code>android:initOrder</code> runs before <code>Application.onCreate()</code>. The problem: each <code>ContentProvider</code> is a separate process boundary hook, they run sequentially, and they bloat startup time invisibly.</p>
 <p><strong>How App Startup works</strong>:</p>
@@ -262,6 +300,16 @@ class AnalyticsInitializer : Initializer&lt;Analytics&gt; {
 <li>Con: All initializers still run on the main thread by default; async initializers require careful handling.</li>
 <li>Con: Dependency cycles produce a runtime exception at startup.</li>
 </ul>
+<p><strong>Under the hood</strong></p>
+<p><code>InitializationProvider</code> is an ordinary <code>ContentProvider</code>, so the framework calls its <code>onCreate()</code> during <code>ActivityThread.installContentProviders()</code> — before <code>Application.onCreate()</code>. In that callback <code>AppInitializer.discoverAndInitialize()</code> reads the <code>&lt;meta-data&gt;</code> entries from the provider&#x27;s <code>ProviderInfo</code> via <code>PackageManager</code>, then for each entry recursively resolves <code>dependencies()</code>, doing a depth-first traversal while tracking an &quot;initializing&quot; set to detect cycles (which throw <code>IllegalStateException</code>). Results are memoized in a <code>mInitialized</code> map keyed by initializer class, so a dependency shared by several initializers is only constructed once. Because the whole walk happens on the provider&#x27;s <code>onCreate</code> on the main thread, the DAG is effectively executed sequentially in topological order — there is no built-in threading.</p>
+<pre><code>installContentProviders()
+   InitializationProvider.onCreate()
+      AppInitializer.discoverAndInitialize()
+         read &lt;meta-data&gt; → list of Initializer classes
+         for each: doInitialize(clazz, initializing=set)
+            if clazz in initializing → throw (cycle)
+            for dep in dependencies(): doInitialize(dep, ...)
+            result = initializer.create(context)   // memoized in mInitialized</code></pre>
 <p><strong>Android implications</strong>:</p>
 <ul>
 <li>Use to replace library <code>ContentProvider</code> auto-init patterns (disable with <code>tools:node=&quot;remove&quot;</code> in manifest merger).</li>
@@ -269,6 +317,7 @@ class AnalyticsInitializer : Initializer&lt;Analytics&gt; {
 </ul>
 <hr>
 <h3 id="baseline-profiles">Baseline Profiles</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;Baseline Profiles are AOT compilation hints I ship in the APK that tell ART to natively compile my hot startup paths the moment the app installs, so I skip the JIT warm-up that normally makes the first few launches sluggish. I write a Macrobenchmark that drives the critical path, it captures which methods and classes matter, and ProfileInstaller applies it on device. The gotcha interviewers love is that the profile is useless without the <code>profileinstaller</code> dependency, and it goes stale as code changes — so I regenerate it in CI on a cadence.&quot;</blockquote>
 <p><strong>Definition</strong>: Baseline Profiles are pre-compiled ART profiles that you ship inside your APK or AAB. The key idea is that they let the system AOT-compile your hot code paths on install, so you get native-speed execution from the very first launch instead of waiting for the JIT compiler to warm up over several runs.</p>
 <p><strong>Background — ART compilation modes</strong>:</p>
 <ul>
@@ -322,8 +371,17 @@ android {
 <li>Con: APK size increases slightly.</li>
 </ul>
 <p><strong>Failure mode</strong>: Forgetting to add <code>profileinstaller</code> dependency — the profile ships in the APK but is never installed on the device.</p>
+<p><strong>Under the hood</strong></p>
+<p>The human-readable <code>baseline-prof.txt</code> is a list of method and class descriptors in the HRF (Human-Readable Format), e.g. <code>HSPLcom/example/MyClass;-&gt;myMethod(I)V</code>, where the leading flags mean <strong>H</strong>ot, <strong>S</strong>tartup, and <strong>P</strong>ost-startup. AGP compiles this into a binary <code>.prof</code>/<code>.profm</code> file embedded under <code>assets/dexopt/</code> in the APK. On first run, <code>ProfileInstaller</code> copies that profile into ART&#x27;s reference profile location (<code>/data/misc/profiles/ref/&lt;pkg&gt;</code>). ART&#x27;s <code>dex2oat</code> then performs AOT compilation of exactly those flagged methods into the <code>.odex</code>/<code>.art</code> files, rather than waiting for the runtime interpreter+JIT to discover them across many sessions. Without the embedded profile, ART starts cold: methods run interpreted, the JIT samples execution counts, and only after thresholds are crossed (and during idle <code>bg-dexopt</code> maintenance) does it compile them — which is why the first several launches are slow.</p>
+<pre><code>baseline-prof.txt (HRF)        AGP packaging              device, first run
+  HSPLcom/app/Foo;-&gt;bar()  ──&gt;  assets/dexopt/baseline.prof  ──&gt;  ProfileInstaller
+                                + baseline.profm                    copies to ref/
+                                                                          │
+                                                                    dex2oat AOT-compiles
+                                                                    flagged methods -&gt; .art/.odex</code></pre>
 <hr>
 <h3 id="splash-screen">Splash Screen</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;Since Android 12 the system owns the splash screen — it draws your themed icon over a window background on every cold and warm start, and dismisses it the instant your first frame is ready. I use the AndroidX core-splashscreen library so the behavior backports to API 23, and <code>installSplashScreen()</code> must run before <code>super.onCreate()</code>. The thing interviewers probe is <code>setKeepOnScreenCondition</code> — it&#x27;s evaluated every single frame on the main thread, so it has to be a cheap StateFlow read, never a blocking call, and it must eventually return false or the app looks frozen.&quot;</blockquote>
 <p><strong>Definition</strong>: The splash screen is the initial visual shown while the app loads. Starting with Android 12, the system enforces a standardized splash screen API rather than letting apps roll their own.</p>
 <p><strong>Pre-Android 12 (legacy)</strong>:</p>
 <ul>
@@ -361,6 +419,14 @@ splashScreen.setOnExitAnimationListener { splashScreenView -&gt;
     &lt;item name=&quot;windowSplashScreenAnimationDuration&quot;&gt;300&lt;/item&gt;
     &lt;item name=&quot;postSplashScreenTheme&quot;&gt;@style/Theme.App&lt;/item&gt;
 &lt;/style&gt;</code></pre>
+<p><strong>Under the hood</strong></p>
+<p>The system splash is not a separate Activity — it&#x27;s a window the framework adds in the same window as your starting Activity, using the attributes resolved from your launch theme (<code>windowSplashScreenBackground</code>, <code>windowSplashScreenAnimatedIcon</code>, etc.). The <code>WindowManager</code>/<code>StartingSurface</code> machinery in <code>system_server</code> constructs this &quot;starting window&quot; before your process even finishes drawing, which is why it appears instantly. <code>installSplashScreen()</code> must run before <code>super.onCreate()</code> because it swaps your Activity&#x27;s theme from <code>Theme.App.Starting</code> to <code>postSplashScreenTheme</code> and registers the keep-on-screen predicate; after <code>setContentView</code>, the framework hooks the <code>ViewTreeObserver.OnPreDrawListener</code> on the content root. On each frame the pre-draw listener evaluates your <code>keepOnScreenCondition</code> — returning <code>true</code> consumes the draw (returns <code>false</code> from the listener so the frame is suspended), and once it finally returns <code>false</code> the listener removes itself and the exit animation runs. That per-frame evaluation is exactly why the condition must be O(1).</p>
+<pre><code>cold start
+  ├─ system_server adds starting window (theme attrs) ── shown immediately
+  ├─ app process: onCreate -&gt; installSplashScreen() swaps theme + sets predicate
+  ├─ setContentView -&gt; OnPreDrawListener attached to decor/content root
+  └─ every frame: keepOnScreenCondition?  true -&gt; suspend draw
+                                          false -&gt; remove listener, exit anim, draw</code></pre>
 <p><strong>Android implications</strong>:</p>
 <ul>
 <li><code>setKeepOnScreenCondition</code> is checked on every frame; keep it cheap (read a StateFlow value, not a blocking call).</li>
@@ -376,6 +442,7 @@ splashScreen.setOnExitAnimationListener { splashScreenView -&gt;
 </ul>
 <hr>
 <h3 id="dependency-graph-initialization">Dependency Graph Initialization</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;Dependency graph init is the cost of building every object that has to exist before the first user interaction — and with Dagger, calling <code>DaggerAppComponent.create()</code> eagerly constructs all your unscoped singletons, including any that do I/O in their constructors. My playbook is to keep the singleton component truly global, defer feature subcomponents until those features open, and wrap expensive singletons in <code>Lazy&lt;T&gt;</code> so they&#x27;re built on first access. The subtle gotcha is transitive I/O hiding in constructors — like a SharedPreferences inject that silently parses an XML file off disk on the main thread — so I instrument each initializer with <code>Trace.beginSection</code> to find them.&quot;</blockquote>
 <p><strong>Definition</strong>: Dependency graph initialization is the cost of constructing all the objects and their interdependencies that have to exist before the app can serve its first user interaction.</p>
 <p><strong>The problem</strong>: Dependency injection frameworks like Dagger construct an entire object graph eagerly when you call <code>DaggerAppComponent.create()</code>. If the component includes dozens of singletons — each with their own <code>@Inject</code> constructor doing I/O or computation — the graph construction cost is paid at startup.</p>
 <p><strong>Strategies</strong>:</p>
@@ -410,8 +477,22 @@ class MyRepository @Inject constructor(
 <li>Transitive I/O in constructor: <code>@Inject constructor(prefs: SharedPreferences)</code> — <code>SharedPreferences</code> reads from disk on first <code>getSharedPreferences()</code>.</li>
 <li>SDK <code>init()</code> methods that internally call Dagger-provided singletons before the graph is ready.</li>
 </ul>
+<p><strong>Under the hood</strong></p>
+<p>Dagger is a fully compile-time framework — the annotation processor (KAPT/KSP) generates concrete <code>*_Factory</code> classes and a <code>DaggerAppComponent</code> implementation, so there is <strong>no runtime reflection</strong>. Each <code>@Provides</code>/<code>@Inject</code> binding becomes a <code>Provider&lt;T&gt;</code> field. The distinction that drives startup cost is how those providers are wired: an unscoped binding generates a factory whose <code>get()</code> allocates a fresh instance every call, while a <code>@Singleton</code> (scoped) binding is wrapped in <code>DoubleCheck</code> — a memoizing provider that lazily allocates on the first <code>get()</code> and then caches, using double-checked locking for thread safety. <code>Lazy&lt;T&gt;</code> is backed by that same <code>DoubleCheck</code>, which is why it defers construction until first access. So <code>DaggerAppComponent.create()</code> itself is cheap — the expense appears when the graph&#x27;s <em>initialization</em> (or your own eager <code>get()</code> calls) walks transitive <code>DoubleCheck</code> providers and triggers constructor bodies, some of which call into the framework (<code>getSharedPreferences</code>, opening Room) and hit disk on the main thread.</p>
+<pre><code>// Generated shape (simplified)
+private Provider&lt;MyRepository&gt; myRepositoryProvider; // = DoubleCheck.provider(MyRepository_Factory.create(dbProvider, apiProvider))
+
+// DoubleCheck: first get() runs the factory, subsequent ones return cached instance
+public T get() {
+    Object result = instance;                 // volatile
+    if (result == UNINITIALIZED) {
+        synchronized (this) { /* double-checked */ result = delegate.get(); instance = result; }
+    }
+    return (T) result;
+}</code></pre>
 <hr>
 <h3 id="avoiding-main-thread-io">Avoiding Main-Thread I/O</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;The rule is that disk reads, disk writes, and network calls never touch the main thread — not at startup, not ever — because storage latency swings from a couple milliseconds on a flagship to hundreds on a low-end device under I/O contention, and the main thread is your 16ms frame budget. I catch violations early with StrictMode in debug builds, using penaltyDeath so they can&#x27;t slip by. The classic trap is that the offending I/O is invisible at the call site — <code>SharedPreferences</code> parses its XML file synchronously on first access — so I migrate to DataStore and push anything synchronous behind <code>withContext(Dispatchers.IO)</code>.&quot;</blockquote>
 <p><strong>Definition</strong>: Avoiding main-thread I/O means making sure disk reads, disk writes, and network calls never block the main UI thread — not during startup, not during any user interaction, ever.</p>
 <p><strong>Why it matters</strong>:</p>
 <ul>
@@ -453,6 +534,14 @@ if (BuildConfig.DEBUG) {
 <li>Wrap synchronous I/O in <code>withContext(Dispatchers.IO) { ... }</code>.</li>
 <li>Preload critical preferences on a background thread immediately after startup and cache them in memory.</li>
 </ul>
+<p><strong>Under the hood</strong></p>
+<p>StrictMode doesn&#x27;t watch your code — it instruments the framework&#x27;s actual I/O entry points. The runtime sets a per-thread policy mask (stored in thread-local state and mirrored into a system property the native layer reads), and low-level methods like <code>BlockGuard.getThreadPolicy().onReadFromDisk()</code> / <code>onWriteToDisk()</code> / <code>onNetwork()</code> are called from inside <code>libcore</code>&#x27;s file and socket primitives (e.g. <code>posix.read</code>, <code>FileInputStream</code>, the network stack). When one of those callbacks fires on a thread whose policy has the matching detect bit set, it walks the configured penalties — logging a stack trace, flashing the screen, or throwing for <code>penaltyDeath</code>. That&#x27;s why it catches I/O you never see at the call site: <code>getSharedPreferences()</code> returns immediately but spawns/awaits a background load that <code>getString()</code> blocks on, and the actual <code>read()</code> syscall trips BlockGuard. The reason main-thread I/O is fatal to smoothness is structural: the main thread runs the <code>Looper</code>, and a blocking <code>read()</code> parks it in the kernel so it can&#x27;t service the <code>Choreographer</code> VSYNC callback — the frame is missed and you jank.</p>
+<pre><code>your code: prefs.getString(...)        Choreographer VSYNC ──► main Looper
+      │                                         (must run doFrame within ~16ms)
+      ▼                                                 │
+libcore FileInputStream.read()                          │ blocked here =
+      └─ BlockGuard.onReadFromDisk() ──► policy bit set? │ missed frame / jank
+                                          └─ penaltyLog / penaltyDeath</code></pre>
 <hr>
 <h3 id="interview-angles-startup">Interview Angles: Startup</h3>
 <p><strong>Q: How do you improve cold start?</strong></p>
@@ -464,6 +553,7 @@ if (BuildConfig.DEBUG) {
 <hr>
 <h2 id="142-battery-and-resource-usage">14.2 Battery and Resource Usage</h2>
 <h3 id="wake-locks">Wake Locks</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;A wake lock keeps the CPU running even when the screen is off, which I reach for only when work absolutely must finish without the device suspending — like a critical chunk of processing after a push arrives. For almost everything deferrable I use WorkManager instead, because it manages wake locks internally and respects Doze. The two gotchas I always call out: always pass a timeout to <code>acquire()</code> so a crash can&#x27;t pin the CPU on until reboot, and always release in a <code>finally</code> block — a partial wake lock blocks every CPU power-saving state, so a leaked one is a battery disaster.&quot;</blockquote>
 <p><strong>Definition</strong>: A wake lock is a mechanism that prevents the CPU — and optionally the screen or keyboard backlight — from going to sleep for as long as the app holds it.</p>
 <p><strong>How it works</strong>:</p>
 <pre><code>val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
@@ -510,8 +600,16 @@ try {
 <li><code>WifiLock</code> forgotten — CPU wakes up but WiFi radio sleeps, causing network timeouts.</li>
 </ul>
 <p><strong>Android 13+ restrictions</strong>: Background apps requesting <code>WAKE_LOCK</code> are increasingly restricted. WorkManager is the right abstraction.</p>
+<p><strong>Under the hood</strong></p>
+<p><code>PowerManager.newWakeLock()</code> is a thin client handle; the real state lives in <code>system_server</code>&#x27;s <code>PowerManagerService</code>. Calling <code>acquire()</code> makes a Binder IPC that registers the lock, and the service aggregates all held locks across all apps to compute a &quot;wakefulness&quot; decision. For a <code>PARTIAL_WAKE_LOCK</code> it tells the kernel — historically by writing the lock&#x27;s tag to <code>/sys/power/wake_lock</code> (the kernel <code>wakeup_sources</code> / suspend-blocker mechanism) — which prevents the SoC from entering deep suspend (<code>autosleep</code>), even though the display pipeline can still power down. This is why a partial lock is so costly: suspend is all-or-nothing for the application processor, so a single held lock keeps the whole CPU in an active idle state, defeating the low-power states that dominate battery savings. The <code>acquire(timeout)</code> overload schedules a <code>Handler</code> message in the service that auto-releases after the deadline — that&#x27;s your safety net against a leaked lock surviving a process crash. WorkManager builds on the same primitive: its internal <code>WakeLockHolder</code> acquires a <code>PARTIAL_WAKE_LOCK</code> around a worker&#x27;s execution and releases it deterministically when the worker finishes, so you get the guarantee without managing lifecycle by hand. Doze/App Standby layer on top by having <code>PowerManagerService</code> ignore or defer many wake locks during maintenance windows.</p>
+<pre><code>app                          system_server (PowerManagerService)        kernel
+ newWakeLock() ── handle
+ acquire(t) ──Binder──►  add to held-lock set, aggregate wakefulness ──► /sys/power/wake_lock
+                          schedule auto-release at t (Handler msg)        (blocks autosleep)
+ release() ──Binder──►   remove from set; if none -&gt; allow suspend ────► /sys/power/wake_unlock</code></pre>
 <hr>
 <h3 id="doze-mode">Doze Mode</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;Doze kicks in when the device is unplugged, screen off, and stationary — the system batches deferred work into periodic maintenance windows instead of letting apps wake the device whenever they want. There are two tiers: light Doze starts quickly even while moving, deep Doze adds stricter limits after the device sits still for a while. The big gotcha is that wake locks, jobs, and <code>setExact</code> alarms are all suspended, so the only reliable way to get urgent work through is a high-priority FCM message, which has a system exemption.&quot;</blockquote>
 <p><strong>Definition</strong>: Doze Mode is a battery-saving state introduced in Android 6.0 (API 23) that aggressively restricts background CPU and network activity whenever the device is unplugged, stationary, and has its screen off.</p>
 <p><strong>How Doze works — two stages</strong>:</p>
 <p><strong>Stage 1 (Light Doze — API 24+)</strong>: Triggered when screen off + unplugged, even while device is moving.</p>
@@ -543,6 +641,13 @@ adb shell dumpsys deviceidle
 
 # Disable Doze for testing
 adb shell dumpsys deviceidle disable</code></pre>
+<p><strong>Under the hood</strong></p>
+<p>Doze is driven by <code>DeviceIdleController</code> in <code>system_server</code>, a state machine fed by sensors: <code>SensorManager</code>&#x27;s significant-motion / stationary detection, the screen-on signal, and the charging signal. As the device stays idle it walks through states — <code>ACTIVE → INACTIVE → IDLE_PENDING → SENSING → LOCATING → IDLE → IDLE_MAINTENANCE</code> — with widening backoff between maintenance windows. While idle, <code>AlarmManagerService</code> holds non-<code>ALLOW_WHILE_IDLE</code> alarms in a deferred list and the <code>JobSchedulerService</code> won&#x27;t grant new job slots; the maintenance window briefly releases them so queued work drains in a burst. FCM high-priority messages arrive over Google Play Services&#x27; persistent connection and the framework grants the receiving app a short temporary power-allowlist (a few seconds to ~minutes) so it can run despite Doze.</p>
+<pre><code>ACTIVE → INACTIVE → IDLE_PENDING → SENSING → LOCATING → IDLE
+                                                          ↓  (maintenance window: deferred jobs/alarms fire)
+                                                  IDLE_MAINTENANCE
+                                                          ↓  (re-enter idle, longer interval)
+                                                        IDLE</code></pre>
 <p><strong>Android implications</strong>:</p>
 <ul>
 <li>Never use <code>AlarmManager.setRepeating()</code> for background sync — use WorkManager.</li>
@@ -551,6 +656,7 @@ adb shell dumpsys deviceidle disable</code></pre>
 </ul>
 <hr>
 <h3 id="app-standby">App Standby</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;App Standby is per-app, not device-wide like Doze — the system sorts each app into a usage bucket from active down to restricted based on how recently and how often the user opens it. The bucket controls how often your jobs, alarms, and network access get to run, so an app the user hasn&#x27;t touched in weeks might only get one job a day. The thing to remember is that the bucket changes dynamically behind your back, so you can&#x27;t promise a sync cadence — you design for eventual delivery and lean on FCM for anything that has to land promptly.&quot;</blockquote>
 <p><strong>Definition</strong>: App Standby is a battery-saving mechanism that progressively restricts an app&#x27;s background activity based on how recently and how often the user has opened it.</p>
 <p><strong>How App Standby works (API 23+)</strong>: The system categorizes apps into buckets based on recency and frequency of use:</p>
 <table border="1" cellpadding="6" cellspacing="0">
@@ -579,8 +685,16 @@ adb shell am set-standby-bucket com.example.app rare
 # Check current bucket
 adb shell am get-standby-bucket com.example.app</code></pre>
 <p><strong>Exemptions</strong>: Battery optimization whitelist (<code>ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS</code>). Requesting this exemption requires justification for Play Store listing; over-broad use is rejected.</p>
+<p><strong>Under the hood</strong></p>
+<p>Bucketing lives in <code>AppStandbyController</code> (part of <code>UsageStatsService</code>). It maintains a per-app &quot;idle&quot; score derived from usage events — <code>ACTIVITY_RESUMED</code>, notification interactions, sync usage, and &quot;active timeout&quot; windows — and on a periodic check elevates or demotes the bucket as elapsed-since-last-use thresholds are crossed (defaults roughly: working set ~hours, frequent ~2 days, rare ~8 days, restricted weeks). Each bucket maps to quota tables that <code>JobSchedulerService</code> (<code>QuotaController</code>) and <code>AlarmManagerService</code> consult: the bucket determines how many jobs/alarms an app may fire per rolling time window and the minimum gap between them. App Standby and Doze are independent gates — work must satisfy <em>both</em> — and <code>UsageStatsManager.getAppStandbyBucket()</code> reads the same controller&#x27;s current value.</p>
+<pre><code>usage events ──► AppStandbyController (idle score, time-since-use)
+                      │ maps to bucket
+                      ▼
+            QuotaController / AlarmManagerService
+            (jobs-per-window, alarm gap) ── enforced AND-ed with Doze</code></pre>
 <hr>
 <h3 id="background-restrictions">Background Restrictions</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;Background restrictions are a stack of independent limits, not one switch. On Oreo and up you can&#x27;t freely start background services or rely on most implicit broadcasts; you move that work to <code>startForegroundService</code> or WorkManager. On top of that the user can flip an app to &#x27;restricted&#x27; in battery settings, which kills essentially all background execution except FCM. The mistake I watch for is assuming a foreground service is a free pass — it isn&#x27;t; it still has to be started legally and justified, and on newer APIs there are foreground-service-type and while-in-use restrictions layered on as well.&quot;</blockquote>
 <p><strong>Definition</strong>: Background restrictions are additional per-app limits on background activity — either ones the user enables manually (Android 9+) or ones the system applies automatically on Android 12+ and on low-RAM devices.</p>
 <p><strong>Layers of background restrictions</strong>:</p>
 <ol>
@@ -595,8 +709,18 @@ adb shell am get-standby-bucket com.example.app</code></pre>
 <li>Use FCM for server-to-device push; never poll.</li>
 <li>Declare foreground services only when truly needed (GPS tracking, music playback, file download with user awareness).</li>
 </ul>
+<p><strong>Under the hood</strong></p>
+<p>These limits are enforced by <code>ActivityManagerService</code> (AMS), which tracks each process&#x27;s lifecycle through the OOM-adjustment / process-state machine (foreground, visible, service, cached, etc.). When <code>startService()</code> is called and AMS sees the caller is not in an allowed state, it throws <code>BackgroundServiceStartNotAllowedException</code> (a subclass of <code>IllegalStateException</code>); <code>startForegroundService()</code> instead enters a grace state and arms a ~5s timer — miss the <code>startForeground()</code> call and AMS raises an ANR-style <code>RemoteServiceException</code>. Implicit broadcast filtering happens when the package is parsed: manifest-declared receivers for most implicit actions are simply not registered in AMS&#x27;s <code>BroadcastQueue</code> dispatch tables (an allowlist of exempt actions survives). The &quot;restricted&quot; toggle sets an <code>AppOpsManager</code> op (<code>RUN_ANY_IN_BACKGROUND</code>) that AMS checks before granting any background process state.</p>
+<pre><code>// API 26+ : illegal because AMS sees the process is in a background/cached state
+context.startService(intent)        // throws BackgroundServiceStartNotAllowedException
+
+// Legal: AMS grants a short-lived foreground grace window
+context.startForegroundService(intent)
+// ...must call within ~5s or AMS kills the service:
+startForeground(NOTIF_ID, notification)</code></pre>
 <hr>
 <h3 id="network-batching">Network Batching</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;Network batching matters because of the cellular radio&#x27;s tail-power problem — after any transmission the radio stays in its high-power state for several seconds before stepping down, so a tiny 1 KB ping can cost nearly as much energy as a big transfer. The win is coalescing requests so the radio powers up once and does everything: batch analytics, defer non-urgent syncs, and let WorkManager align your work with other apps&#x27; wakeups. The nuance interviewers like is that this is a state machine — RRC states with promotion and demotion timers set by the carrier — so frequent dribs and drabs are the worst possible pattern.&quot;</blockquote>
 <p><strong>Definition</strong>: Network batching is the practice of grouping multiple small network requests together so the radio is activated as few times as possible.</p>
 <p><strong>Why it matters — radio state machine</strong>: The cellular radio transitions through states:</p>
 <ul>
@@ -612,6 +736,12 @@ adb shell am get-standby-bucket com.example.app</code></pre>
 <li>Use HTTP/2 multiplexing — multiple requests over a single connection reduce overhead.</li>
 <li>Implement request coalescing in your network layer: buffer events for 30 seconds, then flush.</li>
 </ul>
+<p><strong>Under the hood</strong></p>
+<p>The &quot;state machine&quot; is the modem&#x27;s RRC (Radio Resource Control) protocol negotiated with the carrier&#x27;s network, not something the OS sets — on LTE the relevant states are <code>RRC_IDLE</code> and <code>RRC_CONNECTED</code>, gated by network-side inactivity timers and the cRPT/DRX (discontinuous reception) configuration that defines the tail. The app never touches RRC directly; it issues sockets, the kernel hands packets to the rild/modem, and the modem requests a promotion to <code>RRC_CONNECTED</code>. That promotion itself costs a signaling round-trip (and energy), which is why scattered requests are doubly expensive — each may re-promote from idle. The OS-side lever is <code>JobScheduler</code>&#x27;s coalescing: the framework holds eligible jobs and fires a batch together (often aligned with maintenance windows or <code>setRequiresDeviceIdle</code>/network constraints) so one radio promotion serves many apps&#x27; work.</p>
+<pre><code>RRC_IDLE ──(packet to send: promotion + signaling)──► RRC_CONNECTED
+   ▲                                                         │
+   └──────────── inactivity timer expires (tail) ◄───────────┘
+   tail time = energy spent with nothing transmitting → batch to amortize it</code></pre>
 <p><strong>Android implications</strong>:</p>
 <ul>
 <li><code>WorkManager.enqueueUniquePeriodicWork()</code> with a 15-minute interval (minimum) is the correct pattern for periodic sync.</li>
@@ -620,6 +750,7 @@ adb shell am get-standby-bucket com.example.app</code></pre>
 </ul>
 <hr>
 <h3 id="job-constraints">Job Constraints</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;Job constraints are the conditions all of which must be true before WorkManager or JobScheduler will run a job — network type, charging, battery-not-low, device idle, storage-not-low. They&#x27;re how you make background work battery-friendly: the system waits for a cheap moment and batches everyone&#x27;s eligible work together. The trap is over-constraining — if I require unmetered plus charging plus idle, a user who only has cellular and never charges overnight may have that work never run, so I pick the loosest constraints that still meet the requirement, and use exponential backoff for retries.&quot;</blockquote>
 <p><strong>Definition</strong>: Job constraints are the conditions that must all be satisfied before a scheduled job — whether via WorkManager or JobScheduler — is allowed to execute.</p>
 <p><strong>WorkManager constraints</strong>:</p>
 <pre><code>val constraints = Constraints.Builder()
@@ -645,8 +776,17 @@ WorkManager.getInstance(context).enqueue(uploadWork)</code></pre>
 </ul>
 <p><strong>PeriodicWork minimum interval</strong>: 15 minutes. The system may run it less frequently based on App Standby bucket. Do not use <code>PeriodicWork</code> for anything requiring precision timing.</p>
 <p><strong>Failure mode</strong>: Job that has <code>setRequiresCharging(true)</code> + <code>setRequiresDeviceIdle(true)</code> + <code>UNMETERED</code> on a user who only has cellular data and never uses their phone while charging — work never runs.</p>
+<p><strong>Under the hood</strong></p>
+<p>WorkManager persists each request and its constraints into its Room database (<code>WorkSpec</code> rows) so they survive process death and reboot. At runtime it observes constraints through <code>ConstraintTracker</code> subclasses — <code>NetworkStateTracker</code> (via <code>ConnectivityManager</code> callbacks), <code>BatteryChargingTracker</code> / <code>BatteryNotLowTracker</code> and <code>StorageNotLowTracker</code> (via sticky <code>ACTION_*</code> broadcasts) — and the <code>WorkConstraintsTracker</code> only marks a <code>WorkSpec</code> runnable when <em>every</em> tracker reports satisfied. On API 23+ WorkManager doesn&#x27;t actually poll; it delegates to <code>JobScheduler</code> by translating the <code>WorkSpec</code> into a <code>JobInfo</code> with the matching <code>setRequiredNetworkType</code>/<code>setRequiresCharging</code>/<code>setRequiresDeviceIdle</code> flags, so the real gating and cross-app batching happen inside <code>JobSchedulerService</code>&#x27;s controllers. Exponential backoff is stored on the <code>WorkSpec</code> (<code>backoffPolicy</code> + <code>backoffDelayDuration</code>) and recomputed on each failed attempt, then re-handed to JobScheduler as the next minimum latency.</p>
+<pre><code>enqueue ─► WorkSpec persisted (Room)
+             │
+   ConstraintTrackers (network, charging, battery, storage, idle)
+             │ all satisfied?
+             ▼
+   JobInfo built ─► JobSchedulerService (cross-app batch + final gate) ─► Worker.doWork()</code></pre>
 <hr>
 <h3 id="location-updates">Location Updates</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;Location is one of the biggest battery sinks, so I always start from the question &#x27;what&#x27;s the loosest accuracy and longest interval that still satisfies the feature?&#x27; I use the Fused Location Provider with a priority — high-accuracy turns the GPS chip on and is only for turn-by-turn, balanced uses cell and WiFi for a fraction of the power, and passive is essentially free because it just piggybacks on other apps&#x27; requests. The classic bug is forgetting to call <code>removeLocationUpdates</code> when the screen goes away, which leaves GPS running in the background — and on Android 10+ that also trips the separate background-location permission.&quot;</blockquote>
 <p><strong>Definition</strong>: Location updates are the mechanism by which apps receive position data from GPS, network, or passive providers — and the way you configure them has a dramatic impact on battery life.</p>
 <p><strong>Location providers</strong>:</p>
 <ul>
@@ -674,9 +814,19 @@ LocationRequest.Builder(Priority.PRIORITY_PASSIVE, Long.MAX_VALUE)              
 <li>Use geofencing APIs instead of polling for &quot;is the user near location X&quot; use cases.</li>
 <li>Android 10+ background location requires <code>ACCESS_BACKGROUND_LOCATION</code> permission and user justification.</li>
 </ul>
+<p><strong>Under the hood</strong></p>
+<p>The Fused Location Provider lives in Google Play Services, not the app process — your <code>LocationRequest</code> is marshalled over Binder to the GMS <code>LocationManagerService</code>/fused engine, which fuses GPS (the hardware GNSS chip via the HAL), network location (cell + WiFi RTT/scan, partly server-assisted), and onboard sensors. The fused engine deduplicates demand system-wide: it runs the GNSS hardware at the <em>highest</em> accuracy any client currently requests and fans the results out to every registered callback — that&#x27;s literally why <code>PRIORITY_PASSIVE</code> is &quot;free,&quot; it only delivers fixes the chip was already producing for someone else, and it&#x27;s also why one app&#x27;s <code>HIGH_ACCURACY</code> request raises everyone&#x27;s effective power cost. Requested interval becomes a hint to the GNSS duty cycle (how often the chip wakes); a leaked callback keeps that duty cycle alive across the Binder boundary even after your Activity is gone. On Android 10+, the <code>ACCESS_BACKGROUND_LOCATION</code> check is enforced in the system when delivering fixes to a process that isn&#x27;t in a foreground/while-in-use state.</p>
+<pre><code>App: LocationRequest(priority, interval)
+        │  Binder IPC
+        ▼
+GMS Fused engine ── fuses ──► GNSS HAL (chip) + WiFi/cell scan + sensors
+        │ runs chip at MAX accuracy across all clients
+        ▼  fan-out to callbacks
+   your onLocationResult()   (PASSIVE = only gets fixes others already triggered)</code></pre>
 <p><strong>Failure mode</strong>: Forgetting to <code>removeLocationUpdates()</code> when the Activity pauses — GPS stays active in the background, draining battery and triggering background location access in Android 10+.</p>
 <hr>
 <h3 id="sensor-usage">Sensor Usage</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;Sensors are read through <code>SensorManager</code> by registering a listener with a sampling delay, and that delay is the single biggest lever on battery — <code>FASTEST</code> pegs the hardware at full rate while <code>NORMAL</code> is fine for most cases. The gotcha interviewers love is lifecycle: you have to unregister in <code>onStop</code>, because the framework keeps the sensor hardware powered as long as any listener is registered, even if your activity is in the background. I also reach for batch mode with a max report latency so the SoC sensor hub buffers events and lets the application processor stay asleep between deliveries.&quot;</blockquote>
 <p><strong>Definition</strong>: Sensor usage covers how apps read hardware sensors — accelerometer, gyroscope, heart rate, barometer, and so on — via <code>SensorManager</code>, and the sampling rate you choose directly determines how much battery the sensor hardware consumes.</p>
 <p><strong>How it works</strong>:</p>
 <pre><code>val sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
@@ -701,8 +851,18 @@ sensorManager.registerListener(
 <li>On Wear OS and health apps, use the Health Services API which manages sensor duty cycling.</li>
 </ul>
 <p><strong>Failure mode</strong>: Registering a <code>SENSOR_DELAY_FASTEST</code> accelerometer listener and forgetting to unregister it — sensor hardware stays active at full rate, draining battery significantly.</p>
+<p><strong>Under the hood</strong></p>
+<p>The <code>SensorManager</code> you get from <code>getSystemService</code> is a <code>SystemSensorManager</code> that talks to the native <code>sensorservice</code> over Binder. The delay constant isn&#x27;t a guarantee — it&#x27;s a hint converted to a sampling period in microseconds and passed down to the kernel sensor driver / hardware sensor hub. The HAL multiplexes all registered listeners for a given physical sensor and runs the hardware at the <em>fastest</em> requested rate, then fans events out, which is why one stray <code>FASTEST</code> listener anywhere costs everyone. Batch mode (<code>maxReportLatencyUs &gt; 0</code>) enables a hardware FIFO in the sensor hub: events accumulate in that buffer so the main application processor can stay in a deep idle state and is only woken when the FIFO fills or the latency window elapses.</p>
+<pre><code>app listener ── registerListener(period, maxReportLatency)
+      │  Binder
+      ▼
+SensorService ── picks min(period) across all clients
+      │
+      ▼
+Sensor HAL ── hardware FIFO buffers samples ──► batched wake-up to AP</code></pre>
 <hr>
 <h3 id="foreground-service-impact">Foreground Service Impact</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;A foreground service is how you tell the system &#x27;I&#x27;m doing ongoing work the user knows about&#x27; — it shows a persistent notification and in exchange the system won&#x27;t kill it or doze the CPU out from under it. The thing that trips people up now is that since Android 14 you must declare a specific <code>foregroundServiceType</code> in both the manifest and the <code>startForeground</code> call, and several types need a runtime permission, with <code>dataSync</code> capped at six hours a day. And the classic crash: if you call <code>startForegroundService</code> you have a five-second window to call <code>startForeground</code>, or the system kills you with <code>ForegroundServiceDidNotStartInTimeException</code>.&quot;</blockquote>
 <p><strong>Definition</strong>: A foreground service is a service with a persistent, user-visible notification that signals to both the user and the system that the app is doing ongoing, intentional work.</p>
 <p><strong>Why foreground services exist</strong>: Android 8.0+ prevents background services. Foreground services are the approved mechanism for long-running work that the user must be aware of: music playback, navigation, file downloads, health tracking.</p>
 <p><strong>Battery impact</strong>:</p>
@@ -729,6 +889,8 @@ startForeground(NOTIFICATION_ID, notification,
 <li>Never use foreground service as a workaround to bypass WorkManager&#x27;s 15-minute periodic interval — Google Play policies prohibit this.</li>
 </ul>
 <p><strong>Failure mode</strong>: Starting a foreground service with <code>startForegroundService()</code> but not calling <code>startForeground()</code> within 5 seconds — the system throws an <code>ANR</code>-like <code>ForegroundServiceDidNotStartInTimeException</code>.</p>
+<p><strong>Under the hood</strong></p>
+<p><code>startForegroundService()</code> routes through <code>ActivityManagerService</code>, which puts the app into a temporary &quot;while-in-use&quot;-style allowlist and arms a 5-second timer. When you call <code>startForeground()</code>, AMS promotes the service&#x27;s process to the <em>foreground service</em> process state (<code>PROCESS_STATE_FOREGROUND_SERVICE</code>), which raises its <code>oom_adj</code> score so the low-memory killer treats it almost like a visible app, and it registers the notification with <code>NotificationManagerService</code>. If the timer fires first, AMS posts a crash via <code>ActivityThread.throwRemoteServiceException</code>, surfacing as <code>ForegroundServiceDidNotStartInTimeException</code>. The elevated process state is also what keeps the CPU out of Doze and exempts the process from background execution limits — the battery cost is a direct consequence of holding that state. On Android 14+ AMS additionally validates the declared <code>foregroundServiceType</code> bitmask against the manifest and the corresponding runtime permission, and <code>dataSync</code> time is accounted against a rolling 24-hour budget tracked per UID.</p>
 <hr>
 <h3 id="interview-angles-battery">Interview Angles: Battery</h3>
 <p><strong>Q: How do you reduce battery drain?</strong></p>
@@ -742,6 +904,7 @@ startForeground(NOTIFICATION_ID, notification,
 <hr>
 <h2 id="143-anr-and-crash-debugging">14.3 ANR and Crash Debugging</h2>
 <h3 id="main-thread-blocking">Main-Thread Blocking</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;Main-thread blocking is anything on the UI thread that runs past the system&#x27;s budget — five seconds for an input event, ten for a broadcast, twenty for a service lifecycle call — and because that one thread drives input, the message loop, and every Choreographer frame, blocking it freezes the whole app and eventually triggers an ANR. The classic culprits are disk I/O like the first <code>SharedPreferences</code> read, database queries, or <code>runBlocking</code> waiting on a slow coroutine. My go-to is StrictMode with <code>penaltyDeath</code> in debug builds so violations crash immediately and never reach production.&quot;</blockquote>
 <p><strong>Definition</strong>: Main-thread blocking is any operation on the Android UI thread that consumes more time than the allowed budget, causing an ANR — Application Not Responding. The main thread owns input event processing, UI updates, and every <code>Choreographer</code> frame, so blocking it freezes the entire app.</p>
 <p><strong>Time budgets</strong>:</p>
 <ul>
@@ -765,8 +928,14 @@ startForeground(NOTIFICATION_ID, notification,
 <li>Systrace/Perfetto shows main-thread slices and their duration.</li>
 <li>Android Studio Profiler → CPU → main thread timeline.</li>
 </ul>
+<p><strong>Under the hood</strong></p>
+<p>The ANR mechanism lives in <code>system_server</code>. When the framework dispatches an input event or starts a broadcast/service, it posts a delayed &quot;timeout&quot; message to a watchdog handler (for input, this is tracked by the <code>InputDispatcher</code> in native code via <code>anrTracker</code>). If the responsible component acknowledges completion before the timeout fires, the message is cancelled; if not, AMS gathers stack traces from the offending process plus a few others and writes them to <code>/data/anr/</code>, then shows the &quot;App isn&#x27;t responding&quot; dialog. Crucially, the budget is <em>not</em> CPU time — it&#x27;s wall-clock time on the main <code>Looper</code>. The main thread&#x27;s <code>MessageQueue</code> processes messages serially, so a long-running <code>onBindViewHolder</code> or a blocking disk read simply prevents the next queued input/lifecycle message from being dispatched in time. StrictMode hooks instrument <code>BlockGuard</code> policy callbacks on disk and network primitives, so a flagged operation is detected the moment it executes on a thread whose policy forbids it.</p>
+<pre><code>input event ──► InputDispatcher posts 5s ANR timer
+                main Looper busy in onBindViewHolder...
+                timer fires first  ──► AMS dumps traces ──► ANR dialog</code></pre>
 <hr>
 <h3 id="deadlock">Deadlock</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;A deadlock is when two or more threads each hold a lock the other needs, so nobody can make progress — they wait forever. The Android-flavored version that bites people is <code>runBlocking</code> on the main thread awaiting a coroutine that needs to post back to the main thread to finish: the main thread is blocked waiting, so the continuation can never run. I diagnose it from the ANR trace by finding threads in <code>BLOCKED</code> state and following the lock-ownership chain, and I prevent it by enforcing a consistent global lock-acquisition order.&quot;</blockquote>
 <p><strong>Definition</strong>: A deadlock is the situation where two or more threads are each waiting for the other to release a lock — so all of them end up permanently blocked, waiting forever.</p>
 <p><strong>Classic deadlock pattern</strong>:</p>
 <pre><code>// Thread A holds lockA, waiting for lockB
@@ -793,8 +962,11 @@ lockA.lock()     // Thread B waits for Thread A to release lockA — DEADLOCK</c
 <li>ANR traces (<code>/data/anr/traces.txt</code> or <code>anr_&lt;pid&gt;.txt</code>) show thread states. Look for threads in <code>BLOCKED</code> state and trace the lock ownership chain.</li>
 <li><code>jstack</code> equivalent: <code>adb shell kill -3 &lt;pid&gt;</code> dumps thread state to logcat.</li>
 </ul>
+<p><strong>Under the hood</strong></p>
+<p>On ART, a Kotlin <code>synchronized</code> block compiles to <code>monitor-enter</code>/<code>monitor-exit</code> bytecode, and each Java object carries a <em>lock word</em> in its header. Uncontended locks use a thin-lock fast path (a CAS storing the owning thread&#x27;s id into the lock word). Under contention the lock inflates into a fat <code>Monitor</code> object held by the runtime, and waiting threads transition to the <code>kBlocked</code> thread state, recorded with the monitor and owning thread. That ownership metadata is exactly what <code>SIGQUIT</code> (<code>kill -3</code>) dumps: ART&#x27;s <code>SignalCatcher</code> walks every thread, and for each blocked thread prints <code>- waiting to lock &lt;addr&gt; ... held by thread N</code>, letting you reconstruct the cycle. A deadlock is a cycle in this wait-for graph; ART doesn&#x27;t break it automatically, so the threads stay <code>kBlocked</code> indefinitely until the process is killed. <code>ReentrantLock</code> is pure-Java (<code>AbstractQueuedSynchronizer</code>) rather than a monitor, so it parks threads via <code>LockSupport.park</code> instead — the cycle is the same, but the trace shows them parked rather than monitor-blocked.</p>
 <hr>
 <h3 id="lock-contention">Lock Contention</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;Lock contention is when many threads compete for the same lock and serialize behind it — there&#x27;s no cycle like a deadlock, just a bottleneck where everyone queues. It won&#x27;t ANR on its own, but if the main thread is one of the waiters and it stalls past five seconds it can become one, and even short of that it tanks throughput. My fixes are to shrink the critical section to the bare minimum, swap coarse <code>synchronized</code> blocks for concurrent or atomic structures like <code>ConcurrentHashMap</code> or <code>AtomicInteger</code>, and use a <code>ReadWriteLock</code> when reads vastly outnumber writes.&quot;</blockquote>
 <p><strong>Definition</strong>: Lock contention happens when multiple threads compete for the same lock, causing them to queue up and wait serially even though no deadlock exists — they&#x27;re just all fighting over a single bottleneck.</p>
 <p><strong>How it harms performance</strong>:</p>
 <ul>
@@ -813,8 +985,11 @@ lockA.lock()     // Thread B waits for Thread A to release lockA — DEADLOCK</c
 <li>Minimize lock scope — acquire lock, do minimal work, release.</li>
 <li>Use <code>ReadWriteLock</code> when reads are far more frequent than writes.</li>
 </ul>
+<p><strong>Under the hood</strong></p>
+<p>When a monitor inflates under contention, ART emits a <code>monitor_contention</code> ATrace event whenever a thread blocks long enough — this is the slice Perfetto surfaces, and it carrys the owner thread and the line/method where the lock is held. Each contended acquisition that misses the thin-lock CAS fast path forces a kernel transition (a <code>futex</code> wait), so the cost isn&#x27;t just waiting — it&#x27;s the context switches and scheduler overhead of parking and waking threads. Lock-free structures like <code>ConcurrentHashMap</code> avoid this by partitioning state (per-bin CAS updates) so threads touching different keys never serialize; <code>AtomicInteger</code> reduces a whole critical section to a single CAS loop on a <code>volatile</code> field. A <code>ReadWriteLock</code> helps read-heavy workloads because multiple readers share the lock concurrently and only writers are exclusive — but its own bookkeeping adds overhead, so for short critical sections a plain lock or an atomic is often faster.</p>
 <hr>
 <h3 id="slow-binder-call">Slow Binder Call</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;A slow Binder call is a synchronous IPC into a system service — like PackageManager or ActivityManager — that blocks the calling thread until the remote process replies. If I make that call on the main thread, it&#x27;s a direct path to an ANR, because the thread is parked in a kernel wait, not doing UI work. The gotcha interviewers probe is that it&#x27;s not just my latency: the system server runs a fixed Binder thread pool, so under load all threads can be busy and my call queues behind everyone else&#x27;s. So I move these off the main thread and cache results aggressively.&quot;</blockquote>
 <p><strong>Definition</strong>: A slow Binder call is a synchronous IPC call through Android&#x27;s Binder mechanism that takes longer than expected — and because it blocks the calling thread, if that thread is the main thread, it becomes a direct path to ANR.</p>
 <p><strong>How Binder works</strong>:</p>
 <ul>
@@ -842,8 +1017,16 @@ lockA.lock()     // Thread B waits for Thread A to release lockA — DEADLOCK</c
 <li>Cache results: call once, cache, serve from cache.</li>
 <li>Use async Binder APIs where available.</li>
 </ul>
+<p><strong>Under the hood</strong></p>
+<p>Binder is a kernel driver (<code>/dev/binder</code>) reached via <code>ioctl(BINDER_WRITE_READ)</code>. The proxy marshals arguments into a <code>Parcel</code>, the driver copies that buffer once into the target process&#x27;s mapped Binder memory region, picks a thread from the target&#x27;s Binder thread pool, and the caller&#x27;s thread blocks inside the kernel until a reply transaction arrives. Each process&#x27;s pool is capped (default 15 threads via <code>setMaxThreads</code>), so an exhausted pool means callers wait for a free thread before their transaction is even serviced. The transaction buffer is also bounded (~1 MB shared per process), which is why large payloads throw <code>TransactionTooLargeException</code>.</p>
+<pre><code>caller thread          binder driver (kernel)        target Binder thread
+  transact() ---------&gt;  copy Parcel into target&#x27;s
+  (BLOCKED)              mmap&#x27;d region, enqueue
+                         pick free pool thread ------&gt; onTransact()
+  (still BLOCKED) &lt;----- reply transaction &lt;---------- return Parcel</code></pre>
 <hr>
 <h3 id="broadcastreceiver-timeout">BroadcastReceiver Timeout</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;A manifest-registered BroadcastReceiver runs <code>onReceive</code> on the main thread, and the system gives it about 10 seconds to return — overrun that and you get a broadcast ANR. The key thing is <code>onReceive</code> should finish fast: hand real work off to WorkManager or a coroutine. If I genuinely need a bit more time inline, I call <code>goAsync()</code>, which holds the broadcast &#x27;live&#x27; and keeps the process at a higher priority, but I still must call <code>finish()</code> within the window or I leak the receiver and risk a kill. Foreground broadcasts get a shorter timeout than background ones, which trips people up.&quot;</blockquote>
 <p><strong>Definition</strong>: A <code>BroadcastReceiver</code>&#x27;s <code>onReceive()</code> must return within 10 seconds — exceed that budget and the system fires an ANR.</p>
 <p><strong>How it works</strong>:</p>
 <ul>
@@ -873,8 +1056,15 @@ lockA.lock()     // Thread B waits for Thread A to release lockA — DEADLOCK</c
     }
 }</code></pre>
 <p><strong>Failure mode</strong>: Doing network I/O or database access directly in <code>onReceive()</code> without <code>goAsync()</code> — causes ANR on slow devices or under load.</p>
+<p><strong>Under the hood</strong></p>
+<p>Broadcasts are dispatched by the <code>ActivityManagerService</code> (AMS), which maintains broadcast queues and arms a timeout alarm when it delivers an intent to a receiver. AMS sends the intent to the app process over Binder; <code>ApplicationThread</code> posts it to the main thread <code>Looper</code>, which invokes <code>onReceive</code>. When <code>onReceive</code> returns (or <code>PendingResult.finish()</code> is called for <code>goAsync</code>), the app sends <code>finishReceiver</code> back to AMS, which cancels the timeout and proceeds to the next receiver. If the timeout fires first, AMS records an ANR. <code>goAsync()</code> simply tells AMS &quot;I&#x27;m not done yet&quot; by deferring that <code>finishReceiver</code> call — and while pending, AMS bumps the process&#x27;s <code>oom_adj</code> so it isn&#x27;t killed mid-work.</p>
+<pre><code>AMS: scheduleReceiver(intent) ---Binder---&gt; app main Looper -&gt; onReceive()
+AMS: start timeout (e.g. 10s fg / 60s bg)
+app: finishReceiver() --------Binder------&gt; AMS: cancel timeout, dispatch next
+(timeout fires before finishReceiver -&gt; ANR)</code></pre>
 <hr>
 <h3 id="service-timeout">Service Timeout</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;A Service&#x27;s lifecycle callbacks run on the main thread, so <code>onStartCommand</code>, <code>onCreate</code>, and <code>onBind</code> have to return quickly — the system arms a timeout, around 20 seconds for a foreground service, and a hang there is a service ANR. The sharp edge is the foreground-service promotion contract: if I call <code>startForegroundService()</code>, I have roughly 5 seconds to call <code>startForeground()</code> with a notification, or on Android 12+ I get a <code>ForegroundServiceDidNotStartInTimeException</code> crash. So I post the notification first thing and do the actual work on a background scope.&quot;</blockquote>
 <p><strong>Definition</strong>: Service lifecycle callbacks — <code>onCreate</code>, <code>onStartCommand</code>, and <code>onBind</code> — must complete within 20 seconds, and <code>onDestroy</code> must return promptly; hanging in any of these causes a service ANR.</p>
 <p><strong>Foreground service not started in time</strong>: When <code>startForegroundService()</code> is called, the service must call <code>startForeground()</code> within 5 seconds:</p>
 <pre><code>class MyService : Service() {
@@ -891,8 +1081,15 @@ lockA.lock()     // Thread B waits for Thread A to release lockA — DEADLOCK</c
     }
 }</code></pre>
 <p><strong>API 34+ <code>ForegroundServiceDidNotStartInTimeException</code></strong>: System throws this if <code>startForeground()</code> isn&#x27;t called in time. Treat it like an ANR.</p>
+<p><strong>Under the hood</strong></p>
+<p><code>startForegroundService()</code> tells AMS to start the service and grants the app a short temporary allowlist so it can run even from the background. AMS posts a delayed timeout message (the ~5s window) before delivering <code>onStartCommand</code> over Binder. When the app calls <code>startForeground()</code>, it Binders back into AMS, which cancels that timeout and registers the service as foreground with an active notification. If the timeout message executes first, AMS throws <code>ForegroundServiceDidNotStartInTimeException</code> into the app process. Separately, the broader service-lifecycle timeout (~20s foreground / ~200s background) is the SERVICE_TIMEOUT watchdog AMS uses to detect a wedged callback and file a service ANR.</p>
+<pre><code>app: startForegroundService() --Binder--&gt; AMS: temp-allowlist, arm 5s timeout
+AMS: scheduleServiceArgs ------Binder----&gt; app main Looper -&gt; onStartCommand()
+app: startForeground(notif) ---Binder----&gt; AMS: cancel timeout, mark FG
+(5s elapses first -&gt; AMS throws ForegroundServiceDidNotStartInTimeException)</code></pre>
 <hr>
 <h3 id="input-dispatch-timeout">Input Dispatch Timeout</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;Input dispatch ANRs come from the system&#x27;s InputDispatcher: it sends each touch or key event to the focused window and expects an acknowledgement within about 5 seconds. If my main thread is blocked on I/O or a lock, <code>ViewRootImpl</code> never reads and finishes the event, the dispatcher&#x27;s deadline passes, and the user sees the &#x27;app isn&#x27;t responding&#x27; dialog. The nuance is that the timeout isn&#x27;t about how long the touch handler runs — it&#x27;s the gap until the event is <em>consumed</em>, so a main thread stuck on something completely unrelated still triggers it.&quot;</blockquote>
 <p><strong>Definition</strong>: The input dispatch timeout is the 5-second window the system gives the focused window to acknowledge each touch or key event. If the window misses that deadline — because the main thread is blocked — the user sees the ANR dialog.</p>
 <p><strong>How it works</strong>:</p>
 <ul>
@@ -919,8 +1116,16 @@ lockA.lock()     // Thread B waits for Thread A to release lockA — DEADLOCK</c
   - waiting to lock &lt;0x...&gt; (a java.lang.Object)
   held by thread 12</code></pre>
 <p>The <code>main</code> thread is <code>Blocked</code> waiting for a lock. Thread 12 holds the lock — look it up in the same file to see what it&#x27;s doing.</p>
+<p><strong>Under the hood</strong></p>
+<p>In <code>system_server</code>, <code>InputDispatcher</code> (native, in <code>libinputflinger</code>) writes each event into an <code>InputChannel</code> — a socket pair shared with the app. On the app side, <code>ViewRootImpl</code>&#x27;s <code>WindowInputEventReceiver</code> reads the event, runs it through the view hierarchy, and calls <code>finishInputEvent</code>, which writes a <code>finished</code> signal back over the channel. <code>InputDispatcher</code> tracks outstanding events per connection and arms an ANR timer (<code>mAnrTracker</code>); if no finish signal arrives before the deadline, it calls back into AMS to raise the ANR. Because the deadline is measured from dispatch to acknowledgement, any main-thread block — even one unrelated to input — starves the <code>Looper</code> and prevents the <code>finishInputEvent</code> write.</p>
+<pre><code>InputDispatcher (system_server)        app process
+  publish event --InputChannel(socket)--&gt; WindowInputEventReceiver.onInputEvent
+  arm ANR timer (~5s)                      -&gt; main thread dispatch -&gt; view handling
+  receive &#x27;finished&#x27; &lt;--InputChannel------ finishInputEvent()
+  (timer expires first -&gt; notify AMS -&gt; ANR dialog)</code></pre>
 <hr>
 <h3 id="tombstones">Tombstones</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;A tombstone is the native crash dump Android writes when a process dies on a fatal signal like SIGSEGV or SIGABRT — it&#x27;s the native-world equivalent of a Java stack trace. It captures the faulting signal, register state, the native backtrace, and memory maps, written by <code>debuggerd</code>. The thing to know is that pure Kotlin/Java crashes don&#x27;t produce tombstones — those show up as a <code>FATAL EXCEPTION</code> in logcat. And the raw backtrace is just hex addresses, so I have to symbolicate it with <code>ndk-stack</code> against my unstripped <code>.so</code> files to get real function names.&quot;</blockquote>
 <p><strong>Definition</strong>: A tombstone is a crash dump file written by Android&#x27;s native crash handler (<code>debuggerd</code>) whenever a native process terminates with a fatal signal — SIGSEGV, SIGABRT, and so on.</p>
 <p><strong>Location</strong>: <code>/data/tombstones/tombstone_XX</code> (requires root) or via <code>adb bugreport</code>.</p>
 <p><strong>Tombstone contents</strong>:</p>
@@ -943,8 +1148,17 @@ lockA.lock()     // Thread B waits for Thread A to release lockA — DEADLOCK</c
 <p><strong>Symbolication</strong>: Raw tombstones contain hex addresses. Use <code>ndk-stack</code> or the Android Studio tombstone parser to resolve to function names:</p>
 <pre><code>adb logcat | ndk-stack -sym /path/to/app/obj/local/arm64-v8a</code></pre>
 <p><strong>Java crashes</strong> produce a <code>FATAL EXCEPTION</code> log in logcat, not tombstones. Tombstones are specifically native crashes.</p>
+<p><strong>Under the hood</strong></p>
+<p>When a process receives a fatal signal, the kernel runs the signal handler that Bionic (libc) installs at startup via <code>debuggerd_init</code>. That handler doesn&#x27;t unwind in-process; instead it forks a helper and hands off to the <code>debuggerd</code> daemon (<code>tombstoned</code>), which <code>ptrace</code>-attaches to the crashing process so it can read registers and walk the stack from outside, unaffected by the corrupted state. It unwinds using the binaries&#x27; <code>.eh_frame</code>/unwind tables, formats the report, and <code>tombstoned</code> writes it to <code>/data/tombstones/</code> with a rotating ring of up to ~10 files. Addresses are file offsets into mapped <code>.so</code> files; symbolication just maps <code>lib + offset</code> back to a symbol using the unstripped binary&#x27;s symbol table.</p>
+<pre><code>fatal signal (SIGSEGV) -&gt; Bionic signal handler -&gt; debuggerd daemon
+   ptrace_attach(crashing_pid)
+   read registers + unwind stack via .eh_frame
+   tombstoned -&gt; /data/tombstones/tombstone_NN
+backtrace frame: #00 pc 0001a2b4  libfoo.so   (offset, not symbol)
+   ndk-stack: libfoo.so + 0x1a2b4 -&gt; Foo::crash() at foo.cpp:88</code></pre>
 <hr>
 <h3 id="stack-traces">Stack Traces</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;A stack trace is the snapshot of the call chain that was live when a crash or ANR happened — newest frame on top, entry point at the bottom. When I read one I scan for the topmost frame that&#x27;s in <em>my</em> code, not framework code, because that&#x27;s usually where the real problem is. For ANRs the trick is different: the file dumps every thread, so I find the <code>main</code>/<code>tid=1</code> thread and look at what it&#x27;s blocked on, then follow the <code>held by thread N</code> pointer to whatever is actually holding the lock it&#x27;s waiting for.&quot;</blockquote>
 <p><strong>Definition</strong>: A stack trace is the ordered list of method calls that were active at the moment of a crash or ANR, with the most recent call at the top and the root invocation at the bottom — it&#x27;s the primary artifact you read to find the actual cause.</p>
 <p><strong>Java/Kotlin stack trace anatomy</strong>:</p>
 <pre><code>FATAL EXCEPTION: main
@@ -968,8 +1182,17 @@ Cmd line: com.example.app
   at com.example.MyActivity.onCreate(MyActivity.kt:15)</code></pre>
 <p>Key: look for the topmost frame in your code (not framework code). That&#x27;s where the blocking happens.</p>
 <p><strong>Multiple thread traces</strong>: ANR files include ALL threads. The main thread is labeled <code>&quot;main&quot;</code> or <code>tid=1</code>. Other threads show their pool names (e.g., <code>&quot;OkHttp Dispatcher&quot;</code>, <code>&quot;DefaultDispatcher-worker-1&quot;</code>).</p>
+<p><strong>Under the hood</strong></p>
+<p>A Java/Kotlin stack trace is captured when a <code>Throwable</code> is constructed: <code>fillInStackTrace()</code> walks ART&#x27;s interpreter/JIT call frames and records, per frame, the <code>ArtMethod</code> and the dex PC. The dex PC is mapped back to a source line via the <code>line_number</code> debug info embedded in the dex file; the <code>MyClass.kt:42</code> you read comes from that table, which is why an obfuscated build needs the ProGuard/R8 mapping file to deobfuscate. ANR traces are different — they&#x27;re produced by the ART runtime&#x27;s SIGQUIT handler: AMS sends <code>SIGQUIT</code> (signal 3) to the process, the signal catcher thread suspends all threads at a safepoint and dumps each one&#x27;s native + managed stack, lock ownership (<code>held by thread N</code>), and scheduler state into the trace file. That cross-thread lock-ownership annotation is exactly what lets you trace a <code>Blocked</code> main thread to its holder.</p>
+<pre><code>throw new X():  fillInStackTrace() -&gt; walk ArtMethod frames
+                dex PC --(debug line table)--&gt; &quot;MyClass.kt:42&quot;
+ANR:  AMS --SIGQUIT(3)--&gt; signal catcher thread
+      suspend all threads at safepoint
+      dump per-thread: state, managed+native frames, monitor owners
+      -&gt; /data/anr/anr_&lt;ts&gt;.txt</code></pre>
 <hr>
 <h3 id="crashlytics">Crashlytics</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;Crashlytics installs its own uncaught-exception handler on top of the JVM&#x27;s and signal handlers for native code, so when the app dies it serializes a report to disk and uploads it on the next launch — that asynchronous-on-next-launch model is the key detail, because reports aren&#x27;t sent at crash time when the process is already unwinding. It groups crashes by stack-trace signature and gives me crash-free rate, velocity alerts, and custom keys for segmentation. The gotcha interviewers love is that Crashlytics does NOT capture ANRs — those only show up in Android Vitals — and non-fatals are rate-limited, so you can&#x27;t rely on it for high-volume handled-exception telemetry.&quot;</blockquote>
 <p><strong>Definition</strong>: Firebase Crashlytics is a real-time crash reporting service that aggregates crash data from every app instance in the field so you can see, group, and prioritize production failures without needing to wait for user reports.</p>
 <p><strong>How it works</strong>:</p>
 <ul>
@@ -1011,8 +1234,24 @@ FirebaseCrashlytics.getInstance().setUserId(anonymizedId)</code></pre>
 <li>Non-fatal recording has rate limiting — not every non-fatal is uploaded.</li>
 <li>Large <code>.so</code> files require uploading symbol maps for native stack trace symbolication.</li>
 </ul>
+<p><strong>Under the hood</strong></p>
+<p>At init the Crashlytics SDK chains itself onto the existing handler: it captures the current <code>Thread.getDefaultUncaughtExceptionHandler()</code>, installs its own, and on a fatal it serializes the crash then delegates to the previous handler. JVM exceptions arrive through <code>UncaughtExceptionHandler</code>; native crashes (SIGSEGV, SIGABRT, etc.) are caught by a registered <code>sigaction</code> signal handler that runs on a pre-allocated alternate signal stack (<code>sigaltstack</code>) so it can still record even when the normal stack is corrupted. Because the process is in the middle of dying, the SDK only writes a minimal binary record to disk — it does not do a network upload at crash time — and a background job (via WorkManager / the <code>crashlytics</code> startup component) reads and uploads pending reports on the next clean launch.</p>
+<p>Grouping is server-side: the backend normalizes each frame, hashes the trace into a &quot;signature,&quot; and buckets identical signatures into one issue. Native traces ship as raw addresses; symbolication happens on the server using the uploaded symbol files (<code>.symbols</code>), mapping addresses in your stripped <code>.so</code> back to function/line via the debug info.</p>
+<pre><code>app start ─► FirebaseCrashlytics.getInstance()
+              └─ saves prevHandler = Thread.getDefaultUncaughtExceptionHandler()
+              └─ Thread.setDefaultUncaughtExceptionHandler(crashlyticsHandler)
+              └─ sigaction(SIGSEGV/SIGABRT/…) on alternate signal stack
+
+crash ─► handler/signal fires
+          └─ write minimal session record + keys + logs to disk
+          └─ delegate to prevHandler  (process still terminates)
+
+next launch ─► background worker uploads pending reports
+                └─ server normalizes frames → hash → group into issue
+                └─ symbolicate native frames via uploaded symbol map</code></pre>
 <hr>
 <h3 id="android-vitals">Android Vitals</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;Android Vitals is Google Play&#x27;s own aggregated stability and performance dashboard, and the reason it matters beyond just visibility is that it&#x27;s the only source for ANR rate — Crashlytics can&#x27;t see ANRs — and Play uses its &#x27;bad behavior&#x27; thresholds, ANR rate above 0.47% and crash rate above 1.09%, to demote your app&#x27;s store ranking. The data comes from the Android system itself, captured by the platform, not an SDK in my app. The big gotcha is the data is delayed roughly a day and only reflects users who opted into Google&#x27;s usage-and-diagnostics sharing, so it&#x27;s lagging and partial — for real-time signal I still need Crashlytics plus my own instrumentation.&quot;</blockquote>
 <p><strong>Definition</strong>: Android Vitals is Google Play&#x27;s dashboard of performance and stability metrics aggregated across all active users of your app, available in the Play Console. It&#x27;s the only place you can see ANR rates and bad-behavior flags that directly affect your Play Store ranking.</p>
 <p><strong>Key metrics</strong>:</p>
 <table border="1" cellpadding="6" cellspacing="0">
@@ -1041,7 +1280,16 @@ FirebaseCrashlytics.getInstance().setUserId(anonymizedId)</code></pre>
 <li>Use OS/device filters to identify if a crash is device-specific (hardware driver issue, OEM customization).</li>
 <li>Compare across releases using the version filter to identify when a regression was introduced.</li>
 </ol>
-<p><strong>Limitation</strong>: Android Vitals data is delayed by ~24 hours and is only from users who have opted into Google&#x27;s usage and diagnostics program. Real-time data requires Crashlytics + your own instrumentation.</p>
+<p><strong>Under the hood</strong></p>
+<p>Android Vitals data is collected by the platform, not by an in-app SDK. ANRs are detected by <code>system_server</code>: components like <code>ActivityManagerService</code>/<code>AnrHelper</code> arm watchdog timers around dispatched work — input events (the <code>InputDispatcher</code> has its own ~5s timeout when an app fails to consume an input event), <code>Service</code> lifecycle calls, <code>BroadcastReceiver.onReceive</code>, and <code>ContentProvider</code> operations. When the app fails to make progress within the deadline, the system signals the process (SIGQUIT / <code>kill -3</code>) and the app&#x27;s runtime dumps every thread&#x27;s stack into an ANR trace, capturing the main thread&#x27;s exact blocked state. The platform then reports these — along with crash signals it observes — through the Play Services / system metrics pipeline, which is why it only covers users opted into &quot;usage and diagnostics.&quot;</p>
+<p>On the server side the pipeline batches and aggregates per app version / OS / device over rolling windows, which is the source of the ~24h delay; rates are computed as affected-DAU over total-DAU, and the percentile/&quot;bad behavior&quot; thresholds are evaluated against user-perceptible buckets (e.g., ANRs in the foreground / while the user is interacting).</p>
+<pre><code>app stalls main thread (input/service/broadcast/provider deadline missed)
+   └─ system_server watchdog fires
+        └─ SIGQUIT (kill -3) → ART dumps ALL thread stacks → ANR trace
+        └─ platform reports ANR + crash signals via Play system pipeline
+              └─ server aggregates per version/OS/device (~24h delay)
+                    └─ ANR rate, crash rate vs bad-behavior thresholds
+                       (only opted-in users&#x27; data included)</code></pre>
 <hr>
 <h3 id="interview-angles-anr-and-crashes">Interview Angles: ANR and Crashes</h3>
 <p><strong>Q: How do you debug an ANR?</strong></p>

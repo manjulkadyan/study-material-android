@@ -46,6 +46,7 @@
 <hr>
 <h2 id="131-android-security-basics">13.1 Android Security Basics</h2>
 <h3 id="app-sandbox-and-uid-isolation">App Sandbox and UID Isolation</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;Every Android app gets its own Linux UID at install time, and the sandbox is really just standard Linux file permissions plus process isolation enforced by the kernel — my app&#x27;s process literally can&#x27;t open another app&#x27;s files because they&#x27;re owned by a different UID with <code>0700</code>-style permissions. The thing I&#x27;d flag is that this is kernel-enforced, not a JVM-level check, so it can&#x27;t be bypassed from userspace — but root gives a process UID 0, which bypasses all of it, and that&#x27;s exactly why we never store secrets assuming the sandbox alone protects them on a compromised device.&quot;</blockquote>
 <p><strong>Definition</strong></p>
 <p>Every Android app runs in its own Linux process with a unique User ID assigned at install time. The key insight is that the Linux kernel enforces the boundary — one app&#x27;s process literally cannot read or write another app&#x27;s memory or files unless you go through an explicit sharing mechanism.</p>
 <p><strong>How it works</strong></p>
@@ -56,6 +57,15 @@
 <li>Apps can share a UID by declaring <code>android:sharedUserId</code> in the manifest (deprecated since API 29; use explicit content sharing instead). Both APKs must be signed with the same key.</li>
 <li>The Dalvik/ART VM provides a second layer: each app has its own VM instance, so a crash in one app does not corrupt another app&#x27;s heap.</li>
 </ol>
+<p><strong>Under the hood</strong></p>
+<p>The sandbox is built directly on Linux DAC (discretionary access control) plus SELinux MAC (mandatory access control), not on anything VM-specific. At install, <code>installd</code> (running as root) creates the data directory and <code>chown</code>s it to the app&#x27;s assigned UID/GID; the kernel&#x27;s inode permission bits then deny any other UID at the <code>open(2)</code>/<code>stat(2)</code> syscall level. The &quot;u0_a123&quot; string decodes to a real numeric UID: <code>userId * 100000 + (appId - 10000)</code> for app UIDs in the 10000–19999 range, so multi-user (<code>u0</code>, <code>u10</code>) and per-app IDs are packed into one integer. On top of DAC, every process and file is labeled with an SELinux domain (e.g., <code>untrusted_app</code>), and the kernel rejects cross-domain access even if DAC bits were somehow permissive. Each app also runs its own ART runtime in a process forked from the Zygote, which shares preloaded framework classes copy-on-write but has a completely separate heap and address space.</p>
+<pre><code>UID packing:   appUid = userId * 100000 + (appId - AID_APP_START)
+               u0_a123  -&gt; userId 0, appId 10123  -&gt; uid 10123
+               u10_a123 -&gt; userId 10, appId 10123 -&gt; uid 1010123
+
+Enforcement layers:  open(&quot;/data/data/other.app/...&quot;)
+   1. DAC inode check (owner UID mismatch, mode 0700) -&gt; EACCES
+   2. SELinux: untrusted_app domain not allowed app_data_file of peer -&gt; EACCES</code></pre>
 <p><strong>Android implications</strong></p>
 <ul>
 <li><strong>Storage</strong>: Internal storage is private by default. External storage (SD card, <code>getExternalFilesDir</code>) is world-readable pre-API 19 and scoped-storage-restricted from API 29+.</li>
@@ -86,6 +96,7 @@ adb shell ps | grep com.yourapp
 adb shell ls -la /data/data/com.yourapp/</code></pre>
 <hr>
 <h3 id="permissions">Permissions</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;Permissions are a declarative gate — I declare every sensitive capability in the manifest, and either the OS auto-grants it for <code>normal</code> permissions or the user has to approve <code>dangerous</code> ones at runtime. The protection level is the part interviewers probe: <code>signature</code> permissions are great for locking down IPC between my own apps because they&#x27;re only granted when the caller is signed with the same key, so there&#x27;s no user prompt and no spoofing. The gotcha is that a manifest declaration alone is necessary but not sufficient for dangerous permissions on API 23+ — without the runtime grant the call just throws <code>SecurityException</code>.&quot;</blockquote>
 <p><strong>Definition</strong></p>
 <p>Android permissions are a gating mechanism — every sensitive capability an app needs must be declared upfront in <code>AndroidManifest.xml</code>, and the OS or the user decides whether to grant it.</p>
 <p><strong>How it works</strong></p>
@@ -116,6 +127,14 @@ adb shell ls -la /data/data/com.yourapp/</code></pre>
 &lt;activity
     android:name=&quot;.SensitiveActivity&quot;
     android:permission=&quot;com.yourapp.permission.ACCESS_DATA&quot; /&gt;</code></pre>
+<p><strong>Under the hood</strong></p>
+<p>Permission grants are tracked by <code>PackageManagerService</code> and persisted on disk — historically in <code>/data/system/packages.xml</code> and, on modern releases, in runtime-permission state files (<code>runtime-permissions.xml</code>) per user. A <code>normal</code> permission is recorded as granted at install; a <code>dangerous</code> one is stored as a flag the user flips at runtime. When code reaches a guarded API, the framework ultimately calls down to <code>ActivityManagerService.checkPermission</code>, which compares the <em>caller&#x27;s</em> UID (obtained from the trusted <code>Binder.getCallingUid()</code>, set by the kernel binder driver — not spoofable) against the set of granted permissions for that UID. <code>signature</code> permissions are special: at install, <code>PackageManagerService</code> compares the APK signing certificate of the requesting app against the certificate of the app that <em>defined</em> the permission, and grants it only on an exact match — there&#x27;s no user involvement, which is why it&#x27;s safe for inter-app IPC. <code>dangerous</code> permissions are also mapped to AppOps entries, letting the user toggle them in Settings independently of the original grant.</p>
+<pre><code>Guarded call  -&gt;  Binder transaction
+   kernel binder driver stamps real callerUid (cannot be forged)
+   AMS.checkPermission(perm, callerUid)
+       lookup PackageManagerService grant state for callerUid
+       signature-level: match signing cert of caller vs definer
+   granted? proceed : throw SecurityException</code></pre>
 <p><strong>Android implications</strong></p>
 <ul>
 <li>From API 23+, declaring a <code>dangerous</code> permission in the manifest is necessary but not sufficient — the user must grant it at runtime.</li>
@@ -130,6 +149,7 @@ adb shell ls -la /data/data/com.yourapp/</code></pre>
 </ul>
 <hr>
 <h3 id="runtime-permissions">Runtime Permissions</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;Runtime permissions, since API 23, move the dangerous-permission ask out of install time and into the moment the feature actually runs, so I check <code>checkSelfPermission</code>, optionally show a rationale, then request via the Activity Result API. The nuance interviewers want is the three-state flow: granted, denied-with-rationale, and permanently denied — on Android 11+ a second denial is treated as &#x27;don&#x27;t ask again,&#x27; so <code>shouldShowRequestPermissionRationale</code> returns false and the system silently drops further requests, meaning my only path left is deep-linking the user into Settings. I also always re-check on resume because the user can revoke while I&#x27;m backgrounded.&quot;</blockquote>
 <p><strong>Definition</strong></p>
 <p>Runtime permissions, introduced in API 23, require apps to explicitly ask the user for dangerous permissions while the app is running — at install time the user sees nothing; the ask happens in context, at the moment the feature actually needs it.</p>
 <p><strong>How it works</strong></p>
@@ -191,6 +211,14 @@ fun checkAndRequestCameraPermission() {
 <li>Auto-reset: permissions are auto-revoked for apps unused for months.</li>
 <li>Background location requires a separate two-step flow: foreground first, then background.</li>
 </ul>
+<p><strong>Under the hood</strong></p>
+<p>The Activity Result API isn&#x27;t magic — under it, <code>registerForActivityResult</code> allocates a unique string key into the <code>ActivityResultRegistry</code>, and <code>launch()</code> ultimately starts the system permission-controller Activity (the <code>PermissionController</code> APK, an updatable Mainline module) via a <code>startActivityForResult</code>-style flow. Because registration must survive process death and configuration changes, the registry persists pending keys in the saved-instance-state bundle and re-dispatches the callback after recreation — which is why you must register at construction time (unconditionally), not inside a click handler. The actual grant is written by <code>PermissionController</code> into <code>PackageManagerService</code> runtime-permission state. <code>shouldShowRequestPermissionRationale</code> reads a per-permission flag tracked by the system: it returns <code>false</code> both before the user has ever seen the dialog <em>and</em> after a permanent denial, so it cannot by itself distinguish &quot;never asked&quot; from &quot;don&#x27;t ask again&quot; — the canonical pattern checks it inside the deny callback, where a <code>false</code> reliably means permanently denied. One-time grants are modeled as a transient flag the system clears when the app&#x27;s process is no longer foreground.</p>
+<pre><code>registerForActivityResult(...)   // at field-init time, key -&gt; ActivityResultRegistry
+   launch(perm)
+      ActivityResultRegistry -&gt; startIntentSenderForResult to PermissionController
+      user taps -&gt; result Intent -&gt; registry matches key -&gt; your callback(isGranted)
+config change / process death:
+      registry keys saved in instanceState, re-bound on recreate, callback re-fires</code></pre>
 <p><strong>Failure modes</strong></p>
 <ul>
 <li>Calling <code>requestPermissions</code> on a non-resumed Activity — can cause silent drops.</li>
@@ -199,6 +227,7 @@ fun checkAndRequestCameraPermission() {
 </ul>
 <hr>
 <h3 id="least-privilege">Least Privilege</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;Least privilege means I only request the permission a feature needs at the moment it needs it, and I reach for scoped alternatives first — a photo picker or <code>GetContent</code> instead of <code>READ_EXTERNAL_STORAGE</code>, <code>ACTION_IMAGE_CAPTURE</code> instead of the <code>CAMERA</code> permission. Every permission I hold is attack surface I don&#x27;t benefit from, and the subtle risk is the supply chain: a compromised third-party library inherits my app&#x27;s UID and every permission I&#x27;ve been granted, so an unused <code>ACCESS_FINE_LOCATION</code> becomes a free capability for an attacker. So I audit the merged manifest each release and delete anything without a live code path.&quot;</blockquote>
 <p><strong>Definition</strong></p>
 <p>Least privilege means requesting only the permissions your feature genuinely needs right now — never speculatively acquiring them &quot;in case we need them later.&quot; The trade-off is that extra permissions are pure attack surface with no benefit.</p>
 <p><strong>How it works in practice</strong></p>
@@ -212,6 +241,13 @@ fun checkAndRequestCameraPermission() {
 </ul>
 <li>Request permissions only when the user triggers the action that needs them, not upfront.</li>
 </ol>
+<p><strong>Under the hood</strong></p>
+<p>The delegation pattern works because of how the binder and <code>grantUriPermission</code> machinery passes data across the sandbox without granting your app a standing permission. When you fire <code>ACTION_GET_CONTENT</code> or <code>ACTION_IMAGE_CAPTURE</code>, the <em>picker/camera app</em> — running under its own UID with its own permissions — does the privileged read, then returns a <code>content://</code> URI. The result Intent is flagged <code>FLAG_GRANT_READ_URI_PERMISSION</code>, and <code>ActivityManagerService</code> records a <em>temporary, per-URI grant</em> scoped to your UID that survives only until your task is finished (or the process dies). So you read one file through a <code>ContentResolver</code> without ever holding <code>READ_EXTERNAL_STORAGE</code>. The supply-chain point is mechanical: a library you bundle is compiled into your APK and runs in your process under your single shared UID, so the kernel and <code>PackageManagerService</code> see all of its API calls as <em>your app</em> exercising <em>your</em> granted permissions — there is no per-library permission boundary at runtime.</p>
+<pre><code>ACTION_GET_CONTENT:
+   your app (no storage perm)  --startActivityForResult--&gt;  picker (has access)
+   picker reads file, returns Intent{ data=content://..., FLAG_GRANT_READ_URI_PERMISSION }
+   AMS adds transient URI grant for yourUid (revoked when task ends)
+   you ContentResolver.openInputStream(uri)  // legal, no manifest permission</code></pre>
 <p><strong>Android implications</strong></p>
 <ul>
 <li>Google Play requires a Privacy Policy and justification for sensitive permissions (location, contacts, SMS, camera).</li>
@@ -222,6 +258,7 @@ fun checkAndRequestCameraPermission() {
 <p>Using intents to delegate to system apps (camera, contacts, file picker) means you lose control over the UX, but gain zero permission overhead and a narrower attack surface.</p>
 <hr>
 <h3 id="exported-components">Exported Components</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;A component is exported when apps with a different UID can reach it, and I control that with <code>android:exported</code>. The detail people miss is the default: pre-API 31, a component with an intent-filter defaulted to exported <code>true</code>, which silently opened things up; since Android 12 you must declare <code>exported</code> explicitly or the build fails. My defense is layered — don&#x27;t export unless I have to, guard with a <code>signature</code> permission when only my own apps should call it, and always treat the incoming Intent as untrusted input and validate it, because exported plus no permission plus blind trust of extras is the classic privilege-escalation or SQL-injection-into-a-provider bug.&quot;</blockquote>
 <p><strong>Definition</strong></p>
 <p>An Android component — <code>Activity</code>, <code>Service</code>, <code>BroadcastReceiver</code>, or <code>ContentProvider</code> — is exported when it can be reached by components in other apps. You control this with <code>android:exported</code> in the manifest, and getting it wrong is one of the most common Android security mistakes.</p>
 <p><strong>How it works</strong></p>
@@ -279,6 +316,14 @@ override fun onCreate(savedInstanceState: Bundle?) {
     android:authorities=&quot;com.yourapp.share&quot;
     android:exported=&quot;false&quot;
     android:grantUriPermissions=&quot;true&quot; /&gt;</code></pre>
+<p><strong>Under the hood</strong></p>
+<p>&quot;Exported&quot; is resolved by <code>PackageManagerService</code> when it parses the merged manifest at install/scan time, and the result is stored on each component&#x27;s <code>ComponentInfo.exported</code> field. Every cross-app launch is a binder transaction into <code>ActivityManagerService</code> (or, for providers, into the <code>ContentResolver</code>/<code>PackageManagerService</code> provider lookup): the framework reads <code>exported</code>, and if <code>false</code>, compares <code>Binder.getCallingUid()</code> against the component owner&#x27;s UID and rejects with <code>SecurityException</code> on mismatch. If <code>exported=&quot;true&quot;</code> but an <code>android:permission</code> is set, AMS additionally calls <code>checkPermission</code> against the caller&#x27;s granted set. The reason the API 31 change exists is that the <em>implicit</em> default was computed from the presence of an <code>&lt;intent-filter&gt;</code> — easy to get wrong — so the manifest merger now hard-errors at build time unless the attribute is explicit. For <code>ContentProvider</code>, the same machinery supports finer grants: <code>grantUriPermissions</code> lets the provider hand out transient per-URI access (via <code>FLAG_GRANT_*_URI_PERMISSION</code>) to callers who otherwise have no provider permission at all.</p>
+<pre><code>other app --binder--&gt; AMS.startActivity(intent, callerUid)
+   resolve target ComponentInfo from PackageManagerService
+   if !exported &amp;&amp; callerUid != ownerUid           -&gt; SecurityException
+   if exported &amp;&amp; component.permission != null:
+        checkPermission(perm, callerUid)            -&gt; deny -&gt; SecurityException
+   else dispatch</code></pre>
 <p><strong>Failure modes</strong></p>
 <ul>
 <li>Exported Activity that accepts a URL extra and opens it in a WebView → open redirect / JavaScript injection.</li>
@@ -296,6 +341,7 @@ dz&gt; run app.service.info -a com.yourapp
 dz&gt; run app.provider.info -a com.yourapp</code></pre>
 <hr>
 <h3 id="intent-spoofing">Intent Spoofing</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;Intent spoofing exploits the fact that Intents carry no built-in caller authentication — any app can craft an Intent to my exported component with arbitrary action, extras, and URI data, and the receiver can&#x27;t trust that the sender is who it claims to be. The defense is to prefer explicit Intents and <code>exported=false</code> for everything internal, gate genuinely-shared components with a signature permission, and validate every extra as hostile input. The one trustworthy signal interviewers like is <code>Binder.getCallingUid()</code> — that&#x27;s stamped by the kernel binder driver and can&#x27;t be forged from userspace — but note that <code>getCallingPackage</code> is only populated for <code>startActivityForResult</code> flows, not plain <code>startActivity</code>, so you can&#x27;t always rely on knowing the caller.&quot;</blockquote>
 <p><strong>Definition</strong></p>
 <p>Intent spoofing is when a malicious app sends a crafted <code>Intent</code> to an exported component of your app, either impersonating a legitimate caller or injecting malicious data to trigger behaviour you didn&#x27;t intend. The root cause is that Android Intents carry no built-in caller authentication.</p>
 <p><strong>How it works</strong></p>
@@ -324,6 +370,13 @@ startService(intent)
 // 5. Validate all data from Intents as untrusted input
 val amount = intent.getDoubleExtra(&quot;amount&quot;, 0.0)
 require(amount &gt; 0 &amp;&amp; amount &lt;= MAX_TRANSFER_LIMIT) { &quot;Invalid amount&quot; }</code></pre>
+<p><strong>Under the hood</strong></p>
+<p>An <code>Intent</code> is just a <code>Parcelable</code> bag of data — action string, categories, data URI, and an extras <code>Bundle</code> — that gets marshalled across the binder boundary; nothing in that payload is a signed or kernel-attested identity, which is precisely why the action and extras are spoofable. The only authentic sender signal comes from the binder transaction itself: the kernel binder driver stamps every transaction with the caller&#x27;s real PID and UID, retrievable via <code>Binder.getCallingUid()</code>/<code>getCallingPid()</code>, and that value cannot be forged from userspace. <code>getCallingPackage()</code>/<code>getCallingActivity()</code> are derived identity that the framework only fills in for the <code>startActivityForResult</code> round-trip (where the system tracks the originating record); a plain <code>startActivity</code> deliberately drops it, so it returns <code>null</code> and can&#x27;t be relied on. This is also why implicit Intents are riskier: the system resolves them by matching intent-filters across all installed apps, so a malicious app can register a matching filter and intercept or impersonate — whereas an explicit Intent (<code>Intent(ctx, Foo::class.java)</code>) names the exact component and bypasses filter resolution entirely.</p>
+<pre><code>// Authentic vs. forgeable signals on the receiving side
+val realCaller = Binder.getCallingUid()   // kernel-stamped, NOT spoofable
+val claimedPkg = callingPackage           // null on plain startActivity; only set for *ForResult
+val action     = intent.action            // attacker-controlled, spoofable
+val extras     = intent.extras            // attacker-controlled, validate as hostile</code></pre>
 <p><strong>Key rules</strong></p>
 <ul>
 <li>Never trust <code>Intent.getStringExtra()</code> or any extras from exported components without validation.</li>
@@ -332,6 +385,7 @@ require(amount &gt; 0 &amp;&amp; amount &lt;= MAX_TRANSFER_LIMIT) { &quot;Invali
 </ul>
 <hr>
 <h3 id="pendingintent-mutability">PendingIntent Mutability</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;A PendingIntent is a token that lets another app or the system fire off one of my components using <em>my</em> app&#x27;s identity and permissions. Mutability decides whether the holder can fill in or rewrite the wrapped Intent. The classic vulnerability is handing out a mutable PendingIntent wrapping an empty Intent — the recipient sets the component and now my app launches the attacker&#x27;s target with my privileges. So the default should always be FLAG_IMMUTABLE, and since API 31 the framework forces me to declare one explicitly or it throws.&quot;</blockquote>
 <p><strong>Definition</strong></p>
 <p>A <code>PendingIntent</code> is a token you hand to another app or the system so it can launch one of your components using your app&#x27;s identity. Mutability controls whether the recipient is allowed to modify the Intent that&#x27;s wrapped inside — and getting this wrong is a privilege-escalation vulnerability.</p>
 <p><strong>How it works</strong></p>
@@ -372,6 +426,15 @@ val replyPendingIntent = PendingIntent.getService(
 )</code></pre>
 <p><strong>Android 12+ enforcement</strong></p>
 <p>From API 31, creating a <code>PendingIntent</code> without explicitly setting either <code>FLAG_IMMUTABLE</code> or <code>FLAG_MUTABLE</code> throws <code>IllegalArgumentException</code> — you have to make a deliberate choice. The right default is <code>FLAG_IMMUTABLE</code>; reach for <code>FLAG_MUTABLE</code> only when you have a specific framework reason and can document it.</p>
+<p><strong>Under the hood</strong></p>
+<p>A <code>PendingIntent</code> is not a wrapper object you own — it&#x27;s a reference to a record (<code>PendingIntentRecord</code>) held inside the <code>ActivityManagerService</code> (AMS) in the system_server process. When you call <code>getActivity()/getService()/getBroadcast()</code>, AMS interns a record keyed by the tuple of (requesting UID, target package, request code, intent &quot;filterEquals&quot; identity, flags). That&#x27;s why two calls with the same key return the <em>same</em> token and why <code>FLAG_UPDATE_CURRENT</code> mutates the existing record rather than creating a new one. The flags (<code>FLAG_IMMUTABLE</code>, <code>FLAG_MUTABLE</code>) are stored on that server-side record, so mutability is enforced by the system process, not your app. When the holder later calls <code>send()</code> with a &quot;fill-in&quot; Intent, AMS calls <code>Intent.fillIn()</code> on the original; <code>fillIn()</code> only copies fields the base Intent left unset <em>and</em> only those the fill-in mask permits — but an immutable record rejects the fill-in entirely. Because the record runs the eventual <code>startActivity</code>/<code>sendBroadcast</code> under the <em>creator&#x27;s</em> UID and identity, an attacker who can supply the fill-in is effectively executing as you. The API 31 hard requirement to pass one of the flags is a <code>checkArgument</code> in <code>PendingIntent.buildServicePendingIntent</code>/<code>getIntentSender</code> that throws <code>IllegalArgumentException</code> when neither bit is present.</p>
+<pre><code>Your app                  system_server (AMS)              Recipient app
+  getActivity(IMMUTABLE) → PendingIntentRecord{uid, intent, flags}
+                                  │  token (IBinder ref)  →  holds token
+                                  │
+                          send(fillInIntent) ←──────────────┘
+                          intent.fillIn(fillInIntent, mask)
+                          (no-op if IMMUTABLE) → startActivity as YOUR uid</code></pre>
 <p><strong>Failure modes</strong></p>
 <ul>
 <li>Mutable PendingIntent given to a notification manager → if a malicious app intercepts the notification before the system, it can modify the wrapped Intent to launch its own component with your app&#x27;s permissions.</li>
@@ -379,6 +442,7 @@ val replyPendingIntent = PendingIntent.getService(
 </ul>
 <hr>
 <h3 id="deep-link-validation">Deep Link Validation</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;I treat every deep link as untrusted external input — the URI and its params can come from anywhere. Custom schemes are the weakest because any app can register the same scheme and intercept; HTTP intent filters can be shared by multiple apps; verified App Links with autoVerify and an assetlinks.json file are the only ones where I&#x27;m guaranteed to be the exclusive handler. Even with App Links I still validate scheme, host, and path against an allowlist and range-check params in code. The gotcha interviewers love is OAuth: you must validate the state parameter against what you stored, or you&#x27;ve got a CSRF hole.&quot;</blockquote>
 <p><strong>Definition</strong></p>
 <p>Deep links are URIs — HTTP/HTTPS or a custom scheme — that launch your app directly to a specific screen. Without proper validation they become a vector for open redirects, parameter injection, and data theft, so treating every deep link as untrusted external input is non-negotiable.</p>
 <p><strong>Types of deep links</strong></p>
@@ -457,6 +521,17 @@ private fun handleOAuthCallback(uri: Uri) {
     }
     exchangeCodeForToken(code)
 }</code></pre>
+<p><strong>Under the hood</strong></p>
+<p>App Link verification is driven by the <code>DomainVerificationManager</code> (pre-S it was the <code>IntentFilterVerifier</code>). At install — and asynchronously after, since Android 12 made verification more robust and re-runnable via <code>pm set-app-links</code> / <code>pm verify-app-links</code> — the system collects every host from intent-filters marked <code>autoVerify=&quot;true&quot;</code>, then makes an HTTPS GET to <code>https://&lt;host&gt;/.well-known/assetlinks.json</code>. It matches the JSON&#x27;s <code>sha256_cert_fingerprints</code> against the signing certificate of your installed APK. Only an exact cert-fingerprint match flips the domain to the &quot;verified&quot; state in <code>DomainVerificationManager</code>&#x27;s per-package, per-domain state machine; until then your app is just one of several candidate handlers and the URL goes to the browser or a disambiguation dialog. When an Intent arrives, <code>PackageManagerService</code>/<code>IntentResolver</code> filters candidate activities by matching the Intent&#x27;s <code>data</code> (scheme/host/path) against each <code>IntentFilter</code>, and verified App Link handlers are given priority so no chooser appears. Crucially, none of this validates <em>query parameters</em> or path <em>values</em> — the framework only matches the structural filter (<code>scheme</code>, <code>host</code>, <code>pathPrefix</code>), so <code>uri.getQueryParameter(&quot;id&quot;)</code> is fully attacker-controlled and must be parsed and bounds-checked in your code. The OAuth <code>state</code> check is pure application logic: there is no framework CSRF protection on the redirect Intent.</p>
+<pre><code>Install / pm verify-app-links
+  ├─ collect autoVerify hosts from &lt;intent-filter&gt;
+  ├─ GET https://host/.well-known/assetlinks.json
+  ├─ compare assetlinks sha256 fingerprint == APK signing cert
+  └─ match? → DomainVerificationManager marks host VERIFIED (exclusive handler)
+             no match → host stays unverified → browser/chooser
+
+VIEW Intent → IntentResolver matches scheme/host/path ONLY
+            → query params + path values are NEVER validated by the OS</code></pre>
 <p><strong>Failure modes</strong></p>
 <ul>
 <li>Loading <code>uri.toString()</code> directly in a WebView → open redirect to phishing site.</li>
@@ -465,6 +540,7 @@ private fun handleOAuthCallback(uri: Uri) {
 </ul>
 <hr>
 <h3 id="fileprovider">FileProvider</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;FileProvider is a ContentProvider that hands other apps a <code>content://</code> URI plus a temporary, per-grant permission instead of a raw filesystem path. The reason it exists is that since Android 7 passing a <code>file://</code> URI across apps throws FileUriExposedException — it would leak your sandbox layout and require the other app to have filesystem access. With FileProvider the receiver just opens an input stream through the ContentResolver and never sees where the file lives. The gotcha is you must add FLAG_GRANT_READ_URI_PERMISSION on the Intent, keep the provider non-exported, and scope your paths tightly — a wide <code>external-path</code> exposes the whole SD card.&quot;</blockquote>
 <p><strong>Definition</strong></p>
 <p><code>FileProvider</code> is a <code>ContentProvider</code> subclass that lets you share files from your app&#x27;s private directories with other apps through temporary URI grants, without ever exposing the actual filesystem path.</p>
 <p><strong>Why avoid direct file paths</strong></p>
@@ -543,6 +619,14 @@ fun launchCamera() {
     photoUri = uri
     takePictureLauncher.launch(uri)
 }</code></pre>
+<p><strong>Under the hood</strong></p>
+<p><code>FileProvider.getUriForFile()</code> doesn&#x27;t copy or open the file — it walks the <code>&lt;paths&gt;</code> XML (parsed once and cached into a <code>PathStrategy</code> map of name→root File), finds the configured root that is a prefix of your file&#x27;s canonical path, then builds a <code>content://&lt;authority&gt;/&lt;path-name&gt;/&lt;relative-path&gt;</code> URI by stripping the root and re-encoding the remainder. If the file isn&#x27;t under any declared root it throws <code>IllegalArgumentException</code> — that&#x27;s the tight-scoping enforcement. The temporary permission is the interesting part: <code>FLAG_GRANT_READ_URI_PERMISSION</code> causes AMS to create a <code>UriPermission</code> grant entry scoped to the <em>specific</em> recipient package (the one the chooser resolves to) and tied to a lifetime — by default it&#x27;s revoked when the granting component&#x27;s task finishes, which is why retaining the URI past the activity fails. When the recipient calls <code>ContentResolver.openInputStream(uri)</code>, Binder routes to your <code>FileProvider.openFile()</code>, which re-resolves the URI back to the File and returns a <code>ParcelFileDescriptor</code> — i.e., it hands over an open <em>fd</em> over Binder, not a path. The kernel&#x27;s fd duplication is what lets the other app read bytes without ever holding filesystem permission to your sandbox. <code>FileUriExposedException</code> itself is thrown by <code>StrictMode.onFileUriExposed()</code>, invoked inside <code>Uri.checkFileUriExposed()</code> during Intent parceling on API 24+.</p>
+<pre><code>getUriForFile(file)
+  └─ match file path against &lt;paths&gt; roots → content://authority/name/relpath
+addFlags(FLAG_GRANT_READ_URI_PERMISSION) + startActivity(chooser)
+  └─ AMS records UriPermission{ grantee=resolvedPkg, uri, READ, ttl=task }
+recipient.openInputStream(uri)
+  └─ Binder → FileProvider.openFile() → ParcelFileDescriptor (open fd, not path)</code></pre>
 <p><strong>Failure modes</strong></p>
 <ul>
 <li>Using <code>&lt;external-path path=&quot;.&quot;&gt;</code> in file_provider_paths.xml — exposes the entire external storage root. Scope paths as tightly as possible.</li>
@@ -552,6 +636,7 @@ fun launchCamera() {
 </ul>
 <hr>
 <h3 id="webview-security">WebView Security</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;A WebView is a full browser engine inside my process, so misconfiguring it is one of the easiest ways to ship remote code execution. The two things I never combine are JavaScript enabled on untrusted content and a JavaScript interface — <code>addJavascriptInterface</code> exposes my Kotlin methods to whatever page loads, so untrusted JS could call them and exfiltrate tokens. I disable file access, force MIXED_CONTENT_NEVER_ALLOW, allowlist navigations in shouldOverrideUrlLoading, and — the big one interviewers check — never call <code>handler.proceed()</code> in onReceivedSslError, because that silently accepts a bad cert and opens you to MITM.&quot;</blockquote>
 <p><strong>Definition</strong></p>
 <p><code>WebView</code> embeds a full browser engine inside your app. The reason misconfigured WebViews show up on so many security audit reports is that they can expose your app&#x27;s Java and Kotlin interfaces directly to web content — and if that content is untrusted, that&#x27;s essentially remote code execution.</p>
 <p><strong>Key security settings</strong></p>
@@ -635,6 +720,16 @@ webView.settings.safeBrowsingEnabled = true // API 26+</code></pre>
 if (BuildConfig.DEBUG) {
     WebView.setWebContentsDebuggingEnabled(true)
 }</code></pre>
+<p><strong>Under the hood</strong></p>
+<p>The modern WebView is backed by the Chromium engine, packaged as the updatable &quot;Android System WebView&quot; / Chrome APK and loaded into your process via the <code>WebViewFactory</code> provider; your Java/Kotlin <code>WebView</code> object is a thin shim over Chromium&#x27;s <code>content</code> layer running in a renderer. <code>addJavascriptInterface</code> registers your object with the V8 JavaScript engine: at injection time Chromium reflects over the object, and from API 17+ only methods carrying <code>@JavascriptInterface</code> are enumerated and exposed as a global JS property. When JS calls <code>AndroidBridge.getUserToken()</code>, the call is marshaled from the renderer across the Chromium IPC boundary back to the browser thread and dispatched to your method via JNI reflection — which is exactly why an untrusted page that can run JS gets a direct line into your app&#x27;s process and its data. The pre-17 RCE history comes from reflection: older WebViews exposed <em>all</em> public methods, so attacker JS could reach <code>getClass().forName(...)</code> and invoke <code>Runtime.exec</code>. For TLS, when Chromium&#x27;s network stack hits a certificate that fails chain/host validation it suspends the load and calls back into <code>WebViewClient.onReceivedSslError</code> with an <code>SslErrorHandler</code> that is essentially a resume/abort token; <code>handler.proceed()</code> tells the Chromium net stack to ignore the validation failure and continue the handshake, and <code>handler.cancel()</code> aborts it. <code>shouldOverrideUrlLoading</code> is consulted by the navigation throttle before a main-frame navigation commits — returning <code>true</code> cancels the in-engine navigation so you can route the URL yourself.</p>
+<pre><code>JS:  AndroidBridge.getUserToken()
+      │  V8 (renderer process/thread)
+      ▼  Chromium IPC  →  browser thread
+   JNI reflective dispatch → MyBridge.getUserToken()   // your process, your data
+   (pre-API-17: ALL public methods reflected → Runtime.exec reachable = RCE)
+
+TLS fail → net stack pauses → onReceivedSslError(handler)
+   handler.proceed() = ignore validation (MITM)  |  handler.cancel() = abort</code></pre>
 <p><strong>Failure modes</strong></p>
 <ul>
 <li><code>onReceivedSslError</code> calling <code>handler.proceed()</code> → app silently accepts invalid/expired certificates → MITM possible.</li>
@@ -644,6 +739,7 @@ if (BuildConfig.DEBUG) {
 <hr>
 <h2 id="132-data-security">13.2 Data Security</h2>
 <h3 id="android-keystore">Android Keystore</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;The Keystore&#x27;s whole point is that the private key material never leaves secure hardware — I get a handle to the key but the actual bytes live in the TEE or a StrongBox secure element, and every crypto op is done in there. So even on a rooted device an attacker can&#x27;t extract the key, at most they can ask the daemon to use it while the app is running. The big gotcha is key invalidation: if I set <code>setUserAuthenticationRequired(true)</code>, enrolling a new fingerprint permanently invalidates the key by default, so my code has to detect KeyPermanentlyInvalidatedException and regenerate. And keys can&#x27;t be backed up — that&#x27;s by design, not a limitation.&quot;</blockquote>
 <p><strong>Definition</strong></p>
 <p>The Android Keystore System is a hardware-backed — or on older devices, OS-isolated — key storage facility. The defining property is that keys stored in the Keystore can never be extracted from the device in plaintext; all cryptographic operations happen inside the secure hardware, whether that&#x27;s a StrongBox secure element, a TEE, or the isolated Keystore daemon.</p>
 <p><strong>What it is</strong></p>
@@ -729,6 +825,15 @@ val spec = KeyGenParameterSpec.Builder(alias, ...)
 <li>Factory reset: Keystore is wiped.</li>
 <li>Root: Keystore may be wiped as a security measure on stock ROMs.</li>
 </ul>
+<p><strong>Under the hood</strong></p>
+<p><code>KeyStore.getInstance(&quot;AndroidKeyStore&quot;)</code> does not return your key bytes — it returns an opaque handle. The <code>SecretKey</code>/<code>PrivateKey</code> you get back is an <code>AndroidKeyStoreKey</code> that holds only an <em>alias</em> and a Binder reference to the <code>keystore2</code> system daemon; there is no <code>getEncoded()</code> you can call. The actual key material lives behind the Keymaster/KeyMint HAL, implemented inside the TEE (e.g., ARM TrustZone) or, with <code>setIsStrongBoxBacked(true)</code>, in a separate tamper-resistant secure element. When you call <code>Cipher.init()</code>/<code>doFinal()</code> on a Keystore key, the <code>AndroidKeyStoreProvider</code> JCA implementation doesn&#x27;t run AES in your process — it begins a Keymaster <em>operation</em> over Binder, streams the plaintext blocks into the secure world, and the TEE/StrongBox performs the AES-GCM and returns ciphertext. That round-trip is why Keystore crypto is slower than in-process Bouncy Castle. Key usage policies (<code>PURPOSE_*</code>, <code>setUserAuthenticationRequired</code>) are encoded as Keymaster authorization tags enforced <em>inside</em> secure hardware, not by your app — so they can&#x27;t be bypassed by patching your APK. For auth-bound keys, a successful biometric/PIN unlock produces a signed Hardware Auth Token (HAT) from Gatekeeper/Fingerprint HAL that the Keymaster checks before allowing the op. <code>setInvalidatedByBiometricEnrollment(true)</code> ties the key to the current biometric enrollment set&#x27;s secure ID; enrolling a new fingerprint changes that ID, so the next use throws <code>KeyPermanentlyInvalidatedException</code>.</p>
+<pre><code>App process                         Secure world (TEE / StrongBox)
+  Cipher.init(Keystore key)
+   └─ alias + Binder handle ──────▶ keystore2 daemon
+                                     └─ Keymaster/KeyMint op begin
+  doFinal(plaintext) ────────────▶  AES-GCM runs HERE on raw key
+                  ciphertext ◀─────  (key bytes never cross back)
+  policy tags (PURPOSE, authReq) enforced inside, checked vs Hardware Auth Token</code></pre>
 <p><strong>Android implications</strong></p>
 <ul>
 <li>Keys cannot be exported (by design). You cannot back up a Keystore key to a server.</li>
@@ -747,6 +852,7 @@ val spec = KeyGenParameterSpec.Builder(alias, ...)
 </tbody></table>
 <hr>
 <h3 id="encryptedsharedpreferences">EncryptedSharedPreferences</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;EncryptedSharedPreferences is a Jetpack Security wrapper that&#x27;s a drop-in replacement for SharedPreferences but encrypts both keys and values — values with AES-256-GCM, keys deterministically with AES-256-SIV so lookups still work — and the master key that wraps the data key lives in the Keystore. It protects data at rest: ADB backups, offline storage access on a lost-but-locked device. What it does <em>not</em> protect against is a rooted live device or a malicious SDK in my own process, because they call the same decrypt API I do. And practically, there&#x27;s no automatic migration from plain prefs and the library&#x27;s been stuck on alpha, so I treat version bumps carefully.&quot;</blockquote>
 <p><strong>Definition</strong></p>
 <p><code>EncryptedSharedPreferences</code> is a Jetpack Security wrapper around <code>SharedPreferences</code> that transparently encrypts both keys and values — AES-256-GCM for values, AES-256-SIV for keys — with the master key living in the Android Keystore. From the outside it&#x27;s a drop-in replacement; underneath, nothing touches disk in plaintext.</p>
 <p><strong>How it works</strong></p>
@@ -796,6 +902,18 @@ val token = prefs.getString(&quot;auth_token&quot;, null)</code></pre>
 <li>A running process with the same UID (e.g., a malicious SDK in your own process) — it calls the same API you do.</li>
 <li>Memory scraping of a live process — plaintext values exist in memory after decryption.</li>
 </ul>
+<p><strong>Under the hood</strong></p>
+<p><code>EncryptedSharedPreferences</code> builds on Google&#x27;s Tink crypto library and a two-tier key hierarchy. The <code>MasterKey</code> is an AES-256-GCM key generated in the Android Keystore (so it&#x27;s hardware-backed and non-exportable); it never encrypts your data directly. Instead, Tink stores two <em>data</em> keysets — one DAEAD (deterministic AEAD, AES-256-SIV) keyset for keys and one AEAD (AES-256-GCM) keyset for values — inside a separate <code>AndroidKeysetManager</code> prefs file, and those keysets are themselves wrapped (encrypted) by the Keystore master key. On <code>putString</code>, the pref name is encrypted <em>deterministically</em> with AES-SIV — determinism is required so the same logical key always maps to the same ciphertext and can be looked up — while the value is encrypted with AES-GCM using a fresh random nonce, with the encrypted <em>key</em> mixed in as associated data to bind value to key and prevent swapping ciphertexts between entries. The result is Base64-encoded and written to a normal XML <code>SharedPreferences</code> file, so on disk you see only opaque strings. Because AES-SIV is deterministic, an attacker observing the file can still tell <em>which</em> entries are equal or repeated, even though they can&#x27;t read them — that&#x27;s the documented determinism trade-off. Decryption simply reverses this: Keystore unwraps the keysets, Tink decrypts. This is also why there&#x27;s no automatic migration — the legacy plaintext file uses entirely different (unencrypted) storage and must be read and re-written through the encrypted instance once.</p>
+<pre><code>Android Keystore
+  └─ MasterKey (AES-256-GCM, hardware-backed)
+        │ wraps
+        ▼
+  Tink keysets file
+   ├─ DAEAD keyset (AES-256-SIV)  → encrypts PREF KEYS (deterministic → lookups work)
+   └─ AEAD  keyset (AES-256-GCM)  → encrypts PREF VALUES (random nonce, key as AAD)
+        │
+        ▼
+  secure_prefs.xml  → Base64(ciphertext) for both key and value</code></pre>
 <p><strong>Trade-offs</strong></p>
 <table border="1" cellpadding="6" cellspacing="0">
 <thead><tr>
@@ -810,6 +928,7 @@ val token = prefs.getString(&quot;auth_token&quot;, null)</code></pre>
 <p>There is no automatic migration. You must read old plain prefs, write to encrypted prefs, and delete the old file. Do this once at app startup.</p>
 <hr>
 <h3 id="encryptedfile">EncryptedFile</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;EncryptedFile is the Jetpack Security wrapper for storing arbitrary files encrypted with AES-256-GCM, with the master key sitting in the Android Keystore. Under the covers it uses Tink&#x27;s streaming AEAD, so it chunks the file into segments and encrypts each one independently — that&#x27;s what lets you stream large files without holding the whole thing in memory. The gotcha interviewers like is that it&#x27;s not seekable: because every segment is GCM-authenticated, you can&#x27;t random-access into the middle, and you can&#x27;t recover anything if a segment is corrupted.&quot;</blockquote>
 <p><strong>Definition</strong></p>
 <p><code>EncryptedFile</code> from Jetpack Security gives you AES-256-GCM file encryption backed by the Android Keystore. Use it whenever you need to store sensitive files — PDFs, images, large JSON blobs — that must stay unreadable even if someone extracts the device storage or pulls an ADB backup.</p>
 <p><strong>How it works</strong></p>
@@ -861,8 +980,16 @@ fun readEncryptedFile(context: Context, filename: String): ByteArray {
 <li>Passing a non-empty existing file to <code>EncryptedFile.Builder</code> where the file was NOT written by <code>EncryptedFile</code> → <code>IOException</code> on read.</li>
 <li>Creating two <code>EncryptedFile</code> instances with different master keys for the same file → decryption failure.</li>
 </ul>
+<p><strong>Under the hood</strong></p>
+<p>The scheme name <code>AES256_GCM_HKDF_4KB</code> describes the actual mechanics: Tink generates a random Data Encryption Key (DEK) per file and wraps it — together with the Keystore master key — using HKDF to derive a unique per-segment key. The file layout is a header (containing the salt/nonce-prefix and segment size) followed by 4KB ciphertext segments. Each segment gets its own derived key + nonce where the nonce encodes the segment index plus a &quot;last segment&quot; flag, so an attacker can&#x27;t truncate, reorder, or splice segments without GCM tag verification failing. The master key itself does symmetric AES-GCM in the Keystore; on hardware-backed devices that wrap/unwrap never exposes raw key bytes to the app process.</p>
+<pre><code>[ header: magic | DEK params | nonce-prefix ]
+[ seg 0: nonce(prefix+0)      | ciphertext | GCM tag ]
+[ seg 1: nonce(prefix+1)      | ciphertext | GCM tag ]
+...
+[ seg N: nonce(prefix+N+last) | ciphertext | GCM tag ]   &lt;- last-segment bit set</code></pre>
 <hr>
 <h3 id="token-storage">Token Storage</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;Where I store auth tokens is a security decision, because a stolen token usually means a stolen session. My default is EncryptedSharedPreferences with the master key in the Keystore — AES-256-GCM at rest, key never leaves secure hardware. For the most sensitive material I drop to the Keystore directly and persist only ciphertext plus IV. The nuance is that &#x27;encrypted at rest&#x27; doesn&#x27;t protect a running, unlocked app — if the process is compromised the plaintext is in memory, so the real defenses are short token lifetimes, rotation, and server-side revocation.&quot;</blockquote>
 <p><strong>Definition</strong></p>
 <p>Where and how you store authentication tokens — session tokens, OAuth access and refresh tokens, JWTs — is one of the highest-impact security decisions you make in a mobile app, because a stolen token is often equivalent to a stolen identity.</p>
 <p><strong>Storage options ranked by security</strong></p>
@@ -946,8 +1073,15 @@ class KeystoreTokenRepository(context: Context) {
 }</code></pre>
 <p><strong>Interview answer: &quot;Where do you store auth tokens?&quot;</strong></p>
 <p>&quot;I store auth tokens in <code>EncryptedSharedPreferences</code> backed by a Keystore master key. That gives AES-256-GCM encryption at rest, with the key never leaving the secure hardware on supported devices. For extremely sensitive flows — like a private signing key — I go a level lower and use the Keystore directly, storing only the ciphertext and IV on disk. I never use plain <code>SharedPreferences</code>, external storage, or hardcoded values.&quot;</p>
+<p><strong>Under the hood</strong></p>
+<p><code>EncryptedSharedPreferences</code> is not a special preferences implementation — it&#x27;s a decorator over a normal XML-backed <code>SharedPreferences</code>. Keys are encrypted deterministically with AES-256-SIV (deterministic so <code>getString(key)</code> can still look up the right entry without leaking the plaintext key), while values use randomized AES-256-GCM. Both the key and value encryption keys are wrapped by the Keystore master key via Tink&#x27;s keyset, and the encrypted keyset itself lives in its own prefs file. On disk you see Base64-encoded ciphertext for both the XML key and the value:</p>
+<pre><code>&lt;map&gt;
+  &lt;string name=&quot;Afh2k...(SIV-encrypted key)&quot;&gt;  Hk9...(GCM ct: nonce|ciphertext|tag)  &lt;/string&gt;
+&lt;/map&gt;</code></pre>
+<p>The hardware-backed guarantee comes from the Keystore daemon (<code>keystore2</code>/Keymaster TEE): the app sends ciphertext to the TEE for unwrap and gets back the usable key only inside that trust boundary on StrongBox/TEE devices. On devices without hardware backing the master key is software-protected, so &quot;key never leaves hardware&quot; is conditional on device capability — worth stating explicitly in an interview.</p>
 <hr>
 <h3 id="biometrics">Biometrics</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;I always use Jetpack&#x27;s BiometricPrompt — FingerprintManager is deprecated and flaky on modern devices. There are two modes: authentication-only, where I just learn the user passed and then trust my own logic, and crypto-bound, where I gate an actual Keystore key behind the biometric so nothing decrypts unless auth genuinely succeeded. The crypto-bound mode is the strong one because authentication-only can be bypassed by a compromised app that just skips the check. The key gotcha is <code>setInvalidatedByBiometricEnrollment(true)</code> — without it, an attacker who enrolls a new fingerprint after stealing the device can unlock your key.&quot;</blockquote>
 <p><strong>Definition</strong></p>
 <p>The <code>BiometricPrompt</code> API in the Jetpack Biometric library gives you a single, unified interface for fingerprint, face, and iris authentication. It is the right API to use — the older <code>FingerprintManager</code> is deprecated and broken on many Android 10+ devices.</p>
 <p><strong>Two modes</strong></p>
@@ -1032,8 +1166,17 @@ when (biometricManager.canAuthenticate(BiometricManager.Authenticators.BIOMETRIC
 <li>Using time-based auth validity (<code>setUserAuthenticationValidityDurationSeconds(30)</code>) for sensitive operations — a compromised app could use the unlocked window.</li>
 <li>Ignoring <code>setInvalidatedByBiometricEnrollment(true)</code> — a new biometric added by an attacker (after stealing the device) would give them access.</li>
 </ul>
+<p><strong>Under the hood</strong></p>
+<p>The reason crypto-bound auth is cryptographically meaningful is that the authorization gate lives inside the TEE/Keymaster, not in your app&#x27;s Java/Kotlin code. When you call <code>cipher.init()</code> on a key created with <code>setUserAuthenticationRequired(true)</code>, Keymaster marks the key operation as &quot;needs auth&quot; but doesn&#x27;t fail yet — it allocates an operation handle. The biometric sensor&#x27;s hardware (running in its own trusted environment) produces a signed Hardware Auth Token (HAT) on a successful match. <code>BiometricPrompt</code> hands that HAT to Keymaster, which verifies the token&#x27;s HMAC and timestamp before allowing <code>doFinal()</code>. With validity duration <code>-1</code> (per-use), Keymaster ties the HAT to that specific operation handle, so the unlocked cipher can be used exactly once. <code>setInvalidatedByBiometricEnrollment(true)</code> works because the key is bound to the current biometric enrollment&#x27;s secure ID (SID); enrolling a new fingerprint rotates that SID, permanently invalidating the key — that&#x27;s why your <code>decrypt()</code> throws <code>KeyPermanentlyInvalidatedException</code> and the <code>getToken()</code> catch returns null.</p>
+<pre><code>sensor match (TEE) ──► signed HAT (HMAC + timestamp + SID)
+        │
+        ▼
+BiometricPrompt ──► Keymaster verifies HAT ──► authorizes cipher.doFinal()
+        │                                            │
+   new enrollment ──► biometric SID rotates ──► key tied to old SID is dead</code></pre>
 <hr>
 <h3 id="tls">TLS</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;TLS encrypts everything in transit, and from API 28 Android blocks cleartext by default, so I almost never opt back in. I configure trust declaratively through the Network Security Config rather than touching socket code — I keep only system CAs in the base config and push user-CA trust into debug-overrides so Charles works in debug but production stays locked down. The classic interview trap is the trust-all TrustManager: people paste one in to silence a handshake error and it silently disables all certificate validation, which is strictly worse than no TLS because it looks secure.&quot;</blockquote>
 <p><strong>Definition</strong></p>
 <p>Transport Layer Security (TLS) encrypts all data in transit between your app and your servers. Android enforces it by default from API 28 onwards — cleartext traffic is blocked unless you explicitly opt in, which you should almost never do in production.</p>
 <p><strong>Network Security Config</strong></p>
@@ -1104,8 +1247,16 @@ val trustAll = object : X509TrustManager {
     override fun checkServerTrusted(chain: Array&lt;X509Certificate&gt;, authType: String) {}
     override fun getAcceptedIssuers(): Array&lt;X509Certificate&gt; = emptyArray()
 }</code></pre>
+<p><strong>Under the hood</strong></p>
+<p>The Network Security Config isn&#x27;t enforced by some background daemon — at process start the framework parses your XML into an <code>ApplicationConfig</code>, and the platform&#x27;s default <code>SSLContext</code>/<code>TrustManagerFactory</code> is initialized with a <code>NetworkSecurityTrustManager</code> that consults that config. So when OkHttp does a handshake through the default <code>SSLSocketFactory</code>, the platform <code>X509TrustManager.checkServerTrusted()</code> walks the presented certificate chain up to a configured trust anchor, checking signatures, validity dates, and basic-constraints/key-usage extensions. Cleartext enforcement is a separate hook: <code>NetworkSecurityPolicy.isCleartextTrafficPermitted()</code> is queried by the HTTP stack (and <code>URL</code>/OkHttp) before opening a plaintext socket, and from API 28 the default verdict is false. The trust-all <code>TrustManager</code> is dangerous precisely because it replaces that platform trust manager with one whose <code>checkServerTrusted</code> is empty — no exception thrown means &quot;valid,&quot; so the handshake completes against any certificate including an attacker&#x27;s self-signed one.</p>
+<pre><code>handshake ──► platform X509TrustManager.checkServerTrusted(chain, authType)
+                 │  walk chain → match a trust anchor from NSC
+                 │  verify signatures + validity + extensions
+                 └─ throws CertificateException on failure  (empty override = always &quot;trusted&quot;)
+plaintext open ──► NetworkSecurityPolicy.isCleartextTrafficPermitted(host)  (false by default on 28+)</code></pre>
 <hr>
 <h3 id="certificate-pinning">Certificate Pinning</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;Pinning makes the app reject any cert that doesn&#x27;t match a public key I&#x27;ve shipped, even if a trusted CA signed it — so it defends against a rogue or compromised CA, which standard TLS can&#x27;t. I pin the SPKI hash, not the leaf cert, so it survives renewal as long as the key pair is reused, and I always ship a backup pin plus an expiration date. The big operational gotcha is rotation: if you push a new cert without a backup pin already in the field, every un-updated user loses connectivity and you can&#x27;t fix it remotely — that&#x27;s the failure mode that turns pinning into a self-inflicted outage.&quot;</blockquote>
 <p><strong>Definition</strong></p>
 <p>Certificate pinning makes your app reject any TLS certificate that doesn&#x27;t match a specific public key or certificate you&#x27;ve embedded in the app — even if that certificate was signed by a trusted CA. The key insight is that it defends against scenarios where the CA itself is compromised, rogue, or coerced: a nation-state MITM, a rogue CA issuing a fraudulent cert for your domain, or a corporate proxy intercepting traffic.</p>
 <p><strong>How it works</strong></p>
@@ -1179,8 +1330,17 @@ val client = OkHttpClient.Builder()
 <li>No expiry date → old unpatchable app versions are permanently broken.</li>
 <li>Pinning in an app with a very long tail of old versions → operational nightmare.</li>
 </ul>
+<p><strong>Under the hood</strong></p>
+<p>A pin is a Base64-encoded SHA-256 digest of the certificate&#x27;s <code>SubjectPublicKeyInfo</code> (SPKI) — the DER-encoded structure holding the algorithm identifier plus the raw public key, not the whole certificate. Pinning happens <em>after</em> normal chain validation, not instead of it: OkHttp&#x27;s <code>CertificatePinner</code> (and the platform&#x27;s NSC pinning path) first lets the standard <code>TrustManager</code> verify the chain to a trusted anchor, then iterates every certificate in the verified chain, computes <code>sha256(cert.publicKey.encoded)</code>, and checks whether <em>any</em> of them matches <em>any</em> configured pin. That &quot;any cert in chain&quot; behavior is why you can pin an intermediate or root rather than the leaf and survive leaf rotation. Because the hash is over the public key, reusing the same key pair across renewals keeps the pin valid. The NSC <code>expiration</code> attribute is checked against the current date at parse/connection time; once past it, the pin-set is simply ignored and validation falls back to CA trust — a deliberate safety valve so an un-updatable build isn&#x27;t bricked forever.</p>
+<pre><code>// Conceptually, per connection after chain validation succeeds:
+for (cert in verifiedChain) {
+    val spkiHash = sha256(cert.publicKey.encoded) // DER SubjectPublicKeyInfo
+    if (configuredPins.contains(&quot;sha256/&quot; + base64(spkiHash))) return // pass
+}
+throw SSLPeerUnverifiedException(&quot;Certificate pinning failure&quot;)</code></pre>
 <hr>
 <h3 id="rooted-device-limitations">Rooted Device Limitations</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;Root gives a user-space process UID 0, which breaks the core Android assumption that the app sandbox boundary is inviolable — so file permissions, in-process secrets, and SSL pinning all become bypassable with tools like Frida. My honest position is that you can&#x27;t fully secure an app against a rooted device the attacker physically owns; the goal is to raise cost, not achieve impossibility. So I layer defenses: hardware-isolated keys via StrongBox so even root can&#x27;t extract key material, server-verifiable attestation through the Play Integrity API, and root detection used to fail gracefully and log server-side — never as a hard barrier I pretend is unbreakable.&quot;</blockquote>
 <p><strong>Definition</strong></p>
 <p>A rooted Android device makes UID 0 (root) access available to user-space processes. Root breaks the foundational assumption of the Android security model — that the app UID boundary is inviolable — which means every defence you&#x27;ve built on top of that boundary becomes weaker or irrelevant.</p>
 <p><strong>What root access enables (threat model)</strong></p>
@@ -1238,8 +1398,14 @@ integrityManager.requestIntegrityToken(request)
 <p>SafetyNet was deprecated in June 2023. Existing integrations continue to work until further notice, but migrate to Play Integrity.</p>
 <p><strong>Honest interview answer on the limits</strong></p>
 <p>&quot;No mobile app can be fully secured against a rooted device with physical access and unlimited time — that&#x27;s just the reality of running on hardware you don&#x27;t control. The goal of root detection isn&#x27;t to make attack impossible; it&#x27;s to raise the cost. So the right layered approach is: use Keystore keys, preferably StrongBox-backed, so the key material is hardware-isolated even from a root process; use the Play Integrity API to get a server-verifiable attestation of device and app state; and do root detection to fail gracefully — warn the user and log the event server-side — rather than pretending you can stop a determined attacker.&quot;</p>
+<p><strong>Under the hood</strong></p>
+<p>Root detection is fundamentally a client-side signal that the client itself can lie about, which is why server-side attestation matters. The Play Integrity verdict is meaningful because it&#x27;s rooted in hardware the app can&#x27;t forge: the device produces a token signed by a key whose chain ultimately attests back to a Google-provisioned hardware-backed key in the TEE/StrongBox, and that token is encrypted/signed such that only Google&#x27;s servers (or your backend after Google decodes it) can validate it. That&#x27;s the structural difference from <code>RootBeer</code> — <code>isRooted</code> returns a boolean your own process computes, so a Frida hook can simply patch the method to return <code>false</code>. Likewise StrongBox raises the bar because Keymaster runs in a physically separate secure element with its own CPU and storage; the application-processor root can <code>ptrace</code> your app and dump heap, but it never sees the key bytes because crypto operations execute inside that element and only inputs/outputs cross the boundary. The takeaway interviewers want: trust must terminate on the server against a hardware root of trust, because anything evaluated purely in-process is bypassable on a rooted device.</p>
+<pre><code>in-process check (RootBeer.isRooted)  ──► attacker hooks method → returns false   (untrusted)
+Play Integrity ──► TEE/StrongBox-signed token ──► your backend verifies via Google  (trusted)
+StrongBox key ──► crypto runs in separate secure element; only I/O crosses boundary  (key bytes never exposed)</code></pre>
 <hr>
 <h3 id="avoiding-hardcoded-secrets">Avoiding Hardcoded Secrets</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;My baseline assumption is that anything shipped inside the APK is public — a <code>jadx</code> decompile recovers every string literal in minutes, including values in <code>BuildConfig</code> and <code>res/values/</code>. So real secrets like API keys, server credentials, or symmetric keys can&#x27;t live in the binary at all; they belong behind a backend proxy or get delivered at runtime over authenticated TLS and stored in EncryptedSharedPreferences. The gotcha interviewers love is the obfuscation myth: R8 renames identifiers but leaves string constants intact, so it does nothing to hide a secret.&quot;</blockquote>
 <p><strong>Definition</strong></p>
 <p>Hardcoded secrets are API keys, tokens, passwords, or cryptographic keys embedded directly in source code, resource files, or compiled bytecode. The problem is not theoretical — Android APKs are trivially decompilable, and any string literal in your code is recoverable in minutes.</p>
 <p><strong>Why it&#x27;s a problem</strong></p>
@@ -1285,8 +1451,13 @@ android {
     }
 }</code></pre>
 <p>This is acceptable for non-secret config values (base URLs, feature flag service URLs). Still visible in the APK via <code>BuildConfig</code>, but not a secret per se. Never use this pattern for API keys or tokens.</p>
+<p><strong>Under the hood</strong></p>
+<p>A string literal in Kotlin/Java is compiled into the class file&#x27;s <em>constant pool</em> as a <code>CONSTANT_Utf8_info</code> entry referenced by a <code>CONSTANT_String_info</code>; at the use site the compiler emits an <code>ldc</code> bytecode that loads that constant by index. R8 operates on this bytecode — it rewrites the name pool (class/method/field identifiers) and prunes dead code, but the UTF-8 constant pool entries holding your literal bytes are left verbatim because the program&#x27;s behavior depends on them. <code>BuildConfig</code> fields compile to <code>static final</code> fields whose initializers are also constant-pool literals (or inlined <code>ldc</code>s). A decompiler like <code>jadx</code> simply walks the constant pool and reconstructs the literals, which is why obfuscation never hides a secret. Even runtime XOR/Base64 &quot;encoding&quot; only adds a trivially reversible transform that an attacker can replay by calling the same decode routine via Frida.</p>
+<pre><code>const-string v0, &quot;sk_live_abc123&quot;   # dex/smali: literal lives in the string_id pool
+# R8 may rename the enclosing class to a.b.c, but &quot;sk_live_abc123&quot; is untouched</code></pre>
 <hr>
 <h3 id="logging-sensitive-data">Logging Sensitive Data</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;Logcat is a shared, unencrypted ring buffer, so my rule is that secrets, tokens, and PII never get written to it — not even in debug, because debug logs leak through ADB and through crash SDKs that snapshot recent Logcat lines. In release I strip <code>Log.d</code>/<code>Log.v</code> with R8&#x27;s <code>assumenosideeffects</code> and route everything through a Timber tree that scrubs before it ships anything to Crashlytics or Sentry. The subtle gotcha is <code>toString()</code> on a data class — the auto-generated one prints every property, so a token field silently lands in your logs unless you override it.&quot;</blockquote>
 <p><strong>Definition</strong></p>
 <p>Android&#x27;s <code>Logcat</code> is a system-wide, unencrypted log buffer. Any app with <code>READ_LOGS</code> permission — or root — can read every line in it, and crash-reporting SDKs routinely capture recent log output and ship it to their servers. That means sensitive data written to Logcat doesn&#x27;t just sit on the device; it can travel off it.</p>
 <p><strong>The problem</strong></p>
@@ -1362,6 +1533,11 @@ data class UserSession(
 ) {
     override fun toString() = &quot;UserSession(userId=$userId, token=[REDACTED])&quot;
 }</code></pre>
+<p><strong>Under the hood</strong></p>
+<p><code>android.util.Log.d(...)</code> ultimately calls into native <code>__android_log_write</code>, which writes the record into the kernel-backed <code>logd</code> daemon&#x27;s circular buffers (the <code>main</code>, <code>system</code>, <code>crash</code>, etc. ring buffers) over a socket — a single shared, plaintext store with no per-app encryption; <code>READ_LOGS</code> (a <code>signature|privileged</code> permission) or root lets a reader drain those buffers. The R8 strip works because <code>-assumenosideeffects</code> tells the optimizer that <code>Log.d</code>/<code>Log.v</code> produce no observable effect, so it deletes the invocation <em>and</em> the bytecode that builds its arguments — the entire string-concatenation <code>invokedynamic</code>/<code>StringBuilder</code> chain for the message is pruned as dead code, so the literal pieces never make it into the release dex. The <code>data class</code> trap comes from the compiler auto-synthesizing <code>toString()</code>: it emits a method that appends every <code>val</code>/<code>var</code> declared in the primary constructor (via <code>StringBuilder</code>), so a <code>token</code> property is interpolated by default unless you override <code>toString()</code> — note that <code>@Transient</code> alone affects serialization, not the generated <code>toString()</code>.</p>
+<pre><code>Log.d(tag, &quot;Token: &quot; + token)
+   └─ liblog: __android_log_write() ──socket──► logd ──► /dev/socket per-buffer ring (plaintext)
+                                                          ↑ drained by `adb logcat`, READ_LOGS holders, crash SDKs</code></pre>
 <hr>
 <h2 id="interview-qa-master-list">Interview Q&amp;A Master List</h2>
 <h3 id="131-security-basics">13.1 Security Basics</h3>

@@ -60,6 +60,7 @@
 <hr>
 <h2 id="111-unit-testing">11.1 Unit Testing</h2>
 <h3 id="junit-4--junit-5-basics">JUnit 4 / JUnit 5 Basics</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;JUnit is the harness that discovers test methods by annotation and runs each one in isolation with a fresh test-instance and a defined lifecycle. On Android we mostly stick with JUnit 4 because the Android Gradle plugin and Robolectric integrate against it natively — JUnit 5 needs the vintage engine to bridge. The gotcha most people hit is that JUnit 4 creates a brand-new instance of the test class for every <code>@Test</code>, so you can&#x27;t lean on instance state surviving between tests, and you wire shared cross-cutting behavior through <code>@Rule</code>s instead of inheritance.&quot;</blockquote>
 <p>JUnit is the standard Java/Kotlin framework for running deterministic, isolated tests against a single unit of code — a class or a function.</p>
 <p><strong>How it works:</strong></p>
 <pre><code>Test lifecycle (JUnit 4):
@@ -91,6 +92,14 @@ class MyViewModelTest {
 
     // ...
 }</code></pre>
+<p><strong>Under the hood</strong></p>
+<p>A JUnit 4 runner (<code>BlockJUnit4ClassRunner</code>, the default behind <code>@RunWith(JUnit4::class)</code>) reflects over the class for <code>@Test</code>-annotated methods, builds a <code>Description</code> tree, and for each test constructs a <em>new</em> instance of the test class — that&#x27;s why per-test isolation is automatic but instance fields reset every method. Each method is wrapped into a chain of <code>Statement</code> objects: the runner composes <code>@Before</code>/<code>@After</code>/<code>@Rule</code> as nested decorators around the actual invocation. A <code>@Rule</code> is really a <code>TestRule.apply(Statement, Description)</code> that returns a wrapping <code>Statement</code>, so rules execute <em>outside</em> <code>@Before</code>/<code>@After</code> — which is exactly why <code>InstantTaskExecutorRule</code> can install its executor before your setup runs and tear it down after.</p>
+<pre><code>RunRules( ruleN ... rule1,
+  RunAfters(
+    RunBefores(
+      InvokeMethod(@Test)   ← fresh test instance
+    , @Before methods)
+  , @After methods))</code></pre>
 <p><strong>Android implications:</strong></p>
 <ul>
 <li>Tests in <code>/app/src/test/</code> run on the JVM — fast, no emulator needed.</li>
@@ -104,6 +113,7 @@ class MyViewModelTest {
 </ul>
 <hr>
 <h3 id="test-doubles-mock-fake-stub-spy-dummy">Test Doubles: Mock, Fake, Stub, Spy, Dummy</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;These are Meszaros&#x27;s five categories of test doubles, and the distinction that matters is <em>state versus behavior versus verification</em>. A dummy just fills a parameter slot, a stub returns canned data so a code path can run, a fake is a real-but-simplified working implementation like an in-memory repo, and a mock is a stub that <em>also</em> records and verifies interactions. The nuance interviewers probe is that mock and spy are about verifying calls — they couple your test to <em>how</em> the code collaborates — whereas stubs and fakes only care about <em>what</em> comes back, so I reach for fakes when I want refactor-resistant tests.&quot;</blockquote>
 <p>These are Gerard Meszaros&#x27;s canonical vocabulary. Interviewers love asking candidates to distinguish them precisely — knowing all five cold is a signal of real testing experience.</p>
 <table border="1" cellpadding="6" cellspacing="0">
 <thead><tr>
@@ -146,8 +156,17 @@ verify(exactly = 1) { mockRepo.saveUser(match { it.email == &quot;a@b.com&quot; 
 
     fun seedUser(user: User) { users.add(user) }
 }</code></pre>
+<p><strong>Under the hood</strong></p>
+<p>A mock object isn&#x27;t your real class — it&#x27;s a dynamically generated subclass/proxy whose every method is overridden to consult a recorded &quot;answer&quot; table instead of running real logic. Frameworks build these proxies at runtime via bytecode generation (ByteBuddy) and load them through an agent; the proxy&#x27;s overridden method looks up a matcher → answer entry, records the invocation into a list for later verification, and returns the stubbed value (or a type-appropriate default). A <em>spy</em> is the same proxy but its default answer delegates to the real method via <code>super</code>/the wrapped instance. A <em>fake</em>, by contrast, involves none of this machinery — it&#x27;s just a hand-written class implementing the interface, so calls are ordinary virtual dispatch with real fields and real control flow.</p>
+<pre><code>mock.getUser(1)
+  → proxy.getUser(1)
+      → invocationStore.record(getUser, [1])      // for verify()
+      → answerTable.match(getUser, eq(1)) ?: default
+fake.getUser(1)
+  → ordinary method: users.find { it.id == 1 }    // no proxy, no recording</code></pre>
 <hr>
 <h3 id="fake-vs-mock--interview-deep-dive">Fake vs Mock — Interview Deep Dive</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;My rule of thumb is fakes for domain logic, mocks for verifying side effects. A fake gives real behavior — an in-memory store that actually filters and sorts — so I can test collaboration without over-specifying, and it only breaks when the contract changes. A mock is best when I genuinely need to assert <em>that a call happened</em>, like an analytics event or a network write. The trap interviewers want you to name is that mocks couple tests to implementation: rename a method and every mocked test breaks even though behavior didn&#x27;t, which is why over-mocking produces brittle, low-value tests.&quot;</blockquote>
 <p><strong>The core question:</strong> &quot;When do you use a fake over a mock?&quot;</p>
 <p><strong>Use a Fake when:</strong></p>
 <ol>
@@ -178,8 +197,11 @@ verify(exactly = 1) { mockRepo.saveUser(match { it.email == &quot;a@b.com&quot; 
 <tr><td>Refactoring resistance</td><td>High</td><td>Low (breaks on rename)</td></tr>
 </tbody></table>
 <p>The key insight for interviews is that mocks couple tests to implementation details. If you rename a method, every mocked test that calls it breaks — even if the behavior is unchanged. Fakes only break when the contract itself changes. So the rule I follow is: use fakes for domain logic, use mocks for verifying side effects.</p>
+<p><strong>Under the hood</strong></p>
+<p>The brittleness difference is structural, not stylistic. A mock&#x27;s stub/verify clauses are keyed on a <em>method reference plus argument matchers</em> captured at record time; the framework resolves that reference against the proxy&#x27;s method table. Rename or re-signature the method and the matcher no longer binds to any invocation, so verification fails or the stub silently returns a default — the test breaks even though behavior is identical. A fake reaches the method only through normal virtual dispatch behind the <em>interface</em>, so as long as the interface contract holds, the compiler rewrites call sites automatically on a rename (it&#x27;s still just a <code>super</code>/interface call in bytecode). That&#x27;s the mechanical reason fakes are &quot;refactoring-resistant&quot;: there&#x27;s no out-of-band string/reference table that can drift out of sync with the code.</p>
 <hr>
 <h3 id="mockk--androids-preferred-mocking-library">MockK — Android&#x27;s Preferred Mocking Library</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;MockK is the Kotlin-first mocking library, and the reason we prefer it over Mockito on Android is that Kotlin classes and methods are <code>final</code> by default — MockK mocks them out of the box via a JVM agent and bytecode generation, whereas plain Mockito needs the inline extension to do the same. The non-negotiable gotcha is <code>unmockkAll()</code> in teardown: <code>mockkStatic</code> and <code>mockkObject</code> patch global classloader state, and because Gradle reuses the test-worker JVM across classes, a leaked static mock silently corrupts completely unrelated tests later in the run.&quot;</blockquote>
 <p>MockK is designed for Kotlin and handles <code>final</code> classes and methods natively. Mockito, by contrast, can&#x27;t mock Kotlin finals without pulling in the <code>mockito-inline</code> extension, which adds friction. On Android, MockK is the default choice.</p>
 <p><strong>Setup:</strong></p>
 <pre><code>@Before
@@ -232,8 +254,16 @@ unmockkStatic(Log::class)
 mockkObject(MyObject)
 every { MyObject.getInstance() } returns fakeInstance</code></pre>
 <p><strong><code>relaxed = true</code></strong> makes MockK automatically return empty, zero, null, or false for any call you haven&#x27;t explicitly stubbed. It&#x27;s good for dependencies that are invoked but whose return value isn&#x27;t relevant to the test under examination.</p>
+<p><strong>Under the hood</strong></p>
+<p>The <code>every { ... }</code> block isn&#x27;t a normal lambda — it runs in &quot;recording&quot; mode. MockK generates a proxy subclass with ByteBuddy, and when your lambda calls <code>repo.getUser(1)</code>, the proxy is in a recording state where matchers like <code>any()</code>/<code>eq(1)</code> push onto a thread-local matcher stack; MockK reconstructs the call signature from that stack and binds it to the answer you supply after <code>returns</code>/<code>throws</code>/<code>just Runs</code>. At verify time it replays recorded invocations against those matchers. <code>coEvery</code>/<code>coVerify</code> exist because suspend functions compile to methods with an extra <code>Continuation</code> parameter — MockK intercepts that and drives the suspension inside a <code>runBlocking</code>-style harness so you write the stub as if it were synchronous. <code>mockkStatic</code>/<code>mockkObject</code> are the dangerous ones: they don&#x27;t create a new object, they <em>re-transform an already-loaded class</em> in place (static method dispatch is patched, and Kotlin <code>object</code> singletons get their <code>INSTANCE</code> behavior redirected), which mutates global classloader/JVM state — exactly why <code>unmockkAll()</code> must reverse it before the next test class reuses the worker JVM.</p>
+<pre><code>every { repo.getUser(1) } returns u
+  1. enter recording mode (thread-local)
+  2. proxy.getUser(1): eq(1) pushed to matcher stack
+  3. signature = getUser(eq(1))  → answerTable[signature] = StubAnswer(u)
+verify { repo.getUser(1) } → replay invocationLog against matcher</code></pre>
 <hr>
 <h3 id="testing-viewmodels">Testing ViewModels</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;A ViewModel is pure presentation logic — state transformation, event routing, coordinating interactors — so I test it entirely on the JVM with constructor-injected fakes or mocks, never through <code>ViewModelProvider</code>. The two rules that make it deterministic are <code>InstantTaskExecutorRule</code> for LiveData and swapping <code>Dispatchers.Main</code> for a <code>TestDispatcher</code>. The subtle part interviewers chase is asserting the <em>sequence</em> of state emissions — loading then success or error — which means collecting the flow and controlling virtual time with <code>advanceTimeBy</code>/<code>advanceUntilIdle</code> rather than just reading <code>.value</code> at the end.&quot;</blockquote>
 <p>A ViewModel&#x27;s job is presentation logic — state transformation, event routing, and coordinating interactors. That logic should be tested entirely on the JVM, with no Activity or emulator involved.</p>
 <p><strong>Setup requirements:</strong></p>
 <ol>
@@ -309,8 +339,16 @@ class UserProfileViewModelTest {
 <li>The ViewModel doesn&#x27;t own actual network or database calls — test those on the interactor.</li>
 <li>Don&#x27;t test Android framework concerns like the Activity lifecycle — that belongs in UI tests.</li>
 </ul>
+<p><strong>Under the hood</strong></p>
+<p><code>runTest</code> installs a <code>TestCoroutineScheduler</code> backed by a <code>StandardTestDispatcher</code> whose work queue is keyed by <em>virtual</em> time, not wall-clock time. When a coroutine hits <code>delay(100)</code>, the dispatcher doesn&#x27;t sleep a real thread — it parks a resume callback at virtual-time 100 in the scheduler&#x27;s priority queue. <code>advanceTimeBy(50)</code> and <code>advanceUntilIdle()</code> simply pop and run those callbacks up to the target virtual time, which is why a &quot;100ms&quot; delay tests instantly and deterministically. The <code>MainCoroutineTestRule</code> calls <code>Dispatchers.setMain(testDispatcher)</code> so any <code>viewModelScope.launch</code> (which defaults to <code>Dispatchers.Main.immediate</code>) lands on that same single-threaded scheduler — giving you a serial, reproducible execution order. Collecting the <code>StateFlow</code>/<code>SharedFlow</code> into a list in a child coroutine works because emissions are dispatched on that controlled scheduler too, so you observe every intermediate state rather than only the final conflated value.</p>
+<pre><code>runTest scheduler (virtual clock = 0)
+  loadUser(1) → launch → enqueue(getUser) 
+  getUser hits delay(100) → park resume @ t=100
+  advanceTimeBy(50)  → clock=50, nothing due → state == Loading
+  advanceUntilIdle() → clock jumps to 100 → resume → state == Success</code></pre>
 <hr>
 <h3 id="testing-use-cases-interactors">Testing Use Cases (Interactors)</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;Interactors are the easiest thing in the codebase to test because they&#x27;re single-responsibility — usually one <code>operator fun invoke</code> — so it&#x27;s input in, output asserted, with a fake or mock for whatever they call. I lean on a fake repository here so I&#x27;m testing the real transformation and mapping logic rather than re-stating it in stubs. The cases I always cover are the happy path, an edge or empty case, and error propagation — making sure an exception from the repo bubbles through unchanged rather than getting swallowed.&quot;</blockquote>
 <p>Use cases are single-responsibility classes — typically an <code>operator fun invoke</code>. They&#x27;re the easiest thing to test in the whole codebase: give them an input, check the output, and use a fake or mocked dependency for anything they call.</p>
 <pre><code>class GetUserInteractorTest {
 
@@ -339,8 +377,11 @@ class UserProfileViewModelTest {
 <li>Mapping — a data-layer model maps correctly to the domain model.</li>
 <li>Caching behavior, if the interactor wraps a cache.</li>
 </ol>
+<p><strong>Under the hood</strong></p>
+<p><code>operator fun invoke</code> is plain Kotlin sugar: the compiler emits a regular JVM method named <code>invoke</code>, and the call site <code>sut(userId = 1)</code> is compiled to <code>sut.invoke(1)</code> — there&#x27;s no reflection or special dispatch, so an interactor is as cheap to call and test as any method. Because the function is <code>suspend</code>, the compiler applies the Continuation-Passing-Style transform: it gains a hidden <code>Continuation</code> parameter and the body becomes a state machine class whose <code>invokeSuspend</code> advances across suspension points. Inside <code>runTest</code>, that continuation is resumed on the test scheduler, so a suspending interactor completes synchronously in virtual time. Error propagation &quot;just works&quot; because a thrown exception is captured by the state machine and delivered through <code>Continuation.resumeWith(Result.failure(e))</code>, which rethrows at the awaiting call site — no special wrapping unless you explicitly catch it, which is exactly the behavior <code>assertFailsWith</code> relies on.</p>
 <hr>
 <h3 id="testing-repositories">Testing Repositories</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;A repository sits between the network and the local cache, so when I unit-test it I fake both data sources and verify the orchestration logic — does it return the cache when it&#x27;s warm, does it fall back to the network and write back on a miss. The thing an interviewer wants to hear is that I&#x27;m testing the <em>policy</em>, not the sources themselves; if I want to validate the real wire format or schema I&#x27;d swap in MockWebServer and an in-memory Room DB and call that an integration test instead.&quot;</blockquote>
 <p>Repositories orchestrate data sources — network plus local cache. The key is to substitute both ends: use a fake or mock for the remote source and a fake or mock for the local source. If you want a true integration test, swap those for a real MockWebServer and an in-memory Room database respectively.</p>
 <p><strong>Unit test approach (all mocked):</strong></p>
 <pre><code>class UserRepositoryImplTest {
@@ -382,8 +423,15 @@ class UserProfileViewModelTest {
         coVerify { localSource.saveUser(remote) }
     }
 }</code></pre>
+<p><strong>Under the hood</strong></p>
+<p>MockK&#x27;s <code>relaxed = true</code> mocks are generated at runtime via bytecode — MockK uses ByteBuddy to subclass the interface/class and route every call through a <code>MockKStub</code> that records invocations into a <code>CallRecorder</code>. A relaxed mock returns a type-appropriate zero value (<code>0</code>, <code>false</code>, empty collection, or a chained relaxed mock for non-primitive returns) unless you override with <code>coEvery</code>. <code>coEvery</code>/<code>coVerify</code> are the suspend-aware variants: under the hood the suspend function&#x27;s hidden <code>Continuation</code> parameter (the result of Kotlin&#x27;s CPS transform) is matched too, so MockK intercepts the call before it actually suspends. <code>coVerify(inverse = true)</code> replays the recorded invocation list and asserts the matcher found zero matches.</p>
+<pre><code>sut.getUser(1)
+  └─ localSource.getUser(1)  → CallRecorder logs invocation, returns stubbed `cached`
+  └─ (remoteSource never invoked) → recorded-call list has 0 entries for fetchUser
+       coVerify(inverse=true) walks that list → passes</code></pre>
 <hr>
 <h3 id="coroutine-testing">Coroutine Testing</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;Coroutines are async, so naive tests are flaky — they depend on wall-clock timing. The fix is <code>runTest</code>, which runs the body on a <code>TestScope</code> backed by a virtual clock: <code>delay</code> doesn&#x27;t actually wait, it just advances a scheduler, so a test with a five-second retry backoff finishes in microseconds. The big gotcha is the dispatcher choice — <code>StandardTestDispatcher</code> queues child coroutines so you must <code>advanceUntilIdle()</code>, whereas <code>UnconfinedTestDispatcher</code> runs them eagerly inline. And on the JVM you have to swap <code>Dispatchers.Main</code> with a test rule because the real Main needs Android&#x27;s Looper, which doesn&#x27;t exist off-device.&quot;</blockquote>
 <p>The core challenge with coroutine testing is that coroutines run asynchronously. Without explicit control over time and dispatchers, your tests become non-deterministic — they pass or fail depending on timing. The solution is a stack of test utilities that give you that control.</p>
 <p><strong>Solution stack:</strong></p>
 <table border="1" cellpadding="6" cellspacing="0">
@@ -484,8 +532,16 @@ fun `retries after delay`() = runTest {
 <li>Forgetting <code>advanceUntilIdle()</code> with <code>StandardTestDispatcher</code> means assertions run before the coroutines have completed.</li>
 <li>Not cleaning up a <code>CoroutineScope</code> owned by the system under test leaves leaked coroutines that keep the Gradle worker JVM alive indefinitely.</li>
 </ul>
+<p><strong>Under the hood</strong></p>
+<p>Virtual time is implemented by <code>TestCoroutineScheduler</code>, which all test dispatchers share within a single <code>runTest</code>. There&#x27;s no real clock — the scheduler keeps a priority queue of <code>TestDispatchEvent</code>s keyed by a <code>currentTime</code> (a <code>Long</code> of virtual milliseconds). When a coroutine calls <code>delay(5000)</code>, the dispatcher doesn&#x27;t <code>Thread.sleep</code>; it schedules a resume event at <code>currentTime + 5000</code> and suspends the continuation. <code>advanceUntilIdle()</code> repeatedly pops the earliest event, jumps <code>currentTime</code> to it, and resumes that continuation until the queue is empty. The Standard-vs-Unconfined difference is purely <em>dispatch policy</em>: <code>StandardTestDispatcher</code> always enqueues the resumed continuation (so <code>launch</code> bodies wait), while <code>UnconfinedTestDispatcher</code> overrides <code>isDispatchNeeded</code> to return false, resuming the continuation on the current call stack immediately. <code>Dispatchers.setMain</code> works because <code>Dispatchers.Main</code> is resolved lazily through a <code>MainDispatcherFactory</code> <code>ServiceLoader</code>; <code>setMain</code> swaps the delegate field so the Android-backed factory is bypassed entirely.</p>
+<pre><code>runTest body ──┐
+               ├─ shares one TestCoroutineScheduler (virtual clock = Long ms)
+launch {...} ──┘
+delay(5000) → scheduler.registerEvent(at = currentTime + 5000); suspend
+advanceUntilIdle() → while(queue not empty){ currentTime = peek.time; resume() }</code></pre>
 <hr>
 <h3 id="flow-testing">Flow Testing</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;Flows are cold and lazy — nothing runs until a terminal operator collects them — so the first decision is whether the Flow is finite or infinite. For a finite Flow I just <code>toList()</code> it. For a <code>StateFlow</code> or any hot/infinite Flow I have to launch a collector in the background and cancel it, and I deliberately collect on an <code>UnconfinedTestDispatcher</code> so it starts eagerly while the test body keeps <code>StandardTestDispatcher</code> to drive the producer&#x27;s timing. The classic trap is forgetting that <code>StateFlow</code> always replays its current value, so the first <code>awaitItem</code> is the initial state, not the update you triggered.&quot;</blockquote>
 <p>Flows are lazy — nothing happens until something collects them. That means testing a Flow requires an active coroutine scope, and you have to pick the right approach depending on whether the Flow is finite or infinite.</p>
 <p><strong>Approach 1: <code>toList()</code> — simplest, blocks until completion</strong></p>
 <pre><code>@Test
@@ -527,8 +583,16 @@ fun `navigation event emitted on successful login`() = runTest {
     assertEquals(listOf(NavigationEvent.GoToHome), events)
     job.cancel()
 }</code></pre>
+<p><strong>Under the hood</strong></p>
+<p>A cold Flow is just a <code>Flow</code> object wrapping a suspend <code>block</code>; <code>collect</code> is what actually invokes the builder lambda, which is why nothing emits until collection — each collector re-runs the producer from scratch on its own. <code>toList()</code> is a terminal operator that suspends the calling coroutine until the upstream completes, appending each <code>emit</code> into a <code>MutableList</code>. <code>StateFlow</code> and <code>SharedFlow</code> are <em>hot</em> and implemented differently: internally <code>StateFlowImpl</code> holds a single volatile <code>_state</code> slot plus an array of <code>slot</code> objects, one per collector, and uses a conflated emission strategy — a new collector immediately gets the current value (replay = 1), and intermediate values can be dropped under back-pressure. That conflation is exactly why a <code>StateFlow</code> test sees the latest state but not necessarily every transition, and why the first <code>awaitItem</code>/index <code>[0]</code> is always the seeded initial value. <code>SharedFlow</code> instead keeps a replay buffer and emission counters and <em>never</em> signals completion, so a collector on it suspends forever waiting for the next slot to fill.</p>
+<pre><code>StateFlowImpl
+  _state : volatile Any?      ← single conflated slot (replay = 1)
+  slots[]: per-collector resume handles
+  emit(x): if (x != _state) { _state = x; resume each waiting slot }
+  new collector → immediately handed current _state, then awaits next change</code></pre>
 <hr>
 <h3 id="turbine">Turbine</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;Turbine is Cash App&#x27;s Flow-testing DSL — its <code>test {}</code> block launches the collector for me and gives me <code>awaitItem</code>, <code>awaitComplete</code>, and <code>awaitError</code> so I can interleave emissions and assertions linearly instead of doing a collect-then-assert two-phase dance. The reason I reach for it over hand-rolled collection is that <code>awaitItem</code> has a built-in timeout, so a hung Flow fails fast instead of spinning forever, and there&#x27;s no <code>job.cancel()</code> I can forget. The one gotcha: <code>SharedFlow</code> never completes, so I end with <code>cancelAndIgnoreRemainingEvents()</code> — calling <code>awaitComplete()</code> on it would hang.&quot;</blockquote>
 <p>Turbine is a testing library by Cash App that wraps Flow collection in a clean DSL. It eliminates all the boilerplate of manually <code>launch</code>-ing a collector, converting to a list, and remembering to cancel the job.</p>
 <p><strong>Dependency:</strong></p>
 <pre><code>testImplementation &quot;app.cash.turbine:turbine:1.x.x&quot;</code></pre>
@@ -608,8 +672,16 @@ fun `multiple flows`() = runTest {
 }</code></pre>
 <p><strong>Why Turbine over manual collection:</strong> There are four reasons. First, <code>awaitItem()</code> has an automatic timeout — it fails fast if the Flow hangs rather than letting the test spin forever. Second, there&#x27;s no <code>job.cancel()</code> you can forget. Third, <code>expectNoEvents()</code> is impossible to express cleanly with <code>toList()</code>. And fourth, interleaving emissions and assertions inside a single <code>test {}</code> block reads much more naturally than a separate collect phase followed by a separate assert phase.</p>
 <p><strong>Turbine + SharedFlow gotcha:</strong> <code>SharedFlow</code> has no completion event. Always end with <code>cancelAndIgnoreRemainingEvents()</code> rather than <code>awaitComplete()</code>, or the test will hang waiting for a termination that never comes.</p>
+<p><strong>Under the hood</strong></p>
+<p><code>test {}</code> launches a collecting coroutine that funnels every signal — items, completion, and errors — into an unbounded <code>Channel&lt;Event&gt;</code>. Each <code>awaitItem()</code> is a suspending <code>channel.receive()</code> wrapped in <code>withTimeout</code> (default 3s via <code>turbineTimeout</code>); if the timeout elapses with no event, Turbine throws an <code>AssertionError</code> rather than hanging, which is the fail-fast property. Completion and exceptions are sent as distinct <code>Event.Complete</code> / <code>Event.Error</code> sentinels, so <code>awaitItem()</code> can detect &quot;Flow finished when I expected a value&quot; and fail with a clear message. <code>turbineScope</code> + <code>testIn(backgroundScope)</code> launch each collector into a child scope tied to the test; on block exit Turbine cancels those collectors and, unless you consumed everything, asserts no unconsumed events remain — that &quot;unconsumed events&quot; check is what catches accidentally-dropped emissions.</p>
+<pre><code>flow.test { } ──launch──► collector coroutine
+   onEach emit  → channel.send(Event.Item(value))
+   onCompletion → channel.send(Event.Complete | Event.Error)
+awaitItem() = withTimeout(3s) { channel.receive() }   // sentinel → AssertionError
+block end   → cancel collector + assert channel drained</code></pre>
 <hr>
 <h3 id="what-should-be-unit-tested">What Should Be Unit Tested?</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;I unit-test the things that are pure logic and fast — ViewModels, use cases, mappers, repository cache policy, validators — because they run in milliseconds on the JVM with no device. I deliberately <em>don&#x27;t</em> unit-test framework behavior like View inflation, lifecycle transitions, Room schema, or wire format; those need instrumentation, an in-memory database, or MockWebServer respectively. My mental checklist is FIRST: fast, isolated, repeatable, self-validating, and timely — if a &#x27;unit&#x27; test needs a device or shared state, it&#x27;s miscategorized.&quot;</blockquote>
 <p><strong>Good candidates:</strong></p>
 <ul>
 <li><strong>ViewModels</strong> — state transitions, event routing, error handling.</li>
@@ -635,9 +707,15 @@ fun `multiple flows`() = runTest {
 <li><strong>Self-validating</strong> — explicit pass or fail, no manual inspection.</li>
 <li><strong>Timely</strong> — written alongside or before the code they cover.</li>
 </ul>
+<p><strong>Under the hood</strong></p>
+<p>The fast/slow split is a real runtime distinction, not a stylistic one. JVM unit tests run under the <code>testDebugUnitTest</code> task on your host JVM via JUnit&#x27;s <code>BlockJUnit4ClassRunner</code>, which reflectively instantiates the test class and invokes each <code>@Test</code> method — no <code>dex</code>, no APK, no device. By default Android framework classes are stubbed to throw <code>RuntimeException(&quot;Method ... not mocked&quot;)</code> (the <code>android.jar</code> &quot;mockable&quot; stub), which is exactly why touching real Views or <code>Looper</code> fails off-device. Instrumentation tests instead compile a separate test APK, install both it and the app via <code>adb</code>, and run inside the app&#x27;s own ART process under <code>AndroidJUnitRunner</code>, so they pay dexing, install, and boot costs — typically seconds-to-minutes versus milliseconds. Room&#x27;s in-memory database (<code>Room.inMemoryDatabaseBuilder</code>) and MockWebServer exist precisely to give the database and network slices a <em>real</em> implementation without the rest of the device.</p>
+<pre><code>JVM unit test  : Gradle → testDebugUnitTest → host JVM (android.jar stubs) → ms
+instrumentation: Gradle → assemble test APK → adb install → ART on device   → s–min
+                 (AndroidJUnitRunner drives @Test inside the app process)</code></pre>
 <hr>
 <h2 id="112-ui-testing">11.2 UI Testing</h2>
 <h3 id="espresso">Espresso</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;Espresso is Google&#x27;s instrumentation framework for driving real Views on a device or emulator, and its whole model is match-a-view, perform-an-action, check-an-assertion. The reason it&#x27;s more reliable than <code>Thread.sleep</code> is that it auto-synchronizes — before each interaction it waits for the main thread&#x27;s message queue to go idle, so it acts only when the UI is settled. The catch every interviewer probes: it only knows about the main thread and explicitly registered Idling Resources, so anything on a background thread or a custom executor is invisible and you get flaky races unless you wire up an IdlingResource.&quot;</blockquote>
 <p>Espresso is Google&#x27;s instrumentation testing framework for interacting with Android Views. It runs on-device or on an emulator — not on the JVM.</p>
 <p><strong>How it works:</strong> Every test follows a three-step pattern.</p>
 <ol>
@@ -684,6 +762,14 @@ onView(withId(R.id.recycler))
     .perform(
         RecyclerViewActions.actionOnItemAtPosition&lt;RecyclerView.ViewHolder&gt;(0, click())
     )</code></pre>
+<p><strong>Under the hood</strong></p>
+<p>Espresso&#x27;s synchronization is built on <code>UiController</code> plus a set of <code>IdlingResource</code>s polled through an <code>IdlingRegistry</code>. <code>onView(...).perform(...)</code> doesn&#x27;t run immediately; it posts the action to the main thread and first loops <code>loopMainThreadUntilIdle()</code>, which drains the <code>MessageQueue</code> and blocks while the queue&#x27;s <code>IdleHandler</code> reports work pending. Out of the box Espresso registers resources for the main <code>Looper</code>&#x27;s message queue and for <code>AsyncTask</code>&#x27;s thread pools, which is <em>why</em> it can&#x27;t see arbitrary background work — a raw <code>Thread</code>, a custom <code>Executor</code>, OkHttp&#x27;s dispatcher, or a coroutine on <code>Dispatchers.IO</code> never touches those queues, so Espresso believes the app is idle and proceeds early, causing flakiness. A <code>ViewMatcher</code> is a Hamcrest <code>Matcher&lt;View&gt;</code> evaluated by walking the view hierarchy from the root via <code>ViewFinder</code>, throwing <code>NoMatchingViewException</code>/<code>AmbiguousViewMatcherException</code> on 0 or &gt;1 matches. The fix for invisible async work is registering a custom <code>IdlingResource</code> whose <code>isIdleNow()</code> returns false until the work completes, which re-couples that work to Espresso&#x27;s idle loop.</p>
+<pre><code>perform(click())
+  └─ loopMainThreadUntilIdle():
+        while (mainQueue not idle || any IdlingResource.isIdleNow()==false)
+            pump messages / wait
+  └─ then inject the click MotionEvents
+(background thread work not on main queue &amp; not an IdlingResource → invisible)</code></pre>
 <p><strong>Android implications:</strong></p>
 <ul>
 <li>Requires a real device or emulator — roughly 10× slower than unit tests.</li>
@@ -691,6 +777,7 @@ onView(withId(R.id.recycler))
 </ul>
 <hr>
 <h3 id="compose-ui-testing">Compose UI Testing</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;Compose has no View hierarchy to traverse, so its test framework works against the semantics tree — the same accessibility metadata that drives TalkBack. I host a composable with a <code>ComposeTestRule</code>, find nodes by text, content description, or <code>testTag</code>, then assert or perform actions on them. The big win over Espresso is that the rule is synchronized with the compose clock, so it auto-waits for recompositions to settle — no Idling Resources. The gotcha is that custom composables don&#x27;t emit useful semantics for free; if I don&#x27;t add a <code>testTag</code> or merge semantics, my finder won&#x27;t match anything.&quot;</blockquote>
 <p>Compose testing works differently from Espresso. Instead of traversing a View hierarchy, a <code>ComposeTestRule</code> hosts the composable in an isolated semantic tree and you query it via semantics — the accessibility metadata that Compose exposes for each node.</p>
 <p><strong>Setup:</strong></p>
 <pre><code>@get:Rule
@@ -743,6 +830,15 @@ fun loadingIndicatorVisibleWhileFetching() {
     }
     composeRule.onNodeWithTag(&quot;LoadingIndicator&quot;).assertIsDisplayed()
 }</code></pre>
+<p><strong>Under the hood</strong></p>
+<p>The <code>SemanticsModifier</code> on each composable contributes a <code>SemanticsConfiguration</code> (a map of <code>SemanticsPropertyKey</code> → value, e.g. <code>Text</code>, <code>ContentDescription</code>, <code>Role</code>, <code>OnClick</code>). At composition these merge into a <code>SemanticsNode</code> tree that mirrors the layout tree. A finder like <code>onNodeWithText</code> is just a <code>SemanticsMatcher</code> predicate run over that tree. Synchronization is the key mechanism: in tests the frame clock is paused, and every <code>onNode...</code>/<code>assert</code>/<code>perform</code> call first runs <code>waitForIdle()</code>, which pumps the <code>Recomposer</code> and the test <code>MonotonicFrameClock</code> until there are no pending recompositions, layouts, or <code>withFrameNanos</code> continuations — that determinism is why you don&#x27;t register Idling Resources.</p>
+<pre><code>LoginScreen()                         SemanticsNode tree
+  └ Column                             RootNode
+      ├ Text(&quot;Sign In&quot;)     ──►          └ node { Text=&quot;Sign In&quot; }
+      └ Button onClick{}                 └ node { Role=Button, OnClick=… }
+
+onNodeWithText(&quot;Sign In&quot;)  ==  filter(tree) { Text contains &quot;Sign In&quot; }</code></pre>
+<p>By default adjacent semantics are <strong>merged</strong> into the nearest ancestor that sets <code>mergeDescendants = true</code> (e.g. a <code>Button</code>), which is why a <code>Button</code> containing a <code>Text</code> is matched by <code>onNodeWithText</code> even though the text lives on a child node. Use <code>useUnmergedTree = true</code> to query the raw, unmerged node.</p>
 <p><strong>Differences from Espresso:</strong></p>
 <ul>
 <li>There are no real Views — everything goes through the Compose semantic tree.</li>
@@ -751,6 +847,7 @@ fun loadingIndicatorVisibleWhileFetching() {
 </ul>
 <hr>
 <h3 id="idling-resources">Idling Resources</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;Espresso auto-syncs with the main thread&#x27;s message queue, but it has no idea about work happening off that thread — a network call, a coroutine, an Rx chain. So it fires the next action before the data lands and the test flakes. An <code>IdlingResource</code> is the bridge: it tells Espresso &#x27;I&#x27;m busy&#x27; and only reports idle once that background work completes, so Espresso parks until then. The nuance is that registering one is increasingly unnecessary — fully Compose UIs sync via the compose clock, and with MockWebServer the latency is deterministic, so I reach for idling resources mainly with legacy Views doing real async.&quot;</blockquote>
 <p>Espresso synchronizes with the main thread, but async operations — network calls, coroutines, RxJava chains — run on background threads. Without help, Espresso proceeds before those operations finish, producing flaky tests. The solution is to register an <code>IdlingResource</code> that signals &quot;the app is idle&quot; only when all background work is done.</p>
 <pre><code>class CountingIdlingResource(name: String) : IdlingResource {
     private val counter = AtomicInteger(0)
@@ -786,8 +883,18 @@ fun unregisterIdlingResource() {
 <pre><code>val okHttpIdlingResource = OkHttp3IdlingResource.create(&quot;OkHttp&quot;, okHttpClient)
 IdlingRegistry.getInstance().register(okHttpIdlingResource)</code></pre>
 <p><strong>Modern alternative:</strong> In fully Compose UIs, <code>composeRule.awaitIdle()</code> automatically waits for recompositions to settle, so you don&#x27;t need an Idling Resource for that case. And in Hilt-plus-MockWebServer integration tests, the latency is predictable enough that idling resources aren&#x27;t needed at all.</p>
+<p><strong>Under the hood</strong></p>
+<p>Espresso&#x27;s <code>UiController.loopMainThreadUntilIdle()</code> doesn&#x27;t sleep — it drains the main thread <code>Looper</code>&#x27;s <code>MessageQueue</code> and then checks two things: that the queue has no immediately-runnable messages, and that every registered <code>IdlingResource</code> reports <code>isIdleNow() == true</code>. The <code>IdlingResourceRegistry</code> polls resources and also listens for the <code>onTransitionToIdle()</code> callback so it can re-check without spinning. Crucially, idling state is sampled <strong>between</strong> UI events, not continuously — so a resource that flickers busy→idle→busy in a single drain can let Espresso slip through, which is the classic source of residual flakiness with hand-rolled counters.</p>
+<pre><code>performClick()
+  └► UiController.loopMainThreadUntilIdle()
+        ├─ drain MessageQueue (run due messages)
+        ├─ all IdlingResources.isIdleNow()?  ── no ─┐
+        │                                            │ park, await onTransitionToIdle()
+        └─ yes ► proceed to next action  ◄───────────┘</code></pre>
+<p>The OkHttp idling resource simply wires the <code>Dispatcher</code>&#x27;s <code>runningCallsCount()</code> to <code>isIdleNow()</code>, so Espresso treats &quot;in-flight HTTP calls &gt; 0&quot; as busy.</p>
 <hr>
 <h3 id="activityscenario">ActivityScenario</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;<code>ActivityScenario</code> is the AndroidX replacement for the old <code>ActivityTestRule</code>. It launches an Activity, lets me drive it through arbitrary lifecycle states, and hands me the instance safely on the main thread via <code>onActivity</code>. It implements <code>Closeable</code>, so I close it or wrap it in <code>use { }</code> to guarantee teardown. The subtlety interviewers probe is the threading rule: the <code>onActivity</code> block runs on the main thread, so I never touch the Activity directly from the test thread, and I copy out anything I need rather than leaking the reference.&quot;</blockquote>
 <p><code>ActivityScenario</code> is Jetpack Test&#x27;s replacement for the old <code>ActivityTestRule</code>. It launches an Activity and gives you fine-grained lifecycle control without coupling your test class to the test runner.</p>
 <pre><code>@Test
 fun activityDisplaysUserName() {
@@ -813,6 +920,15 @@ val scenario = ActivityScenario.launch&lt;UserProfileActivity&gt;(intent)</code>
 scenario.moveToState(Lifecycle.State.STARTED)   // onStart called
 scenario.moveToState(Lifecycle.State.RESUMED)   // onResume called (default)
 scenario.recreate()                              // simulate rotation</code></pre>
+<p><strong>Under the hood</strong></p>
+<p><code>ActivityScenario</code> drives lifecycle through real framework plumbing, not reflection hacks. It registers an <code>ActivityLifecycleCallbacks</code> monitor on the <code>Application</code> (via <code>Instrumentation.ActivityMonitor</code>) so it can observe the true <code>Stage</code> (CREATED/STARTED/RESUMED/etc.) of the launched Activity. <code>moveToState</code> posts an <code>InstrumentationActivityInvoker</code> command to the main thread that issues the actual lifecycle transitions — and it works synchronously, blocking the test thread on a latch until the target stage is reached. <code>recreate()</code> invokes <code>Activity.recreate()</code>, the same path a configuration change uses, so it genuinely tears down and rebuilds the instance including saved-state restoration.</p>
+<pre><code>test thread                          main thread
+   │ moveToState(RESUMED)
+   ├─ post command ───────────────►  invoker drives onStart→onResume
+   │ await CountDownLatch            ActivityLifecycleCallbacks fires
+   ◄──────────────────────────────  latch.countDown() at Stage.RESUMED
+   │ continue</code></pre>
+<p><code>onActivity { }</code> posts its <code>ActivityAction</code> onto the main <code>Looper</code> and blocks until it returns — that&#x27;s why the block sees a consistent Activity and why you must not stash the reference for use back on the test thread.</p>
 <p><strong><code>ActivityScenario.launch</code> vs <code>launchActivity</code>:</strong></p>
 <ul>
 <li><code>launch</code> returns an <code>ActivityScenario&lt;T&gt;</code> for direct lifecycle control.</li>
@@ -820,6 +936,7 @@ scenario.recreate()                              // simulate rotation</code></pr
 </ul>
 <hr>
 <h3 id="fragmentscenario">FragmentScenario</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;<code>FragmentScenario</code> does for Fragments what <code>ActivityScenario</code> does for Activities — it spins up a Fragment in isolation without needing the host Activity that normally owns it. <code>launchFragmentInContainer</code> adds it to a real container view so I can run Espresso assertions, while <code>launchFragment</code> hosts it headlessly. The catch is the theme: the empty host Activity has no theme, so if my Fragment relies on theme attributes I have to pass <code>themeResId</code>, otherwise it crashes or renders wrong. And because it uses the real <code>FragmentManager</code>, I can call <code>moveToState</code> and <code>recreate()</code> to exercise lifecycle and state restoration.&quot;</blockquote>
 <pre><code>@Test
 fun fragmentShowsEmptyState() {
     val scenario = launchFragmentInContainer&lt;UserListFragment&gt;(
@@ -839,8 +956,17 @@ fun fragmentShowsEmptyState() {
 <p><strong>Moving fragment state:</strong></p>
 <pre><code>scenario.moveToState(Lifecycle.State.CREATED)
 scenario.recreate()</code></pre>
+<p><strong>Under the hood</strong></p>
+<p><code>FragmentScenario</code> is built on top of <code>ActivityScenario</code>: it launches an empty, themeless host Activity (<code>EmptyFragmentActivity</code> / <code>EmptyFragmentActivityWithLayout</code>) and then uses that Activity&#x27;s real <code>FragmentManager</code> to perform a transaction that adds your Fragment — via a supplied <code>FragmentFactory</code> so constructor-injected Fragments work. Because it&#x27;s the genuine <code>FragmentManager</code>, the full lifecycle and <code>FragmentTransaction</code> machinery runs. <code>moveToState</code> translates the target into a fragment-manager <code>setMaxLifecycle</code> plus the host Activity&#x27;s own state move. <code>recreate()</code> recreates the host Activity and relies on <code>FragmentManager</code>&#x27;s saved state to restore the Fragment — so a Fragment that doesn&#x27;t persist its state correctly will visibly lose it here, which is exactly the bug this is good at catching.</p>
+<pre><code>launchFragmentInContainer&lt;F&gt;(themeResId)
+  └─ ActivityScenario.launch(EmptyFragmentActivity[theme])
+        └─ activity.supportFragmentManager
+              .beginTransaction()
+              .add(android.R.id.content, F via FragmentFactory)
+              .commitNow()   ← synchronous, so view exists before assertions</code></pre>
 <hr>
 <h3 id="screenshot-testing">Screenshot Testing</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;Screenshot testing renders UI and diffs it pixel-by-pixel against a committed golden image, so unintended visual regressions — a stray padding, a wrong color token, a font change — fail the build. On Android I lean toward Paparazzi or Roborazzi because they render on the JVM via LayoutLib or Robolectric, so they&#x27;re fast and need no emulator in CI. The trade-off the interviewer will push on: JVM rendering isn&#x27;t pixel-identical to a real device — font metrics and shadow rounding drift — and goldens are binary blobs that bloat PRs, so I scope them to stable design-system components, not content-heavy screens.&quot;</blockquote>
 <p>Screenshot testing catches unintentional visual regressions by rendering UI and comparing the output pixel-by-pixel against a committed golden baseline image. If anything changes — a color, a padding value, a font — the test fails.</p>
 <p><strong>Options for Android:</strong></p>
 <ol>
@@ -874,6 +1000,13 @@ fun userCardLooksCorrect() {
 <li>Future runs: <code>./gradlew verifyPaparazziDebug</code> → fails if diff exceeds threshold.</li>
 <li>On intentional changes: re-record.</li>
 </ol>
+<p><strong>Under the hood</strong></p>
+<p>Paparazzi runs the actual Android framework&#x27;s UI toolkit on the JVM by loading <strong>LayoutLib</strong> — the same rendering engine Android Studio&#x27;s layout preview uses — which is a repackaged <code>layoutlib.jar</code> plus native font/graphics libraries (<code>libandroid_runtime</code>-equivalents). It bootstraps a fake <code>Resources</code>/<code>AssetManager</code> from your merged resources and a stub <code>Context</code>, measures and lays out the view (or composes the tree into a <code>View</code> via <code>ComposeView</code>), then draws into an in-memory <code>BufferedImage</code> and PNG-encodes it. Verification decodes the golden PNG and computes a per-pixel delta against a configurable threshold. Roborazzi differs by using <strong>Robolectric</strong>&#x27;s shadow framework and the real ART-on-JVM Robolectric environment, capturing from the Robolectric-rendered canvas instead of LayoutLib.</p>
+<pre><code>snapshot { UserCard(...) }
+  ├─ LayoutLib: inflate fonts/resources → measure → layout
+  ├─ draw to Bitmap/BufferedImage (software canvas, no GPU)
+  └─ verify: |goldenPixels − renderedPixels| &gt; threshold ? FAIL</code></pre>
+<p>The reason device and JVM renders diverge is subpixel: software (no-GPU) rasterization, host vs device freetype font hinting, and shadow/elevation blur math are not bit-identical — hence the diff threshold rather than exact match.</p>
 <p><strong>Trade-offs:</strong></p>
 <ul>
 <li>JVM rendering can differ subtly from a real device — font metrics and shadow rounding in particular can diverge.</li>
@@ -882,6 +1015,7 @@ fun userCardLooksCorrect() {
 </ul>
 <hr>
 <h3 id="accessibility-testing">Accessibility Testing</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;Accessibility testing verifies that TalkBack, Switch Access, and large-text users can actually use the app — missing content descriptions, low contrast, and undersized touch targets are real bugs. In Espresso I enable Google&#x27;s Accessibility Test Framework so any action automatically throws if the element fails a check; in Compose I assert on semantics like <code>assertHasClickAction</code> and <code>assertContentDescriptionEquals</code>. The nuance is that automated checks catch only the mechanical stuff — minimum 48dp targets, 4.5:1 contrast, presence of a label — they can&#x27;t judge whether a screen is actually navigable or labeled meaningfully, so I still do a manual TalkBack pass.&quot;</blockquote>
 <p>Accessibility is not optional. TalkBack, Switch Access, and large-text users depend on correct semantics — broken content descriptions and undersized touch targets are real bugs, not nice-to-haves.</p>
 <p><strong>Espresso Accessibility Checks (Google&#x27;s Accessibility Test Framework):</strong></p>
 <pre><code>androidTestImplementation &quot;com.google.android.apps.common.testing.accessibility.framework:accessibility-test-framework:4.x.x&quot;</code></pre>
@@ -902,8 +1036,20 @@ fun enableAccessibilityChecks() {
 <li>Interactive elements must have a semantic role like button, checkbox, and so on.</li>
 </ul>
 <p><strong>TalkBack testing:</strong> Run the app with TalkBack enabled and navigate entirely by swipe. Every screen must be fully navigable without vision.</p>
+<p><strong>Under the hood</strong></p>
+<p>The Accessibility Test Framework (ATF) runs a set of <code>AccessibilityHierarchyCheck</code> rules against a snapshot of the accessibility hierarchy — for Views it reads the <code>AccessibilityNodeInfo</code> tree (the same data the framework hands to TalkBack), and for contrast it actually samples the rendered bitmap to compute the luminance ratio. When you call <code>AccessibilityChecks.enable()</code>, Espresso installs a <code>ViewAssertion</code>-style hook into its <code>ViewActions</code> pipeline so every action captures the hierarchy and runs the checks, throwing <code>AccessibilityViewCheckException</code> with the failing <code>AccessibilityCheckResult</code>s. In Compose, the equivalent assertions read the <code>SemanticsNode</code> properties (<code>OnClick</code>, <code>ContentDescription</code>, <code>Role</code>) — and Compose&#x27;s own accessibility bridge translates those same semantics into <code>AccessibilityNodeInfo</code> for TalkBack at runtime, so testing the semantics tree is testing what assistive tech will see.</p>
+<pre><code>TalkBack / Switch Access
+        ▲  AccessibilityNodeInfo tree
+        │
+   ┌────┴──────────────┐
+   View hierarchy   Compose SemanticsNode tree
+   (createAccessibilityNodeInfo)   (AndroidComposeViewAccessibilityDelegate)
+        ▲                    ▲
+        └── ATF checks ──────┘   contrast = sample bitmap luminance ratio</code></pre>
+<p>The reason automated checks are necessary-but-not-sufficient: ATF can verify a label <em>exists</em> and meets size/contrast minimums, but it cannot evaluate whether the label is <em>correct</em> or whether focus order is sensible — those require the manual TalkBack pass.</p>
 <hr>
 <h3 id="flaky-tests">Flaky Tests</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;A flaky test passes sometimes and fails other times with no code change — and the root cause is always non-determinism leaking in: timing, async work that isn&#x27;t synchronized, shared state from a prior test, or wall-clock and random seeds. The biggest gotcha interviewers probe is the retry instinct — retries and <code>@FlakyTest</code> hide the symptom, they don&#x27;t fix it. I treat a flake as a real bug: reproduce it by looping the test 50 times, find the unsynchronized async or the leaked singleton, and fix the determinism rather than quarantining it forever.&quot;</blockquote>
 <p>A flaky test is one that produces different results — passing sometimes, failing other times — on different runs with no code changes. The root cause is always some form of non-determinism leaking into the test.</p>
 <p><strong>Root causes in Android UI tests:</strong></p>
 <table border="1" cellpadding="6" cellspacing="0">
@@ -962,8 +1108,17 @@ fun enableAccessibilityChecks() {
 <li>Add logging at each step to identify which specific assertion is flaking.</li>
 <li>Check for static singletons that aren&#x27;t reset between tests — those are a common source of cross-test contamination.</li>
 </ul>
+<p><strong>Under the hood</strong></p>
+<p>Most UI-test flakiness traces back to how Espresso synchronizes with the app. Espresso doesn&#x27;t sleep; before each <code>perform</code>/<code>check</code> it calls <code>Looper.myQueue().isIdle()</code> on the main thread and blocks until the <code>MessageQueue</code> has no due messages, the <code>AsyncTask</code> thread pool is idle, and every registered <code>IdlingResource</code> reports <code>isIdleNow() == true</code>. Work that escapes those three signals — a raw background thread, an <code>OkHttp</code> dispatcher thread, or a coroutine on <code>Dispatchers.IO</code> — is invisible to Espresso, so the assertion races the result. That&#x27;s the structural origin of &quot;async not synchronized.&quot;</p>
+<pre><code>Espresso UiController loop (simplified):
+  loopMainThreadUntilIdle():
+    while (!queueIsEmpty || !allIdlingResourcesIdle || !asyncPoolIdle):
+        process next main-thread Message
+  -&gt; only THEN run the ViewAction / ViewAssertion</code></pre>
+<p>Animations are a second source: a <code>0</code>→<code>1</code> interpolator posts frames via <code>Choreographer</code>, so the view&#x27;s final bounds aren&#x27;t settled when Espresso reads them. Setting the three <code>*_animation_scale</code> globals to <code>0</code> makes the platform skip the animator entirely rather than fast-forward it. Order-dependence comes from JVM reuse — instrumentation runs all tests in one process, so a <code>static</code>/<code>object</code> field or an un-reset Dispatcher carries state across tests; JUnit also doesn&#x27;t guarantee method order unless you set <code>@FixMethodOrder</code>, which is why hidden coupling surfaces randomly.</p>
 <hr>
 <h3 id="espresso-vs-compose-testing">Espresso vs Compose Testing</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;Both run on a device and both auto-synchronize, but they look at different trees. Espresso matches against the Android View hierarchy with ViewMatchers, while Compose has no Views — it asserts against the semantics tree using SemanticsMatchers. The nuance I call out is that Compose&#x27;s test rule ties its idle-waiting to the same clock that drives recomposition, so it knows when the UI has settled in a way Espresso can&#x27;t for arbitrary async. On a mixed screen I use <code>createAndroidComposeRule</code> so <code>onView</code> and <code>onNode</code> work in the same test.&quot;</blockquote>
 <table border="1" cellpadding="6" cellspacing="0">
 <thead><tr>
 <th>Dimension</th>
@@ -987,8 +1142,15 @@ fun enableAccessibilityChecks() {
 <li>When you need fine-grained semantic assertions.</li>
 </ul>
 <p><strong>Mixed screens (Views + Compose):</strong> Use both frameworks in the same test — <code>onView()</code> for the View parts, <code>composeRule.onNode()</code> for the Compose parts. <code>createAndroidComposeRule&lt;Activity&gt;()</code> supports both in one test class.</p>
+<p><strong>Under the hood</strong></p>
+<p>The two frameworks find elements through completely different data structures. Espresso walks the live <code>View</code> tree returned by <code>getRootView()</code>, applying <code>Matcher&lt;View&gt;</code> predicates against fields like <code>getText()</code> and <code>getContentDescription()</code>. Compose has no Views to walk — instead each composable that calls <code>Modifier.semantics { }</code> (or a higher-level component that does) contributes a <code>SemanticsNode</code> to a merged/unmerged <code>SemanticsTree</code>, a parallel structure built specifically for accessibility and testing. <code>onNodeWithText</code> runs a <code>SemanticsMatcher</code> over <code>SemanticsProperties</code> (e.g. <code>Text</code>, <code>Role</code>, <code>OnClick</code>), not over any rendered pixels.</p>
+<pre><code>Espresso:  View tree  --ViewMatcher--&gt;  matched View   --&gt; perform/check
+Compose:   Composition --produces--&gt;  SemanticsTree
+                                   --SemanticsMatcher--&gt; SemanticsNode --&gt; action/assert</code></pre>
+<p>Synchronization also differs. Compose&#x27;s <code>ComposeTestRule</code> swaps in a <code>TestMonotonicFrameClock</code> and pauses the automatic frame clock, so <code>waitForIdle()</code>/<code>awaitIdle()</code> deterministically drain pending recompositions, layout, and <code>LaunchedEffect</code> work driven by that clock — there&#x27;s no separate IdlingResource registry. With <code>createAndroidComposeRule</code>, the underlying <code>AndroidComposeView</code> is just another View in Espresso&#x27;s hierarchy, which is why the two query mechanisms coexist in one process and one test.</p>
 <hr>
 <h3 id="what-not-to-test-in-ui-tests">What Not to Test in UI Tests</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;UI tests are the slowest, most expensive, and most brittle layer, so I keep them thin: they verify wiring and the critical happy/error paths, not logic. Business rules, exhaustive state permutations, and AB-variant selection belong in fast ViewModel and interactor unit tests. The thing I&#x27;m careful about is not re-testing the platform or third-party SDKs — I don&#x27;t write a UI test that Retrofit parses JSON or that the back button works; that&#x27;s framework behavior, and asserting on it just buys flakiness with no confidence.&quot;</blockquote>
 <ol>
 <li><strong>Business logic</strong> — that belongs in ViewModel and interactor unit tests. UI tests are expensive; don&#x27;t replicate your unit test coverage at the UI layer.</li>
 <li><strong>All permutations of state</strong> — test the happy path and the critical error paths; exhaustive combinatorial state testing belongs in unit tests.</li>
@@ -998,6 +1160,12 @@ fun enableAccessibilityChecks() {
 <li><strong>Animations themselves</strong> — disable them for test stability and test that the end state is correct.</li>
 <li><strong>A/B test variants exhaustively</strong> — pick the most critical variant; the variant selection logic belongs in unit tests.</li>
 </ol>
+<p><strong>Under the hood</strong></p>
+<p>The cost asymmetry is mechanical, not philosophical. A UI test boots the full instrumentation process: it installs two APKs (app + test), spins up an <code>ActivityThread</code>, inflates the real view tree or runs a full Compose composition, and drives everything through <code>Instrumentation</code> IPC to the device — startup and teardown alone dominate. A JVM unit test for the same logic instantiates one class and runs in milliseconds with no Binder, no <code>Looper</code>, no rendering. So each assertion you push up to the UI layer multiplies real wall-clock and exposes you to every device-level non-determinism (GPU rendering, IPC timing, system dialogs racing your activity).</p>
+<pre><code>Unit test:  new ViewModel() -&gt; call method -&gt; assert            ~ms, in-process
+UI test:    install APKs -&gt; ActivityThread -&gt; inflate/compose
+            -&gt; Instrumentation IPC -&gt; assert on device tree      ~seconds–minutes</code></pre>
+<p>Testing platform behavior is wasteful for the same reason it&#x27;s flaky: the back button, IME, and system dialogs are implemented in <code>system_server</code>/the framework and dispatched over Binder, so you&#x27;re exercising AOSP code you don&#x27;t own and can&#x27;t make deterministic. Third-party SDK internals (Retrofit&#x27;s converter, an analytics SDK&#x27;s batching) are likewise already covered by their own suites — your contract is the boundary, which a fast fake or a unit-level verification can pin down without paying the instrumentation tax.</p>
 <hr>
 <h2 id="113-integration-and-end-to-end-testing">11.3 Integration and End-to-End Testing</h2>
 <h3 id="test-pyramid">Test Pyramid</h3>
@@ -1027,6 +1195,7 @@ fun enableAccessibilityChecks() {
 <p><strong>Android CI strategy:</strong> The allocation follows directly from the cost table. Unit tests run on every commit — they&#x27;re fast at roughly 2 to 5 minutes. Integration and smoke UI tests run on every PR at medium cost and gate merges. Full E2E runs nightly or pre-release, where the higher cost is acceptable.</p>
 <hr>
 <h3 id="repository-integration-tests">Repository Integration Tests</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;A repository integration test wires the real collaborators together but stubs the edges of the system — a real Room in-memory DB, MockWebServer for the network, and zero mocked business logic — so I exercise the full data path: parse the response, map it, persist it, and read it back. The value over unit tests is that it catches the seams unit tests mock away, like a wrong column mapping or a serialization mismatch. The gotcha I watch is teardown — I must <code>shutdown()</code> MockWebServer and <code>close()</code> the DB in <code>@After</code>, or the dispatcher thread and the in-memory DB leak across tests in the reused JVM.&quot;</blockquote>
 <p>Integration tests wire real components together but substitute external dependencies like the network and hardware. For a repository, the concrete recipe is: a real Room in-memory database, MockWebServer for the network layer, and no mocked business logic. The result is a test that exercises the full data path through real code.</p>
 <pre><code>@RunWith(JUnit4::class)
 class UserRepositoryIntegrationTest {
@@ -1076,8 +1245,17 @@ class UserRepositoryIntegrationTest {
         assertEquals(&quot;Alice&quot;, db.userDao().getUser(1)?.name)  // verify persisted
     }
 }</code></pre>
+<p><strong>Under the hood</strong></p>
+<p>MockWebServer isn&#x27;t a mock object — it&#x27;s a real HTTP server. On <code>start()</code> it binds an actual <code>ServerSocket</code> on <code>localhost:0</code> (the OS assigns a free port), and <code>url(&quot;/&quot;)</code> returns that loopback address. When the test points Retrofit at it, OkHttp opens a genuine TCP socket and writes a real HTTP/1.1 (or HTTP/2) request; the server pulls the next queued <code>MockResponse</code> off an internal <code>BlockingQueue</code> (FIFO, set via <code>enqueue</code>) and writes real response bytes back. So the path under test includes OkHttp&#x27;s connection pool, the converter factory, and Gson actually parsing the JSON — the only thing faked is what&#x27;s on the wire.</p>
+<pre><code>sut.getUser(1)
+  -&gt; Retrofit proxy -&gt; OkHttp -&gt; TCP socket -&gt; 127.0.0.1:&lt;port&gt;
+       MockWebServer dequeues MockResponse (FIFO) -&gt; writes real bytes
+  -&gt; GsonConverterFactory deserializes -&gt; UserEntity
+  -&gt; Room DAO INSERT into in-memory SQLite -&gt; SELECT verifies</code></pre>
+<p>This is also why ordering and teardown matter: responses are consumed in enqueue order regardless of which endpoint is called, so a mismatched count silently feeds the wrong body to the wrong call. And because <code>start()</code> leaves an accept thread parked on the socket, skipping <code>shutdown()</code> leaks both the thread and the port across the reused test JVM.</p>
 <hr>
 <h3 id="database-tests-room">Database Tests (Room)</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;Room DAO tests run against a real in-memory SQLite database, which is fast and self-cleaning since it vanishes on close. The catch interviewers look for is why they need instrumentation: Room generates code that calls Android&#x27;s bundled SQLite via JNI, and that native library isn&#x27;t on the plain JVM — so the test lives in androidTest, or I bring in Robolectric to shim the Android runtime and run it on the JVM at the cost of a few seconds of startup. I also test the Flow queries with Turbine to confirm they re-emit when the underlying table changes.&quot;</blockquote>
 <p>Room tests use an in-memory database, which is fast — but they require instrumentation because Room uses Android&#x27;s SQLite bindings, which aren&#x27;t available on the plain JVM. The alternative is Robolectric, which emulates enough of the Android runtime to run them on the JVM.</p>
 <p><strong>Pattern:</strong></p>
 <pre><code>@RunWith(AndroidJUnit4::class)
@@ -1141,8 +1319,15 @@ class UserDaoRobolectricTest {
     // same setup as above — runs on JVM, no emulator needed
 }</code></pre>
 <p>Robolectric adds roughly 5 to 10 seconds of startup overhead, but removes the device requirement entirely.</p>
+<p><strong>Under the hood</strong></p>
+<p>Room is an annotation-processor (KSP/kapt) framework: at compile time it generates a <code>UserDao_Impl</code> and an <code>AppDatabase_Impl</code> containing the actual SQL strings and the cursor-to-entity binding code. None of that is reflection at runtime — <code>db.userDao()</code> just returns the generated impl. The reason these can&#x27;t run on a bare JVM is that the generated code ultimately drives <code>SQLiteDatabase</code>/<code>SQLiteConnection</code>, whose query execution is implemented in native code (<code>libsqlite</code>) reached through JNI. The desktop JVM has no such library loaded, so you either run on a device/emulator or let Robolectric load its shadow + bundled native SQLite.</p>
+<pre><code>@Dao interface -&gt; KSP -&gt; UserDao_Impl (raw SQL + cursor binding)
+in-memory builder -&gt; SQLiteDatabase(&quot;:memory:&quot;) -&gt; JNI -&gt; native libsqlite
+                                                   (absent on plain JVM)</code></pre>
+<p>The <code>observeUsers()</code> Flow re-emits because Room registers an <code>InvalidationTracker</code>: each table maintains a flag in a <code>room_table_modification_log</code> temp table updated by triggers Room installs, and after a write transaction commits the tracker checks those flags and notifies registered observers, which re-run the query. An in-memory database (<code>:memory:</code>) lives entirely in the connection&#x27;s heap and is discarded the instant the last connection closes — that&#x27;s why <code>db.close()</code> in <code>@After</code> gives perfect isolation with no file cleanup.</p>
 <hr>
 <h3 id="room-migration-tests">Room Migration Tests</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;Migration tests matter because a migration runs exactly once on a real device, and if it corrupts data the user can never recover it. So I seed a database at the old schema version, run the actual migration, and assert that existing rows survived and new columns got their defaults. The gotcha interviewers love is <code>NOT NULL</code> without a <code>DEFAULT</code> — that crashes on any populated table — and the other one is forgetting <code>MigrationTestHelper</code> validates the resulting schema against Room&#x27;s exported JSON, which is why you have to commit those schema files.&quot;</blockquote>
 <p>Migrations are critical because they run exactly once on a user&#x27;s real device. A bad migration corrupts data that the user can never get back. Migration tests verify that the schema transition is correct, that existing data survives, and that new columns have the right defaults.</p>
 <p><strong>Setup:</strong></p>
 <pre><code>androidTestImplementation &quot;androidx.room:room-testing:$room_version&quot;</code></pre>
@@ -1206,8 +1391,19 @@ class MigrationTest {
 <li>A column type mismatch between the migration SQL and the Room entity annotation.</li>
 <li>A missing migration path — for example, providing 1→2 and 2→3 individually but no direct 1→3 path for users skipping versions.</li>
 </ul>
+<p><strong>Under the hood</strong></p>
+<p><code>createDatabase</code> uses Room&#x27;s exported schema JSON (the files emitted by the <code>room.schemaLocation</code> annotation-processor argument, committed under <code>schemas/</code>) to physically build a SQLite file whose <code>CREATE TABLE</code> statements exactly match version N — it does <em>not</em> run your entity definitions. <code>runMigrationsAndValidate</code> then applies your <code>Migration.migrate()</code> SQL against that real SQLite database, and afterward reads SQLite&#x27;s own catalog (<code>PRAGMA table_info</code>, <code>PRAGMA foreign_key_list</code>, <code>PRAGMA index_list</code>) and diffs it against the expected version-N+1 schema JSON. A mismatch throws <code>IllegalStateException</code> — this is why a column type that differs between your migration SQL and your <code>@Entity</code> (e.g. you <code>ADD COLUMN email TEXT</code> but annotate the field non-null with a different affinity) fails validation even when the SQL itself succeeds.</p>
+<pre><code>exported schema JSON (v1) ──► createDatabase ──► real .db file at v1
+                                                      │
+                          your Migration(1,2).migrate(SupportSQLiteDatabase)
+                                                      ▼
+                              PRAGMA table_info / index_list  ──diff──►  expected schema JSON (v2)
+                                                      │
+                                          mismatch → IllegalStateException</code></pre>
+<p><code>SupportSQLiteDatabase</code> here is the framework SQLite binding (<code>FrameworkSQLiteDatabase</code> wrapping <code>android.database.sqlite.SQLiteDatabase</code>), so <code>execSQL</code> goes straight through JNI to the device&#x27;s bundled SQLite engine — the test exercises the same C library that runs in production.</p>
 <hr>
 <h3 id="api-contract-tests-with-mockwebserver">API Contract Tests with MockWebServer</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;MockWebServer spins up a real HTTP server on localhost in the test process, so my Retrofit client does actual socket I/O against it — real headers, real status codes, real JSON parsing. That catches things a mock can&#x27;t: a misspelled JSON field, a broken interceptor, wrong serialization. I point Retrofit at <code>mockWebServer.url(&#x27;/&#x27;)</code>, enqueue canned responses, and then call <code>takeRequest()</code> to assert on what my client actually sent. The trade-off is it&#x27;s milliseconds-per-call slower than a pure mock and it doesn&#x27;t validate the real backend — that&#x27;s still E2E&#x27;s job.&quot;</blockquote>
 <p>OkHttp&#x27;s <code>MockWebServer</code> runs a real HTTP server in-process. Your Retrofit client makes actual HTTP requests to it — real serialization, real headers, real status codes — which means these tests verify the contract between your app and the API in a way that pure mocks cannot.</p>
 <p><strong>Dependency:</strong></p>
 <pre><code>testImplementation &quot;com.squareup.okhttp3:mockwebserver:4.x.x&quot;</code></pre>
@@ -1298,8 +1494,18 @@ class UserApiContractTest {
 <li>More fragile to API shape changes — you have to keep test JSON in sync with the actual API.</li>
 <li>Doesn&#x27;t test the real backend — that&#x27;s what E2E tests are for.</li>
 </ul>
+<p><strong>Under the hood</strong></p>
+<p><code>MockWebServer.start()</code> binds a real <code>ServerSocket</code> on <code>127.0.0.1</code> at an OS-assigned ephemeral port (port 0 → kernel picks a free one), spins up a dispatcher thread to accept connections, and <code>url(&quot;/&quot;)</code> returns an <code>HttpUrl</code> pointing at that loopback port. Enqueued <code>MockResponse</code> objects sit in a <code>BlockingQueue</code>; the default <code>QueueDispatcher</code> pops one per incoming request and writes raw HTTP/1.1 (or HTTP/2) bytes back over the socket. Your Retrofit call therefore goes through the full OkHttp stack — interceptor chain, connection pool, <code>Okio</code> buffered socket source/sink, and the converter&#x27;s <code>JsonReader</code> parsing the response body — none of which is stubbed. Each received request is parsed into a <code>RecordedRequest</code> and pushed onto another queue that <code>takeRequest()</code> drains (blocking up to a timeout), which is how you can assert on the method, path, headers, and body bytes the client actually transmitted.</p>
+<pre><code>api.getUser(1)
+  └─ Retrofit invocation handler builds Request
+       └─ OkHttp interceptor chain (auth/logging/retry)
+            └─ TCP connect to 127.0.0.1:&lt;ephemeral&gt;  ◄─── MockWebServer ServerSocket
+                 └─ QueueDispatcher pops next MockResponse → writes HTTP bytes
+            └─ converter parses body → User
+  takeRequest() ◄── RecordedRequest (method, path, headers, body) recorded on accept</code></pre>
 <hr>
 <h3 id="hilt-test-injection">Hilt Test Injection</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;Hilt owns the whole dependency graph, so for tests I don&#x27;t hand-build fakes — I swap bindings inside the graph. <code>@HiltAndroidTest</code> plus <code>HiltAndroidRule</code> regenerates the components against a <code>HiltTestApplication</code>, and I replace a production module with <code>@TestInstallIn(replaces = ...)</code>, or for a one-off I use <code>@BindValue</code> to push a field straight into the graph. The classic gotcha is rule ordering: the Hilt rule has to be <code>order = 0</code> so injection finishes before <code>ActivityScenarioRule</code> launches the Activity, otherwise the component isn&#x27;t ready when the Activity asks for its dependencies.&quot;</blockquote>
 <p>Hilt manages the entire dependency graph in production. The testing challenge is that you need to swap out specific components with fakes — without touching any production wiring. Hilt provides dedicated annotations for exactly that.</p>
 <p><strong>Hilt testing annotations:</strong></p>
 <pre><code>// Marks a test class to use Hilt injection
@@ -1364,9 +1570,16 @@ class MainActivityTest {
 }</code></pre>
 <p>Note: <code>@HiltAndroidTest</code> requires that a <code>@HiltAndroidApp</code> Application exists. For tests, use <code>HiltTestApplication</code> — Hilt provides it — as the test application class. Configure it in the <code>AndroidManifest.xml</code> for the <code>androidTest</code> source set.</p>
 <p><strong><code>HiltAndroidRule</code> order matters</strong> when combining multiple rules. Set <code>order = 0</code> for the Hilt rule so Hilt injects before any Activity launches.</p>
+<p><strong>Under the hood</strong></p>
+<p>These annotations are processed at compile time by Hilt&#x27;s annotation processor (running on top of Dagger). <code>@HiltAndroidTest</code> makes the processor generate a <em>per-test</em> Dagger component (e.g. a test variant of <code>SingletonComponent</code>) instead of relying on the app&#x27;s single generated graph, which is why each test class can have a different binding set. <code>@TestInstallIn</code> and <code>@UninstallModules</code> work by altering which <code>@Module</code> classes are aggregated into that generated component: <code>replaces</code> tells the processor to drop the named production module&#x27;s <code>@Provides</code> methods and substitute the test module&#x27;s, all resolved statically — no runtime reflection or bytecode rewriting. <code>@BindValue</code> is the one runtime-ish piece: the processor generates a synthetic <code>@Module</code> whose <code>@Provides</code> method returns the <em>field value</em> read from your test instance, so the binding is created when <code>hiltRule.inject()</code> runs and reads that field. Rule ordering is enforced by JUnit&#x27;s <code>RuleChain</code>: <code>@get:Rule(order = 0)</code> makes JUnit wrap the Hilt rule as the outermost statement, so its <code>before()</code> (which builds the component and performs field injection) executes before <code>ActivityScenarioRule.before()</code> launches the Activity via <code>ActivityScenario</code>, guaranteeing the graph exists when the Activity&#x27;s <code>onCreate</code> triggers member injection.</p>
+<pre><code>JUnit RuleChain (outer → inner):
+  HiltAndroidRule(order=0).before()   → build test component, inject @Inject/@BindValue fields
+    ActivityScenarioRule(order=1).before() → ActivityScenario.launch(...) → Activity.onCreate
+                                              → Hilt member-injects Activity from ready graph</code></pre>
 <hr>
 <h3 id="ci-strategy">CI Strategy</h3>
 <p>A well-structured CI test strategy has three goals. First, fast feedback on every PR — under 10 minutes for blocking checks. Second, full regression coverage before any release. And third, a quarantine system so flaky tests don&#x27;t block the pipeline while they&#x27;re being investigated.</p>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;My CI strategy maps directly onto the test pyramid: unit and integration tests gate every PR because they&#x27;re fast and deterministic, UI smoke tests cover only the critical flows on the PR, and the slow full UI and device-farm suites run pre-release where a longer runtime is acceptable. To keep PR feedback under ten minutes I shard instrumentation tests across parallel emulators and merge the results. The discipline part is flaky-test quarantine — I tag and exclude a flake with a linked bug, but with a hard fix-or-delete policy so the quarantine list doesn&#x27;t quietly become a graveyard of untrusted tests.&quot;</blockquote>
 <p><strong>Recommended layer allocation:</strong></p>
 <table border="1" cellpadding="6" cellspacing="0">
 <thead><tr>
@@ -1392,8 +1605,18 @@ class MainActivityTest {
 <li>Never leave quarantined tests sitting indefinitely — set a policy of fix or delete within 2 sprints.</li>
 </ul>
 <p><strong>Test result aggregation:</strong> Use <code>allure</code> or <code>junit-merge</code> to combine results across parallel shards into a single report.</p>
+<p><strong>Under the hood</strong></p>
+<p><code>numShards</code>/<code>shardIndex</code> are consumed by AndroidJUnitRunner, not Gradle: the runner enumerates every discovered test method, computes a stable hash of each, and runs only those where <code>hash % numShards == shardIndex</code>. That partition is deterministic and disjoint, so N machines each running a different <code>shardIndex</code> collectively run every test exactly once with no coordination — which is why merging is just concatenating each shard&#x27;s <code>TEST-*.xml</code> JUnit reports. <code>@FlakyTest</code> is a JUnit filter annotation: the runner&#x27;s <code>-e annotation</code>/<code>-e notAnnotation</code> arguments (or a CI filter) drop annotated methods from the run set before execution, so a quarantined test never even instantiates. Each shard typically targets its own emulator/device instance to avoid contention on the single ADB/instrumentation channel per device.</p>
+<pre><code>AndroidJUnitRunner discovers M test methods
+   for each test:  shard = stableHash(testName) % numShards
+   run if shard == shardIndex            ── disjoint partition, no overlap
+emulator 0 → shard 0 ─┐
+emulator 1 → shard 1 ─┤ each emits TEST-*.xml
+emulator 2 → shard 2 ─┤
+emulator 3 → shard 3 ─┘ → junit-merge / allure → single aggregated report</code></pre>
 <hr>
 <h3 id="how-to-test-a-login-flow">How to Test a Login Flow</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;I&#x27;d answer this as three tests at three layers, not one. Unit tests on the ViewModel and interactor cover validation and the success/error mapping — blank email, token returned. A repository integration test with MockWebServer proves the 200 actually persists the token and a 401 maps to invalid-credentials. Then one or two UI tests with a <code>FakeAuthRepository</code> bound via Hilt verify that a success navigates to home and a failure shows the error. The key principle I&#x27;d state out loud: never hit the real backend — the server isn&#x27;t my system under test, my app&#x27;s behavior is.&quot;</blockquote>
 <p>This is the canonical multi-layer testing interview question. The right answer isn&#x27;t one test — it&#x27;s three tests at three different layers, each catching a different class of bug.</p>
 <p>The flow covers: email input, password input, submit, API call, token storage, and navigation to home.</p>
 <p><strong>Layer 1: Unit tests (fastest)</strong></p>
@@ -1472,8 +1695,15 @@ class LoginScreenTest {
     }
 }</code></pre>
 <p><strong>What NOT to do:</strong> Never test login with real network calls. The backend is not your system under test — you&#x27;re testing your app&#x27;s behavior, not the server&#x27;s.</p>
+<p><strong>Under the hood</strong></p>
+<p>The three layers run on entirely different machinery, which is why they catch different bug classes. Layer 1 runs on a local JVM (no Android framework) under <code>runTest</code>, whose <code>TestCoroutineScheduler</code> virtualizes the clock — <code>advanceUntilIdle()</code> drains all queued coroutine continuations on the test dispatcher instantly rather than waiting real time, so there is no actual concurrency and assertions are deterministic. Layer 2 still runs on the JVM but adds real socket I/O to a loopback MockWebServer, exercising serialization and HTTP status mapping. Layer 3 runs on a device/emulator inside an instrumentation APK; Espresso&#x27;s value-add is its <code>UiController</code>, which loops on the main thread&#x27;s <code>MessageQueue</code> and only proceeds when the app is <em>idle</em> — no pending main-thread messages and all registered <code>IdlingResource</code>s reporting idle — which is what makes <code>onView(...).check(...)</code> reliable instead of racing the UI. The <code>@BindValue FakeAuthRepository</code> is wired in by Hilt&#x27;s generated test component so the production network path is never touched, and Espresso <code>ViewMatchers</code>/<code>ViewActions</code> resolve views by walking the view hierarchy from the activity&#x27;s decor view.</p>
+<pre><code>Layer 1  JVM only        runTest virtual clock → continuations drained, 0 real ms
+Layer 2  JVM + loopback  Retrofit ↔ MockWebServer socket → real JSON + status mapping
+Layer 3  emulator        Espresso UiController waits for MessageQueue idle + IdlingResources
+                         FakeAuthRepository bound via Hilt test component (no real network)</code></pre>
 <hr>
 <h3 id="how-to-test-network-error-handling">How to Test Network Error Handling</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;Network error handling isn&#x27;t one scenario — it&#x27;s a matrix: timeouts, no connectivity, 4xx, 5xx, malformed JSON, and cancellation, each tested at the right layer. At the ViewModel layer I make the interactor throw an <code>IOException</code> and assert the UI goes to a retryable error state. At the integration layer MockWebServer is the star: <code>SocketPolicy</code> lets me simulate a connection refused, a mid-response disconnect, or a never-responding server for timeouts, and a <code>setBodyDelay</code> to force a <code>SocketTimeoutException</code>. The nuance is matching the exception type the layer below actually surfaces — a timeout is a <code>SocketTimeoutException</code>, a bad body is a parse exception — not just catching a generic <code>Exception</code>.&quot;</blockquote>
 <p>Network error handling is a broad category — it covers timeouts, no connectivity, HTTP 4xx and 5xx responses, malformed JSON, and cancelled requests. Each of these requires a different test at a different layer.</p>
 <p><strong>Unit test — ViewModel handles errors:</strong></p>
 <pre><code>@Test
@@ -1554,9 +1784,19 @@ fun `repository retries 3 times on 503`() = runTest {
     assertEquals(3, mockWebServer.requestCount)
     assertEquals(&quot;Alice&quot;, user.name)
 }</code></pre>
+<p><strong>Under the hood</strong></p>
+<p>Each <code>SocketPolicy</code> maps to a concrete manipulation of the TCP socket by MockWebServer&#x27;s dispatcher thread, which is why the resulting exception types differ. <code>DISCONNECT_AT_START</code> closes (or refuses) the socket before any bytes flow, surfacing in OkHttp as a connection failure (<code>ConnectException</code>/<code>IOException</code>). <code>NO_RESPONSE</code> accepts the connection but writes nothing, so OkHttp&#x27;s read on the <code>Okio</code> source eventually trips the configured <code>readTimeout</code> and throws <code>SocketTimeoutException</code> — the same mechanism <code>setBodyDelay</code> exploits by stalling the body write past the client&#x27;s timeout. <code>DISCONNECT_DURING_RESPONSE_BODY</code> writes a partial body then drops the connection, so the OkHttp source hits EOF before the declared/expected length and throws an <code>IOException</code>. Malformed JSON gets through the socket layer intact and only fails deeper in the stack, when the converter&#x27;s streaming parser (Gson&#x27;s <code>JsonReader</code> / Moshi&#x27;s <code>JsonReader</code>) encounters an unexpected token. Crucially, OkHttp does <em>not</em> automatically retry HTTP <code>5xx</code> responses — <code>retryOnConnectionFailure</code> only covers transport-level failures — so the &quot;retries 3 times on 503&quot; test is exercising <em>your</em> application-level retry interceptor or repository loop, which is exactly why <code>requestCount</code> is the right assertion.</p>
+<pre><code>SocketPolicy            socket action                     exception surfaced
+DISCONNECT_AT_START     refuse/close before bytes      →  ConnectException / IOException
+NO_RESPONSE             accept, never write            →  SocketTimeoutException (readTimeout)
+setBodyDelay &gt; timeout  stall body write               →  SocketTimeoutException
+DISCONNECT_DURING_BODY  partial body then close        →  IOException (unexpected EOF)
+malformed body (200)    full bytes delivered           →  JsonReader parse exception (in converter)
+5xx (200-level socket)  clean response, status 503     →  no OkHttp auto-retry → app-level retry loop</code></pre>
 <hr>
 <h2 id="quick-reference-interview-cheat-sheet">Quick-Reference Interview Cheat Sheet</h2>
 <h3 id="unit-testing">Unit Testing</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;Unit tests cover the pieces that hold logic but no Android framework — ViewModels, use cases, repositories, mappers, and pure functions — so they run on the JVM in milliseconds with no emulator. The discipline that makes coroutine tests deterministic is injecting dispatchers and using <code>runTest</code> with a <code>TestDispatcher</code>, because that swaps the real scheduler for a virtual clock I can fast-forward with <code>advanceUntilIdle()</code>. The gotcha interviewers love is <code>StandardTestDispatcher</code> versus <code>Unconfined</code>: Standard queues coroutines so I have to advance time explicitly, while Unconfined runs them eagerly inline — pick Standard when you want to assert intermediate states, Unconfined when you just want the final result.&quot;</blockquote>
 <table border="1" cellpadding="6" cellspacing="0">
 <thead><tr>
 <th>Question</th>
@@ -1569,7 +1809,16 @@ fun `repository retries 3 times on 503`() = runTest {
 <tr><td>Why <code>unmockkAll()</code>?</td><td>Prevents mock leaks between test classes in same JVM worker</td></tr>
 <tr><td><code>StandardTestDispatcher</code> vs <code>UnconfinedTestDispatcher</code>?</td><td>Standard: explicit advance needed. Unconfined: runs eagerly inline.</td></tr>
 </tbody></table>
+<p><strong>Under the hood</strong></p>
+<p><code>runTest</code> builds a <code>TestScope</code> backed by a <code>TestCoroutineScheduler</code> — a virtual-time clock, not the wall clock. Both test dispatchers share that single scheduler; they differ only in <em>when</em> they dispatch. <code>StandardTestDispatcher</code> enqueues every resumption into the scheduler&#x27;s task queue and runs nothing until you call <code>advanceUntilIdle()</code>, <code>advanceTimeBy()</code>, or <code>runCurrent()</code>, which drain the queue in <code>when</code>-timestamp order. <code>UnconfinedTestDispatcher</code> resumes coroutines eagerly on the current thread up to their first real suspension point, so child coroutines execute as soon as they&#x27;re launched. Crucially, <code>delay()</code> does not sleep — the dispatcher intercepts it and registers a <code>when</code> timestamp on the scheduler, so <code>advanceTimeBy(10_000)</code> advances &quot;10 seconds&quot; instantly. <code>runTest</code> also installs an auto-advancing mechanism and asserts at the end that no coroutines were left uncompleted, throwing <code>UncompletedCoroutinesError</code> if a launched job never finished.</p>
+<pre><code>runTest
+  └─ TestScope
+       └─ TestCoroutineScheduler  (virtual clock, priority queue keyed by `when`)
+            ├─ StandardTestDispatcher  → enqueue, drain only on advance*/runCurrent
+            └─ UnconfinedTestDispatcher → resume eagerly on current thread</code></pre>
+<p>MockK&#x27;s <code>unmockkAll()</code> matters because <code>mockkStatic</code>/<code>mockkObject</code> install a JVM-wide bytecode/objenesis transformation on the class — the test JVM worker is reused across classes (Gradle&#x27;s <code>forkEvery</code> is not 1), so an un-reset static mock stays patched into the shared classloader and silently corrupts later, unrelated tests.</p>
 <h3 id="ui-testing">UI Testing</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;UI tests drive the real screen on a device or emulator, and which framework I use depends on what rendered it — Espresso walks the View hierarchy, while Compose tests query the semantics tree that composables publish. The thing seniors get asked about is flakiness: it almost always comes from unsynchronized async work, animations, real network, or shared state between tests. My fixes are to disable animations, hook async work into Espresso&#x27;s idling mechanism — Idling Resources or <code>awaitIdle()</code> in Compose — mock the network, and isolate test data so tests don&#x27;t leak into each other. And I&#x27;m deliberate about what I <em>don&#x27;t</em> test in UI: business logic and platform behavior belong in unit tests, not slow instrumentation runs.&quot;</blockquote>
 <table border="1" cellpadding="6" cellspacing="0">
 <thead><tr>
 <th>Question</th>
@@ -1581,7 +1830,15 @@ fun `repository retries 3 times on 503`() = runTest {
 <tr><td>What not to test in UI?</td><td>Business logic, platform behavior, pixel metrics, third-party SDKs, animations themselves</td></tr>
 <tr><td>What is an Idling Resource?</td><td>Callback that tells Espresso &quot;app is busy/idle&quot; so it waits before proceeding</td></tr>
 </tbody></table>
+<p><strong>Under the hood</strong></p>
+<p>Espresso&#x27;s core guarantee is <em>synchronization</em>: every <code>onView(...).perform/check</code> posts work onto the main thread&#x27;s <code>MessageQueue</code> and then blocks until the app is idle. It does this through a <code>UiController</code> that watches three things — the <code>MessageQueue</code> (via the <code>Looper</code>&#x27;s <code>IdleHandler</code> and an internal queue interrogation), the <code>AsyncTask</code> thread pool, and any registered <code>IdlingResource</code>s. Only when all report idle does Espresso dispatch the next interaction, which is why custom async work (custom thread pools, OkHttp dispatchers) is invisible to Espresso unless you wrap it in an <code>IdlingResource</code> whose <code>isIdleNow()</code> returns false while busy and calls back via <code>ResourceCallback</code> when done. Animations break this because a running <code>Animator</code>/<code>ValueAnimator</code> keeps posting frame callbacks through the <code>Choreographer</code>, so the queue never appears idle (or the view&#x27;s final state isn&#x27;t settled) — hence disabling them at the system level.</p>
+<p>Compose has no View hierarchy, so it can&#x27;t be walked by Espresso. Instead each composable can attach a <code>SemanticsConfiguration</code> (via <code>Modifier.semantics</code>, <code>testTag</code>, content descriptions), and these merge into a <code>SemanticsTree</code>. <code>ComposeTestRule</code> matchers like <code>onNodeWithText</code> query that tree, and synchronization runs through the Compose <code>Recomposer</code> / <code>Snapshot</code> system: <code>waitForIdle()</code>/<code>awaitIdle()</code> pumps the test clock and blocks until there are no pending recompositions, layout, or draw passes. Under Espresso interop, Compose registers itself as an <code>IdlingResource</code> so the two frameworks stay coordinated.</p>
+<pre><code>onView(matcher).perform(click())
+   → UiController.loopMainThreadUntilIdle()
+        ↳ MessageQueue idle?  AsyncTask pool idle?  all IdlingResources idle?
+        ↳ when ALL true → inject the MotionEvent / ViewAction</code></pre>
 <h3 id="integration--e2e">Integration / E2E</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;I think about this as the test pyramid — lots of fast unit tests, fewer integration tests, very few full UI and E2E tests, because the higher you go the slower and flakier they get. For integration I lean on MockWebServer rather than mocking the API class, because it exercises the whole stack — interceptors, JSON deserialization, HTTP error handling, even request construction — against a real socket. So a login flow gets tested at three levels: unit for the ViewModel validation and use case, integration for the repository talking to MockWebServer, and a thin UI test with a fake repository. The detail interviewers probe is Room migrations: I use <code>MigrationTestHelper</code> to create the DB at the old version, write data, run the migration, then assert both the schema and that the data survived.&quot;</blockquote>
 <table border="1" cellpadding="6" cellspacing="0">
 <thead><tr>
 <th>Question</th>
@@ -1594,6 +1851,17 @@ fun `repository retries 3 times on 503`() = runTest {
 <tr><td>What does MockWebServer add over mocks?</td><td>Tests interceptors, JSON deserialization, HTTP error handling, request construction end-to-end</td></tr>
 <tr><td>Hilt in tests?</td><td><code>@HiltAndroidTest</code>, <code>HiltAndroidRule</code>, <code>@TestInstallIn</code> to replace modules, <code>@BindValue</code> for per-test bindings</td></tr>
 </tbody></table>
+<p><strong>Under the hood</strong></p>
+<p>MockWebServer is a real HTTP server: it binds a <code>ServerSocket</code> on localhost, accepts connections on a background thread, and serves responses you <code>enqueue()</code> from a FIFO <code>BlockingQueue</code>. Because the client connects over an actual socket, the <em>entire</em> OkHttp/Retrofit stack runs for real — DNS to localhost, the connection pool, every <code>Interceptor</code>, the converter factory (Moshi/Gson/kotlinx) deserializing the byte stream — which a mocked <code>ApiService</code> skips entirely. <code>SocketPolicy</code> lets you inject failures at the transport layer: <code>DISCONNECT_AT_START</code> closes the socket before sending bytes, <code>NO_RESPONSE</code> hangs to trigger read timeouts, and you can return malformed bodies to exercise converter-level parse failures — fault modes a return-stubbed mock can never reproduce.</p>
+<p>Room&#x27;s <code>MigrationTestHelper</code> is a JUnit <code>TestRule</code> that reads the schema JSON Room exports at compile time (the <code>room.schemaLocation</code> annotation-processor arg). <code>createDatabase(name, version)</code> materializes a real SQLite file using the exported schema for that version so you can insert legacy rows; <code>runMigrationsAndValidate(name, newVersion, validateDroppedTables, migration)</code> then opens that file with <code>SupportSQLiteOpenHelper</code>, applies your <code>Migration.migrate()</code> SQL, and diffs the resulting live schema (via <code>PRAGMA table_info</code> / <code>PRAGMA foreign_key_list</code>) against the exported schema for <code>newVersion</code> — throwing if columns, indices, or types don&#x27;t match, while your own assertions confirm the data survived.</p>
+<pre><code>MigrationTestHelper
+  1. createDatabase(v1)  → real .db file built from exported schema_v1.json
+  2. insert legacy rows  → SupportSQLiteDatabase.execSQL(...)
+  3. runMigrationsAndValidate(v2, MIGRATION_1_2)
+        ↳ apply your migrate() SQL
+        ↳ compare live PRAGMA schema vs exported schema_v2.json  → throws on mismatch
+  4. query + assert rows preserved</code></pre>
+<p>Hilt&#x27;s test machinery rewrites the dependency graph at compile time: <code>@HiltAndroidTest</code> makes the annotation processor generate a per-test <code>ApplicationComponent</code> against a <code>HiltTestApplication</code>; <code>HiltAndroidRule.inject()</code> performs members-injection into the test instance. <code>@TestInstallIn</code> generates a replacement module that <em>uninstalls</em> the production module from the component, and <code>@BindValue</code> binds a field&#x27;s runtime value straight into the graph — so you swap fakes without touching production wiring, all resolved by Dagger&#x27;s generated factory code, not reflection.</p>
 <div class="pager">
 <a class="prev" href="android-data-layer.html"><span class="lbl">‹ Previous</span>10. Android Data Layer</a>
 <a class="next" href="build-gradle-release.html"><span class="lbl">Next ›</span>12. Build, Gradle &amp; Release</a>

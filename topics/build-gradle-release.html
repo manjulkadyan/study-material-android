@@ -58,6 +58,7 @@
 <hr>
 <h2 id="121-gradle-basics">12.1 Gradle Basics</h2>
 <h3 id="project-vs-module">Project vs Module</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;A Gradle project is the whole build rooted at <code>settings.gradle.kts</code>, and a module — Gradle calls it a subproject — is an independently buildable unit you declare with <code>include</code>. The reason we split into modules isn&#x27;t aesthetics: each module is its own compilation unit, so a change in <code>:feature:search</code> doesn&#x27;t force <code>:core:network</code> to recompile. The gotcha interviewers probe is that modularization is only a win if your dependency graph stays acyclic and you keep <code>api</code> leakage in check — otherwise you get recompile cascades and you&#x27;ve paid the complexity cost for nothing.&quot;</blockquote>
 <p><strong>Definition</strong></p>
 <p>A Gradle project is the top-level build — the root <code>build.gradle(.kts)</code> and <code>settings.gradle(.kts)</code> files represent it. A Gradle module (Gradle calls them &quot;subprojects&quot;) is an independently buildable unit declared in <code>settings.gradle.kts</code> via <code>include(&quot;:moduleName&quot;)</code>.</p>
 <p><strong>How it works</strong></p>
@@ -67,6 +68,11 @@
   include(&quot;:feature:search&quot;)
   include(&quot;:core:network&quot;)</code></pre>
 <p>Each module has its own <code>build.gradle.kts</code>. The root project aggregates them. Gradle resolves the dependency graph by walking <code>include</code> declarations and evaluating each module&#x27;s build script.</p>
+<p><strong>Under the hood</strong></p>
+<p><code>settings.gradle.kts</code> is evaluated first by the <code>Settings</code> object during the initialization phase, before any <code>build.gradle.kts</code> is touched. Each <code>include(&quot;:a:b&quot;)</code> creates a <code>ProjectDescriptor</code> and maps the path to a directory (default <code>a/b</code>). Gradle then builds an in-memory <code>Project</code> object tree and runs the configuration phase, evaluating every project&#x27;s build script to register tasks and wire dependencies into a single <code>TaskExecutionGraph</code> (the DAG). Modules are nodes in a project-dependency graph; Gradle topologically sorts it, which is exactly why a cycle is fatal — there is no valid linear order to execute.</p>
+<pre><code>init phase:    Settings → ProjectDescriptor tree
+config phase:  each Project.evaluate() → tasks + dependency edges
+exec phase:    topological sort of TaskExecutionGraph → run</code></pre>
 <p><strong>Android implications</strong></p>
 <ul>
 <li><code>:app</code> is almost always the only <code>com.android.application</code> module.</li>
@@ -92,6 +98,7 @@
 </ul>
 <hr>
 <h3 id="android-gradle-plugin-agp">Android Gradle Plugin (AGP)</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;AGP is the Gradle plugin that bolts Android onto generic Gradle — it&#x27;s what knows about <code>aapt2</code>, manifest merging, DEX-ing, variants, signing, and AAB packaging. When you apply <code>com.android.application</code>, it registers hundreds of tasks behind friendly lifecycle names like <code>assembleDebug</code>. The thing interviewers always check is the version coupling: AGP, the Gradle wrapper, the Kotlin Gradle plugin, and the JDK all have to line up — AGP 8 needs Gradle 8 and JDK 17 — and a mismatch surfaces as a cryptic <code>NoSuchMethodError</code>, not a clear message.&quot;</blockquote>
 <p><strong>Definition</strong></p>
 <p>AGP is the Gradle plugin that layers Android-specific build logic on top of standard Gradle — it handles resource compilation with <code>aapt2</code>, manifest merging, DEX compilation, APK/AAB packaging, signing, lint, and instrumented test support.</p>
 <p><strong>How it works</strong></p>
@@ -112,6 +119,12 @@ plugins {
 <li>Resource shrinking (<code>shrinkResources</code>)</li>
 <li>APK/AAB assembly and signing</li>
 </ol>
+<p><strong>Under the hood</strong></p>
+<p>AGP is itself a Gradle plugin written against Gradle&#x27;s <code>Plugin&lt;Project&gt;</code> API plus internal <code>Variant</code>/<code>Component</code> APIs. When applied, it reads the <code>android { }</code> extension (a Gradle <code>ExtensionContainer</code> object), enumerates the build-type × flavor matrix, and programmatically <code>register</code>s a task per variant — <code>aapt2</code> compile/link tasks, <code>merge*</code> tasks, the <code>dexBuilder</code>/<code>d8</code>/<code>r8</code> tasks, package and sign tasks — wiring their inputs and outputs so Gradle&#x27;s up-to-date and caching machinery can track them. The <code>NoSuchMethodError</code> failure mode happens because AGP and the Kotlin Gradle Plugin both link against Gradle&#x27;s internal (non-stable) APIs; if AGP calls a Gradle method that a mismatched Gradle/KGP version removed or changed signature on, the JVM resolves the call at runtime and throws.</p>
+<pre><code>apply AGP → read android{} extension
+          → expand variants (buildType × flavor)
+          → for each variant: register aapt2 / merge / d8|r8 / package / sign tasks
+          → expose lifecycle tasks (assemble*, bundle*) depending on them</code></pre>
 <p><strong>Failure modes</strong></p>
 <ul>
 <li>Version mismatch between AGP and Kotlin Gradle Plugin → obscure <code>NoSuchMethodError</code> at build time.</li>
@@ -120,6 +133,7 @@ plugins {
 </ul>
 <hr>
 <h3 id="gradle-tasks">Gradle Tasks</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;A Gradle task is a unit of work with declared inputs, outputs, and an action, and tasks form a DAG that Gradle executes in dependency order. The power comes from incremental builds: Gradle fingerprints each task&#x27;s inputs and outputs, and if nothing changed it skips the task as UP-TO-DATE or pulls it FROM-CACHE. The classic gotcha is non-deterministic inputs — if a task reads <code>System.currentTimeMillis()</code> or forgets its <code>@Input</code>/<code>@OutputFile</code> annotations, Gradle can&#x27;t fingerprint it correctly, so it either never goes up-to-date or silently serves stale outputs.&quot;</blockquote>
 <p><strong>Definition</strong></p>
 <p>A Gradle task is a unit of work with declared inputs, outputs, and an action. Tasks form a DAG — a directed acyclic graph — and Gradle executes them in dependency order.</p>
 <p><strong>Key concepts</strong></p>
@@ -160,6 +174,12 @@ abstract class GenerateVersionTask : DefaultTask() {
 tasks.register&lt;GenerateVersionTask&gt;(&quot;generateVersion&quot;) {
     outputFile.set(layout.buildDirectory.file(&quot;version.txt&quot;))
 }</code></pre>
+<p><strong>Under the hood</strong></p>
+<p>Up-to-date checking is built on input/output snapshots, not timestamps. For each task, Gradle hashes the declared inputs — file contents (a hash per file, combined into a fingerprint), input properties, and the task&#x27;s own implementation/classpath — and stores them with the previous execution in <code>.gradle</code>. Before running, it recomputes those hashes; if they match the prior run AND the output fingerprints are unchanged, it reports UP-TO-DATE and skips the action entirely. The build cache extends this: the input fingerprint becomes a cache key, and the task&#x27;s outputs are stored as an archive keyed by that hash (locally or in a remote cache), so a matching key on any machine yields FROM-CACHE. This is precisely why <code>@Input</code>/<code>@OutputFile</code> annotations matter — they tell Gradle what to put in the fingerprint. An unannotated input is invisible to hashing (stale-output risk); a volatile value like <code>currentTimeMillis()</code> makes the fingerprint differ every run (never cacheable). <code>register</code> is also lazy — the task is configured only if it ends up in the graph, unlike eager <code>create</code>.</p>
+<pre><code>inputs (files+props+impl) ──hash──▶ fingerprint ──┐
+                                                   ├─ == previous? &amp; outputs intact? → UP-TO-DATE
+prev run fingerprint  ◀── stored in .gradle ───────┘
+fingerprint as key ──▶ build cache lookup ──▶ hit → FROM-CACHE (unpack outputs)</code></pre>
 <p><strong>Failure modes</strong></p>
 <ul>
 <li>Tasks that read <code>System.currentTimeMillis()</code> or random values as outputs break UP-TO-DATE checks — outputs always differ.</li>
@@ -169,6 +189,7 @@ tasks.register&lt;GenerateVersionTask&gt;(&quot;generateVersion&quot;) {
 <hr>
 <h3 id="build-variants-build-types-product-flavors">Build Variants, Build Types, Product Flavors</h3>
 <h4 id="build-types">Build Types</h4>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;A build type controls <em>how</em> the same code is compiled and packaged — debuggability, minification, signing config, and id/version suffixes — with <code>debug</code> and <code>release</code> as the defaults. The mental model I use: build type is the <em>how</em>, flavor is the <em>what</em>. A subtlety is that <code>initWith</code> lets a custom type like <code>staging</code> inherit from <code>debug</code> and then override pieces, which is cleaner than copy-pasting the whole block, and <code>applicationIdSuffix</code> lets you install debug and release side by side.&quot;</blockquote>
 <p><strong>Definition</strong>: A build type controls how the code is compiled and packaged. The two default types are <code>debug</code> and <code>release</code>.</p>
 <pre><code>android {
     buildTypes {
@@ -190,7 +211,10 @@ tasks.register&lt;GenerateVersionTask&gt;(&quot;generateVersion&quot;) {
     }
 }</code></pre>
 <p><strong>What build type controls</strong>: debuggability, minification, signing config, application ID suffix, version name suffix.</p>
+<p><strong>Under the hood</strong></p>
+<p><code>applicationIdSuffix</code> does not just change the installed package name — AGP appends it to the <code>applicationId</code> that gets written into the merged <code>AndroidManifest.xml</code> and the final DEX/resource table, which is what makes two build types installable on the same device as distinct apps. <code>isDebuggable = true</code> flips the <code>android:debuggable</code> manifest flag, which ART honors by disabling certain JIT/AOT optimizations and allowing a debugger to attach (JDWP). <code>isMinifyEnabled = true</code> inserts the R8 task into the variant&#x27;s task chain between compilation and DEX, and <code>signingConfig</code> selects which key AGP uses in the <code>apksigner</code>/<code>zipalign</code> step that produces the final signed artifact.</p>
 <h4 id="product-flavors">Product Flavors</h4>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;A product flavor controls <em>what</em> goes into the build — different endpoints, branding, or feature sets — like a free vs paid tier, or prod vs staging. Flavors live in dimensions, and AGP produces the Cartesian product: every combination of one flavor per dimension, crossed with each build type, becomes a variant. The gotcha is variant explosion — three dimensions of two flavors each is eight combos times two build types equals sixteen variants — and that library modules need <code>missingDimensionStrategy</code> if they don&#x27;t declare every dimension the app does.&quot;</blockquote>
 <p><strong>Definition</strong>: A product flavor controls what is in the build — different API endpoints, feature sets, or branding for different market segments.</p>
 <pre><code>android {
     flavorDimensions += listOf(&quot;environment&quot;, &quot;payment&quot;)
@@ -214,7 +238,10 @@ tasks.register&lt;GenerateVersionTask&gt;(&quot;generateVersion&quot;) {
     }
 }</code></pre>
 <p><strong>Flavor dimensions</strong>: When multiple dimensions exist, every combination of one flavor per dimension × each build type creates a variant: <code>prodFreeDebug</code>, <code>prodFreeRelease</code>, <code>stagingPaidDebug</code>, etc.</p>
+<p><strong>Under the hood</strong></p>
+<p><code>buildConfigField</code> causes AGP to generate a <code>BuildConfig.java</code> per variant during the <code>generate{Variant}BuildConfig</code> task; each field becomes a <code>public static final</code> constant compiled into bytecode, so <code>BuildConfig.BASE_URL</code> is resolved at compile time, not read from a file at runtime. Flavor resolution is implemented through Gradle&#x27;s <em>variant-aware dependency management</em>: each variant publishes a set of attributes (the flavor of each dimension plus the build type), and when <code>:app</code> depends on a library, Gradle&#x27;s attribute-matching engine selects the library variant whose attributes match. <code>missingDimensionStrategy</code> supplies a default attribute value for a dimension the library never declared, which is why its absence produces <code>No matching variant of project :core found</code> — the matcher has an unsatisfiable attribute.</p>
 <h4 id="build-variants">Build Variants</h4>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;A build variant is exactly one flavor combination plus one build type — <code>stagingPaidDebug</code>, say — and AGP generates a dedicated source set, BuildConfig, output artifact, and full task chain for each. What&#x27;s worth knowing is how sources merge: AGP layers variant-specific over build-type over flavor over main, with higher priority winning. That layering is what lets you, for example, swap in a fake network module just for debug without touching production code.&quot;</blockquote>
 <p>A build variant is one flavor combination plus one build type. Gradle creates a variant-specific source set, output APK/AAB, and compile/assemble tasks for each combination.</p>
 <pre><code>Variant matrix (2 env flavors × 2 payment flavors × 2 build types = 8 variants):
   prodFreeDebug
@@ -230,6 +257,8 @@ tasks.register&lt;GenerateVersionTask&gt;(&quot;generateVersion&quot;) {
 <li>Resources, manifests, and Java/Kotlin sources from higher-priority sets override lower ones.</li>
 <li><code>BuildConfig</code> fields are generated per variant.</li>
 </ol>
+<p><strong>Under the hood</strong></p>
+<p>For each variant AGP builds a merged view from the contributing source sets and feeds it to the compilers. Java/Kotlin sources from different source sets are <em>additive</em> — they&#x27;re concatenated into one compilation unit, so two source sets defining the <em>same fully-qualified class</em> is a duplicate-class compile error, not an override. Resources, by contrast, are <em>merged</em> by the <code>merge{Variant}Resources</code> task: it walks source sets in priority order and the highest-priority definition of a given <code>name</code>+type wins, silently shadowing lower ones (a same-priority duplicate is a hard error). Manifests are combined by the manifest merger using node markers and <code>tools:</code> rules. Because every variant gets its own compile/dex/package task chain keyed by the merged inputs, adding a flavor dimension multiplies the number of task chains Gradle must configure and potentially execute — that&#x27;s the literal source of variant-count build-time growth.</p>
 <p><strong>Trade-offs</strong></p>
 <ul>
 <li>Each additional flavor dimension multiplies the variant count — 3 dimensions × 2 flavors each = 8 combos × 2 build types = 16 variants. Build times grow.</li>
@@ -242,6 +271,7 @@ tasks.register&lt;GenerateVersionTask&gt;(&quot;generateVersion&quot;) {
 </ul>
 <hr>
 <h3 id="source-sets">Source Sets</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;A source set is just a named bundle of source directories — Kotlin/Java, res, assets, and a manifest — tied to a variant or one of its components. Android gives you <code>main</code> plus one per build type, per flavor, and per combination, and they merge by priority: variant-specific beats build-type beats flavor beats main. The practical use is injecting different code per variant — a fake <code>NetworkModule</code> in <code>debug/</code>, the real <code>google-services.json</code> in <code>release/</code> — and the gotcha is that for <em>code</em> a duplicate class across source sets is an error, while for <em>resources</em> the higher-priority one just silently wins.&quot;</blockquote>
 <p><strong>Definition</strong>: A source set is a named collection of source directories — Java/Kotlin, resources, assets, and manifest — associated with a specific variant or one of its components.</p>
 <p><strong>Default source set layout</strong></p>
 <pre><code>app/src/
@@ -268,6 +298,8 @@ tasks.register&lt;GenerateVersionTask&gt;(&quot;generateVersion&quot;) {
 <p><strong>Priority (highest wins)</strong></p>
 <p><code>variant-specific</code> &gt; <code>build-type</code> &gt; <code>flavor</code> &gt; <code>main</code></p>
 <p>For resources, duplicate resource names at the same priority level are a build error. At different priority levels, the higher one wins silently.</p>
+<p><strong>Under the hood</strong></p>
+<p>A source set is represented by AGP as an <code>AndroidSourceSet</code> object holding <code>AndroidSourceDirectorySet</code>s (one each for <code>java</code>, <code>kotlin</code>, <code>res</code>, <code>assets</code>, <code>manifest</code>, <code>jniLibs</code>, etc.) — these are just configurable lists of directories, which is why <code>srcDirs(...)</code> can point them anywhere. The directory naming convention (<code>debug/</code>, <code>prodDebug/</code>) is pure convention: AGP derives the expected folder names from the variant&#x27;s build type and flavor names and registers those paths automatically; renaming a flavor renames the expected directory. At build time the resolved per-variant set is the ordered concatenation of every contributing source set, and the priority ordering you see is literally the order in which those directories are presented to the resource merger and prepended to the compiler&#x27;s source roots. Nothing physically moves on disk — the merge is a virtual, in-memory composition done by the relevant <code>merge*</code>/<code>compile*</code> task.</p>
 <p><strong>Use cases</strong></p>
 <ul>
 <li>Put mock <code>NetworkModule.kt</code> in <code>debug/</code> so debug builds wire a fake API.</li>
@@ -277,13 +309,22 @@ tasks.register&lt;GenerateVersionTask&gt;(&quot;generateVersion&quot;) {
 <hr>
 <h3 id="dependency-configurations">Dependency Configurations</h3>
 <h4 id="implementation"><code>implementation</code></h4>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;<code>implementation</code> puts a dependency on this module&#x27;s own compile classpath but hides it from consumers — they see my public ABI, not my internal Retrofit dependency. The big payoff is incremental compilation: if Retrofit changes internally but my module&#x27;s public API doesn&#x27;t, Gradle won&#x27;t recompile any downstream module. That&#x27;s why the default advice is <code>implementation</code> everywhere and only reach for <code>api</code> when a type genuinely leaks into your public signatures.&quot;</blockquote>
 <p><strong>Definition</strong>: The dependency is on the compile classpath of this module only — it is not exposed to consumers of this module.</p>
 <pre><code>dependencies {
     implementation(&quot;com.squareup.retrofit2:retrofit:2.9.0&quot;)
 }</code></pre>
 <p><strong>How it works</strong>: Consumers of this module see the compiled ABI (public API), but Retrofit is hidden from their compile classpath. Consumers can still use Retrofit at runtime if they declare it themselves.</p>
 <p><strong>Key benefit</strong>: If Retrofit changes internally but the module&#x27;s own public API doesn&#x27;t change, Gradle will NOT recompile downstream modules. This is the primary mechanism for incremental compilation gains in a multi-module project.</p>
+<p><strong>Under the hood</strong></p>
+<p>The distinction is realized through Gradle&#x27;s outgoing-variant configurations. Every module publishes two relevant configurations: <code>apiElements</code> (consumed at compile time by downstream modules) and <code>runtimeElements</code> (consumed at runtime). An <code>implementation</code> dependency is added to the <code>implementation</code> bucket, which feeds <em>only</em> <code>runtimeElements</code> — it never appears in <code>apiElements</code>, so it&#x27;s literally absent from the consumer&#x27;s compile classpath. On top of that, Gradle tracks the <em>ABI fingerprint</em> (public method/field signatures) of upstream modules; the Kotlin/Java incremental compiler skips recompiling a consumer when an upstream change doesn&#x27;t alter that ABI. Since an <code>implementation</code> dependency&#x27;s internals can&#x27;t be part of your ABI (consumers can&#x27;t reference them), changes there can&#x27;t trigger downstream recompilation.</p>
+<pre><code>module :core:network
+  ├─ apiElements      → exposed at compile time to consumers
+  └─ runtimeElements  → exposed at runtime
+implementation dep ─▶ runtimeElements only  (hidden from consumer compile classpath)
+api dep            ─▶ apiElements + runtimeElements (leaks to consumers)</code></pre>
 <h4 id="api"><code>api</code></h4>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;<code>api</code> is like <code>implementation</code> but it transitively exposes the dependency to consumers — anyone depending on my module gets it on their compile classpath automatically. You only want this when the dependency&#x27;s types actually appear in your public API signatures, like returning an <code>OkHttpClient</code>. The cost interviewers want you to name is the recompile cascade: change an <code>api</code> dependency and every downstream module recompiles, so over-using <code>api</code> silently erodes the whole point of modularization.&quot;</blockquote>
 <p><strong>Definition</strong>: The dependency is on the compile classpath of this module and is transitively exposed to all consumers.</p>
 <pre><code>// In :core:network
 dependencies {
@@ -292,6 +333,8 @@ dependencies {
 <p><strong>How it works</strong>: Any module depending on <code>:core:network</code> sees OkHttp on its compile classpath automatically. If OkHttp updates, Gradle must recompile all downstream modules.</p>
 <p><strong>When to use <code>api</code></strong></p>
 <p>Use <code>api</code> only when the dependency&#x27;s types appear in the module&#x27;s own public API signatures (method parameters, return types, public fields). If you expose <code>OkHttpClient</code> in a public function, consumers need it on their classpath to compile.</p>
+<p><strong>Under the hood</strong></p>
+<p><code>api</code> dependencies are placed in the <code>api</code> bucket, which Gradle wires into <em>both</em> <code>apiElements</code> and <code>runtimeElements</code> of the publishing module. When a consumer resolves its compile classpath, Gradle transitively pulls everything from upstream <code>apiElements</code>, so OkHttp&#x27;s types are present and resolvable. The recompile cascade follows from ABI tracking: because an <code>api</code> dependency&#x27;s types can legally appear in your public signatures, a change to that dependency <em>can</em> change your module&#x27;s effective ABI, so Gradle must conservatively assume downstream consumers may be affected and recompile them. This transitivity is also what pollutes consumer classpaths — they can now accidentally <code>import okhttp3.*</code> even if they never declared OkHttp.</p>
 <p><strong><code>api</code> vs <code>implementation</code> — the key interview question</strong></p>
 <table border="1" cellpadding="6" cellspacing="0">
 <thead><tr>
@@ -307,20 +350,27 @@ dependencies {
 </tbody></table>
 <p>The rule of thumb is to start with <code>implementation</code> everywhere. Only upgrade to <code>api</code> when the compiler tells you a consumer can&#x27;t find a type it needs.</p>
 <h4 id="compileonly"><code>compileOnly</code></h4>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;<code>compileOnly</code> puts a dependency on the compile classpath but does <em>not</em> package it into the output — perfect for annotations like <code>javax.inject</code> that are only needed at compile time, or APIs the platform itself provides at runtime, which is exactly how <code>android.jar</code> is wired. The trap: if you mark something <code>compileOnly</code> whose classes are actually needed at runtime, you&#x27;ll compile fine and then crash with <code>NoClassDefFoundError</code> once you hit that code path on device.&quot;</blockquote>
 <p><strong>Definition</strong>: On the compile classpath but not packaged into the output. Used for compile-time annotations or APIs that the platform provides at runtime.</p>
 <pre><code>dependencies {
     compileOnly(&quot;javax.annotation:javax.annotation-api:1.3.2&quot;)
     compileOnly(&quot;com.google.dagger:dagger:2.51&quot;) // when using kapt for code gen only
 }</code></pre>
 <p><strong>Android use cases</strong>: <code>javax.inject</code> annotations, provided annotations for annotation processors, APIs available on Android platform (<code>android.jar</code> is automatically <code>compileOnly</code>).</p>
+<p><strong>Under the hood</strong></p>
+<p><code>compileOnly</code> artifacts are added to the <code>compileClasspath</code> configuration but deliberately excluded from <code>runtimeClasspath</code>, so the DEX/packaging step never sees them and they don&#x27;t ship in the APK. This works for annotations because many have <code>@Retention(SOURCE)</code> or <code>CLASS</code> retention — they&#x27;re consumed by the compiler/annotation processor and either discarded or left only as metadata, never needed by the running VM. <code>android.jar</code> is the canonical case: AGP adds it as a bootclasspath-style compile-only dependency so your code can reference <code>android.app.Activity</code>, but the actual implementation lives in the framework on the device. The failure mode is direct: a <code>compileOnly</code> library&#x27;s class is absent from <code>runtimeClasspath</code>, so the class loader (ART&#x27;s <code>PathClassLoader</code> walking the DEX files) can&#x27;t find it, and the first reference throws <code>NoClassDefFoundError</code>/<code>ClassNotFoundException</code>.</p>
 <p><strong>Failure mode</strong>: If you <code>compileOnly</code> a library whose classes are needed at runtime, you get <code>ClassNotFoundException</code> or <code>NoClassDefFoundError</code> at runtime.</p>
 <h4 id="runtimeonly"><code>runtimeOnly</code></h4>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;<code>runtimeOnly</code> is the mirror image of <code>compileOnly</code> — the dependency is packaged into the output but kept off the compile classpath, so you can&#x27;t reference its types directly in code. It&#x27;s for pluggable implementations chosen at runtime, like an SLF4J logging backend or a JDBC driver. It&#x27;s pretty rare in Android app modules and shows up more in plain JVM modules where you wire the implementation via service loading or reflection.&quot;</blockquote>
 <p><strong>Definition</strong>: Not on the compile classpath, but packaged into the output. Used for implementations selected at runtime — SLF4J backends, JDBC drivers, and similar.</p>
 <pre><code>dependencies {
     runtimeOnly(&quot;org.slf4j:slf4j-android:1.7.36&quot;)
 }</code></pre>
 <p>Rare in Android app modules, more common in JVM modules.</p>
+<p><strong>Under the hood</strong></p>
+<p><code>runtimeOnly</code> adds the artifact to <code>runtimeClasspath</code> (and thus into the packaged output) but excludes it from <code>compileClasspath</code>, so the compiler can&#x27;t see the types — that&#x27;s intentional, because the consumer is expected to discover the implementation indirectly. The common mechanism is <code>java.util.ServiceLoader</code>: a façade like SLF4J calls <code>ServiceLoader.load(...)</code>, which reads <code>META-INF/services/</code> provider files from whatever is on the runtime classpath and instantiates the backend by reflection. Because nothing in your source references the backend directly, keeping it off the compile classpath prevents accidental hard coupling while still shipping the bytecode so the loader can find it at runtime.</p>
 <h4 id="kapt"><code>kapt</code></h4>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;<code>kapt</code> runs Java annotation processors against Kotlin code, but Java APs can&#x27;t read Kotlin directly, so kapt first generates Java <em>stubs</em> — signature-only representations of your Kotlin classes — runs the processors against those, then feeds the generated sources back for a final Kotlin compile. That stub-generation round is the expensive part and it doesn&#x27;t play well with incremental compilation, which is the whole reason the ecosystem moved to KSP.&quot;</blockquote>
 <p><strong>Definition</strong>: Runs an annotation processor through the Kotlin Annotation Processing Tool. The processor runs after Kotlin compilation and generates Java/Kotlin source files.</p>
 <pre><code>plugins {
     id(&quot;kotlin-kapt&quot;)
@@ -330,8 +380,14 @@ dependencies {
     kapt(&quot;com.google.dagger:dagger-compiler:2.51&quot;)
 }</code></pre>
 <p><strong>How it works</strong>: KAPT creates stubs (Java-compatible representation of Kotlin classes), runs Java annotation processors against those stubs, then feeds the generated sources back into the Kotlin compiler. Two compilation rounds: stubs + Java AP → generated sources → final Kotlin compile.</p>
+<p><strong>Under the hood</strong></p>
+<p>KAPT exists because the standard <code>javax.annotation.processing</code> API (and <code>javax.lang.model</code> mirror types) only understands Java source/elements, not Kotlin. KAPT runs the Kotlin compiler in a special mode that emits Java <em>stub</em> files — classes with correct signatures but empty/throwing method bodies — then launches a real <code>javac</code> annotation-processing round over those stubs so existing processors like Dagger&#x27;s see familiar <code>TypeElement</code>/<code>ExecutableElement</code> models. Generated sources are collected and then compiled in the final Kotlin/Java passes. The cost is twofold: stub generation requires fully resolving and re-emitting your Kotlin as Java for the whole compilation unit, and because the AP round operates on regenerated stubs, KAPT&#x27;s incremental support is coarse — small Kotlin edits often invalidate the stubs and force broad reprocessing.</p>
+<pre><code>Kotlin sources ─▶ KAPT stub gen ─▶ Java stubs ─▶ javac annotation processing ─▶ generated sources
+                                                                                       │
+                          final compile ◀──────────────────────────────────────────────┘</code></pre>
 <p><strong>Performance cost</strong>: Stub generation is expensive. KAPT cannot benefit from Kotlin incremental compilation as effectively as KSP.</p>
 <h4 id="ksp"><code>ksp</code></h4>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;KSP is a first-class Kotlin compiler plugin API for annotation processing — it operates directly on Kotlin&#x27;s symbol/resolution model with no Java stub-generation step, which is why it&#x27;s roughly twice as fast as kapt and supports proper incremental processing. Room, Moshi, and Hilt all ship KSP processors now. The migration nuance is that KSP gives processor authors a Kotlin-native API, so each library had to write a dedicated KSP processor — you can&#x27;t just point kapt config at it.&quot;</blockquote>
 <p><strong>Definition</strong>: Kotlin Symbol Processing is a first-class Kotlin compiler plugin API for building annotation processors that work directly on the Kotlin IR, with no stub generation step.</p>
 <pre><code>plugins {
     id(&quot;com.google.devtools.ksp&quot;) version &quot;1.9.24-1.0.20&quot;
@@ -342,6 +398,8 @@ dependencies {
     implementation(&quot;androidx.room:room-runtime:2.6.1&quot;)
     ksp(&quot;androidx.room:room-compiler:2.6.1&quot;)
 }</code></pre>
+<p><strong>Under the hood</strong></p>
+<p>KSP runs as a Kotlin compiler plugin and exposes its own abstraction layer — <code>KSClassDeclaration</code>, <code>KSFunctionDeclaration</code>, <code>Resolver</code> — backed by the compiler&#x27;s already-resolved symbol table, so processors read Kotlin declarations (nullability, suspend, properties, default args) without any Java stub round. Processors implement <code>SymbolProcessor</code> and run in <em>rounds</em>: each round returns the symbols it couldn&#x27;t yet process (deferred) and can generate new files via a <code>CodeGenerator</code>, which records the originating source files. That dependency tracking is what enables true incremental processing — when a source file changes, KSP only reprocesses the symbols and regenerates the outputs whose recorded dependencies were touched, instead of re-running over rebuilt stubs. The net effect is fewer compiler invocations and finer-grained invalidation, hence the roughly 2× speedup over KAPT.</p>
 <p><strong>KSP advantages over KAPT</strong>: Up to 2× faster, supports incremental processing, no stub generation step, works natively with Kotlin types. Room, Moshi, Hilt all support KSP.</p>
 <h4 id="dependency-configuration-summary">Dependency Configuration Summary</h4>
 <pre><code>dependencies {
@@ -367,6 +425,7 @@ dependencies {
 }</code></pre>
 <hr>
 <h3 id="version-catalogs">Version Catalogs</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;A version catalog is a single TOML file — <code>gradle/libs.versions.toml</code> — where I declare every dependency version and coordinate once, and Gradle generates type-safe <code>libs.*</code> accessors with IDE autocomplete instead of me memorizing string keys. It replaces <code>ext {}</code> blocks and <code>buildSrc</code> constants. The gotcha interviewers like is scope: those generated accessors only exist in the <code>build.gradle.kts</code> DSL — inside <code>buildSrc</code> or a convention plugin you don&#x27;t get <code>libs.</code> for free, you have to resolve the catalog through the <code>VersionCatalogsExtension</code> and <code>findLibrary(...)</code>.&quot;</blockquote>
 <p><strong>Definition</strong>: A version catalog is a centralized, type-safe way to declare all dependency versions in one place, defined in <code>gradle/libs.versions.toml</code>.</p>
 <p><strong>Why version catalogs</strong></p>
 <p>Before version catalogs, teams used <code>ext {}</code> blocks or <code>buildSrc</code> constants, which required you to memorize the string key names at every call site. Version catalogs generate type-safe accessors and give you IDE autocomplete instead.</p>
@@ -435,8 +494,15 @@ dependencies {
 <li>Mixing <code>libs.versions.toml</code> with <code>ext {}</code> in the same project creates confusion about which is authoritative.</li>
 <li>Version catalog accessors are only available in <code>build.gradle.kts</code>, not in <code>buildSrc</code> Kotlin files (use <code>libs</code> extension or publish catalog to <code>buildSrc</code>).</li>
 </ul>
+<p><strong>Under the hood</strong></p>
+<p>The catalog is not a runtime construct — it is consumed entirely at <em>configuration time</em>. When a build with a <code>libs.versions.toml</code> is present, Gradle parses the TOML and synthesizes a Java class (commonly <code>LibrariesForLibs</code>) whose methods correspond to your dependency aliases; the <code>libs</code> you type in the DSL is an instance of that generated extension registered on the project. Aliases with dashes/dots are split into a nested accessor tree, so <code>retrofit-converter-gson</code> becomes <code>libs.retrofit.converter.gson</code> returning a <code>Provider&lt;MinimalExternalModuleDependency&gt;</code>. Because the accessors are generated from the TOML, a typo can only fail at configuration time (unresolved symbol) — it can never reach execution. The catalog model itself is also a build <em>input</em>, so changing a version in the TOML invalidates the relevant configuration/cache entries.</p>
+<pre><code>libs.versions.toml ──(parse at config time)──▶ generated LibrariesForLibs class
+   [libraries] alias &quot;room-ktx&quot;  ──▶ libs.room.ktx : Provider&lt;MinimalExternalModuleDependency&gt;
+   [bundles]   &quot;room&quot;            ──▶ libs.bundles.room : Provider&lt;ExternalModuleDependencyBundle&gt;
+   [plugins]   &quot;hilt&quot;            ──▶ libs.plugins.hilt : Provider&lt;PluginDependency&gt;</code></pre>
 <hr>
 <h3 id="convention-plugins">Convention Plugins</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;A convention plugin is just a regular Gradle plugin that bundles the build configuration I&#x27;d otherwise copy-paste into every module — <code>compileSdk</code>, Java/JVM target, lint, common dependencies. I write it once in <code>buildSrc</code> or a <code>:build-logic</code> included build and apply it by id, so bumping <code>compileSdk</code> across 50 modules is a one-line change. The senior nuance is <em>where</em> I put it: <code>buildSrc</code> is auto-discovered but sits on every module&#x27;s classpath, so touching it invalidates the whole project; an included build is more setup but only recompiles affected modules and is fully configuration-cache friendly, so for a large repo I reach for <code>:build-logic</code>.&quot;</blockquote>
 <p><strong>Definition</strong>: A convention plugin is a Gradle plugin — typically written in <code>buildSrc</code> or an included build (<code>:build-logic</code>) — that encapsulates common build configuration shared across multiple modules.</p>
 <p><strong>The problem they solve</strong></p>
 <p>Without convention plugins, each module&#x27;s <code>build.gradle.kts</code> repeats the same boilerplate:</p>
@@ -511,6 +577,10 @@ class HiltConventionPlugin : Plugin&lt;Project&gt; {
 <li><code>buildSrc</code> changes invalidate the entire project&#x27;s configuration cache → every module recompiles. For active development on build logic, prefer <code>:build-logic</code>.</li>
 <li>Version catalog not accessible in <code>buildSrc</code> plugins without explicitly wiring <code>versionCatalogs</code> extensions.</li>
 </ul>
+<p><strong>Under the hood</strong></p>
+<p>A precompiled script plugin (<code>android-library-convention.gradle.kts</code>) is <em>compiled</em> by the <code>kotlin-dsl</code> plugin into a real <code>Plugin&lt;Project&gt;</code> class before any consuming build runs — the file name (with dots) becomes the plugin id. So applying <code>id(&quot;android-library-convention&quot;)</code> is identical to applying a hand-written <code>class … : Plugin&lt;Project&gt;</code>: Gradle instantiates it and calls <code>apply(project)</code>, which mutates that project&#x27;s <code>ExtensionContainer</code> (e.g., the <code>android {}</code> extension) and <code>DependencyHandler</code>. The <code>buildSrc</code>-vs-included-build cost difference is a classpath fact: <code>buildSrc</code>&#x27;s output jar is injected into the build-script classpath of <em>every</em> project, so any change there changes that shared classpath and Gradle conservatively invalidates all task and configuration-cache entries. An <code>includeBuild(&quot;build-logic&quot;)</code> is a separate Gradle build whose published plugin artifacts are resolved per-consumer, so its task graph and outputs are tracked independently and only the modules that actually apply the changed plugin recompile.</p>
+<pre><code>buildSrc change ──▶ shared buildscript classpath changes ──▶ ALL projects invalidated
+:build-logic change ──▶ only consumers of the changed plugin recompile</code></pre>
 <hr>
 <h3 id="interview-angles-121">Interview Angles 12.1</h3>
 <p><strong>Q: <code>api</code> vs <code>implementation</code> — explain the difference and when to use each.</strong></p>
@@ -527,6 +597,7 @@ class HiltConventionPlugin : Plugin&lt;Project&gt; {
 <hr>
 <h2 id="122-build-performance">12.2 Build Performance</h2>
 <h3 id="configuration-cache">Configuration Cache</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;The configuration cache serializes the <em>result</em> of the configuration phase — the fully built task graph — to disk, so on a warm run Gradle skips re-evaluating every build script and jumps straight to execution. On a big modular project that&#x27;s 10–30 seconds saved per invocation, and it stacks with the build cache. The catch is it imposes a strict contract: tasks can&#x27;t touch <code>Project</code> or other live build state at execution time, and they must capture only serializable inputs — so non-compliant plugins are the usual blocker, which is why I run with <code>problems=warn</code> first and read the HTML report before flipping it to <code>fail</code>.&quot;</blockquote>
 <p><strong>Definition</strong>: Gradle&#x27;s configuration cache stores the result of the configuration phase — the task graph construction — to disk so it can be reused on subsequent builds without re-evaluating build scripts.</p>
 <p><strong>How it works</strong></p>
 <p>Without configuration cache:</p>
@@ -563,8 +634,15 @@ org.gradle.configuration-cache.problems=warn  # or &quot;fail&quot; for strict m
 </ul>
 <p><strong>Debugging</strong></p>
 <p>Run <code>./gradlew assembleDebug --configuration-cache</code> and examine the HTML report at <code>build/reports/configuration-cache/</code> — it lists all incompatibilities.</p>
+<p><strong>Under the hood</strong></p>
+<p>The cache key is a fingerprint of everything that <em>influenced</em> configuration: the requested task names, the build-script classpath, the values of read system properties and environment variables, and the content of files read during configuration. If any of those change on a later run, Gradle gets a cache miss and re-runs configuration; this is exactly why reading an env var at execution time is unsafe — it was never recorded as a configuration input. On a hit, Gradle deserializes a graph of <code>Task</code> instances with their input/output state already populated and proceeds directly to execution scheduling, skipping script evaluation entirely. The serializer is what enforces the contract: it walks each task&#x27;s captured fields, and a live <code>Project</code> (or other non-serializable build service) fails the graph because the whole point is that no configuration-time-only state may survive into the execution of a cached graph. The cache also enables eager parallelism — once the graph is materialized, Gradle can begin scheduling work without waiting on script evaluation.</p>
+<pre><code>inputs: [task requests] + [buildscript classpath] + [env vars/sysprops read] + [files read]
+        └──── hashed ────▶ cache key
+hit  ▶ deserialize Task graph (inputs/outputs restored) ▶ execute
+miss ▶ run configuration phase ▶ serialize graph ▶ store under key</code></pre>
 <hr>
 <h3 id="build-cache">Build Cache</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;The build cache keys each task&#x27;s <em>outputs</em> by a hash of its inputs — task type, input files, classpath, properties. If that key already exists locally or on a remote node, Gradle copies the outputs in instead of running the task. The thing people conflate is UP-TO-DATE versus build cache: UP-TO-DATE only asks whether <em>this</em> checkout&#x27;s outputs are still current, whereas the build cache lets you reuse outputs across machines and even after a clean. The failure mode to watch is non-deterministic outputs — embedded timestamps or absolute paths — because those poison the key and you get misses on every build.&quot;</blockquote>
 <p><strong>Definition</strong>: The build cache stores task outputs keyed by a hash of the task&#x27;s inputs. If the inputs hash to a key already in the cache, Gradle fetches the outputs from cache instead of re-executing the task.</p>
 <p><strong>How it works</strong></p>
 <p>Gradle computes a cache key as a hash of the task class, task inputs, and classpath. If that key exists in the local or remote cache, outputs are restored. This is different from UP-TO-DATE: UP-TO-DATE checks whether the outputs on disk are unchanged; the build cache allows reuse across machines and clean checkouts.</p>
@@ -602,8 +680,15 @@ buildCache {
 <li>Kotlin compiler embeds absolute paths in some metadata → cache misses across machines with different workspace paths. Mitigated in recent KGP versions via path normalization.</li>
 <li>Tasks with <code>@CacheableTask</code> but undeclared path-sensitive inputs → false cache hits → stale outputs.</li>
 </ul>
+<p><strong>Under the hood</strong></p>
+<p>Only tasks annotated <code>@CacheableTask</code> participate, and each input property carries normalization metadata (<code>@PathSensitive</code>, <code>@InputFiles</code>, etc.) that tells Gradle <em>how</em> to hash it. The build cache key is a Merkle-style hash: Gradle hashes the task implementation (class + its classpath), then each input — for files it hashes content under the declared path sensitivity, so <code>@PathSensitive(RELATIVE)</code> deliberately ignores absolute locations and lets two machines with different workspace roots produce the same key. The combined hash is the cache entry&#x27;s name; the entry itself is a tarball of the declared <code>@OutputFile</code>/<code>@OutputDirectory</code> artifacts. A hit simply unpacks that tarball into the output locations — no task action runs. This is why embedded timestamps and unnormalized absolute paths are fatal: they change the hashed content of an <em>input</em> (or are baked into an output that becomes a future input), so the key never repeats. UP-TO-DATE is a cheaper, local-only check that compares the current input/output snapshot against the last build&#x27;s snapshot in the project&#x27;s <code>.gradle</code> state — it never consults the shared store.</p>
+<pre><code>key = hash( taskType+classpath ) ⊕ hash( each input @ declared PathSensitivity )
+entry = tar( @OutputFile / @OutputDirectory )
+hit  ▶ untar outputs into place (action skipped)
+miss ▶ run action ▶ tar outputs ▶ store under key (local and/or remote)</code></pre>
 <hr>
 <h3 id="parallel-builds">Parallel Builds</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;Parallel builds let Gradle run tasks that have no dependency between them on separate worker threads at the same time. In a modular Android project the win is mostly cross-module — <code>:feature:search</code> and <code>:feature:appointments</code> can compile concurrently once their shared <code>:core</code> deps are built. The honest caveat is that <code>:app</code> sits at the bottom of the graph and has to wait for everything above it, so deep or skinny dependency chains cap your speedup no matter how many cores you have — and bumping <code>org.gradle.workers.max</code> too high on a RAM-constrained CI box just trades parallelism for OOM kills.&quot;</blockquote>
 <p><strong>Definition</strong>: With parallel builds enabled, Gradle executes independent tasks across multiple worker threads simultaneously.</p>
 <p><strong>Enabling</strong></p>
 <pre><code>// gradle.properties
@@ -611,6 +696,12 @@ org.gradle.parallel=true
 org.gradle.workers.max=8  # default: number of CPU cores</code></pre>
 <p><strong>How it works</strong></p>
 <p>Gradle builds the task execution graph and identifies tasks with no dependency relationship. It dispatches these to a worker pool. In a multi-module project, if <code>:feature:search</code> and <code>:feature:appointments</code> both depend only on <code>:core:network</code> (already built), they compile in parallel.</p>
+<p><strong>Under the hood</strong></p>
+<p>Gradle models the build as a DAG of tasks and acquires/releases <em>resource leases</em> before running each one: a global worker lease (bounded by <code>org.gradle.workers.max</code>) plus a project lock. Historically a project was locked while one of its tasks ran, so intra-project parallelism was limited and most concurrency came from running tasks in <em>different</em> projects at once — which is why modularization, not single-module work, unlocks the speedup. The Worker API goes further by letting a single task fan its own work units out to the shared worker pool (in-process, or in a forked daemon for classpath isolation). The scheduler is greedy over the DAG: a task becomes eligible the moment all its dependency edges are satisfied and it can acquire the needed leases, so a long pole like <code>:app</code> — which depends transitively on everything — serializes the tail of the build regardless of free cores. Each worker consumes heap, so total memory scales with <code>maxWorkers</code>; oversubscribing on a small CI box triggers GC thrash or OOM rather than faster builds.</p>
+<pre><code>DAG:  :core:network ─┬─▶ :feature:search ──────┐
+                     └─▶ :feature:appointments ─┴─▶ :app   (long pole)
+scheduler: run a task when (all deps done) AND (worker lease + project lock acquired)
+workers bounded by org.gradle.workers.max ; each worker holds heap → OOM if oversubscribed</code></pre>
 <p><strong>Android implications</strong></p>
 <ul>
 <li>Most benefit comes from parallel module compilation, not parallel tasks within a single module.</li>
@@ -632,8 +723,8 @@ org.gradle.workers.max=8  # default: number of CPU cores</code></pre>
 <li>Modules that share output directories (misconfigured custom tasks) cause race conditions → non-deterministic build failures.</li>
 <li><code>maxWorkers</code> set too high on CI machines with limited RAM → OOM errors. Rule: <code>max(1, min(cpuCores, availableRAM_GB / 1.5))</code>.</li>
 </ul>
-<hr>
 <h3 id="incremental-annotation-processing">Incremental Annotation Processing</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;Incremental annotation processing means a processor only re-runs against the files that changed instead of the whole source set — and processors declare their category as ISOLATING or AGGREGATING so Gradle knows how to scope that. The gotcha is that aggregation poisons the well: a single AGGREGATING processor, or one non-incremental processor in the module, forces a full reprocessing pass for everything in that module on any change, even a one-line comment edit. So when I&#x27;m optimizing build time I hunt for the one processor that&#x27;s silently downgrading the whole module to the slow path.&quot;</blockquote>
 <p><strong>Definition</strong>: Annotation processors that support incremental processing only re-run against the source files that changed, not against the entire source set.</p>
 <p><strong>How it works</strong></p>
 <p>An annotation processor declares itself as incremental (<code>ISOLATING</code>, <code>AGGREGATING</code>, or <code>DYNAMIC</code>):</p>
@@ -646,6 +737,11 @@ org.gradle.workers.max=8  # default: number of CPU cores</code></pre>
 <pre><code>./gradlew :app:compileDebugKotlin --info 2&gt;&amp;1 | grep -i &quot;incremental&quot;
 # Look for: &quot;Annotation processor &#x27;com.google.dagger.internal.codegen.ComponentProcessor&#x27; is &#x27;ISOLATING&#x27;&quot;
 # vs: &quot;not incremental&quot; — this is the slow path</code></pre>
+<p><strong>Under the hood</strong></p>
+<p>A processor opts in by writing a properties resource at <code>META-INF/gradle/incremental.annotation.processors</code> inside its jar, mapping each processor&#x27;s fully-qualified class name to a category. At configuration/compile time Gradle reads that file; if any processor on the classpath is absent from it, Gradle treats the entire processing round as non-incremental. Gradle then tracks an <em>origin</em> relationship: for ISOLATING, it records that generated file <code>G</code> and its outputs originate from exactly one source file <code>X</code>, so it can delete <code>G</code> and re-run just <code>X</code> when <code>X</code> changes. For AGGREGATING, the processor is allowed to read any number of source files, so Gradle records that its outputs depend on the whole annotated set and re-runs it whenever any annotated element changes. Generated files are fingerprinted in the build&#x27;s incremental state so stale outputs are pruned rather than left to cause duplicate-symbol errors.</p>
+<pre><code>ISOLATING:    edit X.kt  → delete outputs originating from X → reprocess X only
+AGGREGATING:  edit X.kt  → reprocess all annotated sources (registry must be rebuilt)
+not declared: edit X.kt  → whole module&#x27;s annotation processing re-runs from scratch</code></pre>
 <p><strong>Android implications</strong></p>
 <ul>
 <li>Hilt/Dagger: mostly isolating in recent versions. <code>@Module</code> aggregation is inherently aggregating.</li>
@@ -662,6 +758,7 @@ org.gradle.workers.max=8  # default: number of CPU cores</code></pre>
 <h3 id="ksp-vs-kapt">KSP vs KAPT</h3>
 <p><strong>This is a high-frequency interview topic. Know it deeply.</strong></p>
 <h4 id="kapt-kotlin-annotation-processing-tool">KAPT: Kotlin Annotation Processing Tool</h4>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;KAPT bolts the Java annotation-processing pipeline onto Kotlin by first generating Java stubs — signatures with no bodies — for every Kotlin class, then running the javac-based processors against those stubs, then feeding the generated code back for a real Kotlin compile. The killer cost is that stub generation can be 30 to 50 percent of compile time, and because stubs only approximate Kotlin, processors see java.lang.String instead of kotlin.String and lose precise nullability. It&#x27;s now in maintenance mode, so I treat KAPT as legacy and migrate off it wherever a KSP processor exists.&quot;</blockquote>
 <p><strong>How it works</strong>:</p>
 <ol>
 <li>Kotlin compiler runs a stub-generation pass: generates <code>.java</code> stubs for all Kotlin classes (method signatures, field declarations, no bodies).</li>
@@ -677,7 +774,18 @@ org.gradle.workers.max=8  # default: number of CPU cores</code></pre>
 <li><strong>Kotlin type fidelity</strong>: Stubs approximate Kotlin types as Java; processors see <code>java.lang.String</code>, not <code>kotlin.String</code>; nullability annotations are approximations.</li>
 <li><strong>Deprecated</strong>: Google has announced KAPT as maintenance-mode. KSP is the recommended path.</li>
 </ul>
+<p><strong>Under the hood</strong></p>
+<p>KAPT runs the Kotlin compiler frontend far enough to resolve declarations, then emits Java source stubs into a <code>kaptStubs</code> directory — each stub is a <code>.java</code> file with full type signatures but method bodies replaced by <code>throw new RuntimeException(&quot;Stub!&quot;);</code>. It then spins up <code>javac</code> configured purely as an annotation-processing host (<code>-proc:only</code>), with the stubs as the source path, so the processors run through the standard <code>javax.annotation.processing.Processor</code> SPI against <code>javac</code>&#x27;s <code>Elements</code>/<code>Types</code> mirror — which is exactly why processors see erased, Java-flavored types and why round-based generation works. Generated sources are collected and handed back to <code>kotlinc</code> for the real compile. The two-frontend-pass structure (resolve-for-stubs, then compile-for-real) is the structural reason KAPT roughly doubles frontend work compared to a plain Kotlin compile.</p>
+<pre><code>.kt sources ──kotlinc frontend──▶ Java stubs (bodies = throw &quot;Stub!&quot;)
+                                      │
+                                      ▼
+                              javac -proc:only ──▶ generated .java/.kt
+                                      │
+                                      ▼
+            .kt sources + generated ──kotlinc full compile──▶ .class</code></pre>
+<hr>
 <h4 id="ksp-kotlin-symbol-processing">KSP: Kotlin Symbol Processing</h4>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;KSP is a Kotlin compiler plugin that hands processors a structured view of the compiler&#x27;s own symbol resolution — so instead of inspecting fake Java stubs, a SymbolProcessor walks KSClassDeclaration and KSFunctionDeclaration with full Kotlin fidelity: real nullability, extension functions, type aliases, value classes. There&#x27;s no stub-generation pass, which is where most of the speedup comes from — typically up to 2x — and it has first-class incremental support because processors declare their symbol dependencies. The one nuance is that KSP deliberately exposes a lazy, resolution-on-demand API, so calling .resolve() on types eagerly can claw back some of the speed you came for.&quot;</blockquote>
 <p><strong>How it works</strong>:</p>
 <ul>
 <li>KSP is a Kotlin compiler plugin that exposes a structured API over the Kotlin compiler&#x27;s symbol table (IR).</li>
@@ -725,6 +833,19 @@ dependencies {
 <tr><td>Dagger (non-Hilt)</td><td>Full (2.48+)</td></tr>
 <tr><td>Retrofit</td><td>Via adapters</td></tr>
 </tbody></table>
+<p><strong>Under the hood</strong></p>
+<p>KSP registers as a <code>kotlin-compiler-plugin</code> and hooks the compiler&#x27;s analysis phase via a <code>SymbolProcessorProvider</code>; it builds its own abstraction (<code>Resolver</code>, <code>KSNode</code> tree) on top of the compiler&#x27;s binding context rather than exposing the raw IR or PSI. The API is intentionally <em>lazy</em>: a <code>KSTypeReference</code> is just a reference until you call <code>.resolve()</code>, which triggers actual type resolution — KSP tracks which symbols a processor touched during resolution to build the incremental dependency graph. That graph is what powers per-processor ISOLATING/AGGREGATING incrementality: KSP records, per round, the input sources each output was derived from, persists it across builds, and on the next build replays only the affected subset. Because it reads resolved Kotlin symbols directly, nullability, <code>value</code>/inline classes, variance, and type aliases survive intact — none of the lossy Java-mirror translation KAPT performs.</p>
+<pre><code>class MyProcessor(private val codeGen: CodeGenerator) : SymbolProcessor {
+    override fun process(resolver: Resolver): List&lt;KSAnnotated&gt; {
+        val symbols = resolver.getSymbolsWithAnnotation(&quot;com.x.MyAnn&quot;)
+        // .resolve() here is what forces type resolution AND records the
+        // incremental dependency on that symbol — overusing it costs speed
+        symbols.filterIsInstance&lt;KSClassDeclaration&gt;().forEach { decl -&gt;
+            decl.getAllProperties().forEach { it.type.resolve() }
+        }
+        return symbols.filterNot { it.validate() }.toList() // deferred to next round
+    }
+}</code></pre>
 <p><strong>Failure modes / gotchas</strong></p>
 <ul>
 <li>KSP and KAPT cannot both process the same annotation for the same library — if you add both <code>kapt(&quot;room-compiler&quot;)</code> and <code>ksp(&quot;room-compiler&quot;)</code>, Room generates duplicate files.</li>
@@ -733,6 +854,7 @@ dependencies {
 </ul>
 <hr>
 <h3 id="modularization">Modularization</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;Modularization splits the codebase into Gradle modules — typically a layered set of :feature and :core modules — so a change recompiles only the changed module and its dependents, sibling modules build in parallel, and unchanged modules get restored from the build cache. The two things an interviewer probes are dependency direction and granularity: features depend on core, never on each other, and you can absolutely over-modularize — two hundred tiny modules push so much work into Gradle&#x27;s configuration phase that you lose the build-time win you were chasing. So I treat the module count as a tuning knob, not a &#x27;more is better&#x27; axis.&quot;</blockquote>
 <p><strong>Definition</strong>: Modularization means splitting the app&#x27;s code into multiple Gradle modules — <code>:core:*</code>, <code>:feature:*</code>, <code>:app</code> — so each can compile independently, enabling parallel builds and scoped incremental recompilation.</p>
 <p><strong>Why modularization improves build time</strong></p>
 <ol>
@@ -763,6 +885,13 @@ dependencies {
 <tr><td>Feature isolation</td><td>Circular dependency risk</td></tr>
 <tr><td>Enables dynamic feature modules</td><td>Navigation contracts across modules</td></tr>
 </tbody></table>
+<p><strong>Under the hood</strong></p>
+<p>Gradle models the build as a directed acyclic graph of tasks; each module contributes tasks (<code>:feature:search:compileDebugKotlin</code>, etc.) with declared inputs and outputs, and Gradle topologically sorts them and runs independent branches concurrently up to <code>org.gradle.workers.max</code>. The reason <code>implementation</code> vs <code>api</code> matters here is the <em>compile classpath</em>: with <code>implementation</code>, a module&#x27;s dependency is on the consumer&#x27;s <em>runtime</em> classpath but not its <em>compile</em> classpath, so changing that transitive dependency&#x27;s ABI does not invalidate the consumer&#x27;s compile task — this is what prunes the recompilation cascade. The build cache keys each task by a hash of its inputs (source fingerprints, classpath ABI hashes, compiler args); an unchanged module&#x27;s task produces the same key and its outputs are restored from the local or remote cache instead of executing. The flip side is that <em>every</em> module must be evaluated during the configuration phase to build the task graph, which is why module count trades off against configuration time.</p>
+<pre><code>configuration phase: evaluate all build.gradle → build task DAG  (cost ∝ module count)
+execution phase:     run task DAG, independent branches in parallel
+                     each task: inputs hash → cache key → HIT (restore) or MISS (execute)
+ABI change in :core:network (api dep)  → invalidates downstream compile tasks
+ABI change behind &#x27;implementation&#x27;     → downstream compile tasks stay UP-TO-DATE</code></pre>
 <p><strong>Failure modes</strong></p>
 <ul>
 <li>Over-modularization: 200 tiny modules → Gradle configuration time dominates. Sweet spot is roughly 20–80 modules for a large app.</li>
@@ -771,6 +900,7 @@ dependencies {
 </ul>
 <hr>
 <h3 id="avoiding-unnecessary-dependencies">Avoiding Unnecessary Dependencies</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;The core idea is to declare only what you use and at the narrowest scope — implementation instead of api, test libs in testImplementation, and compileOnly for annotation-only artifacts that don&#x27;t need to ship. The build-time reason this matters is the ABI cascade: an api dependency leaks onto consumers&#x27; compile classpaths, so a version bump anywhere in that chain invalidates everyone&#x27;s compile tasks. The nuance interviewers like is that api isn&#x27;t always wrong — if a module&#x27;s public types genuinely expose another library&#x27;s types in their signatures, you need api; the skill is keeping that surface deliberately small.&quot;</blockquote>
 <p><strong>Definition</strong>: Keeping dependencies lean means only declaring what you actually need and always using the narrowest scope — <code>implementation</code> over <code>api</code>, and test-only dependencies in <code>testImplementation</code>.</p>
 <p><strong>Practical steps</strong></p>
 <ol>
@@ -793,8 +923,14 @@ dependencies {
         exclude(group = &quot;org.json&quot;, module = &quot;json&quot;) // already provided by Android
     }
 }</code></pre>
+<p><strong>Under the hood</strong></p>
+<p>Gradle resolves dependencies per <em>configuration</em> — <code>implementation</code>, <code>api</code>, <code>compileOnly</code>, <code>runtimeOnly</code> are configurations with different visibility. The Java/Android plugins wire these so that <code>api</code> dependencies are exposed transitively to consumers via the <code>apiElements</code> outgoing variant (landing on the consumer&#x27;s compile classpath), while <code>implementation</code> flows only through <code>runtimeElements</code> (runtime classpath, not compile). Gradle also computes a <em>compile-avoidance</em> ABI hash: when a dependency changes, Gradle compares the new ABI (public signatures) against the cached one; if only method bodies changed, downstream compile tasks stay UP-TO-DATE. But that avoidance only protects you for dependencies that aren&#x27;t on the compile classpath in the first place — which is precisely why <code>api</code> is costly: it puts the dependency where any ABI change forces recompilation of every consumer. <code>compileOnly</code> keeps the artifact off the runtime classpath entirely (it won&#x27;t be packaged into the APK/DEX), which is correct for annotation/source-only libraries like <code>javax.inject</code>.</p>
+<pre><code>api dep:         producer apiElements  ──▶ consumer COMPILE classpath  (ABI change → recompile consumers)
+implementation:  producer runtimeElements ─▶ consumer RUNTIME classpath (ABI change → consumers stay UP-TO-DATE)
+compileOnly:     consumer COMPILE classpath only, NOT packaged into DEX</code></pre>
 <hr>
 <h3 id="gradle-profiling">Gradle Profiling</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;Gradle profiling is about measuring before optimizing — I never guess at build-time fixes. My go-to is a build scan, which gives a per-task timeline and breaks every task into UP-TO-DATE, cache-hit, or executed, so I can see whether time is going to configuration, kapt, resource merging, or dexing. For rigorous before/after comparisons I use the gradle-profiler to run repeated warm and cold scenarios and get statistically meaningful numbers, because a single build is too noisy — daemon warm-up and OS file caching alone can swing a run by seconds.&quot;</blockquote>
 <p><strong>Definition</strong>: Gradle profiling is the practice of using tools and techniques to measure exactly where build time is being spent before you try to fix it.</p>
 <p><strong><code>--scan</code> (Gradle Build Scan)</strong></p>
 <pre><code>./gradlew assembleDebug --scan</code></pre>
@@ -824,6 +960,13 @@ android {
 }</code></pre>
 <p><strong><code>org.gradle.daemon=true</code> and JVM warm-up</strong></p>
 <p>The Gradle Daemon keeps the JVM warm between builds, avoiding JVM startup overhead (300–500ms). Always enabled by default for developer builds. On CI, use <code>--no-daemon</code> for reproducibility unless you have persistent agents that benefit from a warm JVM.</p>
+<p><strong>Under the hood</strong></p>
+<p>The build scan and <code>--profile</code> reports are driven by Gradle&#x27;s internal <em>build operations</em> and the listener APIs (<code>TaskExecutionListener</code>, <code>BuildOperationListener</code>) — Gradle instruments each phase (initialization, configuration, execution) and each task with start/end events, then categorizes a task&#x27;s outcome as <code>EXECUTED</code>, <code>UP-TO-DATE</code> (inputs unchanged), <code>FROM-CACHE</code> (output restored via cache key), <code>SKIPPED</code>, or <code>NO-SOURCE</code>. <code>--scan</code> serializes those operations and uploads them; <code>--profile</code> renders them locally. The daemon matters for profiling because it&#x27;s a long-lived JVM that preserves JIT-compiled hot paths and Gradle&#x27;s in-memory caches (the configuration model, file-system watching state) across invocations — which is exactly why the first build after starting a daemon is slower than subsequent ones, and why a profiler must distinguish <em>cold</em> (fresh daemon, OS cache cleared) from <em>warm</em> scenarios to produce comparable numbers.</p>
+<pre><code>build phases instrumented by build operations:
+  initialization → settings.gradle, included builds
+  configuration  → evaluate every project&#x27;s build.gradle (the phase config-cache skips on hit)
+  execution      → run task DAG; per task outcome: EXECUTED | UP-TO-DATE | FROM-CACHE | SKIPPED
+daemon: persistent JVM → keeps JIT + Gradle in-memory state warm between builds</code></pre>
 <hr>
 <h3 id="interview-angles-122">Interview Angles 12.2</h3>
 <p><strong>Q: How do you reduce build time in a large Android app?</strong></p>
@@ -850,6 +993,7 @@ android {
 <h2 id="123-release">12.3 Release</h2>
 <h3 id="apk-vs-aab">APK vs AAB</h3>
 <h4 id="apk-android-package">APK (Android Package)</h4>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;An APK is the actual installable artifact — a ZIP archive holding the DEX bytecode, the compiled <code>resources.arsc</code>, native <code>.so</code> libraries, assets, and the manifest, all signed so the device can verify it. The thing to call out is that a universal APK packs every ABI, density, and language for all devices, so it&#x27;s bloated — that&#x27;s exactly the problem AABs were introduced to solve, and it&#x27;s also why side-loading or any non-Play distribution still needs a full APK.&quot;</blockquote>
 <p><strong>Definition</strong>: An APK is the installable artifact for Android. It bundles compiled DEX bytecode, compiled resources (<code>resources.arsc</code>), native libraries (<code>.so</code>), assets, and <code>AndroidManifest.xml</code> into a single file that devices install directly.</p>
 <p><strong>How APKs are built</strong></p>
 <pre><code>Kotlin/Java source
@@ -864,7 +1008,18 @@ All artifacts
   → apksigner / jarsigner → signed.apk</code></pre>
 <p><strong>Universal APK</strong>: A single APK containing resources, native code, and screen densities for every device. Large file size. Required for side-loading and for builds that don&#x27;t go through the Play Store.</p>
 <p><strong>Split APKs</strong> (Dynamic Delivery pre-cursor): AGP can split one build into multiple APKs by ABI, screen density, or language. Manually managing splits is complex.</p>
+<p><strong>Under the hood</strong></p>
+<p>An APK is just a ZIP file with a specific layout, and the OS treats it as one. At install time <code>PackageManager</code>/<code>installd</code> copies it to <code>/data/app/&lt;pkg&gt;-&lt;hash&gt;/</code>, and the DEX is processed by <code>dex2oat</code> (ART&#x27;s ahead-of-time compiler) into an <code>.oat</code>/<code>.art</code> file for faster startup — modern ART uses a hybrid of AOT plus JIT plus profile-guided compilation. The <code>resources.arsc</code> is a flat binary table mapping resource IDs (a packed <code>0xPPTTEEEE</code> int: package/type/entry) to per-configuration values, which is how <code>Resources</code> resolves the right drawable or string for the device config at runtime. The Zip&#x27;s entries must be 4-byte aligned (<code>zipalign</code>) so the OS can <code>mmap</code> uncompressed resources directly instead of copying them into RAM.</p>
+<pre><code>app.apk (ZIP)
+├── classes.dex, classes2.dex ...   # DEX bytecode (multidex)
+├── resources.arsc                  # compiled resource table (ID → value/config)
+├── res/                            # compiled binary XML + assets referenced by arsc
+├── lib/arm64-v8a/*.so              # native libs per ABI
+├── assets/                         # raw files (AssetManager)
+├── AndroidManifest.xml             # binary XML
+└── META-INF/                       # signatures (v1); v2+ block sits before central dir</code></pre>
 <h4 id="aab-android-app-bundle">AAB (Android App Bundle)</h4>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;An AAB is an upload-only format — you can&#x27;t install it on a device directly. You ship Google one bundle, and Play&#x27;s Dynamic Delivery generates a tailored APK set per device, stripping out the ABIs, densities, and languages that device doesn&#x27;t need, which typically cuts download size dramatically. The gotcha interviewers probe is that because Play re-splits and re-signs, you need Play App Signing, and to test an AAB locally you have to run it through <code>bundletool</code> to materialize an installable APK set.&quot;</blockquote>
 <p><strong>Definition</strong>: An AAB is an upload artifact for the Google Play Store — it is not directly installable on a device. It contains all app code and resources in a modular format (<code>base/</code>, feature modules), and the Play Store&#x27;s Dynamic Delivery infrastructure generates device-optimized APKs from it at delivery time.</p>
 <p><strong>How AABs work</strong></p>
 <ol>
@@ -893,6 +1048,15 @@ bundletool build-apks --bundle=app.aab --output=app.apks --connected-device
 bundletool install-apks --apks=app.apks</code></pre>
 <p><strong>Dynamic Feature Modules</strong></p>
 <p>AABs enable on-demand feature delivery: large features (e.g., AR module, PDF viewer) can be delivered as dynamic feature modules downloaded only when the user needs them, reducing initial install size.</p>
+<p><strong>Under the hood</strong></p>
+<p>An AAB is a ZIP in a protobuf-based format: the manifest is <code>AndroidManifest.xml</code> in protobuf (<code>aapt2</code>&#x27;s proto resource format, not the binary-XML used in APKs), resources live in <code>resources.pb</code>, and code/resources are organized into modules (<code>base/</code>, plus feature modules) each declaring split dimensions. The AAB itself is <strong>not</strong> signed for distribution — Play&#x27;s server runs <code>bundletool</code> to produce an APK set: one <strong>base APK</strong> plus <strong>split APKs</strong> keyed by config (<code>config.arm64_v8a</code>, <code>config.xxhdpi</code>, <code>config.en</code>). On install, the device receives the base plus only the matching splits, and Android&#x27;s split-APK mechanism loads them as one logical package (this is the same machinery as <code>Split APKs</code>, surfaced through Play). The device tells Play its capabilities via the Play Store app&#x27;s device spec, so the server&#x27;s <code>bundletool</code> invocation is effectively <code>build-apks --device-spec=&lt;that device&gt;</code>.</p>
+<pre><code>app.aab (ZIP, proto format)        Play server (bundletool)         device download
+├── base/                          ─────────────────────────►       base.apk
+│   ├── manifest/ (proto)          generates an APK set:      +     config.arm64_v8a.apk
+│   ├── dex/, res/, assets/        base + per-config splits   +     config.xxhdpi.apk
+│   └── resources.pb                                          +     config.en.apk
+├── feature_x/  (dynamic module)                              (feature delivered on-demand)
+└── BUNDLE-METADATA/  (mapping.txt, etc.)</code></pre>
 <p><strong>Trade-offs</strong></p>
 <table border="1" cellpadding="6" cellspacing="0">
 <thead><tr>
@@ -908,6 +1072,7 @@ bundletool install-apks --apks=app.apks</code></pre>
 </tbody></table>
 <hr>
 <h3 id="app-signing">App Signing</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;Every APK and AAB has to be signed with a developer key — Android records the signing certificate at first install and refuses any update signed with a different key, which is how it guarantees updates come from the same author. The big senior-level point is to enroll in Play App Signing: you sign with an upload key you can rotate if it leaks, while Google holds the real distribution key. Losing the distribution key without that enrollment is catastrophic — you can never update the app again and have to ship under a new package name.&quot;</blockquote>
 <p><strong>Definition</strong>: Before an APK or AAB can be installed or uploaded to the Play Store, it must be cryptographically signed with a developer key. Android verifies that signature at install time and on every subsequent update.</p>
 <p><strong>Keystore and keys</strong></p>
 <ul>
@@ -969,8 +1134,16 @@ signingConfigs {
 <li><strong>v4</strong>: For incremental installs (ADB). Android 11+.</li>
 </ul>
 <p>AGP enables v1+v2 by default; v3 is opt-in for key rotation. Play requires v1+v2 for compatibility with older Android versions.</p>
+<p><strong>Under the hood</strong></p>
+<p>Signing is asymmetric cryptography: a SHA-256 digest of the content is signed with the RSA/EC private key, and the public certificate ships inside the APK so any verifier can check it — there&#x27;s no CA chain of trust, the certificate is self-signed and identity is &quot;same cert as last time.&quot; v1 (JAR) hashes each ZIP entry and stores manifests in <code>META-INF/</code>, which is why it doesn&#x27;t protect the ZIP metadata and is slow (the device must read every entry). v2/v3 insert an <strong>APK Signing Block</strong> between the ZIP entries and the central directory, signing a digest computed over the whole file in 1 MB chunks (a Merkle-style tree), so verification is one pass and tamper-evident across the entire archive. v3 extends the block with a <strong>proof-of-rotation</strong> linked list where the old key signs the new key, letting Android accept an update whose signer changed because it can follow the chain back to the originally trusted cert. The accepted certificate&#x27;s hash is what Android persists in <code>PackageManager</code>&#x27;s <code>packages.xml</code> and checks on every update.</p>
+<pre><code>APK layout for v2/v3 verification:
+[ ZIP entries ][ APK Signing Block ][ Central Directory ][ End of CD ]
+                      │
+                      └── digests over 1MB chunks of the other 3 sections,
+                          signed by private key; v3 adds rotation lineage</code></pre>
 <hr>
 <h3 id="proguard--r8">ProGuard / R8</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;R8 is the default release-build tool that replaced ProGuard — it does shrinking, optimization, obfuscation, and DEX compilation in a single pass, taking <code>.class</code> files straight to <code>.dex</code>, which is why it&#x27;s faster than the old ProGuard-then-D8 pipeline. It&#x27;s driven by the same <code>proguard-rules.pro</code> keep-rule syntax, so it&#x27;s backwards compatible. The gotcha is full mode, the default since AGP 8 — it optimizes far more aggressively, including assuming things are non-null, so anything touched by reflection or JNI needs explicit keep rules or it&#x27;ll get stripped or broken.&quot;</blockquote>
 <p><strong>Definition</strong>: R8 is the code shrinker, optimizer, and obfuscator used in Android release builds, replacing ProGuard. It performs four operations in a single pass: tree-shaking (shrinking), optimization, obfuscation, and DEX compilation.</p>
 <p><strong>How R8 works (single-pass)</strong></p>
 <p>ProGuard was a separate Java tool that ran after <code>d8</code> DEX compilation. R8 is a compiler: it takes <code>.class</code> files and outputs <code>.dex</code> directly, applying shrinking, optimization, and obfuscation in the same compilation pass. That single-pass approach is what makes R8 faster than the ProGuard + D8 pipeline it replaced.</p>
@@ -992,8 +1165,24 @@ signingConfigs {
 <pre><code>// gradle.properties
 android.enableR8.fullMode=true</code></pre>
 <p>R8 full mode is more aggressive: it applies more optimizations and stricter class inlining. Can break code that relies on reflection without explicit keep rules. In AGP 8.0+, full mode is the default.</p>
+<p><strong>Under the hood</strong></p>
+<p>R8 parses all <code>.class</code> bytecode into its own intermediate representation, then walks the call graph from the keep rules (the &quot;roots&quot;) to build a set of live classes/methods/fields. Reachability is what drives shrinking — anything the graph never reaches is dropped. Optimizations then run over the IR: aggressive inlining, devirtualization (turning virtual <code>invoke-virtual</code>/<code>invoke-interface</code> into direct calls when there&#x27;s a single implementer), class merging, and outlining of repeated bytecode sequences into shared helpers to save DEX size. In <strong>full mode</strong>, R8 stops honoring some implicit ProGuard assumptions — most notably it assumes a class/member not kept is not reachable via reflection, and it propagates non-null and constant information aggressively, so a field only ever set by Gson reflection can be optimized to <code>null</code>. Finally R8 lowers the optimized IR straight to DEX, applying register allocation and the <code>invoke-*</code> opcode selection itself rather than handing <code>.class</code> files to a separate D8 step.</p>
+<pre><code>.class (all modules + libs)
+   │  parse → R8 IR
+   ▼
+build live set from keep rules (roots) ── unreachable nodes pruned (SHRINK)
+   │
+   ▼
+optimize IR: inline / devirtualize / merge / outline / propagate constants
+   │
+   ▼
+rename live symbols → a,b,c (OBFUSCATE)  + emit mapping.txt
+   │
+   ▼
+lower to DEX: register alloc + opcode selection (no separate D8)</code></pre>
 <hr>
 <h3 id="obfuscation">Obfuscation</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;Obfuscation renames classes, methods, and fields to short meaningless identifiers like <code>a</code>, <code>b</code>, <code>aa</code> — it raises the bar for reverse engineering and shrinks the binary because short names compress and pack better. But I&#x27;m always careful to frame it as a speed bump, not security: string literals, endpoints, and control flow are all still recoverable by decompilers. The operationally critical part is the <code>mapping.txt</code> R8 emits — without archiving it per release, your production crash stack traces are permanently unreadable.&quot;</blockquote>
 <p><strong>Definition</strong>: Obfuscation means renaming class names, method names, and field names to short meaningless identifiers like <code>a</code>, <code>b</code>, <code>c</code>, <code>aa</code>, and so on. The goal is to make reverse engineering harder and to reduce binary size, since shorter names compress better.</p>
 <p><strong>How obfuscation works</strong></p>
 <p>R8 generates a mapping file (<code>mapping.txt</code>) that records every original name → obfuscated name. At build time:</p>
@@ -1031,9 +1220,18 @@ android.enableR8.fullMode=true</code></pre>
 
 # Keep specific class but allow method renaming
 -keepnames class com.example.MyClass</code></pre>
+<p><strong>Under the hood</strong></p>
+<p>Obfuscation is a rename pass over the live symbol set, but the renaming is constrained by JVM/DEX rules R8 must preserve: it can&#x27;t rename anything overriding a framework or library method (the override relationship must keep the same descriptor), and it reuses names across unrelated scopes — <code>a</code> can name a class, a field, and a method simultaneously because the DEX format resolves each by its kind plus enclosing type, and method dispatch keys on the full descriptor (name + parameter/return types). This is also why <strong>overloads collapse</strong>: two methods with different signatures can both become <code>a(...)</code> since the descriptor still disambiguates them, which shrinks the string pool that DEX uses for all identifiers. The <code>mapping.txt</code> is the inverse table R8 records so the rename is reversible at symbolication time; the obfuscated DEX itself contains none of the original names except those held by keep rules. Strings stay untouched because they&#x27;re entries in the DEX <code>string_ids</code> data pool, not symbols R8 considers renameable — only type/method/field identifiers participate.</p>
+<pre><code>DEX identifier pools (all renamed independently by R8):
+  type_ids     → Lcom/example/UserRepo;  becomes  La/b/c;
+  method_ids   → resolved by (defining type, name, proto/descriptor)
+  field_ids    → resolved by (defining type, name, type)
+  string_ids   → literal strings — NOT obfuscated
+mapping.txt = reverse map (obfuscated → original) kept off-device</code></pre>
 <hr>
 <h3 id="shrinking-code-and-resource">Shrinking (Code and Resource)</h3>
 <h4 id="code-shrinking-tree-shaking">Code Shrinking (Tree-Shaking)</h4>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;Code shrinking is tree-shaking: R8 starts from the entry points — everything declared in the manifest plus keep rules — builds a reachability graph, and deletes any class or method nothing reaches. The big wins come from huge transitive dependencies where you only use a sliver of the library. The catch is that R8 can&#x27;t see reflection or JNI calls, so anything reached only that way looks dead and gets removed unless you explicitly keep it — that&#x27;s the classic source of release-only crashes.&quot;</blockquote>
 <p><strong>How it works</strong>: R8 builds a call graph from the app&#x27;s entry points (Activities, Services, BroadcastReceivers — all declared in <code>AndroidManifest.xml</code>). It follows every reachable method call and class instantiation. Anything not reachable is removed from the output DEX.</p>
 <p><strong>Size impact</strong>: Removing unused code from large transitive dependencies (e.g., a library that includes its own JSON parser which you never use) can reduce APK size by 20–50%.</p>
 <p><strong>What R8 keeps by default</strong> (from <code>proguard-android-optimize.txt</code>):</p>
@@ -1043,7 +1241,18 @@ android.enableR8.fullMode=true</code></pre>
 <li>Classes annotated with <code>@Keep</code></li>
 <li>Native method signatures</li>
 </ul>
+<p><strong>Under the hood</strong></p>
+<p>The reachability analysis is essentially a mark-and-sweep over the type/method/field graph: keep rules and the manifest seed a worklist of &quot;roots,&quot; R8 marks each reachable node and enqueues everything it references (called methods, instantiated types, read fields, supertypes/interfaces it must keep for verification), and repeats to a fixpoint. Whatever stays unmarked is swept from the output DEX. Reflection breaks this because a call like <code>Class.forName(&quot;com.example.Foo&quot;)</code> is just a string argument — there&#x27;s no edge in the graph from caller to <code>Foo</code>, so <code>Foo</code> stays unmarked and is removed; the same applies to <code>native</code> methods whose implementations live in C++ and whose Java side is only reached via JNI name lookup. R8 ships consumer rules bundled inside many AARs (<code>META-INF/proguard/</code>) precisely so library authors can declare these invisible edges on your behalf, which is why most well-behaved libraries don&#x27;t need manual keep rules.</p>
+<pre><code>roots = manifest components + @Keep + keep rules + JNI signatures
+worklist ← roots
+while worklist not empty:
+    n ← pop
+    mark(n)
+    enqueue n&#x27;s static edges: called methods, new&#x27;d types,
+            read/written fields, supertypes/interfaces
+# reflection / JNI create NO static edge → target left unmarked → swept</code></pre>
 <h4 id="resource-shrinking">Resource Shrinking</h4>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;Resource shrinking runs after code shrinking — once R8 knows which <code>R.id</code> constants survive, the resource shrinker drops drawables, layouts, and strings nothing references. By default it runs in safe mode and keeps anything it&#x27;s unsure about, because resources are often loaded dynamically by name via <code>getIdentifier</code>, which it can&#x27;t trace. The subtle detail is that &#x27;removed&#x27; resources aren&#x27;t truly deleted from <code>resources.arsc</code> — they&#x27;re replaced with tiny dummy stubs so the resource table&#x27;s ID offsets stay valid.&quot;</blockquote>
 <p><strong>How it works</strong>: After code shrinking, AGP&#x27;s resource shrinker analyzes which resource IDs are referenced in the remaining code. Unreferenced resources (images, layouts, strings) are removed from <code>resources.arsc</code> and replaced with tiny dummy files (not truly deleted to preserve alignment).</p>
 <p><strong>Enabling</strong></p>
 <pre><code>buildTypes {
@@ -1059,6 +1268,8 @@ android.enableR8.fullMode=true</code></pre>
     tools:keep=&quot;@layout/l_used*_a,@layout/l_used_b*&quot;
     tools:discard=&quot;@layout/unused&quot;
     tools:shrinkMode=&quot;strict&quot; /&gt;</code></pre>
+<p><strong>Under the hood</strong></p>
+<p>The resource shrinker builds a reference graph too, but across resources: it parses the surviving DEX for integer <code>R</code> constants, scans <code>resources.arsc</code> and compiled binary-XML resources for resource-to-resource references (a layout referencing <code>@drawable/x</code>, a style referencing another style), and computes the transitively reachable set. The &quot;safe mode&quot; heuristic is a string scan — if it finds any string constant that looks like a resource name, it assumes <code>getIdentifier</code>-style dynamic lookup and keeps everything matching, because a missing resource at runtime is a crash. Crucially it can&#x27;t physically delete entries from <code>resources.arsc</code> without renumbering every resource ID (those IDs are baked into the DEX as constants), so it instead rewrites the unused entries to point at a tiny placeholder file and zeroes their value — the ID slot survives, the payload shrinks. <code>tools:shrinkMode=&quot;strict&quot;</code> turns off the name-matching heuristic so only graph-reachable resources survive, trading safety for more removal.</p>
 <p><strong>Optimization (R8 only)</strong></p>
 <p>Beyond shrinking, R8 performs code optimizations:</p>
 <ul>
@@ -1070,6 +1281,7 @@ android.enableR8.fullMode=true</code></pre>
 </ul>
 <hr>
 <h3 id="mapping-files-and-crash-symbolication">Mapping Files and Crash Symbolication</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;When R8 obfuscates, it emits <code>mapping.txt</code> — a text file mapping every renamed class, method, and field back to its original name and line numbers. That file is the only way to turn a production stack trace full of <code>a.b.c</code> back into readable code, so I archive one per <code>versionCode</code>; lose it and crashes from that build are unreadable forever. In practice I wire it into the crash reporter — upload the mapping to Sentry keyed by a build UUID, and it de-obfuscates automatically instead of me running <code>retrace</code> by hand.&quot;</blockquote>
 <p><strong>Definition</strong>: The <code>mapping.txt</code> file produced by R8 is a line-oriented text file that maps every obfuscated identifier back to its original name and source file line number. Without it, production crash stack traces are permanently unreadable.</p>
 <p><strong>Location</strong></p>
 <pre><code>app/build/outputs/mapping/release/mapping.txt</code></pre>
@@ -1118,8 +1330,16 @@ com.example.UserRepository -&gt; a.b.c:
 <pre><code>-keepattributes SourceFile,LineNumberTable
 -renamesourcefileattribute SourceFile</code></pre>
 <p>This keeps line numbers accurate while still obfuscating the source file name shown in stack traces — you&#x27;ll see <code>SourceFile:line</code> instead of <code>UserRepository.kt:line</code>. For most crash tooling, having accurate line numbers is sufficient.</p>
+<p><strong>Under the hood</strong></p>
+<p><code>retrace</code> is a pure reverse lookup: a stack frame prints <code>class.method(SourceFile:lineNumber)</code>, and retrace resolves the obfuscated class to its original, then uses the <code>from:to:</code> line ranges in <code>mapping.txt</code> to map the runtime line back to the original source line — which is also how it can un-collapse inlined frames, because R8 records inlining ranges in the mapping so an inlined call can be expanded back into multiple original frames. The &quot;Unknown Source:N&quot; you see when <code>SourceFile</code>/<code>LineNumberTable</code> aren&#x27;t kept happens because the DVM/ART <code>StackTraceElement</code> carries the line number from the DEX <code>debug_info</code> but no file name; R8 can still resolve it through the line-range table even without the original file name, which is exactly the trick the <code>-renamesourcefileattribute</code> rule exploits. The Sentry-style automation works by R8/AGP embedding a stable UUID into the build (and the mapping is uploaded under that UUID); the SDK stamps each event with it, so the server picks the exact mapping for that build rather than guessing.</p>
+<pre><code>mapping.txt line-range entry:
+    10:12:com.example.User getUser(long) -&gt; a
+    └ runtime lines 10–12 in method `a` ⇒ original getUser(long), original lines 10–12
+retrace(frame &quot;a.b.c.a(SourceFile:11)&quot;) → com.example.UserRepository.getUser(UserRepository.kt:11)
+inlining ranges in the same file let one runtime frame expand into several source frames</code></pre>
 <hr>
 <h3 id="play-console-rollout-and-staged-rollout">Play Console Rollout and Staged Rollout</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;Staged rollout lets me push a release to a slice of production — say 10% — watch crash-free rate and ANRs, then expand or halt. The key detail is that the selection is deterministic per Google account, so a user in the 10% bucket stays in when I bump to 20%, and the cohort only grows. The gotcha interviewers love is that you can&#x27;t truly &#x27;roll back&#x27; — Play requires a strictly increasing versionCode, so a rollback is really publishing the old binary as a brand-new higher-versionCode release, which is why the real fast kill switch is a server-side feature flag, not Play Console.&quot;</blockquote>
 <p><strong>Definition</strong>: Play Console staged rollout lets you release a new version of your app to a percentage of your user base first, monitor crash rates and reviews, and then gradually expand or halt the rollout based on what you see.</p>
 <p><strong>How staged rollout works</strong></p>
 <ol>
@@ -1157,8 +1377,15 @@ com.example.UserRepository -&gt; a.b.c:
 <li>Users on beta/alpha tracks always get the latest beta/alpha version (no percentage control there).</li>
 <li>Users who manually go to Play Store and press Update always get the latest available regardless of rollout percentage.</li>
 </ul>
+<p><strong>Under the hood</strong></p>
+<p>The rollout decision is not made on-device and isn&#x27;t random per check — Play&#x27;s distribution backend computes a stable bucket for each (app, account) pair and the Play Store client honors it during its auto-update poll. Because the bucket is derived from a hash of the account identity rather than re-rolled, the population is monotonic: expanding the percentage can only add users, never swap them, which keeps the observed cohort coherent for vitals analysis. Android vitals themselves are aggregated server-side from <code>DropBoxManager</code>/<code>ActivityManager</code> crash and ANR reports that the framework collects on-device and uploads via Play services; the &quot;crash-free users&quot; rate you watch is a backend rollup of those reports keyed by <code>versionCode</code>. There is no per-device flag the framework reads to decide &quot;am I in the rollout&quot; — staging is purely a delivery-time gate on which APK splits the device is offered.</p>
+<pre><code>Account ID --hash--&gt; stable bucket in [0,100)
+   bucket &lt; rolloutPercent  -&gt;  offered new versionCode
+   bucket &gt;= rolloutPercent -&gt;  stays on old versionCode
+expanding percent only lowers the threshold =&gt; cohort grows, never churns</code></pre>
 <hr>
 <h3 id="feature-flags-and-remote-config">Feature Flags and Remote Config</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;Feature flags let me decouple deploy from release — I merge code to main and ship it dark, then turn it on for 1% independently of the Play release cadence, and flip it off server-side as a kill switch within minutes if it misbehaves. With Firebase Remote Config the critical detail is that fetch is asynchronous and cached, so on a cold start before the first fetch completes the app reads the bundled XML defaults — which means my defaults must always be the safe, off state for anything risky. The nuance interviewers probe is the fetch throttle: in production the minimum fetch interval defaults to several hours, so you can&#x27;t expect a flag flip to propagate instantly to a device that just fetched.&quot;</blockquote>
 <p><strong>Definition</strong>: Feature flags — also called feature toggles — let you enable or disable features at runtime without shipping a new app release. Remote Config extends this by allowing flag values to be configured from the server side.</p>
 <p><strong>Why feature flags for risky features</strong></p>
 <ol>
@@ -1218,8 +1445,17 @@ class CheckoutViewModel @Inject constructor(
 </ol>
 <p><strong>Remote config fetch latency</strong></p>
 <p>Remote config values are fetched asynchronously and cached locally. If the app launches before a fetch completes, it falls back to the default values from <code>remote_config_defaults.xml</code>. That is the safe state — defaults should always be the conservative, off setting for any risky feature.</p>
+<p><strong>Under the hood</strong></p>
+<p>Remote Config keeps three separate value stores on-device: a <strong>defaults</strong> map (seeded from your XML), a <strong>fetched</strong> store (the most recent values pulled from the server but not yet live), and the <strong>active</strong> store (what <code>getBoolean</code>/<code>getString</code> actually read). <code>fetch()</code> does an HTTP request and writes into the fetched store; <code>activate()</code> atomically copies fetched → active. <code>fetchAndActivate()</code> chains the two. Crucially, a getter never blocks on the network — it reads the active store synchronously, and the resolution order is active value → default → static type default (<code>false</code>/<code>0</code>/<code>&quot;&quot;</code>). Each fetched value also carries a <em>source</em> enum (<code>REMOTE</code>, <code>DEFAULT</code>, <code>STATIC</code>) you can inspect. The <code>minimumFetchIntervalInSeconds</code> is a client-side throttle: if you call <code>fetch()</code> again inside the window, the SDK short-circuits and returns the cached result without a network round-trip, which is why production uses hours and debug uses 0. Values persist across process death in app-private storage, so a returning user already has the last-activated flags before the first fetch of the new session even starts.</p>
+<pre><code>getBoolean(&quot;flag&quot;)
+  -&gt; active store has key?   yes -&gt; return it (source REMOTE/DEFAULT)
+  -&gt; no -&gt; static type default (false)   (source STATIC)
+
+fetch(): network -&gt; fetched store   (throttled by minFetchInterval)
+activate(): fetched store --atomic copy--&gt; active store</code></pre>
 <hr>
 <h3 id="versioning">Versioning</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;Every Android app has two version identifiers: versionCode, an integer Play uses purely for update ordering, and versionName, the human-readable string shown to users — they&#x27;re completely independent. The one rule that bites people is that versionCode must strictly increase for every upload to Play, which is exactly why a &#x27;rollback&#x27; has to be a new, higher versionCode publishing the old code. In practice I never hand-bump it; I derive it in CI from the build number or git commit count so it&#x27;s monotonic and reproducible, and both values are emitted into BuildConfig so I can stamp them into crash reports and analytics.&quot;</blockquote>
 <p><strong>Definition</strong>: Android apps have two version identifiers. <code>versionCode</code> is an integer the Play Store uses for update ordering. <code>versionName</code> is the human-readable string shown to users.</p>
 <pre><code>android {
     defaultConfig {
@@ -1270,6 +1506,15 @@ android {
 // In app/build.gradle.kts variant filter or applicationVariants loop</code></pre>
 <p><strong><code>BuildConfig</code> versioning</strong></p>
 <p><code>BuildConfig.VERSION_CODE</code> and <code>BuildConfig.VERSION_NAME</code> are generated constants available at runtime, useful for including in analytics events, crash reports, and support tooling.</p>
+<p><strong>Under the hood</strong></p>
+<p><code>versionCode</code> and <code>versionName</code> are not Gradle inventions — they are manifest attributes (<code>android:versionCode</code>, <code>android:versionName</code>) that AGP merges into the final <code>AndroidManifest.xml</code>, then <code>aapt2</code> encodes them into the binary resource table of the APK. At install time <code>PackageManagerService</code> reads <code>versionCode</code> out of the parsed manifest into the <code>PackageInfo</code>/<code>ApplicationInfo</code> it tracks; an update is only accepted if the incoming package&#x27;s <code>versionCode</code> is greater than or equal to the installed one (Play enforces strictly greater on the store side). The integer is actually stored as a 32-bit value, which is the origin of the ~2.1 billion ceiling — and modern AGP splits it into <code>versionCode</code> (lower bits) plus <code>versionCodeMajor</code> (upper bits) for apps that exhaust the range. <code>BuildConfig.VERSION_CODE</code>/<code>VERSION_NAME</code> are a separate artifact: AGP generates a <code>BuildConfig.java</code> per variant with these as <code>public static final</code> fields, so they&#x27;re baked into the compiled bytecode as constants — meaning the runtime value comes from the build, not from re-reading the manifest at startup.</p>
+<pre><code>build.gradle versionCode/versionName
+   |
+   +--&gt; merged AndroidManifest.xml (android:versionCode/Name)
+   |         |--&gt; aapt2 -&gt; binary resource table in APK
+   |         |--&gt; PackageManagerService: update allowed iff newCode &gt; installedCode
+   |
+   +--&gt; generated BuildConfig.{VERSION_CODE,VERSION_NAME} (static final consts)</code></pre>
 <hr>
 <h3 id="interview-angles-123">Interview Angles 12.3</h3>
 <p><strong>Q: What does R8 do?</strong></p>

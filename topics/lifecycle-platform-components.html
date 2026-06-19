@@ -101,6 +101,7 @@
 <hr>
 <h2 id="91-activity">9.1 Activity</h2>
 <h3 id="full-lifecycle-oncreate--ondestroy">Full Lifecycle: onCreate → onDestroy</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;The Activity lifecycle is a set of callbacks the framework drives as the Activity moves between created, started, resumed, paused, stopped, and destroyed. What I really care about is what each callback <em>guarantees</em>: <code>onCreate</code> runs exactly once per instance, <code>onResume</code> means I&#x27;m interactive, and <code>onStop</code>/<code>onDestroy</code> are <em>not</em> guaranteed to run because the system can kill my process outright. So I never put persistence-critical work in <code>onDestroy</code> — I save in <code>onPause</code>/<code>onStop</code> and lean on ViewModel plus saved state for survival.&quot;</blockquote>
 <p>An Activity&#x27;s lifecycle is the set of callbacks the Android system invokes as it creates, runs, pauses, stops, and destroys the Activity. The thing that matters in an interview — and in production — is knowing exactly what each callback guarantees and what it does not, because getting that wrong is the source of almost every lifecycle bug.</p>
 <pre><code>         App launched
               │
@@ -123,7 +124,16 @@
 onRestart()          onDestroy()       ← Finishing or system reclaim
      │
  onStart() ──► ...</code></pre>
+<p><strong>Under the hood</strong></p>
+<p>The lifecycle isn&#x27;t a set of virtual methods the OS calls directly across the process boundary. The system server (<code>ActivityManagerService</code>) sends transactions over Binder to the app process, where <code>ActivityThread</code> (running the main <code>Looper</code>) receives them as messages. Each transition is modeled as a <code>ClientTransaction</code> carrying lifecycle items and a target state; <code>TransactionExecutor</code> computes the path between the current and requested lifecycle state and replays the intermediate callbacks in order. <code>Activity.dispatchActivityResult</code> / <code>performCreate</code> / <code>performStart</code> etc. are the internal hooks that ultimately invoke your <code>onX()</code> overrides and flip the <code>mCalled</code> flag — which is why forgetting <code>super.onCreate()</code> throws <code>SuperNotCalledException</code>.</p>
+<pre><code>system_server (AMS) ──Binder──► app process main thread
+                                  ActivityThread.mH (Handler/Looper)
+                                  └─ ClientTransaction
+                                       └─ TransactionExecutor
+                                            ├─ cycleToPath(...)   // replays onStart→onResume etc.
+                                            └─ performLifecycleSequence(...) → your onX()</code></pre>
 <h4 id="oncreatesavedinstancestate-bundle">onCreate(savedInstanceState: Bundle?)</h4>
+<blockquote><strong>🎤 Say it out loud (~30s):</strong> &quot;<code>onCreate</code> runs once per instance — <code>savedInstanceState</code> is null on a fresh launch and non-null when I&#x27;m being recreated after rotation or a process kill. It&#x27;s where I inflate the layout, grab my ViewModel, and wire observers. The gotcha is the views aren&#x27;t measured yet — width and height are zero — so anything that needs layout dimensions has to wait for a layout pass, not run here.&quot;</blockquote>
 <ul>
 <li>Called <strong>once</strong> per Activity instance lifetime — when first created or after process death recreation.</li>
 <li>Receives <code>savedInstanceState</code>: <code>null</code> on a fresh launch, non-null on recreation after a system kill or configuration change.</li>
@@ -137,46 +147,66 @@ onRestart()          onDestroy()       ← Finishing or system reclaim
     viewModel.uiState.observe(this) { state -&gt; render(state) }
     // Safe: savedInstanceState?.getString(&quot;MY_KEY&quot;) to restore transient UI state
 }</code></pre>
+<p><strong>Under the hood</strong></p>
+<p><code>setContentView</code> only attaches your inflated hierarchy to the Activity&#x27;s <code>DecorView</code>; it does not measure or lay anything out. The actual measure/layout/draw traversal happens later, on the first <code>ViewRootImpl.performTraversals()</code> after the window is added to the <code>WindowManager</code> (around <code>onResume</code>/<code>makeVisible</code>). That&#x27;s why view dimensions are <code>0</code> in <code>onCreate</code> — <code>getWidth()</code>/<code>getHeight()</code> read fields that <code>layout()</code> hasn&#x27;t populated yet. If you need real sizes, post to the view&#x27;s handler or use a <code>OnGlobalLayoutListener</code>/<code>doOnLayout</code>, which fire after the traversal. The <code>savedInstanceState</code> Bundle, when present, is the deserialized result of an earlier <code>onSaveInstanceState</code> that the system unparceled from the activity record.</p>
 <h4 id="onstart">onStart()</h4>
+<blockquote><strong>🎤 Say it out loud (~30s):</strong> &quot;<code>onStart</code> is the visible-but-not-interactive state — the Activity is on screen but not yet at the top accepting touches. It runs both after <code>onCreate</code> and after <code>onRestart</code> when I come back from stopped. I use it to re-register lightweight, visibility-scoped listeners like a UI <code>BroadcastReceiver</code>, because anything registered here pairs cleanly with <code>onStop</code> to release it.&quot;</blockquote>
 <ul>
 <li>Activity transitions from &quot;stopped&quot; to &quot;visible but not yet in the foreground.&quot;</li>
 <li>Called after <code>onCreate</code> and also after <code>onRestart</code> when returning from a stopped state.</li>
 <li>The Activity can receive UI updates at this point, but the user cannot interact yet.</li>
 <li><strong>Typical use</strong>: re-register lightweight listeners that should only be active while the Activity is visible (e.g., a <code>BroadcastReceiver</code> for UI updates).</li>
 </ul>
+<p><strong>Under the hood</strong></p>
+<p>Internally <code>onStart</code> is where the framework marks the Activity as part of the <em>visible</em> set and the <code>LifecycleRegistry</code> (the <code>Lifecycle</code> backing the <code>LifecycleOwner</code>) advances to the <code>STARTED</code> state, moving any <code>STARTED</code>-gated <code>LifecycleObserver</code>s and <code>repeatOnLifecycle(STARTED)</code> collectors into their active phase. The window has been added but <code>mStopped</code>/<code>mVisibleFromClient</code> bookkeeping in <code>Activity</code> flips such that the surface becomes eligible to be shown. Symmetry with <code>onStop</code> matters: the framework guarantees a matching stop for every start that completes, so listeners registered here are safe to unregister there.</p>
 <h4 id="onresume">onResume()</h4>
+<blockquote><strong>🎤 Say it out loud (~30s):</strong> &quot;<code>onResume</code> means I&#x27;m at the top of the stack and fully interactive — touch events flow to me. It&#x27;s also called when I come back from a partial cover, like dismissing a dialog, without <code>onStart</code> running again. So I acquire foreground-only resources here — camera, sensors, media playback — and release the mirror image in <code>onPause</code>.&quot;</blockquote>
 <ul>
 <li>Activity is at the top of the stack and fully interactive.</li>
 <li>Called after <code>onStart</code> and also after returning from any partial-cover state — for example, after a dialog is dismissed.</li>
 <li><strong>Typical use</strong>: start animations, acquire camera or audio resources, resume media playback.</li>
 <li>This is the steady state for a running Activity — the one it spends most of its time in.</li>
 </ul>
+<p><strong>Under the hood</strong></p>
+<p><code>onResume</code> returning is <em>not</em> the same instant the user can touch the screen. After <code>handleResumeActivity</code>, <code>ActivityThread</code> calls <code>WindowManager.addView</code> on the <code>DecorView</code>, which creates the <code>ViewRootImpl</code> and registers the window/input channel with the system. Only once the surface is created and the first frame is drawn and the input channel is wired does touch dispatch actually begin. The <code>LifecycleRegistry</code> advances to <code>RESUMED</code> here. There&#x27;s also <code>onTopResumedActivityChanged</code> (added for multi-window) which is the true &quot;I uniquely own focus&quot; signal when several visible activities exist side by side.</p>
 <h4 id="onpause">onPause()</h4>
+<blockquote><strong>🎤 Say it out loud (~30s):</strong> &quot;<code>onPause</code> fires when I&#x27;m losing the foreground but might still be visible — a transparent dialog, multi-window, or the next Activity starting. It has to be <em>fast</em>, because the incoming Activity&#x27;s <code>onResume</code> won&#x27;t run until my <code>onPause</code> returns, so heavy work here janks the transition. I release foreground-only resources and do light saves here, never blocking DB writes.&quot;</blockquote>
 <ul>
 <li>Called when the Activity is losing the foreground but may still be visible — for example, in multi-window mode, with a transparent dialog over it, or as a new Activity is starting.</li>
 <li><strong>Must be fast</strong> — the new Activity&#x27;s <code>onResume</code> is not called until <code>onPause</code> returns, so any long work here causes the transition to stutter.</li>
 <li><strong>Typical use</strong>: save lightweight unsaved data (not heavy database writes), stop animations, release camera or audio resources that must not run in the background.</li>
 <li>After <code>onPause</code>, the Activity may be killed by the system without <code>onStop</code> or <code>onDestroy</code> ever being called — a low-memory scenario that is rare in modern Android but worth knowing.</li>
 </ul>
+<p><strong>Under the hood</strong></p>
+<p>The &quot;<code>onPause</code> must be fast&quot; rule comes from the historical handshake in <code>ActivityManagerService</code>: when starting a new Activity, AMS would pause the current one and <em>wait</em> on the <code>completePaused</code> callback (with an <code>ActivityManagerService</code> timeout, classically ~500ms) before resuming the next. Modern Android relaxes some of this, but the dependency is real — your <code>onPause</code> is on the critical path of the next screen&#x27;s appearance. The OS uses your process&#x27;s <em>adj</em> (out-of-memory adjustment score, managed via <code>oom_adj</code>) to decide kill priority; once paused-and-stopped your process climbs to a cached/background adj and the Linux low-memory killer can reap it with no further callbacks.</p>
 <h4 id="onstop">onStop()</h4>
+<blockquote><strong>🎤 Say it out loud (~30s):</strong> &quot;<code>onStop</code> means I&#x27;m fully off-screen — another Activity covered me or the user hit Home. The object is still alive and its state is preserved, so this is where I do the heavier teardown: flush DB writes, unregister receivers, stop location updates. The key caveat is the system can kill my process after <code>onStop</code> without ever calling <code>onDestroy</code>, so <code>onStop</code> is my last reliable chance to persist.&quot;</blockquote>
 <ul>
 <li>Called when the Activity is no longer visible — either another Activity has fully covered it, or the user pressed Home.</li>
 <li><strong>Typical use</strong>: release resources not needed while invisible (heavy database writes, unregister receivers), stop location updates.</li>
 <li>The Activity object is still alive in memory at this point and its state is preserved.</li>
 <li>The system can kill the process after <code>onStop</code> without ever calling <code>onDestroy</code>.</li>
 </ul>
+<p><strong>Under the hood</strong></p>
+<p>At <code>onStop</code> the <code>WindowManager</code> is told the window is no longer visible, so the surface is released back to SurfaceFlinger and the Activity stops consuming GPU/compositor resources — but the Java object graph (the <code>Activity</code> instance, its view tree, your ViewModel) stays resident in the heap. The framework keeps an <code>ActivityClientRecord</code> referencing it. Crucially, the <em>saved state</em> has already been parceled (<code>onSaveInstanceState</code> ran around this point) and handed to <code>system_server</code>, which holds it in the <code>TaskRecord</code>/<code>ActivityRecord</code> in a <em>different</em> process. That&#x27;s why a process kill after <code>onStop</code> loses your in-memory objects but not your Bundle — the Bundle lives outside your process.</p>
 <h4 id="ondestroy">onDestroy()</h4>
+<blockquote><strong>🎤 Say it out loud (~30s):</strong> &quot;<code>onDestroy</code> runs when the Activity is genuinely finishing — either I called <code>finish()</code> or the system is reclaiming it — and also on config changes before the new instance is built. The big trap interviewers want is that it&#x27;s <em>not guaranteed</em>: on process death the OS just kills the process and <code>onDestroy</code> never runs. So for anything that must survive, I use ViewModel and saved state, not cleanup code in <code>onDestroy</code>.&quot;</blockquote>
 <ul>
 <li>Called when the Activity is permanently finishing — either <code>finish()</code> was called or the system decided to reclaim it.</li>
 <li>Also called on <strong>configuration changes</strong> such as rotation, before the new instance is created.</li>
 <li><strong>Not guaranteed</strong> during process death — the system kills the process without calling this.</li>
 <li><strong>Typical use</strong>: cancel coroutines not tied to a lifecycle scope, release any remaining resources. For anything that needs to survive configuration changes, use <code>ViewModel</code> instead.</li>
 </ul>
+<p><strong>Under the hood</strong></p>
+<p>You can distinguish a real finish from a config-change destroy with <code>isFinishing()</code> and <code>isChangingConfigurations()</code>. Internally, on a config change the framework calls <code>retainNonConfigurationInstances()</code> <em>before</em> <code>performDestroy()</code> to snapshot the <code>NonConfigurationInstances</code> (which wraps the <code>ViewModelStore</code>), then destroys the old Activity and hands that snapshot to the new one — so the ViewModel object literally survives by reference, never serialized. On process death there is no <code>performDestroy</code> call at all: the kernel reaps the process when the OOM killer fires, so any <code>onDestroy</code> cleanup (closing files, cancelling raw threads) simply never executes — only the externally-held saved state remains.</p>
 <h4 id="onrestart">onRestart()</h4>
+<blockquote><strong>🎤 Say it out loud (~20s):</strong> &quot;<code>onRestart</code> only fires when a <em>stopped</em> Activity is coming back to the foreground — not when it was killed and recreated. The exact path is <code>onStop</code> → <code>onRestart</code> → <code>onStart</code> → <code>onResume</code>. It&#x27;s a hook for re-preparing state that was torn down in <code>onStop</code> but where the object itself was never destroyed.&quot;</blockquote>
 <ul>
 <li>Called only when an Activity is returning to the foreground after being stopped — not after being killed and recreated.</li>
 <li>The path is: <code>onStop</code> → <code>onRestart</code> → <code>onStart</code> → <code>onResume</code>.</li>
 </ul>
+<p><strong>Under the hood</strong></p>
+<p><code>onRestart</code> exists because the framework distinguishes a <em>stopped-but-alive</em> Activity from a <em>destroyed</em> one. The <code>ActivityClientRecord</code> still holds the live instance, so <code>TransactionExecutor.cycleToPath</code> computes a transition from <code>ON_STOP</code> back up to <code>ON_RESUME</code> and inserts the restart callback as the entry point — it is never part of the create path. There is no <code>onRestart</code> after recreation because that path goes through a brand-new instance and <code>onCreate</code>, not through the retained object.</p>
 <hr>
 <h3 id="configuration-changes">Configuration Changes</h3>
 <p>A <strong>configuration change</strong> is any change to the device environment that could require the Activity to rebuild its UI: screen rotation, locale change, font scale change, keyboard availability, dark/light mode toggle, or a screen size change from a multi-window resize.</p>
@@ -186,7 +216,11 @@ onRestart()          onDestroy()       ← Finishing or system reclaim
 <li><code>onCreate(savedInstanceState)</code> → <code>onStart</code> → <code>onResume</code> (new instance)</li>
 </ol>
 <p><strong>Key fact</strong>: <code>ViewModel</code> survives this destruction and recreation because it is stored in a <code>ViewModelStore</code> owned by the <code>ViewModelStoreOwner</code> — the Activity&#x27;s backing store — which the framework passes across the configuration change via <code>NonConfigurationInstance</code> under the hood.</p>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;By default a config change like rotation destroys and recreates the whole Activity — full <code>onPause</code> through <code>onDestroy</code>, then a fresh <code>onCreate</code> with the saved Bundle. The reason that&#x27;s safe is the resource system: the new config may map to different resources, so the framework rebuilds to re-resolve them. ViewModel survives that because it&#x27;s held outside the Activity instance via the non-configuration-instance mechanism, while transient view state rides along in the Bundle. I only opt into <code>configChanges</code> for narrow performance cases like a video player.&quot;</blockquote>
+<p><strong>Under the hood</strong></p>
+<p>The deeper reason Android <em>recreates</em> rather than just notifying is the resource system. Each <code>Configuration</code> maps to a set of qualified resource directories (<code>values-land</code>, <code>values-night</code>, <code>drawable-xxhdpi</code>, etc.); on a config change the framework builds a new <code>Resources</code>/<code>AssetManager</code> context so that <code>getString</code>, <code>getDrawable</code>, layout inflation, and so on resolve against the new qualifiers. Recreation guarantees every cached resource reference is re-fetched consistently. The ViewModel&#x27;s survival is implemented in <code>ComponentActivity.onRetainNonConfigurationInstance()</code>, which packs the <code>ViewModelStore</code> into a <code>NonConfigurationInstances</code> holder; <code>ActivityThread</code> stashes that on the <code>ActivityClientRecord</code> and injects it into the new instance, so <code>getLastNonConfigurationInstance()</code> returns the same store and <code>ViewModelProvider</code> hands back the <em>same</em> ViewModel objects.</p>
 <h4 id="handling-configuration-changes-manually">Handling configuration changes manually</h4>
+<blockquote><strong>🎤 Say it out loud (~30s):</strong> &quot;I can declare <code>configChanges</code> in the manifest to tell the system <em>not</em> to recreate for those specific changes — instead it calls <code>onConfigurationChanged</code> and hands me the new config to react to manually. The downside is I now own all the resource-swapping the framework would&#x27;ve done for free, so any layout that differs by orientation has to be updated in code. It&#x27;s fragile; I reserve it for cases like a video player that mustn&#x27;t rebuffer on rotation.&quot;</blockquote>
 <p>You can tell the system to <strong>not</strong> recreate the Activity for certain config changes by declaring <code>configChanges</code> in the manifest:</p>
 <pre><code>&lt;activity
     android:name=&quot;.MyActivity&quot;
@@ -200,6 +234,8 @@ onRestart()          onDestroy()       ← Finishing or system reclaim
     }
 }</code></pre>
 <p><strong>Trade-off</strong>: Handling config changes manually bypasses the standard lifecycle recreation, which means any layout that differs between orientations must be updated programmatically. That is fragile and hard to maintain. The better default is ViewModel plus saved instance state. Reserve <code>configChanges</code> for genuinely performance-sensitive cases — a video player that must not rebuffer on rotation is the classic example.</p>
+<p><strong>Under the hood</strong></p>
+<p>When you list a flag in <code>configChanges</code>, the framework compares the changed config bits against your declared mask. If <em>every</em> changed bit is one you claimed to handle, it skips the relaunch path entirely and instead calls <code>Activity.onConfigurationChanged(newConfig)</code> plus the resource update — your <code>Resources</code> object&#x27;s configuration is updated in place rather than rebuilt. If even one changed bit is <em>not</em> in your mask, the framework falls back to a full relaunch regardless. A common bug: declaring <code>orientation</code> but not <code>screenSize</code>, so on modern API levels (where rotation also changes the smallest-width/screen-size config) the Activity still gets recreated because <code>screenSize</code> wasn&#x27;t claimed.</p>
 <h4 id="lifecycle-during-rotation-the-classic-interview-question">Lifecycle during rotation (the classic interview question)</h4>
 <pre><code>User rotates device:
   Old instance: onPause → onStop → onSaveInstanceState → onDestroy
@@ -209,6 +245,7 @@ ViewModel: NOT destroyed — survives the entire sequence.
 savedInstanceState Bundle: saved before destroy, restored in new onCreate.</code></pre>
 <hr>
 <h3 id="process-death">Process Death</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;Process death is when the OS reclaims my app&#x27;s process for memory while it&#x27;s backgrounded — it happens <em>after</em> <code>onStop</code>, and <code>onDestroy</code> is never called; the process just disappears. When the user returns, Android recreates the top Activity and back stack from saved state and calls <code>onCreate</code> with the Bundle. The trap is that ViewModel is gone — it lived in the dead process — but <code>SavedStateHandle</code> survives because the framework serializes it alongside the instance state. So I design recovery around the Bundle plus a re-query from my repository, not around in-memory ViewModel fields.&quot;</blockquote>
 <p>The Android system can kill an app&#x27;s process when memory is low. This happens <strong>after</strong> <code>onStop</code> is called on the visible Activity — the system never calls <code>onDestroy</code>. The process simply ceases to exist.</p>
 <p><strong>From the user&#x27;s perspective</strong>: they can background the app, do memory-intensive work, then come back and expect to see the app in exactly the state they left it. That is Android&#x27;s &quot;apparent continuity&quot; contract.</p>
 <p><strong>How Android restores</strong>:</p>
@@ -241,8 +278,17 @@ savedInstanceState Bundle: saved before destroy, restored in new onCreate.</code
 <tr><td>onSaveInstanceState?</td><td>Called before destroy</td><td>Called when Activity is stopped</td></tr>
 <tr><td>Recovery mechanism</td><td>ViewModel + Bundle</td><td>Bundle + SavedStateHandle + DB</td></tr>
 </tbody></table>
+<p><strong>Under the hood</strong></p>
+<p>The kill itself is performed by the Linux <strong>Low Memory Killer</strong> (historically the in-kernel LMK driver, now usually the userspace <code>lmkd</code> daemon) acting on the <em>oom_adj</em> score <code>system_server</code> assigns each process based on its component states. A foreground Activity sits near adj 0 (effectively unkillable); once your task is cached/background it climbs to a high adj and is among the first reaped under pressure. Because the kill is <code>SIGKILL</code> at the kernel level, no Java finalizers, <code>onDestroy</code>, or shutdown hooks run — that&#x27;s why <code>onDestroy</code> and process death are fundamentally asymmetric. The saved-state survival works because <code>onSaveInstanceState</code> parcels your <code>Bundle</code> and ships it over Binder to <code>system_server</code>, which persists it in the <code>ActivityRecord</code>; <code>SavedStateHandle</code> plugs into this same pipeline via the <code>SavedStateRegistry</code>, so its contents are written into the same Bundle and replayed on recreation.</p>
+<pre><code>Backgrounded app process              system_server (survives)
+  onStop ─► onSaveInstanceState ──Binder──► Bundle stored in ActivityRecord
+        adj raised → lmkd SIGKILL                     │
+  (heap, ViewModel, threads gone)                     │
+  user returns → recreate top activity ◄──────────────┘
+        onCreate(savedBundle)  // ViewModel rebuilt fresh; SavedStateHandle rehydrated</code></pre>
 <hr>
 <h3 id="saved-instance-state">Saved Instance State</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;<code>onSaveInstanceState</code> gives me a Bundle to stash small, transient UI state — scroll position, form text, selected tab — right before the Activity might be destroyed for a config change or process kill. The hard limit people forget is that the Bundle goes through a Binder transaction capped around 1MB, so dropping a bitmap or a big list in there throws <code>TransactionTooLargeException</code>. The rule of thumb: Bundle for ephemeral screen state, database or repository for anything large or authoritative.&quot;</blockquote>
 <p><code>onSaveInstanceState(outState: Bundle)</code> is called:</p>
 <ul>
 <li>Before the Activity may be destroyed for a configuration change.</li>
@@ -269,8 +315,11 @@ override fun onCreate(savedInstanceState: Bundle?) {
 <li><strong>Bundle</strong>: ephemeral UI state that is only meaningful on the current screen — scroll position, form input, selected item. Cheap to serialize and small in size.</li>
 <li><strong>Database / Repository</strong>: persistent domain data that should survive app uninstall/reinstall cycles, is shared across screens, or is large. Restore it from the repository inside the ViewModel.</li>
 </ul>
+<p><strong>Under the hood</strong></p>
+<p><code>super.onSaveInstanceState(outState)</code> walks the view hierarchy and calls <code>View.onSaveInstanceState()</code> on every view that has an <code>id</code>, collecting each <code>Parcelable</code> into a <code>SparseArray</code> keyed by view id — that&#x27;s how an <code>EditText</code>&#x27;s text or a <code>RecyclerView</code>&#x27;s scroll position restore automatically without you writing code (and why an id is required). The Bundle is then <strong>parceled</strong> — flattened into a <code>Parcel</code>, a contiguous native buffer — and transmitted to <code>system_server</code> over Binder. The ~1MB ceiling is the per-process Binder transaction buffer shared across <em>all</em> in-flight transactions, so the real safe budget is well under 1MB and exceeding it surfaces as <code>TransactionTooLargeException</code> (sometimes asynchronously, making it tricky to attribute). Note <code>putParcelable</code> doesn&#x27;t serialize at call time — the flattening happens lazily when the Bundle is actually parceled for the transaction.</p>
 <hr>
 <h3 id="viewmodel">ViewModel</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;ViewModel holds UI state in a lifecycle-aware way and survives configuration changes because it&#x27;s scoped to the <code>ViewModelStore</code>, not the Activity instance — the store is retained across recreation via the non-configuration-instance mechanism. It does <em>not</em> survive process death by itself; for that I inject <code>SavedStateHandle</code>, whose contents are serialized into the saved-state Bundle. The other thing I rely on is <code>viewModelScope</code> — it&#x27;s a <code>CoroutineScope</code> that&#x27;s automatically cancelled in <code>onCleared</code>, so I never leak coroutines.&quot;</blockquote>
 <p><code>ViewModel</code> is an Architecture Component designed to hold and manage UI-related data in a lifecycle-conscious way. It survives <strong>configuration changes</strong> but not <strong>process death</strong> — unless you are using <code>SavedStateHandle</code>, in which case the parts you put in the handle can survive both.</p>
 <p><strong>Internals</strong>: The <code>ViewModelStore</code> is retained by the <code>NonConfigurationInstance</code> mechanism in <code>ComponentActivity</code>. When a configuration change occurs, <code>ActivityThread</code> calls <code>retainNonConfigurationInstances()</code> before destroying the Activity, and passes the returned objects to the new instance.</p>
 <pre><code>class ProfileViewModel(
@@ -309,8 +358,11 @@ override fun onCreate(savedInstanceState: Bundle?) {
 <li>savedInstanceState: serialized to disk, survives process death, but limited to roughly 50 KB of serializable data.</li>
 <li><strong>Best practice</strong>: combine both — the ViewModel holds the full data set, and savedInstanceState (via <code>SavedStateHandle</code>) holds just enough to re-query it after process death.</li>
 </ul>
+<p><strong>Under the hood</strong></p>
+<p><code>ViewModelStore</code> is just a <code>HashMap&lt;String, ViewModel&gt;</code> keyed by a provider-generated key. <code>ViewModelProvider.get()</code> looks up the key and either returns the existing instance or builds one via the <code>Factory</code>. The &quot;survives config change&quot; magic is purely that the <em>store map</em> outlives the Activity instance: <code>ComponentActivity.onRetainNonConfigurationInstance()</code> returns a holder containing that map, the framework reattaches it, and the new Activity&#x27;s <code>getViewModelStore()</code> finds the same map with the same <code>ViewModel</code> objects — no serialization, same heap references. <code>viewModelScope</code> is a lazily-created <code>CoroutineScope</code> backed by <code>SupervisorJob() + Dispatchers.Main.immediate</code>, stored as a tagged field on the <code>ViewModel</code>; <code>onCleared()</code> is invoked when the store calls <code>clear()</code> (on genuine finish, <em>not</em> config change), and the framework cancels that scope&#x27;s <code>Job</code>, which cancels every child coroutine. <code>SavedStateHandle</code> is a <code>MutableMap</code> whose <code>savedStateProvider()</code> is registered with the <code>SavedStateRegistry</code>, so its entries get written into the same instance-state Bundle that survives process death.</p>
 <hr>
 <h3 id="back-stack">Back Stack</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;The back stack is a per-task LIFO stack of Activities the system maintains — <code>startActivity</code> pushes, <code>finish()</code> and the Back button pop and resume what&#x27;s underneath. Each <em>task</em> has its own stack, and pressing Home doesn&#x27;t destroy your task, it just moves it to the background. The subtle part interviewers probe is <code>taskAffinity</code> and launch modes — affinity defaults to the package name and determines which task an Activity prefers to land in, which is what makes <code>singleTask</code> and friends behave the way they do.&quot;</blockquote>
 <p>The <strong>task back stack</strong> is a stack of Activities maintained by the system. Each task has its own stack, and pressing the system Back button pops the top Activity and resumes the one beneath it.</p>
 <ul>
 <li><code>startActivity(intent)</code> pushes a new Activity onto the current task&#x27;s back stack.</li>
@@ -318,15 +370,23 @@ override fun onCreate(savedInstanceState: Bundle?) {
 <li>The home screen is a separate task; navigating to it moves your task to the background rather than destroying it.</li>
 </ul>
 <p><strong>Task affinity</strong>: Activities have a <code>taskAffinity</code> attribute that defaults to the app&#x27;s package name. Activities with the same affinity are naturally grouped in the same task, and this interacts with certain launch modes.</p>
+<p><strong>Under the hood</strong></p>
+<p>The back stack isn&#x27;t stored in your process — it lives in <code>system_server</code> as a <code>Task</code> (historically <code>TaskRecord</code>) holding an ordered list of <code>ActivityRecord</code>s, managed by the activity task subsystem (<code>ActivityTaskManagerService</code> / <code>ActivityStack</code> / <code>Task</code>). When you <code>startActivity</code>, the launch flows through AMS, which consults the Intent flags and the target&#x27;s <code>launchMode</code>/<code>taskAffinity</code> to decide <em>which</em> task receives the record and whether to reuse an existing instance. <code>standard</code> always creates a new record; <code>singleTop</code> reuses the top if it matches (routing through <code>onNewIntent</code> instead of a new instance); <code>singleTask</code> finds or creates a task by affinity and clears records above the existing instance; <code>singleInstance</code> isolates the Activity as the sole member of its own task. Because the records and their saved Bundles live in the system process, the entire stack can be reconstructed after your app&#x27;s process is killed — the system replays it Activity by Activity on return.</p>
 <hr>
 <h3 id="launch-modes">Launch Modes</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;Launch modes decide whether starting an Activity creates a fresh instance or reuses an existing one, and whether it lives in the current task or a new one. The four manifest modes are standard, singleTop, singleTask, and singleInstance, and you can layer runtime overrides with Intent flags like CLEAR_TOP or NEW_TASK. The gotcha interviewers love is that singleTask and singleTop reuse the instance and route through <code>onNewIntent</code> instead of <code>onCreate</code> — so if you parse your data in <code>onCreate</code>, deep links into an already-running Activity silently break unless you also handle <code>onNewIntent</code>.&quot;</blockquote>
 <p>Launch modes control whether a new instance of an Activity is created when it is started, or whether an existing instance is reused. They can be declared in the manifest or set dynamically via Intent flags.</p>
 <h4 id="standard-default">standard (default)</h4>
+<blockquote><strong>🎤 Say it out loud (~30s):</strong> &quot;Standard is the default: every start creates a brand-new instance and pushes it onto the task, so you can end up with several copies of the same Activity stacked on top of each other. It doesn&#x27;t care whether an instance already exists — that&#x27;s both its simplicity and its footgun if you launch the same screen repeatedly.&quot;</blockquote>
 <ul>
 <li>A new instance is created every time the Activity is started, even if an instance already exists in the stack.</li>
 <li>Multiple instances of the same Activity can coexist in the stack at the same time.</li>
 </ul>
+<p><strong>Under the hood</strong></p>
+<p>In the framework, <code>ActivityStarter</code> resolves a target and, for <code>standard</code>, always allocates a new <code>ActivityRecord</code> and pushes it onto the top <code>TaskFragment</code> of the resolved task. There&#x27;s no reuse check — the record&#x27;s lifecycle begins at <code>onCreate</code>. Each <code>ActivityRecord</code> is a distinct token in the ActivityManagerService (AMS), so two &quot;identical&quot; standard Activities are completely separate objects with separate saved states.</p>
+<pre><code>Task: [ A ] -&gt; startActivity(A) -&gt; Task: [ A, A&#x27; ]   // A&#x27; is a new ActivityRecord</code></pre>
 <h4 id="singletop">singleTop</h4>
+<blockquote><strong>🎤 Say it out loud (~30s):</strong> &quot;singleTop only reuses the instance if it&#x27;s already sitting at the very top of the task — in that case you get <code>onNewIntent</code> instead of a new <code>onCreate</code>. If it&#x27;s lower in the stack, you still get a fresh instance. I reach for it on notification and search targets so tapping again doesn&#x27;t stack duplicates, and I always remember to call <code>setIntent()</code> inside <code>onNewIntent</code> or <code>getIntent()</code> keeps returning the stale one.&quot;</blockquote>
 <ul>
 <li>If the Activity is already at the <strong>top</strong> of the current task&#x27;s back stack, no new instance is created — instead, <code>onNewIntent(intent)</code> is called on the existing instance.</li>
 <li>If the Activity exists somewhere in the stack but is not at the top, a new instance is created.</li>
@@ -337,19 +397,32 @@ override fun onCreate(savedInstanceState: Bundle?) {
     setIntent(intent) // important: update the intent so getIntent() returns the new one
     handleDeepLink(intent)
 }</code></pre>
+<p><strong>Under the hood</strong></p>
+<p>When AMS resolves the start, it compares the requested component against the top <code>ActivityRecord</code> of the task. On a match it skips creating a record and instead schedules a <code>NewIntentItem</code> through the <code>ClientTransaction</code> pipeline, which the <code>ActivityThread</code> delivers as <code>onNewIntent</code>. Because no new record is created, <code>getIntent()</code> still points at the original launch Intent — <code>setIntent()</code> mutates the record&#x27;s stored intent so subsequent reads see the new one.</p>
+<pre><code>Task: [ X, A ]  startActivity(A) -&gt; top is A -&gt; onNewIntent(A)   // no new instance
+Task: [ A, X ]  startActivity(A) -&gt; top is X -&gt; new A pushed     // not top, so created</code></pre>
 <h4 id="singletask">singleTask</h4>
+<blockquote><strong>🎤 Say it out loud (~30s):</strong> &quot;singleTask guarantees a single instance within its task — if it already exists anywhere in the stack, the system pops everything above it and delivers <code>onNewIntent</code> rather than making a new one. It&#x27;s the classic home/root-screen mode. The surprise is that those Activities sitting on top really do get destroyed when it surfaces, so any unsaved state up there is gone.&quot;</blockquote>
 <ul>
 <li>Only one instance of this Activity exists in its task. If it already exists anywhere in the back stack, all Activities stacked on top of it are popped and <code>onNewIntent</code> is called on the existing instance.</li>
 <li>Creates a new task if one does not already exist.</li>
 <li><strong>Use case</strong>: main or home screen of an app.</li>
 <li><strong>Gotcha</strong>: Activities on top of it are destroyed when it comes to the foreground, which can be surprising if you&#x27;re not expecting it.</li>
 </ul>
+<p><strong>Under the hood</strong></p>
+<p>AMS scans the task&#x27;s <code>ActivityRecord</code> list for an existing match. On a hit it performs a &quot;clear top&quot; operation, finishing every record above the target (each goes through <code>onDestroy</code>), then schedules <code>onNewIntent</code> on the survivor. The task affinity (<code>taskAffinity</code>, defaulting to the package name) decides which task it belongs to; if no task with that affinity exists, AMS creates a new <code>Task</code> and roots the Activity there.</p>
+<pre><code>Task: [ Home, B, C ]  startActivity(Home) -&gt; finish C, finish B -&gt; Home.onNewIntent()
+                       -&gt; Task: [ Home ]</code></pre>
 <h4 id="singleinstance">singleInstance</h4>
+<blockquote><strong>🎤 Say it out loud (~30s):</strong> &quot;singleInstance is singleTask taken to the extreme: the Activity is the <em>only</em> thing in its task, and anything it launches gets shoved into a different task. It&#x27;s really for system-style surfaces like a dialer or alarm screen where you want hard isolation. In a normal app it&#x27;s almost always the wrong tool and causes weird back-stack behavior.&quot;</blockquote>
 <ul>
 <li>Like <code>singleTask</code> but more isolated: the Activity is the only Activity in its task, and any Activities it starts go into a different task.</li>
 <li><strong>Use case</strong>: system-level shared UIs such as a dialer or alarm screen. Rarely needed in typical apps.</li>
 </ul>
+<p><strong>Under the hood</strong></p>
+<p>AMS marks the task as exclusive to this single <code>ActivityRecord</code> and refuses to add any other record to it. When this Activity calls <code>startActivity</code>, the launcher routes the new record into a separate task (creating one by affinity if needed), so the singleInstance task never grows beyond one entry. This is why &quot;up&quot;/back navigation across these boundaries is non-intuitive — two distinct <code>Task</code> objects are involved, each with its own back stack.</p>
 <h4 id="intent-flags-runtime-alternative-to-manifest-modes">Intent flags (runtime alternative to manifest modes)</h4>
+<blockquote><strong>🎤 Say it out loud (~30s):</strong> &quot;Intent flags let me override or approximate launch-mode behavior at the call site without touching the manifest, which is handy when the same Activity needs different behavior from different entry points. The common combo is <code>CLEAR_TASK or NEW_TASK</code> to wipe the stack and land on Home. The catch is that some flags only make sense together — <code>CLEAR_TASK</code> is a no-op without <code>NEW_TASK</code> — and launching from a non-Activity Context requires <code>NEW_TASK</code>.&quot;</blockquote>
 <table border="1" cellpadding="6" cellspacing="0">
 <thead><tr>
 <th>Flag</th>
@@ -367,8 +440,13 @@ val intent = Intent(this, HomeActivity::class.java).apply {
     flags = Intent.FLAG_ACTIVITY_CLEAR_TASK or Intent.FLAG_ACTIVITY_NEW_TASK
 }
 startActivity(intent)</code></pre>
+<p><strong>Under the hood</strong></p>
+<p>Flags are packed as a bitmask into the <code>Intent</code>&#x27;s <code>mFlags</code> int and travel with the Intent across the Binder call to AMS. The starter (<code>ActivityStarter.setInitialState</code> / <code>computeLaunchingTaskFlags</code>) reads them to decide reuse and task placement — they&#x27;re effectively merged with the manifest <code>launchMode</code> to produce a final disposition. A subtlety: <code>CLEAR_TOP</code> without <code>SINGLE_TOP</code> destroys and recreates the matched Activity (new <code>onCreate</code>), whereas <code>CLEAR_TOP or SINGLE_TOP</code> delivers <code>onNewIntent</code> to the existing one instead.</p>
+<pre><code>mFlags = NEW_TASK | CLEAR_TASK  -&gt;  AMS finishes all records in the target task,
+                                    then roots HomeActivity as the new base record</code></pre>
 <hr>
 <h3 id="deep-links">Deep Links</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;A deep link is just an Intent — usually an <code>ACTION_VIEW</code> with a URI — that drops the user straight onto a specific screen from outside the app. The manifest intent-filter does the routing, and I read the target from <code>intent.data</code>. The part people forget is the synthetic back stack: if the user arrives via a deep link, pressing back should walk them up through your app hierarchy, not kick them out. Jetpack Navigation builds that automatically from <code>&lt;deepLink&gt;</code> nodes; doing it by hand means <code>TaskStackBuilder</code> with <code>addNextIntentWithParentStack</code>.&quot;</blockquote>
 <p>A <strong>deep link</strong> is an Intent that brings the user directly to a specific screen within your app from an external source — a notification, a web page, or another app.</p>
 <p><strong>Manifest declaration</strong>:</p>
 <pre><code>&lt;activity android:name=&quot;.ProfileActivity&quot;&gt;
@@ -399,8 +477,15 @@ val stackBuilder = TaskStackBuilder.create(this).apply {
     addNextIntentWithParentStack(deepLinkIntent)
 }
 stackBuilder.startActivities()</code></pre>
+<p><strong>Under the hood</strong></p>
+<p>At install time PackageManagerService parses every <code>&lt;intent-filter&gt;</code> into an <code>IntentFilter</code> object indexed by action, category, scheme, host, and path. When an <code>ACTION_VIEW</code> Intent fires, AMS asks PackageManager to match it against these filters — the URI&#x27;s scheme/host/path are tested with the filter&#x27;s matching rules, and <code>BROWSABLE</code> is required for links arriving from a browser. <code>addNextIntentWithParentStack</code> walks the manifest&#x27;s <code>parentActivityName</code> chain (or <code>getParentActivityIntent()</code>) upward, building an array of Intents; <code>startActivities</code> then hands that whole array to AMS, which materializes the synthetic stack bottom-up so each parent <code>ActivityRecord</code> exists before the leaf.</p>
+<pre><code>URI myapp://profile/user/42
+   matched filter -&gt; ProfileActivity
+TaskStackBuilder: [ HomeIntent, ProfileIntent ]  // parent chain resolved
+   -&gt; AMS creates Home (paused) then Profile (resumed) as one task</code></pre>
 <hr>
 <h3 id="multi-window">Multi-Window</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;Multi-window lets two apps share the screen in split mode since Android 7. The lifecycle wrinkle is visibility versus focus: before Android 10 only the focused Activity was RESUMED and the other dropped to PAUSED, so people used to put &#x27;stop the camera&#x27; logic in <code>onPause</code>. Android 10 introduced multi-resume, where both Activities can be RESUMED at once, so that assumption breaks — now the focused one is signalled via <code>onTopResumedActivityChanged</code>, and that&#x27;s where exclusive resources like the camera or mic should be acquired and released.&quot;</blockquote>
 <p>Android 7.0 and above support multi-window (split-screen) mode. In multi-window:</p>
 <ul>
 <li>Both Activities can be visible simultaneously, but only one is <strong>resumed</strong> at a time — that is the pre-Android 10 behavior.</li>
@@ -418,8 +503,14 @@ stackBuilder.startActivities()</code></pre>
     }
 }</code></pre>
 <p><strong>Declaring support</strong>: Activities are multi-window-enabled by default. You can opt out with <code>android:resizeableActivity=&quot;false&quot;</code>, but that is not recommended.</p>
+<p><strong>Under the hood</strong></p>
+<p>Pre-Android 10, the WindowManager/AMS scheduler enforced a single globally-resumed Activity by pausing whichever Activity lost top focus, so RESUMED implied &quot;focused&quot;. Android 10&#x27;s multi-resume relaxed this: the scheduler can keep several <code>ActivityRecord</code>s in the RESUMED lifecycle state across different windows/displays, and it tracks the <em>focused</em> one separately via the <code>onTopResumedActivityChanged(isTopResumedActivity)</code> callback (delivered through the same <code>ClientTransaction</code> pipeline). A window resize doesn&#x27;t go through that path at all — it produces a new <code>Configuration</code> whose diff includes <code>screenSize</code>/<code>smallestScreenSize</code>, and unless those bits are in <code>android:configChanges</code> AMS relaunches the Activity exactly like a rotation.</p>
+<pre><code>&lt; API 29:  split-screen -&gt; non-focused Activity forced to onPause (only one RESUMED)
+&gt;= API 29: both RESUMED; focus moves via onTopResumedActivityChanged(true/false)
+resize:    new Configuration (screenSize bit set) -&gt; relaunch unless in configChanges</code></pre>
 <hr>
 <h3 id="activity-result-api">Activity Result API</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;The Activity Result API replaced <code>startActivityForResult</code>/<code>onActivityResult</code>. You register a launcher with a typed contract — input and output are strongly typed — and the framework hands you the result in a callback. The big win is lifecycle safety: because you register at construction time, not at launch time, the callback is correctly re-wired across configuration changes and even process death, so you don&#x27;t lose the result like the old request-code pattern could. That&#x27;s also the one rule interviewers check — you must register unconditionally at class init, never inside a click handler or after STARTED, or it throws.&quot;</blockquote>
 <p>The Activity Result API is the modern replacement for the deprecated <code>startActivityForResult</code>/<code>onActivityResult</code> pattern. It is lifecycle-safe and uses a contract-based approach where you declare what you want upfront and get a typed result back.</p>
 <pre><code>// 1. Register the launcher in the Activity/Fragment (at class level, before lifecycle)
 private val pickImageLauncher = registerForActivityResult(
@@ -460,6 +551,11 @@ fun onPickPhotoClicked() {
 <li>No more managing integer request codes.</li>
 <li>Works cleanly with Fragments without any extra plumbing.</li>
 </ul>
+<p><strong>Under the hood</strong></p>
+<p><code>registerForActivityResult</code> is backed by an <code>ActivityResultRegistry</code> owned by the ComponentActivity. At registration it generates (or restores) an integer request code, hashes the key, and stores the contract + callback in maps; the registry&#x27;s state is itself saved and restored via <code>onSaveInstanceState</code>, which is why results survive configuration changes and process death. <code>launch()</code> calls the contract&#x27;s <code>createIntent</code>, then dispatches via the platform <code>startActivityForResult</code> under that generated code. When the result returns, <code>ComponentActivity.onActivityResult</code> forwards to <code>ActivityResultRegistry.dispatchResult</code>, which runs the contract&#x27;s <code>parseResult</code> and invokes your callback — but only if the registering <code>LifecycleOwner</code> is at least STARTED, otherwise the result is held until it is. Registering after STARTED throws <code>IllegalStateException</code>, which enforces the &quot;register at init&quot; rule.</p>
+<pre><code>register -&gt; rc=0x0001 stored {key -&gt; (contract, callback)}, persisted in saved state
+launch   -&gt; createIntent() -&gt; startActivityForResult(intent, rc)
+return   -&gt; onActivityResult(rc, code, data) -&gt; parseResult() -&gt; callback (if &gt;= STARTED)</code></pre>
 <hr>
 <h3 id="activity-interview-angles">Activity Interview Angles</h3>
 <p><strong>Q: Walk me through the Activity lifecycle during device rotation.</strong></p>
@@ -473,6 +569,7 @@ fun onPickPhotoClicked() {
 <hr>
 <h2 id="92-fragment">9.2 Fragment</h2>
 <h3 id="fragment-lifecycle">Fragment Lifecycle</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;A Fragment&#x27;s lifecycle is coupled to its host Activity but has extra phases, and the crucial split is the Fragment instance versus its view. The Fragment object runs <code>onCreate</code>/<code>onDestroy</code> once, but <code>onCreateView</code>/<code>onDestroyView</code> can fire many times — every time it goes on and off the back stack the view is torn down and rebuilt while the instance lives on. That&#x27;s exactly why you bind views in <code>onViewCreated</code> and null out your binding in <code>onDestroyView</code>; if you hold a view reference past <code>onDestroyView</code> you leak the entire view hierarchy. It&#x27;s also why you observe LiveData with <code>viewLifecycleOwner</code>, not the Fragment itself.&quot;</blockquote>
 <p>A Fragment has its own lifecycle that is coupled to — but distinct from — its host Activity. The key word is &quot;distinct&quot;: a Fragment&#x27;s lifecycle has more phases than an Activity&#x27;s, and getting them confused is one of the most common sources of Android bugs. Each Fragment instance goes through these callbacks:</p>
 <pre><code>onAttach(context)       ← Fragment associated with Activity; safe to access Context
     │
@@ -502,8 +599,14 @@ onDestroy()             ← Fragment instance being destroyed
     │
 onDetach()              ← Fragment disassociated from Activity</code></pre>
 <p><strong>Key insight</strong>: <code>onCreateView</code> and <code>onDestroyView</code> can be called <strong>multiple times</strong> on the same Fragment instance — for example, when a Fragment is placed on the back stack its view is destroyed, but the Fragment object itself lives on. <code>onCreate</code> and <code>onDestroy</code>, by contrast, happen exactly once per Fragment instance lifetime.</p>
+<p><strong>Under the hood</strong></p>
+<p>The <code>FragmentManager</code> drives each Fragment through an integer state machine (<code>Fragment.mState</code>, e.g. <code>INITIALIZING</code>, <code>CREATED</code>, <code>VIEW_CREATED</code>, <code>ACTIVITY_CREATED</code>, <code>STARTED</code>, <code>RESUMED</code>), and <code>FragmentStateManager.moveToExpectedState()</code> steps the Fragment up or down one state at a time toward the target the manager computes from the Activity&#x27;s state and the transaction. Critically, the Fragment owns <em>two</em> <code>LifecycleOwner</code>s: the Fragment itself (lives <code>onCreate</code>→<code>onDestroy</code>) and a separate <code>viewLifecycleOwner</code> whose <code>LifecycleRegistry</code> is recreated on each <code>onCreateView</code> and moved to <code>DESTROYED</code> on each <code>onDestroyView</code>. That second registry is what makes back-stack reuse safe — observers bound to <code>viewLifecycleOwner</code> are automatically removed when the view dies, so a recreated view doesn&#x27;t accumulate duplicate observers, and a stale binding reference held past <code>onDestroyView</code> keeps the whole detached view tree alive (the classic Fragment view leak).</p>
+<pre><code>Fragment instance state:   CREATED ─────────────────────────── DESTROYED   (once)
+view lifecycle state:      [INITIALIZED→RESUMED→DESTROYED]  [INITIALIZED→...]  (per view)
+                            └ onCreateView..onDestroyView ┘  └ recreated on back-stack pop ┘</code></pre>
 <hr>
 <h3 id="view-lifecycle-vs-fragment-lifecycle">View Lifecycle vs Fragment Lifecycle</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;The key is that a Fragment outlives its view. The Fragment instance runs from onAttach to onDetach, but its view only exists from onCreateView to onDestroyView — and when a Fragment goes onto the back stack, its view gets destroyed while the instance survives. So when it comes back, you get a brand-new view but the same Fragment. The gotcha interviewers love is that if you observe LiveData or collect a Flow against <code>this</code> instead of <code>viewLifecycleOwner</code>, the observer never dies with the view, so you can end up with a stale reference to a destroyed view or duplicate observers piling up.&quot;</blockquote>
 <p>This is one of the most important distinctions in Android development and a very common interview topic.</p>
 <p><strong>Fragment lifecycle</strong>: tied to the Fragment <em>instance</em>. The Fragment object can exist long after its view is destroyed — that happens whenever the Fragment is on the back stack.</p>
 <p><strong>View lifecycle</strong> (<code>viewLifecycleOwner</code>): tied specifically to the Fragment&#x27;s <em>view</em>. It starts in <code>onCreateView</code> and ends in <code>onDestroyView</code>.</p>
@@ -517,8 +620,16 @@ viewModel.uiState.observe(this) { state -&gt; render(state) }
 
 // CORRECT — observer is tied to the view&#x27;s lifecycle
 viewModel.uiState.observe(viewLifecycleOwner) { state -&gt; render(state) }</code></pre>
+<p><strong>Under the hood</strong></p>
+<p>A Fragment holds two separate <code>LifecycleRegistry</code> objects. <code>mLifecycleRegistry</code> is the instance lifecycle owned by the Fragment itself. The view lifecycle lives in a distinct <code>FragmentViewLifecycleOwner</code> that the <code>FragmentManager</code> creates inside <code>performCreateView</code> and exposes via <code>getViewLifecycleOwner()</code>. When the view is created, the manager moves the view registry to <code>RESUMED</code>; in <code>performDestroyView</code> it drives that view registry to <code>DESTROYED</code> and then nulls out the reference, so the next <code>onCreateView</code> builds a fresh <code>FragmentViewLifecycleOwner</code> with a fresh registry. That is why a back-stack Fragment can have multiple sequential view-lifecycle owners over the life of one instance.</p>
+<pre><code>Fragment instance ──► mLifecycleRegistry (LifecycleRegistry)   // lives onAttach..onDetach
+       │
+       └─ getViewLifecycleOwner() ──► FragmentViewLifecycleOwner
+                                          └─ own LifecycleRegistry  // recreated each onCreateView</code></pre>
+<p><code>LiveData.observe(owner, observer)</code> wraps the observer in a <code>LifecycleBoundObserver</code> registered against whichever registry you pass. Pass the view owner and the binding auto-detaches at <code>onDestroyView</code>; pass the Fragment and it survives until <code>onDestroy</code>, which is exactly how duplicate/stale observers accumulate.</p>
 <hr>
 <h3 id="viewlifecycleowner">viewLifecycleOwner</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;<code>viewLifecycleOwner</code> is a LifecycleOwner whose lifecycle exactly mirrors the Fragment&#x27;s view — alive from onCreateView to onDestroyView. My rule of thumb is: anything that touches a view goes on <code>viewLifecycleOwner</code>, and anything that should survive view recreation, like a data load, goes on the Fragment itself. The classic trap is accessing <code>viewLifecycleOwner</code> before onCreateView or after onDestroyView — it throws because there&#x27;s no current view lifecycle to give you.&quot;</blockquote>
 <p><code>viewLifecycleOwner</code> is a <code>LifecycleOwner</code> that mirrors the lifecycle of the Fragment&#x27;s view, running from <code>onCreateView</code> through to <code>onDestroyView</code>.</p>
 <p><strong>When to use <code>this</code> vs <code>viewLifecycleOwner</code></strong>:</p>
 <ul>
@@ -531,8 +642,11 @@ viewModel.uiState.observe(viewLifecycleOwner) { state -&gt; render(state) }</cod
         viewModel.uiState.collect { state -&gt; /* update Compose */ }
     }
 }</code></pre>
+<p><strong>Under the hood</strong></p>
+<p><code>getViewLifecycleOwner()</code> returns the <code>FragmentViewLifecycleOwner</code> stored in the Fragment&#x27;s <code>mViewLifecycleOwner</code> field; if that field is null it throws <code>IllegalStateException(&quot;Can&#x27;t access the Fragment View&#x27;s LifecycleOwner ... when getView() is null&quot;)</code>. There is also a <code>viewLifecycleOwnerLiveData</code> that emits the new owner each time a view is created and <code>null</code> when it&#x27;s destroyed, which is how libraries observe view-owner transitions safely. The <code>lifecycleScope</code> you get from it is a <code>LifecycleCoroutineScope</code> backed by a <code>SupervisorJob</code> plus <code>Dispatchers.Main.immediate</code>; when the view registry reaches <code>DESTROYED</code>, the lifecycle&#x27;s coroutine cancels that scope&#x27;s job, so any collect launched there is automatically cancelled at <code>onDestroyView</code>. <code>repeatOnLifecycle(STARTED)</code> further suspends the body and cancels the inner block on each <code>STOP</code>, restarting it on the next <code>START</code> — so it pauses collection while backgrounded without tearing down the outer scope.</p>
 <hr>
 <h3 id="fragment-transactions">Fragment Transactions</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;A Fragment transaction is a batch of operations — add, remove, replace, hide/show, detach/attach — that the FragmentManager applies atomically. The subtlety is that commit doesn&#x27;t run synchronously; it posts the work to the main thread&#x27;s message queue, so the views aren&#x27;t actually swapped until that runs. If I need them applied right now I call executePendingTransactions, but never from a background thread, and I avoid commit after onSaveInstanceState unless I deliberately allow state loss.&quot;</blockquote>
 <p>Fragment transactions are operations that add, remove, replace, or show and hide Fragments. They are batched together and committed atomically, which means either all operations in the transaction happen or none of them do.</p>
 <pre><code>supportFragmentManager.commit {
     setCustomAnimations(R.anim.slide_in, R.anim.slide_out, R.anim.slide_in, R.anim.slide_out)
@@ -548,8 +662,16 @@ viewModel.uiState.observe(viewLifecycleOwner) { state -&gt; render(state) }</cod
 <li><code>detach</code>/<code>attach</code>: Detaches (destroys the view but the Fragment instance lives on) and attaches (recreates the view).</li>
 </ul>
 <p><strong>Pending transactions</strong>: Transactions are not immediately executed — they are scheduled on the main thread&#x27;s message queue. Use <code>executePendingTransactions()</code> to force immediate, synchronous execution on the main thread. Never call this from a background thread.</p>
+<p><strong>Under the hood</strong></p>
+<p>A <code>FragmentTransaction</code> is really a <code>BackStackRecord</code> — an ordered list of <code>Op</code> objects, each holding a command code (<code>OP_ADD</code>, <code>OP_REPLACE</code>, <code>OP_HIDE</code>, etc.) and the target Fragment. <code>commit()</code> doesn&#x27;t touch any views; it calls <code>FragmentManager.enqueueAction</code>, which appends a runnable to <code>mPendingActions</code> and posts <code>mExecCommit</code> to the main <code>Handler</code>. When that runnable runs, <code>execPendingActions</code> pops the records and <code>FragmentManager</code> &quot;optimizes&quot; them by reordering and cancelling out redundant ops (the reordered-transactions behavior), then moves each affected Fragment through the state machine via <code>moveToState</code>. <code>executePendingTransactions()</code> just drains that queue inline on the calling thread — which must be the main thread, since it manipulates views. <code>commit()</code> checks <code>mStateSaved</code>/<code>mStopped</code> and throws <code>IllegalStateException: Can not perform this action after onSaveInstanceState</code> unless you used <code>commitAllowingStateLoss()</code>.</p>
+<pre><code>commit() ──► enqueueAction(BackStackRecord) ──► mPendingActions.add(...)
+        └──► mHost.handler.post(mExecCommit)
+                                   │  (main-thread message)
+                                   ▼
+                       execPendingActions() ──► optimize/reorder Ops ──► moveToState(fragment)</code></pre>
 <hr>
 <h3 id="fragment-back-stack">Fragment Back Stack</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;<code>addToBackStack</code> records a transaction so that pressing Back reverses it and restores the prior state. The thing to be precise about: with addToBackStack the replaced Fragment&#x27;s view is destroyed but the <em>instance</em> survives on the back stack, so Back can rebuild it; without it, the Fragment is gone for good. I also keep the popBackStack variants straight — the async one posts to the queue, popBackStackImmediate runs synchronously, and the INCLUSIVE flag controls whether the named entry itself gets popped.&quot;</blockquote>
 <p><code>addToBackStack(name)</code> records the transaction on the Fragment back stack. Pressing Back reverses it — restoring the previous state.</p>
 <pre><code>// Add to back stack — Back press will reverse this replace
 fragmentManager.commit {
@@ -563,8 +685,11 @@ fragmentManager.popBackStackImmediate()                 // sync (main thread)
 fragmentManager.popBackStack(&quot;detail&quot;, 0)              // pop to &quot;detail&quot; inclusive
 fragmentManager.popBackStack(&quot;detail&quot;, FragmentManager.POP_BACK_STACK_INCLUSIVE) // pop &quot;detail&quot; too</code></pre>
 <p><strong>Gotcha</strong>: If you call <code>replace</code> without <code>addToBackStack</code>, the replaced Fragment is destroyed and its instance is gone — pressing Back will not bring it back. With <code>addToBackStack</code>, the Fragment&#x27;s view is destroyed but the instance is retained, so Back can restore it.</p>
+<p><strong>Under the hood</strong></p>
+<p>The back stack is <code>FragmentManager.mBackStack</code>, an <code>ArrayList&lt;BackStackRecord&gt;</code>. Calling <code>addToBackStack(name)</code> flips <code>mAddToBackStack = true</code> on the record and stores the optional name; on commit the record is pushed onto that list and assigned an index. A Fragment referenced by a record kept on the back stack is moved only down to <code>CREATED</code> (view destroyed at <code>onDestroyView</code>) rather than removed, and its <code>mSavedFragmentState</code>/saved-instance bundle is retained so the view can be rebuilt on pop. <code>popBackStack()</code> enqueues a <code>PopBackStackState</code> action processed on the next main-thread loop, while <code>popBackStackImmediate()</code> enqueues it and then immediately calls <code>execPendingActions</code>. The integer flags select named-pop semantics: <code>0</code> pops everything above the entry, and <code>POP_BACK_STACK_INCLUSIVE</code> (value <code>1</code>) also removes the named entry itself. Popping replays each <code>Op</code> in reverse — an <code>OP_REPLACE</code> is undone by re-adding the previous Fragment and re-tearing-down the current one.</p>
 <hr>
 <h3 id="navigation-component">Navigation Component</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;Jetpack Navigation sits on top of Fragment transactions and lets me navigate by destination ID against a graph instead of hand-writing replace calls. I get type-safe args through Safe Args, automatic back-stack management, declarative deep links and animations. Under the hood it&#x27;s still a NavHostFragment delegating to a FragmentNavigator that runs the same transactions — so the FragmentManager rules still apply, and one gotcha is that calling navigate twice fast can throw or double-navigate if you don&#x27;t guard the current destination.&quot;</blockquote>
 <p>Jetpack Navigation abstracts Fragment transactions into a graph-based navigation system, so you navigate by destination rather than by manually writing <code>replace</code>/<code>add</code> transactions.</p>
 <pre><code>// Navigate
 findNavController().navigate(R.id.action_home_to_detail, bundleOf(&quot;userId&quot; to id))
@@ -591,8 +716,15 @@ findNavController().popBackStack(R.id.homeFragment, inclusive = false)</code></p
     android:name=&quot;androidx.navigation.fragment.NavHostFragment&quot;
     app:navGraph=&quot;@navigation/nav_graph&quot;
     app:defaultNavHost=&quot;true&quot; /&gt;</code></pre>
+<p><strong>Under the hood</strong></p>
+<p><code>findNavController()</code> walks up the view tree (via a tag set on the <code>NavHostFragment</code>&#x27;s view) to find the <code>NavController</code>. The controller owns a <code>NavBackStackEntry</code> deque — each entry pairs a <code>NavDestination</code> with its arguments and its <em>own</em> <code>Lifecycle</code>, <code>ViewModelStore</code>, and <code>SavedStateRegistry</code>, which is why nav-scoped ViewModels work. <code>navigate()</code> resolves the action/destination, then delegates to the registered <code>Navigator</code> for that destination type; <code>FragmentNavigator.navigate</code> ultimately issues a normal <code>FragmentTransaction</code> (<code>replace</code> + <code>addToBackStack</code>) against the <code>NavHostFragment</code>&#x27;s child <code>FragmentManager</code>. Safe Args is a Gradle plugin that code-generates <code>Directions</code> and <code>Args</code> classes at build time, packing/unpacking a <code>Bundle</code> so there&#x27;s no runtime reflection. <code>defaultNavHost=&quot;true&quot;</code> registers an <code>OnBackPressedCallback</code> with the host Activity&#x27;s <code>OnBackPressedDispatcher</code> so system Back pops the nav back stack first.</p>
+<pre><code>findNavController() ─► NavController
+   └─ mBackQueue: ArrayDeque&lt;NavBackStackEntry&gt;   // each entry = destination + Lifecycle + ViewModelStore
+        navigate(id) ─► Navigator&lt;Destination&gt; ─► FragmentNavigator
+                                                      └─ childFragmentManager.commit { replace(...); addToBackStack(...) }</code></pre>
 <hr>
 <h3 id="view-binding-cleanup">View Binding Cleanup</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;View binding holds strong references to the inflated view tree, and because a Fragment can outlive its view on the back stack, holding that binding past onDestroyView leaks the entire destroyed view hierarchy and its Context. So the pattern is a nullable backing field that I set in onCreateView and explicitly null out in onDestroyView. The non-obvious part is that even though the views are gone, the surviving Fragment instance keeps the field alive, so GC can&#x27;t reclaim anything until I clear it.&quot;</blockquote>
 <p><strong>The problem</strong>: View binding references (and <code>findViewById</code> references) hold a strong reference to views. Views are destroyed in <code>onDestroyView</code>, but the Fragment instance may live on in the back stack. If the binding property is not cleared, the old destroyed view hierarchy is held in memory — a <strong>memory leak</strong>.</p>
 <p><strong>The solution</strong>: Always null out the binding reference in <code>onDestroyView</code>.</p>
 <pre><code>class MyFragment : Fragment(R.layout.fragment_my) {
@@ -618,8 +750,14 @@ findNavController().popBackStack(R.id.homeFragment, inclusive = false)</code></p
     }
 }</code></pre>
 <p><strong>Why this is a leak</strong>: The Fragment instance — which holds <code>_binding</code> — is retained on the back stack. The <code>_binding</code> field holds a reference to the now-destroyed view hierarchy, including all <code>View</code> objects and their <code>Context</code>. That chain of references prevents the garbage collector from reclaiming any of those views.</p>
+<p><strong>Under the hood</strong></p>
+<p>The generated <code>FragmentMyBinding</code> is a plain class holding a strong field for the root <code>View</code> plus one strong field per <code>id</code>-bearing view, produced at build time by the View Binding annotation-processor-equivalent step in AGP. Each <code>View</code> in turn references its parent and its <code>mContext</code>, so a single retained binding root keeps the whole inflated tree — and the Activity <code>Context</code> it was inflated with — reachable through the GC root graph. A Fragment kept on the back stack is itself reachable from the <code>FragmentManager</code>&#x27;s <code>mActive</code>/back-stack structures, so it acts as a live GC root for whatever <code>_binding</code> points at. Nulling <code>_binding</code> in <code>onDestroyView</code> cuts the only remaining strong edge from the surviving instance to the dead view tree, letting ART&#x27;s concurrent collector reclaim it; tools like LeakCanary detect the failure mode by watching destroyed Fragment views with a <code>WeakReference</code> and forcing a GC to confirm they were not collected.</p>
+<pre><code>FragmentManager (GC root)
+   └─► MyFragment instance (on back stack, survives)
+          └─► _binding ──► root View ──► child Views ──► Context   // leaked if not nulled</code></pre>
 <hr>
 <h3 id="fragment-result-api">Fragment Result API</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;The Fragment Result API lets two fragments pass a result Bundle through their shared FragmentManager using a string key, so neither needs a direct reference to the other or a casted interface. The sender calls <code>setFragmentResult</code>, the receiver registers a <code>setFragmentResultListener</code>, and the framework holds the result until the receiver is at least STARTED. The gotcha is scoping: a child talking to its parent has to use the parent&#x27;s <code>childFragmentManager</code>, and there&#x27;s only one listener per key, so the last registration wins.&quot;</blockquote>
 <p>The Fragment Result API is the modern way for Fragments to communicate results back to their parent or sibling Fragments, without requiring direct Fragment-to-Fragment references or casting the parent as an interface.</p>
 <pre><code>// In the child Fragment (sender)
 setFragmentResult(&quot;requestKey&quot;, bundleOf(&quot;selected_date&quot; to date))
@@ -637,8 +775,19 @@ setFragmentResultListener(&quot;requestKey&quot;) { key, bundle -&gt;
 <li>Works between a child and its parent by using <code>childFragmentManager</code> on the parent side.</li>
 </ul>
 <p><strong>Alternative (legacy pattern)</strong>: interface callbacks from Fragment to Activity or parent Fragment. This is fragile because it requires casting and creates tight coupling between the two.</p>
+<p><strong>Under the hood</strong></p>
+<p>The <code>FragmentManager</code> keeps two maps keyed by <code>requestKey</code>: one of stored results (<code>Map&lt;String, Bundle&gt;</code>) and one of registered listeners (<code>Map&lt;String, LifecycleAwareResultListener&gt;</code>). <code>setFragmentResult</code> either dispatches immediately if a STARTED listener exists, or parks the <code>Bundle</code> in the results map. <code>setFragmentResultListener</code> wraps your callback in a <code>LifecycleEventObserver</code> attached to the owner&#x27;s <code>Lifecycle</code>; on the <code>ON_START</code> event it checks the results map, fires any pending result, and on <code>ON_DESTROY</code> it removes itself — which is why each key holds only one live listener and why the Bundle survives configuration changes (it lives in the FragmentManager&#x27;s saved state, not the Fragment instance).</p>
+<pre><code>setFragmentResult(key, bundle)
+   ├─ listener registered &amp; STARTED? → invoke now
+   └─ else → mResults[key] = bundle  (held)
+
+setFragmentResultListener(key) {...}
+   └─ register LifecycleEventObserver
+        on ON_START → if mResults[key] != null → invoke, then clear
+        on ON_DESTROY → unregister</code></pre>
 <hr>
 <h3 id="child-fragments">Child Fragments</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;A Fragment can host its own nested fragments through its <code>childFragmentManager</code>, which is the right tool for tab containers, ViewPagers, or any reusable sub-screen. The key discipline is to always use <code>childFragmentManager</code>, never the Activity&#x27;s <code>supportFragmentManager</code>, or you break the lifecycle and save-state hierarchy. And the back button doesn&#x27;t automatically pop the child back stack — the dispatcher only knows about the Activity&#x27;s manager — so I have to wire that up myself through <code>OnBackPressedDispatcher</code>.&quot;</blockquote>
 <p>A Fragment can host its own <code>childFragmentManager</code> to manage nested Fragments. This is the right approach for view pagers, tab layouts inside a Fragment, and any case where you need modular, reusable screen segments.</p>
 <pre><code>class TabContainerFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -654,8 +803,11 @@ setFragmentResultListener(&quot;requestKey&quot;) { key, bundle -&gt;
 <li>A <code>DialogFragment</code> shown from inside a Fragment should use <code>show(childFragmentManager, tag)</code>.</li>
 <li>The system Back button does not automatically pop <code>childFragmentManager</code>. You must manually intercept Back and call <code>childFragmentManager.popBackStack()</code>, or wire it up through <code>OnBackPressedDispatcher</code>.</li>
 </ul>
+<p><strong>Under the hood</strong></p>
+<p>Each Fragment owns a <code>FragmentManager</code> instance created lazily via <code>getChildFragmentManager()</code>, distinct from the host Activity&#x27;s <code>supportFragmentManager</code>. They form a tree: the child manager is initialized with a <code>FragmentHostCallback</code> pointing at the parent Fragment, so child lifecycle states are clamped to the parent&#x27;s — a child can never be RESUMED while its parent is only STARTED. State save/restore walks this tree: the parent serializes its child manager&#x27;s <code>FragmentManagerState</code> (back stack records, saved fragment states) into the parent&#x27;s own saved-state Bundle, which is why mixing in <code>supportFragmentManager</code> corrupts restoration — the child fragments get attached to the wrong manager and the parent has nothing to restore. The back stack itself is just an <code>ArrayList&lt;BackStackRecord&gt;</code> per manager, and <code>OnBackPressedDispatcher</code> only registers a callback for the Activity-level manager automatically.</p>
 <hr>
 <h3 id="commit-vs-commitnow">commit vs commitNow</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;<code>commit()</code> is asynchronous — it enqueues the transaction onto the main thread&#x27;s message queue and runs on a later dispatch, and it supports <code>addToBackStack</code>. <code>commitNow()</code> runs the transaction synchronously, right then on the main thread, which is useful when the next line of code needs the fragment to already exist, but it deliberately forbids <code>addToBackStack</code> because synchronous execution would reorder the back stack unpredictably. There&#x27;s also <code>commitAllowingStateLoss</code>, which swallows the after-<code>onSaveInstanceState</code> crash but risks losing your transaction if the process dies, so I treat it as a last resort.&quot;</blockquote>
 <p><code>commit()</code>: Schedules the transaction asynchronously on the main thread&#x27;s message queue. The actual transaction executes on the next frame or message dispatch.</p>
 <p><code>commitNow()</code>: Executes the transaction <strong>immediately</strong> on the calling thread, which must be the main thread. Does NOT work with <code>addToBackStack</code> — it throws <code>IllegalStateException</code> if you try.</p>
 <p><code>commitAllowingStateLoss()</code>: Behaves like <code>commit()</code> but suppresses the <code>IllegalStateException</code> that occurs when the Activity&#x27;s state has already been saved — that is, after <code>onSaveInstanceState</code>. <strong>Use with caution</strong>: if the Activity is killed after a state loss, your transaction will not be restored.</p>
@@ -668,6 +820,11 @@ fragmentManager.commitNow { replace(R.id.container, SomeFragment()) }
 // After onSaveInstanceState (e.g., from a callback) — UI inconsistency risk
 fragmentManager.commitAllowingStateLoss { replace(R.id.container, SomeFragment()) }</code></pre>
 <p><strong>When to use <code>commitNow</code></strong>: When subsequent code in the same method depends on the transaction having already completed — for example, you immediately find the new Fragment by tag. This is rare; most cases do not need synchronous execution.</p>
+<p><strong>Under the hood</strong></p>
+<p><code>commit()</code> calls <code>FragmentManager.enqueueAction</code>, which appends a <code>Runnable</code> (a <code>Op</code>-list executor) to <code>mPendingActions</code> and posts <code>mExecCommit</code> onto the main thread <code>Handler</code>. On the next loop iteration <code>execPendingActions</code> drains the queue and <code>moveToState</code> walks each affected fragment through its lifecycle. <code>commitNow()</code> skips the queue: it calls <code>execSingleAction</code>, which first flushes any already-pending actions, then executes this transaction&#x27;s ops inline on the current (main) thread. The <code>addToBackStack</code> prohibition is structural — a back stack entry is identified by an index assigned at commit time (<code>mBackStack</code>), and reentrant synchronous commits would interleave indices nondeterministically, so the API asserts <code>!mAddToBackStack</code>. The state-loss check is the boolean <code>mStateSaved</code>/<code>mStopped</code>: <code>commit()</code> throws when it&#x27;s set after <code>onSaveInstanceState</code>, and <code>commitAllowingStateLoss</code> simply passes <code>allowStateLoss = true</code> to bypass that guard.</p>
+<pre><code>commit()      → mPendingActions.add(op); handler.post(execCommit)  [later dispatch]
+commitNow()   → execPendingActions(); execSingleAction(op)         [inline, sync]
+addToBackStack + commitNow → IllegalStateException (checkStateLoss / assert)</code></pre>
 <hr>
 <h3 id="fragment-interview-angles">Fragment Interview Angles</h3>
 <p><strong>Q: Fragment lifecycle vs view lifecycle — why does it matter?</strong></p>
@@ -688,6 +845,7 @@ fragmentManager.commitAllowingStateLoss { replace(R.id.container, SomeFragment()
 <hr>
 <h2 id="93-services">9.3 Services</h2>
 <h3 id="started-service">Started Service</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;A started service runs independently of whoever launched it — once it&#x27;s going it survives the caller&#x27;s death and keeps running until it calls <code>stopSelf</code> or someone calls <code>stopService</code>. The return value of <code>onStartCommand</code> controls restart behavior: <code>START_STICKY</code>, <code>START_NOT_STICKY</code>, or <code>START_REDELIVER_INTENT</code>. The modern gotcha is background limits — on Oreo and up you can&#x27;t just <code>startService</code> from the background; you have to use <code>startForegroundService</code> and then call <code>startForeground</code> with a notification within about five seconds or the system crashes you with an ANR-style exception.&quot;</blockquote>
 <p>A started Service is launched by <code>startService(intent)</code> or <code>startForegroundService(intent)</code> and runs independently of the caller. Even if the starting component is destroyed, the service keeps running until it stops itself or is stopped externally.</p>
 <pre><code>// Start
 startService(Intent(this, DownloadService::class.java).apply {
@@ -709,8 +867,11 @@ class DownloadService : Service() {
     }
     override fun onBind(intent: Intent?): IBinder? = null
 }</code></pre>
+<p><strong>Under the hood</strong></p>
+<p><code>startService</code> doesn&#x27;t run the service in your process directly — it sends a Binder transaction to the <code>ActivityManagerService</code> (AMS) in <code>system_server</code>, which looks up the <code>&lt;service&gt;</code> in the target package, forks/binds the hosting process if needed, and schedules <code>onStartCommand</code> via the app&#x27;s <code>ApplicationThread</code> back on its main-thread <code>Handler</code> (<code>H</code>). Each delivery gets a monotonically increasing <code>startId</code>; <code>stopSelf(startId)</code> only tears down if that id matches the most recent start, which prevents a stale stop from killing a service that received newer work. The <code>onStartCommand</code> return value is recorded by AMS in the <code>ServiceRecord</code> and consulted on process death: <code>START_NOT_STICKY</code> discards the record, <code>START_STICKY</code> re-creates with a null intent, and <code>START_REDELIVER_INTENT</code> re-delivers the last intent. For <code>startForegroundService</code>, AMS starts a watchdog timer (~5s) and throws a <code>ForegroundServiceDidNotStartInTimeException</code> / <code>RemoteServiceException</code> if <code>startForeground()</code> isn&#x27;t called in time.</p>
 <hr>
 <h3 id="bound-service">Bound Service</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;A bound service exposes an <code>IBinder</code> interface to clients that connect with <code>bindService</code>, and it lives only as long as at least one client is bound — when the last one unbinds, it&#x27;s destroyed, unless it was also started. Same-process binding is cheap because <code>onServiceConnected</code> hands you the actual <code>Binder</code> object and you just cast it. The gotcha is lifecycle hygiene: bind in <code>onStart</code> and unbind in <code>onStop</code>, and remember the connection callbacks aren&#x27;t symmetric — <code>onServiceDisconnected</code> only fires on an unexpected crash, not on a normal <code>unbindService</code>.&quot;</blockquote>
 <p>A bound Service is connected to by one or more clients via <code>bindService(intent, connection, flags)</code>. It lives as long as at least one client is bound — when all clients unbind, the service is destroyed, unless it was also started independently.</p>
 <pre><code>class MusicService : Service() {
     inner class MusicBinder : Binder() {
@@ -744,8 +905,14 @@ override fun onStop() {
     musicService = null
 }</code></pre>
 <p><strong>Cross-process binding</strong>: For services running in different processes, use AIDL (Android Interface Definition Language) or <code>Messenger</code> to communicate across the process boundary.</p>
+<p><strong>Under the hood</strong></p>
+<p><code>bindService</code> routes through AMS, which tracks each binding as a <code>ConnectionRecord</code> and reference-counts how many clients are bound; the service is destroyed when that count hits zero (and it wasn&#x27;t started). Within the same process, the <code>IBinder</code> delivered to <code>onServiceConnected</code> is the literal <code>Binder</code> instance returned by <code>onBind</code> — no marshalling happens, so the cast to <code>MusicBinder</code> works directly. Across processes it&#x27;s a <code>BinderProxy</code>: AMS hands the client a proxy whose method calls become <code>transact()</code> Binder kernel-driver IPC, which is exactly why AIDL exists — it generates <code>Stub</code>/<code>Proxy</code> classes that marshal arguments into a <code>Parcel</code>, copy them across the kernel binder buffer (capped around 1MB per transaction), and unmarshal on the other side. <code>onServiceDisconnected</code> is invoked by the binder <code>DeathRecipient</code> mechanism: it only fires when the remote process dies unexpectedly, never on an orderly <code>unbindService</code>.</p>
+<pre><code>same process : onServiceConnected(binder)  → binder IS the MusicBinder (no IPC)
+cross process: onServiceConnected(proxy)   → BinderProxy → transact() → Parcel → kernel → Stub
+death        : remote crash → linkToDeath → onServiceDisconnected()</code></pre>
 <hr>
 <h3 id="foreground-service">Foreground Service</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;A foreground service is for work the user is actively aware of — music, navigation, a live workout — so it shows a mandatory ongoing notification and the system treats it as high priority, almost as if there&#x27;s a visible Activity. The gotcha interviewers love is the contract: once you call <code>startForegroundService()</code> you have a hard five-second window to call <code>startForeground()</code> with a notification, or the system throws an ANR-style crash. And since Android 14 you also have to declare a <code>foregroundServiceType</code> and hold the matching permission, or the start is rejected outright.&quot;</blockquote>
 <p>A foreground Service performs work that is noticeable to the user and must show a persistent notification while it runs. It has elevated priority and is much less likely to be killed by the system than a background service.</p>
 <p>Required since Android 8.0 (API 26):</p>
 <ul>
@@ -768,6 +935,16 @@ override fun onStop() {
     
     override fun onBind(intent: Intent?): IBinder? = null
 }</code></pre>
+<p><strong>Under the hood</strong></p>
+<p>When you call <code>startForegroundService()</code>, <code>ActivityManagerService</code> (AMS) in <code>system_server</code> records the start and arms a watchdog. The <code>ServiceRecord</code> is flagged as requiring a foreground transition, and AMS posts a delayed message (the 5-second timer) onto its own handler. The component&#x27;s process is told to run <code>onCreate</code>/<code>onStartCommand</code> via the <code>ApplicationThread</code> binder. When your code calls <code>startForeground()</code>, that routes back through <code>ActivityManager.getService().setServiceForeground(...)</code>, which cancels the pending timeout and asks <code>NotificationManagerService</code> to post the ongoing notification. If the timer fires first, AMS calls into the app to crash it with a <code>ForegroundServiceDidNotStartInTimeException</code> (a <code>RemoteServiceException</code> subtype).</p>
+<pre><code>startForegroundService()
+  └─&gt; AMS.startService() → ServiceRecord(fgRequired=true)
+        ├─ schedule TIMEOUT msg (+5s) on AMS handler
+        └─ schedule onCreate/onStartCommand on app process
+app: startForeground(id, notif)
+  └─&gt; AMS.setServiceForeground() → cancel TIMEOUT, NMS posts notification
+[if 5s elapses first] → AMS posts crash to app&#x27;s main thread</code></pre>
+<p>On Android 14+ the <code>foregroundServiceType</code> is verified at this transition: AMS checks the manifest-declared type bits and the runtime permission grant for that type (e.g. <code>ACCESS_FINE_LOCATION</code> for <code>location</code>); a mismatch throws <code>SecurityException</code> or <code>MissingForegroundServiceTypeException</code>.</p>
 <p><strong>Android 14+ foreground service types</strong>: You must declare <code>foregroundServiceType</code> in the manifest and request the appropriate type-specific permissions:</p>
 <pre><code>&lt;service
     android:name=&quot;.LocationService&quot;
@@ -775,6 +952,7 @@ override fun onStop() {
 <p>Available types: <code>camera</code>, <code>connectedDevice</code>, <code>dataSync</code>, <code>health</code>, <code>location</code>, <code>mediaPlayback</code>, <code>mediaProjection</code>, <code>microphone</code>, <code>phoneCall</code>, <code>remoteMessaging</code>, <code>shortService</code>, <code>specialUse</code>, <code>systemExempted</code>.</p>
 <hr>
 <h3 id="background-service-restrictions">Background Service Restrictions</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;Starting with Android 8, the OS stopped letting backgrounded apps spin up arbitrary background services — if your app has no visible UI and you call <code>startService()</code>, you get an <code>IllegalStateException</code>. The reasoning is battery and memory: free-running background services were a top cause of drain. So the modern answer is to use <code>startForegroundService()</code> if the user genuinely needs to know about the work, or <code>WorkManager</code> for anything deferrable. There&#x27;s a layered set of follow-on restrictions too — exact alarms need a permission on 12, posting notifications needs <code>POST_NOTIFICATIONS</code> on 13, and 14 tightens background foreground-service starts further.&quot;</blockquote>
 <p>Android 8.0 (API 26) introduced severe restrictions on background Services:</p>
 <ul>
 <li>Apps in the background — meaning they have no visible Activity — <strong>cannot start background services</strong>. Calling <code>startService()</code> in that state throws <code>IllegalStateException</code>.</li>
@@ -782,8 +960,17 @@ override fun onStop() {
 <li>The system will kill background services aggressively to reclaim memory.</li>
 </ul>
 <p><strong>Android 12+ (API 31)</strong>: Exact alarm restrictions. Apps must request the <code>SCHEDULE_EXACT_ALARM</code> permission. <strong>Android 13+ (API 33)</strong>: Posting notifications requires the <code>POST_NOTIFICATIONS</code> permission. <strong>Android 14+ (API 34)</strong>: Further restrictions on starting foreground services from the background.</p>
+<p><strong>Under the hood</strong></p>
+<p>AMS tracks every app&#x27;s process state on a numeric importance scale (<code>ActivityManager.RunningAppProcessInfo.IMPORTANCE_*</code>, internally <code>ProcessRecord.setProcState</code>). When <code>startService()</code> is invoked, AMS consults the caller&#x27;s current proc-state. If the caller is below the foreground threshold — roughly anything weaker than a visible/foreground process and outside a temp-allowlist window — <code>ActiveServices.startServiceLocked()</code> rejects the start and the binder call surfaces an <code>IllegalStateException</code> in the calling process. A short temporary allowlist is granted by certain triggers (a high-priority FCM message, a notification action, an exact alarm firing), which briefly bumps the proc-state so a start is permitted.</p>
+<pre><code>app.startService(i)
+  → AMS.ActiveServices.startServiceLocked(caller)
+      procState = caller.setProcState
+      if (procState worse than FOREGROUND &amp;&amp; !inTempAllowlist)
+          throw IllegalStateException(&quot;Not allowed to start service ...&quot;)</code></pre>
+<p><code>WorkManager</code> sidesteps this entirely: instead of holding a live process, it persists a <code>WorkSpec</code> row in its Room DB and schedules execution through <code>JobScheduler</code> (API 23+), so <code>JobSchedulerService</code> in <code>system_server</code> — not your process — owns the timing and constraint evaluation (Doze, network, charging), waking your app only when the job is actually dispatchable.</p>
 <hr>
 <h3 id="service-lifecycle">Service Lifecycle</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;A Service has two distinct lifecycles depending on how it&#x27;s used. Started services go <code>onCreate</code> once, then <code>onStartCommand</code> for every <code>startService</code> call, and they keep running until something calls <code>stopSelf</code> or <code>stopService</code>. Bound services go <code>onCreate</code>, <code>onBind</code>, and live only while clients are connected — when the last one unbinds, they&#x27;re destroyed. The subtle part interviewers probe is the combined case: if a service is both started and bound, it won&#x27;t die until it&#x27;s both stopped AND fully unbound — both conditions have to be satisfied, otherwise you leak a running service.&quot;</blockquote>
 <p><strong>Started service lifecycle</strong>:</p>
 <pre><code>startService() / startForegroundService()
     │
@@ -809,8 +996,18 @@ onUnbind()       ← called when last client unbinds; override to allow re-bindi
     │
 onDestroy()</code></pre>
 <p><strong>Combined (started + bound)</strong>: The service stays alive until it has been both stopped and unbound — both conditions must be satisfied.</p>
+<p><strong>Under the hood</strong></p>
+<p>AMS represents each service with a <code>ServiceRecord</code> and decides destruction in <code>ActiveServices.bringDownServiceIfNeededLocked()</code>. That method ANDs two pieces of state: <code>startRequested</code> (set true by <code>startServiceLocked</code>, cleared when the last <code>startId</code> is stopped) and the connection set <code>connections</code> (populated per <code>bindService</code>, drained per <code>unbindService</code>). The service is only torn down when <code>startRequested == false</code> AND there are no remaining bindings — which is exactly why the combined service survives until both conditions hold.</p>
+<pre><code>ServiceRecord {
+  startRequested : Boolean   // started path
+  connections    : Map&lt;IBinder, ConnectionRecord&gt;  // bound path
+}
+bringDownServiceIfNeededLocked():
+  if (!startRequested &amp;&amp; connections.isEmpty())  → bringDownServiceLocked() → onDestroy()</code></pre>
+<p>Each lifecycle callback is not invoked directly — AMS sends scheduling commands over the <code>IApplicationThread</code> binder interface to your process, where <code>ActivityThread</code>&#x27;s main-thread <code>Handler</code> (<code>H</code>) processes messages like <code>CREATE_SERVICE</code>, <code>SERVICE_ARGS</code>, <code>BIND_SERVICE</code>, <code>UNBIND_SERVICE</code>, and <code>STOP_SERVICE</code>, calling the matching method on your <code>Service</code> instance on the main thread.</p>
 <hr>
 <h3 id="onstartcommand-and-return-values">onStartCommand and Return Values</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;<code>onStartCommand</code> runs on the main thread for every <code>startService</code> call, and its return value tells the system what to do if the process gets killed. <code>START_NOT_STICKY</code> means don&#x27;t bother recreating; <code>START_STICKY</code> recreates but hands you a null intent — good for ongoing services like music; and <code>START_REDELIVER_INTENT</code> recreates and redelivers the last intent, which is what you want for transactional work like a download so you don&#x27;t lose the work spec. The detail people forget is <code>startId</code>: you should call <code>stopSelf(startId)</code> rather than bare <code>stopSelf()</code>, so you don&#x27;t kill the service out from under a newer start request that arrived while you were working.&quot;</blockquote>
 <p><code>onStartCommand(intent: Intent?, flags: Int, startId: Int): Int</code></p>
 <ul>
 <li>Called on the <strong>main thread</strong> for every <code>startService()</code> call.</li>
@@ -835,8 +1032,17 @@ onDestroy()</code></pre>
     }
     return START_REDELIVER_INTENT // safe: if killed mid-download, redelivers URL
 }</code></pre>
+<p><strong>Under the hood</strong></p>
+<p>AMS keeps a list of <code>ServiceRecord.StartItem</code> entries — one per <code>startService</code> call, each tagged with the monotonically increasing <code>startId</code> it issued. Your return code is stored as <code>ServiceRecord.lastStartId</code>&#x27;s disposition and dictates the restart policy. For <code>START_REDELIVER_INTENT</code>, AMS retains the <code>StartItem</code> (including its intent) in a &quot;delivered but not finished&quot; state until you call <code>stopSelf(startId)</code>, which invokes <code>serviceDoneExecuting</code>/<code>stopServiceTokenLocked</code> and lets AMS discard that item. If the process dies first, AMS re-launches the service and replays the retained intents with <code>START_FLAG_REDELIVERY</code> set.</p>
+<pre><code>startService(A) → AMS issues startId=1, StartItem{id=1, intent=A}
+startService(B) → AMS issues startId=2, StartItem{id=2, intent=B}
+service finishes work for A → stopSelf(1)  // removes only StartItem 1
+   → StartItem 2 still pending ⇒ AMS keeps service alive
+stopSelf() with no id ⇒ would clear ALL items ⇒ B&#x27;s work lost</code></pre>
+<p>This is the mechanism behind the <code>stopSelf(startId)</code> guidance: bare <code>stopSelf()</code> clears every outstanding <code>StartItem</code> regardless of <code>startId</code>, so a concurrent start that arrived after you began processing gets silently dropped.</p>
 <hr>
 <h3 id="service-vs-workmanager">Service vs WorkManager</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;I frame it as two questions: does the work need to run right now, and does the user need to be aware of it? If yes — music, VoIP, live location — it&#x27;s a foreground Service. If the work is deferrable, must survive process death and reboots, or depends on constraints like Wi-Fi or charging, it&#x27;s WorkManager, because WorkManager persists its queue to a database and delegates scheduling to JobScheduler so it respects Doze and guarantees retried execution. Given how locked-down background services are since Android 8, WorkManager is my default for anything that isn&#x27;t genuinely immediate and user-visible.&quot;</blockquote>
 <p>This is one of the most common design-decision questions in Android interviews, and the answer is not &quot;always use WorkManager.&quot;</p>
 <table border="1" cellpadding="6" cellspacing="0">
 <thead><tr>
@@ -857,6 +1063,15 @@ onDestroy()</code></pre>
 <p><strong>Use Service when</strong>: work must run <strong>right now</strong>, potentially indefinitely, and the user should be aware of it via a foreground service notification. Examples: music playback, VoIP, live location sharing.</p>
 <p><strong>Use WorkManager when</strong>: work can be deferred, must survive process death and device reboots, depends on constraints like waiting for Wi-Fi, or is a one-shot or periodic background task. Examples: syncing the database, uploading photos, sending analytics.</p>
 <p><strong>When to run in another process</strong>: declare <code>android:process=&quot;:myservice&quot;</code> in the manifest. There are three reasons to do this — first, crash isolation: a crash in the service process won&#x27;t kill the main app process. Second, a separate memory budget so the service doesn&#x27;t push the main app out of memory. Third, enforcing architectural separation. The downsides are IPC overhead for every call and the fact that you cannot share in-memory singletons across processes.</p>
+<p><strong>Under the hood</strong></p>
+<p>A Service holds a live <code>ProcessRecord</code> in your app process for as long as it runs; AMS only knows it&#x27;s &quot;alive&quot; while the process exists, so an OOM-kill or reboot wipes it. WorkManager decouples the <em>intent to do work</em> from the <em>process that does it</em>: <code>enqueue()</code> writes a <code>WorkSpec</code> row (state, constraints, backoff policy, input <code>Data</code>) into its bundled Room database, then registers the job with a scheduler. On modern Android that scheduler is <code>JobScheduler</code>, living in <code>system_server</code>; it persists job records and evaluates constraints (network, idle, charging, Doze maintenance windows) independently of your app. When constraints are met, <code>JobScheduler</code> binds to WorkManager&#x27;s <code>SystemJobService</code>, which spins up the <code>WorkerFactory</code>, runs your <code>Worker.doWork()</code>, and writes the result back to the DB.</p>
+<pre><code>workManager.enqueue(req)
+  └─&gt; WorkSpec row → Room DB (survives kill/reboot)
+  └─&gt; Scheduler.schedule() → JobScheduler (system_server) persists job
+[reboot] → system re-reads jobs; WorkManager re-syncs DB ↔ JobScheduler
+constraints met → JobScheduler binds SystemJobService → Worker.doWork()
+  └─&gt; result (SUCCESS/RETRY/FAILURE) written back to WorkSpec row</code></pre>
+<p>Because the DB row is the source of truth, a <code>RETRY</code> result re-applies the <code>BackoffPolicy</code> to compute the next <code>WorkSpec.calculateNextRunTime()</code>, giving the &quot;guaranteed, retried with backoff&quot; property the table claims — something a raw Service has no equivalent of.</p>
 <hr>
 <h3 id="services-interview-angles">Services Interview Angles</h3>
 <p><strong>Q: Service vs WorkManager — when do you choose each?</strong></p>
@@ -870,6 +1085,7 @@ onDestroy()</code></pre>
 <p>A <code>BroadcastReceiver</code> responds to system-wide or app-specific broadcast messages delivered as Intents. The defining constraint is that it has a very short execution window — roughly 10 seconds on the main thread — and the process may be killed immediately after <code>onReceive()</code> returns.</p>
 <hr>
 <h3 id="manifest-registered-vs-context-registered">Manifest-Registered vs Context-Registered</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;A manifest-registered receiver is static — it&#x27;s declared in the manifest and the system can cold-start my process just to deliver the broadcast, even if the app isn&#x27;t running. A context-registered receiver is dynamic — I register it in code and it&#x27;s only alive while the registering component is, so I must unregister it or I leak. The big gotcha is Android 8.0: static receivers can no longer get most implicit broadcasts because of background execution limits, so for runtime-only signals like connectivity I use a dynamic receiver, and for app-startup work I lean on the small exempt whitelist or explicit broadcasts.&quot;</blockquote>
 <p><strong>Manifest-registered (static receiver)</strong>:</p>
 <ul>
 <li>Declared in <code>AndroidManifest.xml</code>.</li>
@@ -907,8 +1123,17 @@ override fun onStop() {
     super.onStop()
     unregisterReceiver(networkReceiver)
 }</code></pre>
+<p><strong>Under the hood</strong></p>
+<p>Both kinds of receiver are ultimately tracked by the system&#x27;s <code>ActivityManagerService</code> (AMS) and routed through your process&#x27;s <code>ActivityThread</code>. The difference is <em>where the IntentFilter lives</em>. For a static receiver, the filter is parsed at install time by the <code>PackageManager</code> from the manifest and stored persistently, so AMS can match a broadcast against an app that has no running process — it then forks/cold-starts the process via Zygote, instantiates the <code>BroadcastReceiver</code> class fresh, and hands it a short-lived <code>Context</code>. For a dynamic receiver, <code>registerReceiver</code> does a Binder call into AMS that stores a live <code>ReceiverList</code> keyed by an <code>IIntentReceiver</code> Binder token tied to your process; the filter only exists in RAM, so it vanishes if the process dies and isn&#x27;t subject to the manifest-broadcast policy gate that AMS applies at install/dispatch time.</p>
+<pre><code>sendBroadcast(intent)
+   └─ Binder → ActivityManagerService.broadcastIntent()
+        ├─ match against static filters (from PackageManager, persisted)   ──&gt; may cold-start process
+        └─ match against dynamic ReceiverLists (in-memory, per-process)     ──&gt; only if process alive
+              └─ schedules onReceive() onto the receiver&#x27;s Handler (main thread)</code></pre>
+<p>The leak with dynamic receivers is concrete: AMS holds your <code>IIntentReceiver</code> Binder, and the <code>Context</code> (often an Activity) holds the receiver object — forget <code>unregisterReceiver</code> and the Activity can&#x27;t be GC&#x27;d, plus AMS logs a &quot;leaked IntentReceiver&quot; warning when the ContextImpl is finalized.</p>
 <hr>
 <h3 id="ordered-broadcasts">Ordered Broadcasts</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;An ordered broadcast is delivered to receivers one at a time, in descending priority order, instead of fanning out to everyone concurrently like a normal broadcast. Because it&#x27;s serialized, each receiver can mutate a shared result that the next one sees with <code>setResult*</code>, or it can call <code>abortBroadcast</code> to stop the chain entirely. The trade-off is latency — every receiver blocks the next, so a slow one stalls the whole pipeline, which is why it&#x27;s rarely worth it in modern apps.&quot;</blockquote>
 <p>Normal broadcasts are delivered to all receivers asynchronously, in no guaranteed order, potentially concurrently. <strong>Ordered broadcasts</strong> are different — they are delivered to one receiver at a time, in priority order.</p>
 <ul>
 <li>Each receiver can call <code>setResult*()</code> to pass data along to the next receiver in the chain.</li>
@@ -924,8 +1149,17 @@ override fun onReceive(context: Context, intent: Intent) {
     // abortBroadcast() // would stop propagation
 }</code></pre>
 <p><strong>Use case</strong>: In-app notification interception, where a foreground Activity intercepts a notification broadcast before it reaches the notification manager. Rarely needed in modern apps.</p>
+<p><strong>Under the hood</strong></p>
+<p>AMS keeps two separate queues per <code>BroadcastQueue</code>: a parallel list (normal broadcasts, dispatched to all receivers back-to-back without waiting) and an <em>ordered</em> list. For an ordered broadcast, AMS builds a single <code>BroadcastRecord</code> containing the sorted receiver list and an index pointer, then dispatches strictly one receiver at a time. After scheduling <code>onReceive</code> on a receiver, AMS waits for that receiver to &quot;finish&quot; — for a synchronous receiver that&#x27;s the return of <code>onReceive</code>, for one that called <code>goAsync()</code> it&#x27;s the <code>PendingResult.finish()</code> call — before advancing the index to the next receiver. The result fields (<code>resultCode</code>, <code>resultData</code>, <code>resultExtras</code>) live on the <code>BroadcastRecord</code> itself, which is why each receiver reads what the previous one wrote; <code>abortBroadcast()</code> just sets a flag on that record that makes AMS skip the remaining indices.</p>
+<pre><code>BroadcastRecord(ordered=true)
+  receivers = [P=1000 R_a, P=500 R_b, P=0 R_c]   // sorted by android:priority
+  resultCode / resultData / resultExtras          // carried across the chain
+  nextReceiver = 0  ──► dispatch R_a ──► wait finish() ──► nextReceiver=1 ──► ...
+                                            └─ abortBroadcast() sets abort flag → stop</code></pre>
+<p>Because AMS <em>waits</em> between receivers, each one is also subject to the broadcast timeout (the same ~10s/~60s ANR window), and a hung high-priority receiver can deny delivery to everyone below it.</p>
 <hr>
 <h3 id="explicit-vs-implicit-broadcasts">Explicit vs Implicit Broadcasts</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;An implicit broadcast names only an action, so the system matches it against any registered intent filter — that&#x27;s powerful but it&#x27;s exactly what Android 8.0 clamped down on for manifest receivers, and it&#x27;s a data-leak risk since any app with a matching filter can receive it. An explicit broadcast targets a specific package and class, so it bypasses the 8.0 manifest restriction and is inherently safer. When I send sensitive data I either make it explicit, attach a receiver permission, or keep it in-process with something like a SharedFlow.&quot;</blockquote>
 <p><strong>Implicit broadcast</strong>: The Intent specifies an action but no specific component. Any registered receiver with a matching intent filter can receive it. Examples include <code>ACTION_BATTERY_LOW</code> and <code>ACTION_AIRPLANE_MODE_CHANGED</code>.</p>
 <p><strong>Explicit broadcast</strong>: Targets a specific component by package and class name. Because it is explicit, it bypasses the Android 8.0 restrictions:</p>
 <pre><code>// Explicit — bypasses Android 8.0+ restrictions
@@ -941,8 +1175,11 @@ val intent = Intent().apply {
 }
 sendBroadcast(intent)</code></pre>
 <p><strong>Security</strong>: implicit broadcasts sent without a permission can be received by any app that has a matching intent filter. For sensitive data, there are three options — first, <code>sendBroadcast(intent, permission)</code>, which restricts delivery to receivers that hold the specified permission. Second, an in-process alternative like <code>SharedFlow</code> (or the deprecated <code>LocalBroadcastManager</code>). Third, an explicit broadcast that targets a specific package.</p>
+<p><strong>Under the hood</strong></p>
+<p>The dividing line is whether the <code>Intent</code> carries a resolved component (<code>ComponentName</code>). When <code>setComponent</code>/<code>setClassName</code>/the <code>Intent(context, Class)</code> constructor is used, AMS skips intent resolution entirely and routes straight to that one component — which is why the 8.0 manifest policy (enforced inside AMS&#x27;s broadcast-matching path for <em>implicit</em> manifest receivers) never trips. For an implicit broadcast, AMS calls into <code>PackageManagerService.queryBroadcastReceivers()</code>, which walks every installed app&#x27;s persisted <code>IntentFilter</code> set and scores matches by action, data type/scheme, and category. The permission form, <code>sendBroadcast(intent, permission)</code>, attaches a <code>requiredPermission</code> string to the <code>BroadcastRecord</code>; before scheduling each receiver AMS checks that the <em>receiving</em> app holds that permission via <code>checkComponentPermission</code>, dropping non-holders. <code>LocalBroadcastManager</code> sidestepped all of this by never touching AMS at all — it kept filters in a process-local <code>HashMap</code> and dispatched via the main-thread <code>Handler</code>, which is exactly the model a <code>SharedFlow</code> replaces today.</p>
 <hr>
 <h3 id="background-execution-limits">Background Execution Limits</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;Starting in Android 8.0, apps can&#x27;t register manifest receivers for most implicit broadcasts, because the OS was waking thousands of processes for system events they didn&#x27;t really need — connectivity changes were the worst battery offender. Only a tiny whitelist like <code>BOOT_COMPLETED</code> and self-package-replaced survives in the manifest. The migration is to move that logic to <code>WorkManager</code> or <code>JobScheduler</code> with constraints for deferrable work, FCM for remote triggers, and context-registered receivers for anything that only matters while the app is running.&quot;</blockquote>
 <p>Android 8.0 prohibits apps from registering receivers for most implicit broadcasts in the manifest. The motivation is that apps were being woken up by system broadcasts they did not actually need, which was a significant source of battery drain.</p>
 <p><strong>Exempted broadcasts</strong> (can still be registered in the manifest):</p>
 <ul>
@@ -958,8 +1195,16 @@ sendBroadcast(intent)</code></pre>
 <li>Replace polling via broadcasts with FCM for remote triggers.</li>
 <li>Use context-registered receivers for anything that only needs to work at runtime.</li>
 </ul>
+<p><strong>Under the hood</strong></p>
+<p>The limit is enforced inside AMS, not by the compiler — when a broadcast is dispatched, AMS evaluates candidate <em>manifest</em> receivers and, for implicit broadcasts, filters out any whose target app <code>targetSdkVersion &gt;= 26</code> unless the action is on the system&#x27;s hardcoded exemption list (defined alongside the broadcast-queue logic). The exemptions exist because those broadcasts are tied to lifecycle events the OS must deliver for correctness (boot, package replacement) and can&#x27;t be polled. The reason <code>WorkManager</code>/<code>JobScheduler</code> is the sanctioned replacement is that constraints (network type, charging, idle) are evaluated centrally by <code>JobSchedulerService</code>, which <em>batches</em> wakeups across all apps and coalesces them into maintenance windows — instead of N apps each spinning up a process on every connectivity flip, the framework wakes one batch when the constraint is genuinely satisfied.</p>
+<pre><code>CONNECTIVITY_CHANGE fires
+   pre-O:  AMS → every manifest receiver with matching filter → N process cold-starts  (battery drain)
+   O+:     AMS drops implicit manifest matches for targetSdk≥26
+           → app instead registers a JobScheduler job with NETWORK_TYPE constraint
+           → JobSchedulerService batches &amp; fires one wakeup when constraint is met</code></pre>
 <hr>
 <h3 id="short-execution-and-follow-up-work">Short Execution and Follow-Up Work</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;<code>onReceive</code> runs on the main thread and has a hard ANR deadline around 10 seconds, but the subtler killer is that once it returns the receiver is dead and the OS can reap the whole process — so any coroutine or thread you spawned dies with it because nothing keeps the process priority elevated. The rule is do only fast synchronous work, then hand off to something with a real lifecycle: <code>WorkManager</code> for deferrable work, a foreground service for immediate user-visible work, or <code>goAsync()</code> for a short extension where I absolutely must call <code>finish()</code> or I&#x27;ll ANR anyway.&quot;</blockquote>
 <p><code>onReceive()</code> runs on the <strong>main thread</strong> with a hard execution time limit of approximately <strong>10 seconds</strong> — exceed that and the app will ANR. After <code>onReceive()</code> returns, the <code>BroadcastReceiver</code> is considered dead and the system may kill the process immediately.</p>
 <p><strong>You cannot</strong>:</p>
 <ul>
@@ -993,6 +1238,17 @@ override fun onReceive(context: Context, intent: Intent) {
         }
     }
 }</code></pre>
+<p><strong>Under the hood</strong></p>
+<p>When AMS dispatches a broadcast it posts the <code>onReceive</code> invocation onto the receiver&#x27;s main-thread <code>Handler</code> (via <code>ActivityThread</code>&#x27;s <code>H</code> handler) and <em>starts a timeout alarm</em> — the broadcast-timeout watchdog. If the receiver hasn&#x27;t reported &quot;finished&quot; before the deadline (~10s foreground / ~60s background), AMS files an ANR against the process. Crucially, while a broadcast is being processed AMS temporarily bumps the process&#x27;s OOM-adjust / scheduling group so it isn&#x27;t killed mid-delivery; the instant <code>onReceive</code> returns (or <code>PendingResult.finish()</code> is called), AMS marks the <code>BroadcastRecord</code> done, lowers the process priority back to a cached/empty state, and the LMK (low-memory killer) is then free to reap it under memory pressure. That priority drop is exactly why a detached coroutine evaporates — there&#x27;s no longer any component holding the process &quot;important,&quot; so the kernel can reclaim it.</p>
+<pre><code>AMS.processNextBroadcast()
+  ├─ set process oom_adj high  (protected during delivery)
+  ├─ schedule onReceive on main Handler + arm broadcast-timeout
+  ├─ goAsync()? → BroadcastRecord stays &quot;open&quot; until PendingResult.finish()
+  └─ on finish/return:
+        ├─ cancel timeout
+        ├─ restore oom_adj → cached/empty  ← background work now unprotected
+        └─ advance queue</code></pre>
+<p><code>goAsync()</code> works by telling AMS <em>not</em> to treat the synchronous return as completion: it hands back a <code>PendingResult</code> (a token referencing the <code>BroadcastRecord</code>) and keeps the record open — and the elevated priority — until you call <code>finish()</code>, but the timeout alarm is still armed, so it buys time, not unbounded life.</p>
 <hr>
 <h3 id="broadcastreceiver-interview-angles">BroadcastReceiver Interview Angles</h3>
 <p><strong>Q: Why should BroadcastReceiver work be short?</strong></p>
@@ -1006,10 +1262,21 @@ override fun onReceive(context: Context, intent: Intent) {
 <p>A <code>ContentProvider</code> is an Android component that provides structured, URI-addressed access to data, enabling data sharing across application boundaries with fine-grained permission control. It is the standard mechanism for apps to expose data to other apps or to the system.</p>
 <hr>
 <h3 id="cross-app-data-sharing">Cross-App Data Sharing</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;A ContentProvider is Android&#x27;s standard way for one app to expose structured data to another app or the system — Contacts, MediaStore, and Calendar are all ContentProviders. I reach for it over just handing out a file because it enforces permission checks on every call, gives callers a uniform query/insert/update/delete interface, and lets me grant temporary URI-level access to a single record instead of opening up my whole file system. The thing interviewers probe is that it&#x27;s the only one of the four components designed for cross-process data access, and access checks happen per-call, not just at open time.&quot;</blockquote>
 <p>ContentProvider is the standard mechanism for one app to expose its data to another app or to the system. The system&#x27;s contacts, media store, and calendar are all ContentProviders.</p>
 <p><strong>Why not just use a file?</strong> There are four reasons. First, a ContentProvider enforces permission checks on every access — not just when the file is first opened. Second, it provides a uniform SQL-like query interface that callers already know how to use. Third, it allows granting temporary URI-level permissions to specific apps without giving broad file system access. Fourth, the Cursor-based streaming model avoids loading large data sets into memory all at once.</p>
+<p><strong>Under the hood</strong></p>
+<p>A ContentProvider&#x27;s cross-process magic is Binder IPC. When app A queries app B&#x27;s provider, <code>ContentResolver.acquireProvider()</code> asks <code>ActivityManagerService</code> to resolve the authority to a process, cold-starting that process if needed, and hands back an <code>IContentProvider</code> Binder proxy (<code>ContentProviderProxy</code>). Each call marshals its arguments across the Binder transaction; the system stamps the <em>caller&#x27;s</em> uid/pid into the transaction so the provider&#x27;s <code>enforceReadPermission</code>/<code>enforceWritePermission</code> can check it on every single call via <code>Binder.getCallingUid()</code>.</p>
+<pre><code>App A                         system_server                 App B (provider process)
+ContentResolver.query() ──► AMS.getContentProvider() ──► (cold start if needed)
+        │                    returns IContentProvider proxy
+        └── Binder txn (uid of A stamped) ──────────────► Transport.query()
+                                                          enforceReadPermission(uid A)
+                                                          ◄── CursorWindow (shared memory) ──</code></pre>
+<p>The returned Cursor is not a copy of the rows — its data lives in a <code>CursorWindow</code> backed by ashmem (anonymous shared memory). Only the shared-memory file descriptor crosses Binder, so large result sets aren&#x27;t serialized through the 1 MB Binder transaction buffer.</p>
 <hr>
 <h3 id="uri-based-access-and-contentresolver">URI-Based Access and ContentResolver</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;Every row in a ContentProvider is addressed by a content URI — <code>content://</code> scheme, then an authority that uniquely identifies the provider, then a path that points at a collection or a specific record. Clients never touch the provider directly; they go through ContentResolver, which resolves the authority and routes the call to the right process, whether that&#x27;s in my app or someone else&#x27;s. The detail worth mentioning is that the resolver is the single choke point — it&#x27;s where I register observers and where the system applies the URI-permission grants.&quot;</blockquote>
 <p>Every piece of data in a ContentProvider is addressed by a <code>Uri</code>:</p>
 <pre><code>content://com.example.app.provider/users/42
            └─────── authority ──────┘ └─ path ┘</code></pre>
@@ -1045,8 +1312,12 @@ val rowsUpdated = contentResolver.update(uri, values, null, null)
 
 // Delete
 val rowsDeleted = contentResolver.delete(uri, &quot;_id = ?&quot;, arrayOf(&quot;42&quot;))</code></pre>
+<p><strong>Under the hood</strong></p>
+<p><code>ContentResolver</code> is abstract; the concrete instance you get from <code>context.contentResolver</code> is <code>ApplicationContentResolver</code>, which delegates to <code>ActivityThread.acquireProvider()</code>. Authority resolution is a lookup in the package manager&#x27;s registry of <code>&lt;provider&gt;</code> declarations — an authority must be globally unique on the device, so two installed apps declaring the same authority causes an install conflict (<code>INSTALL_FAILED_CONFLICTING_PROVIDER</code>).</p>
+<p>The resolver also maintains the <code>ContentObserver</code> machinery: <code>registerContentObserver(uri, ...)</code> records your observer in a <code>Transport</code> tied to that URI tree, and a provider&#x27;s <code>notifyChange(uri)</code> walks the system&#x27;s observer node tree to dispatch <code>onChange</code> callbacks. The internal URI representation is a parsed <code>Uri</code> object (an immutable, lazily-parsed <code>Uri.HierarchicalUri</code>), not the raw string, so repeated <code>Uri.parse</code> of the same string allocates fresh objects — cache them on hot paths.</p>
 <hr>
 <h3 id="mime-types">MIME Types</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;Every provider has to answer <code>getType()</code> with a MIME type so callers know how to interpret the data without parsing it. The Android convention is two custom vendor types — <code>vnd.android.cursor.dir/...</code> for a collection of rows and <code>vnd.android.cursor.item/...</code> for a single row — and standard types like <code>image/jpeg</code> for file-backed data. The practical reason it matters is intent resolution: the system matches an intent&#x27;s MIME type against <code>&lt;intent-filter&gt;</code> data types, so a wrong <code>dir</code> vs <code>item</code> means the wrong activity gets offered to handle the URI.&quot;</blockquote>
 <p>ContentProviders must return MIME types for their data so that clients know how to interpret what they receive.</p>
 <pre><code>override fun getType(uri: Uri): String? {
     return when (uriMatcher.match(uri)) {
@@ -1061,8 +1332,11 @@ val rowsDeleted = contentResolver.delete(uri, &quot;_id = ?&quot;, arrayOf(&quot
 <li><strong>Single item</strong>: <code>vnd.android.cursor.item/vnd.&lt;authority&gt;.&lt;type&gt;</code></li>
 <li><strong>File-based</strong>: standard MIME types such as <code>image/jpeg</code> or <code>application/pdf</code></li>
 </ul>
+<p><strong>Under the hood</strong></p>
+<p><code>getType()</code> is special among provider methods: since Android allows querying a URI&#x27;s type without holding read permission, the call is routed and resolved against the provider&#x27;s declared structure. When the system needs to match an intent against intent filters, <code>IntentResolver</code> compares the resolved MIME type using the <code>type/subtype</code> grammar where <code>*</code> wildcards match — <code>image/*</code> matches <code>image/jpeg</code>. The <code>vnd.android.cursor.dir</code>/<code>vnd.android.cursor.item</code> prefixes are just a platform convention encoded as ordinary MIME strings; nothing in the kernel treats them specially, but <code>CursorAdapter</code>-style framework code and intent filters keying on <code>android:mimeType=&quot;vnd.android.cursor.dir/...&quot;</code> rely on the exact string. <code>UriMatcher</code> itself is a small trie of path segments built by <code>addURI</code>; <code>match()</code> walks segments, treating <code>#</code> as a numeric wildcard and <code>*</code> as a text wildcard, returning the registered integer code.</p>
 <hr>
 <h3 id="contentprovider-permissions">ContentProvider Permissions</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;I control provider access with manifest permissions — separate read and write permissions, plus <code>exported</code> to decide whether other apps can reach it at all. But the powerful piece is temporary URI permissions: I can hand another app a content URI with <code>FLAG_GRANT_READ_URI_PERMISSION</code> so it reads just that one record without ever holding my broad provider permission, and the grant evaporates when the receiving task finishes. The gotcha interviewers like is that <code>grantUriPermissions=true</code> is what enables those temporary grants, and that grants survive only as long as the task — for longer-lived access you take a persistable grant.&quot;</blockquote>
 <p>Permissions are the primary mechanism for controlling who can access your ContentProvider:</p>
 <pre><code>&lt;provider
     android:name=&quot;.MyContentProvider&quot;
@@ -1079,8 +1353,16 @@ val intent = Intent(Intent.ACTION_VIEW).apply {
 }
 startActivity(intent)</code></pre>
 <p>The receiving app can access that specific URI until the task ends or you call <code>revokeUriPermission</code> to revoke it early.</p>
+<p><strong>Under the hood</strong></p>
+<p>Permission enforcement lives in <code>ActivityManagerService</code>, which holds the authoritative table of active URI grants (<code>UriGrantsManagerService</code> in newer releases). When you launch an intent carrying <code>FLAG_GRANT_READ_URI_PERMISSION</code>, AMS records a grant entry keyed by <code>(sourceUid, targetUid, Uri, modeFlags)</code>. On each subsequent provider call, the provider&#x27;s <code>enforceReadPermission</code> first checks whether the calling uid holds the static permission; if not, it asks AMS <code>checkUriPermission()</code> for a matching transient grant. This is why a uid with <em>no</em> declared permission can still read a single granted URI.</p>
+<pre><code>grant record:  src=uid(A)  tgt=uid(B)  uri=content://.../photo/7  mode=READ
+lifetime:      tied to target&#x27;s task stack — cleared when task finishes
+persisted:     only via takePersistableUriPermission() (survives reboot,
+               stored in /data/system/urigrants.xml)</code></pre>
+<p>A subtle point: the grant is per <em>exact</em> URI (or a tree, for <code>DocumentsProvider</code> tree URIs). A grant on <code>.../users/42</code> does not extend to <code>.../users/43</code>. Persistable grants are the exception that survive process death and reboot, and the device caps how many an app may hold.</p>
 <hr>
 <h3 id="cursor">Cursor</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;A Cursor is a movable pointer into a result set — you call <code>moveToFirst</code>, loop with <code>moveToNext</code>, and pull columns by index for the current row. The two things I&#x27;m careful about: column lookups can return -1 silently if the name&#x27;s wrong, so I use <code>getColumnIndexOrThrow</code>; and I always close the cursor, ideally with Kotlin&#x27;s <code>use {}</code>, because a SQLite-backed cursor holds a native statement and a shared-memory window that leak if I don&#x27;t. It&#x27;s lazy too — rows are paged in from the window as I iterate, not all up front.&quot;</blockquote>
 <p><code>Cursor</code> is the object returned by <code>ContentResolver.query()</code> — a pointer into a row set that you iterate over, one row at a time.</p>
 <pre><code>cursor?.use { c -&gt;
     if (c.moveToFirst()) {
@@ -1100,8 +1382,14 @@ startActivity(intent)</code></pre>
 <li><code>isNull(columnIndex)</code> — check for null before reading to avoid unexpected crashes</li>
 </ul>
 <p><strong>Memory</strong>: Cursors backed by SQLite are lazy — data is fetched row by row as you iterate. Close cursors promptly to release the underlying SQLite statement and free resources. The idiomatic Kotlin way is <code>cursor.use {}</code>, which closes it automatically even if an exception is thrown.</p>
+<p><strong>Under the hood</strong></p>
+<p>A SQLite-backed cursor is a <code>SQLiteCursor</code>, and its rows live in a <code>CursorWindow</code> — a fixed-size block of ashmem shared memory (default ~2 MB). The cursor doesn&#x27;t hold all rows; it fills the window with a page of rows around the current position, and <code>moveToPosition</code> past the window edge triggers a re-query (<code>onMove</code>) that re-runs the compiled statement and refills the window from a new offset. That&#x27;s the laziness.</p>
+<pre><code>SQLiteCursor ──► SQLiteQuery (compiled statement, sqlite3_stmt*)
+            └──► CursorWindow (ashmem) ── holds page of rows ──► getString reads from window</code></pre>
+<p>Across process boundaries the cursor becomes a <code>BulkCursorToCursorAdaptor</code>/<code>CrossProcessCursorWrapper</code>: the provider fills a <code>CursorWindow</code> and passes only the shared-memory fd over Binder, so the client reads rows directly from shared memory without copying. <code>close()</code> releases the <code>CursorWindow</code> (decrementing its ref count to free the ashmem) and finalizes the native <code>sqlite3_stmt</code>. If you leak it, <code>StrictMode</code> / the <code>CloseGuard</code> finalizer logs &quot;Cursor finalized but not deactivated&quot; and the statement stays pinned — under load this exhausts SQLite&#x27;s cursor pool and you get <code>SQLiteException: too many open cursors</code>.</p>
 <hr>
 <h3 id="fileprovider">FileProvider</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;FileProvider is a ready-made ContentProvider from AndroidX that wraps a file in your private storage as a <code>content://</code> URI you can safely share. I need it because since Android 7 the system throws <code>FileUriExposedException</code> if you put a raw <code>file://</code> URI in an intent to another app — sharing private file paths is a security hole. So I declare FileProvider with an XML paths config, call <code>getUriForFile</code>, and add a grant-URI flag on the intent. The catch is the paths file: the file you hand it must live under one of the declared roots, or <code>getUriForFile</code> throws <code>IllegalArgumentException</code>.&quot;</blockquote>
 <p><code>FileProvider</code> is a specialized ContentProvider that grants temporary access to files in your app&#x27;s private storage to other apps, replacing direct <code>file://</code> URIs which are dangerous and now blocked.</p>
 <p><strong>Why</strong>: Since Android 7.0 (API 24), the system blocks <code>file://</code> URIs in Intents between apps and throws a <code>FileUriExposedException</code>. Apps must instead use <code>content://</code> URIs generated by <code>FileProvider</code>, which applies permission checks and grants only the specific URI requested.</p>
 <p><strong>Setup</strong>:</p>
@@ -1139,6 +1427,13 @@ val intent = Intent(MediaStore.ACTION_IMAGE_CAPTURE).apply {
     addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
 }
 startActivity(intent)</code></pre>
+<p><strong>Under the hood</strong></p>
+<p>The <code>FileUriExposedException</code> is enforced by <code>StrictMode.VmPolicy</code>&#x27;s file-uri-exposure check, which is on by default for apps targeting API 24+. <code>Uri.checkFileUriExposed()</code> runs whenever a <code>file://</code> URI leaves the app via <code>Intent.migrateExtraStreamToClipData()</code> and similar paths.</p>
+<p><code>FileProvider</code> itself is a real <code>ContentProvider</code> subclass. At init it parses the <code>&lt;paths&gt;</code> XML into a <code>SimplePathStrategy</code> — a map from a path <em>name</em> to a concrete root <code>File</code> (resolved from <code>Context.getFilesDir()</code>, <code>getCacheDir()</code>, <code>getExternalFilesDir()</code>, etc.). <code>getUriForFile()</code> canonicalizes the target file&#x27;s path, finds the longest matching root prefix, and rewrites it into <code>content://&lt;authority&gt;/&lt;name&gt;/&lt;relative-path&gt;</code>; if no root contains the file it throws <code>IllegalArgumentException(&quot;Failed to find configured root...&quot;)</code>.</p>
+<pre><code>file:  /data/data/pkg/cache/camera_photos/photo.jpg
+root:  &lt;cache-path name=&quot;camera&quot; path=&quot;camera_photos/&quot;&gt;  → getCacheDir()/camera_photos
+uri:   content://pkg.fileprovider/camera/photo.jpg</code></pre>
+<p>On the read side, <code>openFile()</code> reverses the mapping back to the real <code>File</code> and returns a <code>ParcelFileDescriptor</code> — the actual kernel fd is duplicated and passed over Binder, so the receiving app reads the bytes directly without ever learning the real path. The <code>FLAG_GRANT_*_URI_PERMISSION</code> is what makes the receiver&#x27;s open succeed, since <code>exported=&quot;false&quot;</code> means it holds no static permission.</p>
 <hr>
 <h3 id="contentprovider-interview-angles">ContentProvider Interview Angles</h3>
 <p><strong>Q: When would you use a ContentProvider?</strong></p>
@@ -1150,6 +1445,7 @@ startActivity(intent)</code></pre>
 <hr>
 <h2 id="96-intents-and-pendingintents">9.6 Intents and PendingIntents</h2>
 <h3 id="explicit-vs-implicit-intents">Explicit vs Implicit Intents</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;An explicit intent names the exact component class I want to start — that&#x27;s what I use inside my own app. An implicit intent only declares an action, data, and category, and lets the system resolve which installed component can handle it — that&#x27;s how I hand work off to other apps, like opening a URL or sharing text. The gotcha is services: implicit service intents have been illegal since Android 5.0 because any app could intercept them, so a service intent must always be explicit.&quot;</blockquote>
 <p><strong>Explicit Intent</strong>: Directly specifies the target component — Activity, Service, or BroadcastReceiver — by its class name. Used for communication within your own app, where you know exactly what you want to start.</p>
 <pre><code>// Start a specific Activity in your app
 val intent = Intent(this, ProfileActivity::class.java).apply {
@@ -1176,8 +1472,18 @@ startActivity(Intent.createChooser(shareIntent, &quot;Share via&quot;))
 val dialIntent = Intent(Intent.ACTION_DIAL, Uri.parse(&quot;tel:+15551234567&quot;))
 startActivity(dialIntent)</code></pre>
 <p><strong>Security</strong>: Always use explicit intents for starting Services. Implicit intents to start a Service have been blocked since Android 5.0 — the system throws <code>IllegalArgumentException: Service Intent must be explicit</code>. The reason is that an implicit service intent is a security risk: any app with a matching intent filter could intercept it.</p>
+<p><strong>Under the hood</strong></p>
+<p>An <code>Intent</code> is a <code>Parcelable</code> bundle of fields (action string, data <code>Uri</code>, categories set, component name, type, flags, and an <code>extras</code> <code>Bundle</code>). When you call <code>startActivity</code>, the intent is marshalled across a Binder transaction to the <code>ActivityManagerService</code> (now <code>ActivityTaskManagerService</code>) in the <code>system_server</code> process. For an explicit intent, AMS reads the embedded <code>ComponentName</code> and dispatches directly. For an implicit intent, AMS hands it to <code>PackageManagerService</code>, which runs <code>IntentResolver</code> over every component&#x27;s parsed <code>&lt;intent-filter&gt;</code> set — matching action, then categories, then data (scheme/host/path/MIME) — and returns ranked <code>ResolveInfo</code> results. Resolution scans only manifest-declared filters, which is why an implicit service intent throws: the framework refuses to let multiple matching services be silently chosen.</p>
+<pre><code>startActivity(intent)
+  → Instrumentation.execStartActivity()
+  → Binder txn → ActivityTaskManagerService (system_server)
+  → explicit? dispatch by ComponentName
+  → implicit? PackageManagerService.queryIntentActivities()
+      → IntentResolver.queryIntent() over parsed manifest filters
+      → match(action) &amp;&amp; match(all categories) &amp;&amp; matchData(uri, mime)</code></pre>
 <hr>
 <h3 id="intent-filters">Intent Filters</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;An intent filter is a manifest declaration that advertises which implicit intents a component can handle — the system matches on action, category, and data. The subtlety interviewers love is the three-part matching rule: the action has to match one entry, the intent&#x27;s categories must all be present in the filter, and the data has to satisfy the scheme and MIME rules. And since Android 12, any component with a filter must explicitly set <code>android:exported</code>, or the build fails.&quot;</blockquote>
 <p>Declared in the manifest, intent filters specify what Intents an Activity, Service, or Receiver is willing to handle. The system uses them to match implicit intents to the right component.</p>
 <pre><code>&lt;activity android:name=&quot;.ShareActivity&quot;&gt;
     &lt;intent-filter&gt;
@@ -1189,8 +1495,16 @@ startActivity(dialIntent)</code></pre>
 &lt;/activity&gt;</code></pre>
 <p><strong>Matching rules</strong>: An implicit Intent matches a filter if three conditions hold — first, its <code>action</code> matches at least one <code>&lt;action&gt;</code> in the filter. Second, its <code>category</code> matches all <code>&lt;category&gt;</code> elements (note that the <code>DEFAULT</code> category is automatically added to Intents started with <code>startActivity</code>). Third, its <code>data</code> — URI plus MIME type — satisfies the filter&#x27;s data rules.</p>
 <p><strong><code>android:exported</code></strong>: Activities with an intent-filter are exported by default, meaning any app can start them. Since Android 12, you must explicitly declare <code>android:exported=&quot;true&quot;</code> or <code>android:exported=&quot;false&quot;</code> for any Activity, Service, or Receiver that has an intent-filter; omitting it causes a build or install failure.</p>
+<p><strong>Under the hood</strong></p>
+<p>At install time, <code>PackageManagerService</code> parses every <code>&lt;intent-filter&gt;</code> in the manifest into an <code>IntentFilter</code> object and registers it in the package&#x27;s parsed component data. Each <code>IntentFilter</code> holds arrays for actions, categories, schemes, authorities, paths, and MIME types. Matching is performed by <code>IntentFilter.match()</code>, which runs four ordered checks — <code>matchAction()</code>, <code>matchCategories()</code>, <code>matchData()</code>, and the implicit <code>DEFAULT</code> requirement — and returns a match constant or a negative <code>NO_MATCH_*</code> code (e.g. <code>NO_MATCH_ACTION</code>, <code>NO_MATCH_CATEGORY</code>, <code>NO_MATCH_DATA</code>). Filters never make an intent broader: an intent&#x27;s categories must be a subset of the filter&#x27;s, not vice versa. The <code>exported</code> flag is also resolved here — if a component has a filter, an unset <code>exported</code> historically defaulted to <code>true</code>, which is why Android 12 (targetSdk 31) makes the attribute mandatory at manifest-merge/parse time.</p>
+<pre><code>IntentFilter.match(action, type, scheme, data, categories)
+  → matchAction()      // intent action ∈ filter actions
+  → matchCategories()  // filter categories ⊇ intent categories
+  → matchData()        // scheme + authority + path + MIME
+  → returns MATCH_CATEGORY_* | NO_MATCH_ACTION | NO_MATCH_DATA ...</code></pre>
 <hr>
 <h3 id="deep-links-intents">Deep Links (Intents)</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;A deep link is just an intent filter on <code>ACTION_VIEW</code> with the <code>BROWSABLE</code> category, which is what makes a URI launchable from a browser or another app into a specific screen. I read the data off <code>intent.data</code> in the target component. The thing to call out is that a plain deep link with a custom scheme isn&#x27;t verified — if more than one app can handle the URI the user sees a disambiguation chooser, which is exactly what App Links solve.&quot;</blockquote>
 <p>Deep links route external URLs and URIs into specific app screens. They are declared as intent filters with <code>ACTION_VIEW</code>, <code>CATEGORY_DEFAULT</code>, and <code>CATEGORY_BROWSABLE</code> — the <code>BROWSABLE</code> category is what allows the link to be opened from a web browser.</p>
 <pre><code>&lt;activity android:name=&quot;.ArticleActivity&quot;&gt;
     &lt;intent-filter&gt;
@@ -1217,8 +1531,11 @@ override fun onCreate(savedInstanceState: Bundle?) {
 }</code></pre>
 <p><strong>Testing deep links</strong>:</p>
 <pre><code>adb shell am start -W -a android.intent.action.VIEW -d &quot;myapp://article/123&quot; com.example.app</code></pre>
+<p><strong>Under the hood</strong></p>
+<p>When a browser or another app fires an <code>ACTION_VIEW</code> intent for a URI, the system resolves it the same way as any implicit intent — through <code>PackageManagerService</code> and <code>IntentResolver</code> — but with the extra requirement that the matching component carry <code>CATEGORY_BROWSABLE</code>. Browsers add <code>BROWSABLE</code> to the intents they build, so a filter lacking that category is invisible to web-originated navigation. The <code>&lt;data&gt;</code> elements are decomposed into scheme, host (authority), and path attributes, and <code>matchData()</code> compares them piecewise; <code>pathPrefix</code>, <code>pathPattern</code>, and <code>path</code> map to different <code>PatternMatcher</code> match types (<code>PATTERN_PREFIX</code>, <code>PATTERN_SIMPLE_GLOB</code>, <code>PATTERN_LITERAL</code>). If multiple components match and none is a verified App Link, <code>ResolverActivity</code> is launched to present the disambiguation chooser. The URI itself arrives parsed lazily — <code>Uri.parse</code> builds an opaque/hierarchical <code>Uri</code> whose <code>lastPathSegment</code> and query parts are decoded on demand.</p>
 <hr>
 <h3 id="app-links">App Links</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;App Links are deep links over HTTPS that prove I own the domain, so Android routes the URL straight into my app with no chooser dialog. I set <code>android:autoVerify</code> on the filter, and I host an <code>assetlinks.json</code> at <code>/.well-known/</code> containing my signing cert&#x27;s SHA-256 fingerprint. The verifier checks that file against my package, and the catch is that verification is fragile — a wrong fingerprint, a redirect, or a non-200 on that file silently drops you back to opening the link in the browser.&quot;</blockquote>
 <p>App Links are a stricter form of deep link that use the <code>https://</code> scheme and require <strong>verified domain ownership</strong>. When verified, Android routes matching links directly to your app without showing the disambiguation dialog.</p>
 <p><strong>Requirements</strong>:</p>
 <ol>
@@ -1245,8 +1562,17 @@ override fun onCreate(savedInstanceState: Bundle?) {
 <li>Deep links show the disambiguation dialog if multiple apps can handle the URI, or offer to open it in a browser.</li>
 <li>App links open directly in your app with no dialog — but only after domain ownership is verified. If your app is not installed, the system falls back to the browser.</li>
 </ul>
+<p><strong>Under the hood</strong></p>
+<p>At install (and on package updates) the <code>DomainVerificationManagerService</code> / <code>IntentFilterVerificationAgent</code> collects every <code>autoVerify</code> filter&#x27;s host and issues an HTTPS fetch of <code>https://&lt;host&gt;/.well-known/assetlinks.json</code>. It parses the JSON, looks for a <code>delegate_permission/common.handle_all_urls</code> relation whose <code>package_name</code> matches and whose <code>sha256_cert_fingerprints</code> includes the hash of the APK&#x27;s signing certificate (the same fingerprint computed from your keystore / Play App Signing key). On success the domain&#x27;s verification state is persisted as <code>STATE_VERIFIED</code>, and the framework promotes that filter above the generic resolver so <code>ACTION_VIEW</code> for the host bypasses <code>ResolverActivity</code> entirely. Any failure — non-200, redirect to a different host, malformed JSON, or fingerprint mismatch — leaves the state unverified, so the link falls through to the chooser or browser. On Android 12+ this state is inspectable via <code>adb shell pm get-app-links &lt;package&gt;</code> and re-triggerable with <code>pm verify-app-links</code>.</p>
+<pre><code>install/update
+  → DomainVerificationManagerService.verify(host)
+  → HTTPS GET https://host/.well-known/assetlinks.json   (must be 200, no cross-host redirect)
+  → match package_name &amp;&amp; sha256 fingerprint ∈ list
+  → STATE_VERIFIED → filter wins over ResolverActivity
+  → any failure → STATE_NO_RESPONSE / unverified → chooser/browser</code></pre>
 <hr>
 <h3 id="pendingintent">PendingIntent</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;A PendingIntent is a token I hand to the system or another app that lets them fire an intent later using my app&#x27;s identity and permissions — it&#x27;s a pre-authorized capability, used for notification taps, alarms, and widgets. The big modern gotcha is mutability: since Android 12 / target 31 I must pass <code>FLAG_IMMUTABLE</code> or <code>FLAG_MUTABLE</code> explicitly, and <code>FLAG_UPDATE_CURRENT</code> matters because PendingIntents that are &#x27;equal&#x27; are deduplicated by the system — same requestCode and matching intent fields return the same token.&quot;</blockquote>
 <p>A <code>PendingIntent</code> is a token representing an Intent that another application or the system can fire <strong>on your app&#x27;s behalf</strong> at some point in the future, using your app&#x27;s identity and permissions. It is essentially a pre-authorized capability you hand to someone else.</p>
 <p><strong>Use cases</strong>:</p>
 <ul>
@@ -1277,8 +1603,17 @@ val notification = NotificationCompat.Builder(context, channelId)
 <li><code>PendingIntent.getBroadcast(context, requestCode, intent, flags)</code> — sends a Broadcast</li>
 <li><code>PendingIntent.getActivities(context, requestCode, intents, flags)</code> — starts a synthetic stack of Activities (useful for deep-link back stacks)</li>
 </ul>
+<p><strong>Under the hood</strong></p>
+<p>A <code>PendingIntent</code> is just a thin wrapper around an <code>IIntentSender</code> Binder handle whose real object — a <code>PendingIntentRecord</code> — lives inside <code>system_server</code>, not your process. When you create one, AMS interns it in a <code>HashMap</code> keyed by a <code>PendingIntentRecord.Key</code> built from your package, the target type (activity/service/broadcast), the <code>requestCode</code>, and the intent&#x27;s &quot;filter equality&quot; fields (action, data, type, component, categories — but <strong>not</strong> extras). If a record with an equal key already exists, AMS returns the same underlying record, which is exactly why <code>FLAG_UPDATE_CURRENT</code> exists: it refreshes the extras on that shared record, and <code>FLAG_CANCEL_CURRENT</code> tears the old one down first. Because the token carries your app&#x27;s UID, whoever holds it fires the intent with your identity — that is the security surface <code>FLAG_IMMUTABLE</code> protects: without it, a holder could use <code>send()</code> with a fill-in Intent to mutate unfilled fields. Targeting SDK 31+ throws <code>IllegalArgumentException</code> if neither <code>FLAG_IMMUTABLE</code> nor <code>FLAG_MUTABLE</code> is supplied.</p>
+<pre><code>PendingIntent.getActivity(ctx, requestCode, intent, flags)
+  → ActivityManager.getIntentSender()  (Binder → system_server)
+  → key = {package, type=ACTIVITY, requestCode, intent.filterEquals(), flags}
+  → existing record for key? reuse (UPDATE_CURRENT refreshes extras)
+  → else new PendingIntentRecord (holds caller UID/identity)
+  → return PendingIntent wrapping IIntentSender token</code></pre>
 <hr>
 <h3 id="pendingintent-mutability">PendingIntent Mutability</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;Since Android 12 you have to declare a PendingIntent as either immutable or mutable — there&#x27;s no implicit default anymore, and if you specify neither on API 31+ creation throws. I reach for <code>FLAG_IMMUTABLE</code> by default because the receiver gets exactly the Intent I described and can&#x27;t tamper with it. I only use <code>FLAG_MUTABLE</code> for the narrow cases where the system legitimately fills fields in — inline notification replies, <code>setAlarmClock</code> show-intents, bubbles — and even then the base Intent must be explicit.&quot;</blockquote>
 <p>Since Android 12 (API 31), apps <strong>must</strong> specify mutability explicitly:</p>
 <ul>
 <li><code>FLAG_IMMUTABLE</code>: The system cannot modify the Intent inside the PendingIntent. The receiving component gets exactly the Intent you specified. <strong>Preferred and required for almost every use case.</strong></li>
@@ -1291,8 +1626,16 @@ PendingIntent.getActivity(context, 0, intent, PendingIntent.FLAG_IMMUTABLE)
 PendingIntent.getBroadcast(context, 0, intent,
     PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE)</code></pre>
 <p><strong>Before API 31</strong>: <code>FLAG_IMMUTABLE</code> was available but not required. Omitting both flags defaulted to mutable behavior. Apps targeting API 31 and above will crash at <code>PendingIntent</code> creation if neither flag is specified.</p>
+<p><strong>Under the hood</strong></p>
+<p>A <code>PendingIntent</code> isn&#x27;t a heap object you own — it&#x27;s a token backed by a record (<code>PendingIntentRecord</code>) held inside <code>system_server</code>&#x27;s <code>ActivityManagerService</code>. When you call <code>getActivity</code>/<code>getBroadcast</code>/<code>getService</code>, the framework binders over to AMS, which stores the <em>description</em> of the Intent (action, component, extras, the requesting uid/package) keyed by a <code>Key</code> that hashes the requestCode, target type, and Intent&#x27;s <code>filterEquals</code> fields. What you get back is a remotable handle (an <code>IIntentSender</code> Binder proxy). The mutability and <code>UPDATE_CURRENT</code>/<code>CANCEL_CURRENT</code> flags are stored as bits on that record. When the holder later calls <code>send()</code>, AMS looks up the record, optionally merges a fill-in Intent (only if <code>FLAG_MUTABLE</code>), and dispatches under the <em>original creator&#x27;s</em> uid — which is why it carries your identity, not the sender&#x27;s.</p>
+<pre><code>your app ──getActivity()──▶ AMS.getIntentSender()
+                              └─ creates/finds PendingIntentRecord{ key, uid, flags }
+                              └─ returns IIntentSender Binder token
+holder  ──send(fillIn)────▶ AMS  ──(merge only if MUTABLE)──▶ startActivity() as creator uid</code></pre>
+<p>Because <code>filterEquals</code> ignores extras, two <code>getActivity</code> calls with the same action/component but different extras resolve to the <em>same</em> record unless you vary the requestCode or pass <code>FLAG_UPDATE_CURRENT</code> — a classic source of &quot;my notification opens the wrong screen&quot; bugs.</p>
 <hr>
 <h3 id="security-implications">Security Implications</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;The headline risk is the confused-deputy attack: a PendingIntent fires with my app&#x27;s identity and permissions, so if it&#x27;s mutable and wraps an implicit Intent, a malicious app can receive it, rewrite the target component, and redirect it at a private component of mine while running as me. The fix is the rule that mutable PendingIntents must carry an explicit base Intent, plus keeping components non-exported or permission-guarded. I also avoid sending sensitive data over implicit broadcasts without a receiver permission.&quot;</blockquote>
 <p><strong>PendingIntent security risks</strong>:</p>
 <ol>
 <li><strong>Mutable PendingIntent with implicit base Intent</strong>: This is extremely dangerous. A mutable PendingIntent wrapping an implicit Intent can be received by a malicious app that then modifies the Intent fields — action, component, extras — and redirects it to any component, including private ones in your app. The rule is simple: if you use <code>FLAG_MUTABLE</code>, the base Intent must be explicit.</li>
@@ -1317,8 +1660,11 @@ val safePendingIntent = PendingIntent.getActivity(
 <ol>
 <li><strong>Exported components without permission checks</strong>: Any Activity with <code>android:exported=&quot;true&quot;</code> and no permission requirement can be started by any app on the device. Add <code>android:permission</code> on the element or do manual permission checks in <code>onCreate</code> if you need to restrict access.</li>
 </ol>
+<p><strong>Under the hood</strong></p>
+<p>The &quot;fires with your identity&quot; property is enforced in the binder/AMS layer, not in your process. When <code>IIntentSender.send()</code> reaches AMS, the kernel binder driver has already stamped the call with <code>Binder.getCallingUid()</code> for the <em>sender</em>, but AMS deliberately uses the <code>uid</code>/<code>packageName</code> captured in the <code>PendingIntentRecord</code> at creation time to perform permission checks and dispatch — that&#x27;s the deputy. For a <em>mutable</em> record, AMS calls <code>Intent.fillIn()</code> to merge the sender&#x27;s supplied Intent into the stored one; <code>fillIn</code> will overwrite the component, action, data, and unset extras <em>only on fields the creator left null/unguarded</em>, which is exactly how redirection happens when the base Intent had no explicit component. An <em>immutable</em> record skips the merge entirely. Exported-component enforcement happens earlier, during Intent resolution in <code>PackageManagerService</code>: each component&#x27;s <code>exported</code> bit and optional <code>android:permission</code> are checked against the caller&#x27;s granted permissions before AMS will even resolve the target, so a non-exported component is unreachable from another uid regardless of the Intent.</p>
 <hr>
 <h3 id="task-stack-behavior">Task Stack Behavior</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;The back stack is owned by the system per task, and Intent flags are how you reshape it from outside an Activity. From a Service or Receiver I need <code>FLAG_ACTIVITY_NEW_TASK</code> because there&#x27;s no Activity task to attach to. <code>CLEAR_TOP</code> plus <code>SINGLE_TOP</code> is my go-to for &#x27;jump home and clear everything above&#x27; — it delivers <code>onNewIntent</code> to the existing instance instead of recreating it. And for notifications I build a synthetic parent stack with <code>TaskStackBuilder</code> so Up navigation makes sense even though the user landed deep.&quot;</blockquote>
 <p>Intents can manipulate the task back stack in significant ways. There are a few key scenarios to know:</p>
 <p><strong>Notification tap</strong>: Tapping a notification should open the app in a sensible state — not just drop the user onto a detail screen with no way to navigate up. Use <code>TaskStackBuilder</code> to create a synthetic back stack that mirrors what the user would have seen if they had navigated there naturally:</p>
 <pre><code>val resultIntent = Intent(context, DetailActivity::class.java).apply {
@@ -1338,6 +1684,12 @@ val intent = Intent(context, HomeActivity::class.java).apply {
 }
 startActivity(intent)</code></pre>
 <p><strong>FLAG_ACTIVITY_NO_HISTORY</strong>: The Activity is not added to the back stack. When the user leaves it — via Back or by starting another Activity — it finishes immediately and cannot be recovered by pressing Back. Useful for splash screens or short-lived intermediary screens.</p>
+<p><strong>Under the hood</strong></p>
+<p>Tasks and the back stack live entirely in <code>system_server</code>, inside the ActivityTaskManager (split out from AMS in API 29). A <em>task</em> is a <code>Task</code> object holding a stack of <code>ActivityRecord</code>s, each with a <code>taskAffinity</code> derived from your package/manifest. When you call <code>startActivity</code>, AMS runs <code>ActivityStarter</code>, which interprets the launch flags against the target&#x27;s manifest <code>launchMode</code> to decide whether to reuse an existing record or push a new one. <code>FLAG_ACTIVITY_CLEAR_TOP</code> makes <code>ActivityStarter</code> scan the task for a matching <code>ActivityRecord</code>; if found <em>and</em> the activity is <code>singleTop</code>/you also passed <code>SINGLE_TOP</code>, it finishes everything above and routes the Intent to <code>onNewIntent</code> on the surviving instance — otherwise it destroys and recreates the matched activity. <code>NEW_TASK</code> triggers an affinity lookup: AMS finds an existing task whose <code>affinity</code> matches and reparents/foregrounds it, or allocates a fresh <code>Task</code>. <code>TaskStackBuilder.getPendingIntent</code> doesn&#x27;t create real activities up front — it serializes the <em>array</em> of synthetic Intents (each tagged with <code>NEW_TASK</code> on the root) into one <code>PendingIntent</code>, and AMS replays them in order as a single <code>startActivities</code> call when fired.</p>
+<pre><code>Task(affinity=com.app) ─ ActivityRecord[Home]
+                        └ ActivityRecord[List]
+                        └ ActivityRecord[Detail]  ◀── CLEAR_TOP+SINGLE_TOP to Home:
+                                                       finish Detail &amp; List, onNewIntent(Home)</code></pre>
 <hr>
 <h3 id="intents-interview-angles">Intents Interview Angles</h3>
 <p><strong>Q: Explicit vs implicit intent — when do you use each?</strong></p>

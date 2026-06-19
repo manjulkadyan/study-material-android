@@ -84,6 +84,7 @@ Monitoring → Rollout</code></pre>
 <h3 id="worked-designs">Worked Designs</h3>
 <hr>
 <h4 id="chat-app">Chat App</h4>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;For a chat client I make Room the single source of truth and treat the WebSocket as just another writer into it — a process-scoped <code>ChatSessionManager</code> owns the socket, and every incoming frame gets persisted, so the UI is always a reactive read off the DB via Paging. Sends are optimistic: I insert with <code>status=PENDING</code> immediately, then reconcile to SENT/DELIVERED/READ as ACKs come back. The nuance an interviewer probes is reliability on a flaky network — that&#x27;s why pending sends live in Room and a WorkManager job drains the queue on reconnect, and why I batch incoming frames before writing to avoid DB thrash.&quot;</blockquote>
 <p><strong>Scenario:</strong> Design the Android client for a consumer chat application (think WhatsApp/Signal scale). Real-time messaging, media sharing, read receipts, message status, group chats.</p>
 <hr>
 <p><strong>Architecture</strong></p>
@@ -230,8 +231,17 @@ Room (MessageDao)   WebSocket / REST</code></pre>
 <li>Monitor crash-free rate, message delivery rate, latency p95.</li>
 <li>Kill-switch: flag off returns users to previous chat implementation.</li>
 </ol>
+<p><strong>Under the hood</strong></p>
+<p>The &quot;persistent&quot; WebSocket is a single TCP connection upgraded from an HTTP/1.1 <code>Upgrade: websocket</code> handshake; OkHttp&#x27;s <code>WebSocket</code> runs frame reading on a dedicated reader thread and writes through a queue, so callbacks (<code>onMessage</code>) come off that I/O thread, never the main thread. The optimistic-send &quot;instant UI&quot; works because Room&#x27;s <code>Flow</code>-returning DAO query registers an <code>InvalidationTracker</code> observer on the underlying SQLite tables — on any write, SQLite update hooks mark the table version dirty, the tracker re-runs the query on the IO executor, and re-emits, which is why a local <code>INSERT</code> repaints the list before the network round-trip completes.</p>
+<pre><code>tap &quot;send&quot;  → INSERT row(status=PENDING)   ──┐ (same DB txn commits)
+                                             ├─► InvalidationTracker fires
+LazyColumn repaints (PENDING bubble) ◄───────┘     re-runs SELECT, emits
+   ... background coroutine: ws.send(frame)
+   ACK frame on reader thread → UPDATE status=SENT → tracker fires again → repaint</code></pre>
+<p>Delivery reliability under process death rests on WorkManager persisting the <code>WorkSpec</code> to its own Room DB and registering a <code>JobScheduler</code> job; the OS, not the app, re-invokes the worker after a kill or reboot, which is why a PENDING queue survives where a plain coroutine would not.</p>
 <hr>
 <h4 id="offline-first-feed">Offline-First Feed</h4>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;An offline-first feed is a strict local-first loop: the UI only ever reads from Room through Paging, and the only thing allowed to write network data into Room is a WorkManager sync job. That separation is the whole design — reads never touch the network, so the feed is instantly available offline, and writes are atomic upserts guarded by a transaction. The gotcha interviewers chase is staleness and resumability: I keep a <code>feed_sync_meta</code> row with the last cursor and timestamp so sync resumes where it left off and the UI can honestly say &#x27;cached from X minutes ago&#x27; instead of pretending it&#x27;s live.&quot;</blockquote>
 <p><strong>Scenario:</strong> Design a social/news feed that works fully offline. Think Twitter timeline, Reddit feed, or an internal news app with periodic content.</p>
 <hr>
 <p><strong>Architecture</strong></p>
@@ -348,8 +358,17 @@ Room (MessageDao)   WebSocket / REST</code></pre>
 <li>Shadow mode: new sync path runs alongside old network-then-cache path; compare outputs.</li>
 <li>Gradual rollout; watch <code>stale_content_shown_rate</code> and crash rate.</li>
 </ul>
+<p><strong>Under the hood</strong></p>
+<p>Paging 3&#x27;s <code>RemoteMediator</code> formalizes exactly this two-path design: the <code>PagingSource</code> reads only from Room, while the mediator&#x27;s <code>load()</code> runs the network fetch and upserts, so the list and the network are decoupled by the database. <code>upsertAll</code> inside a <code>@Transaction</code> compiles to a single SQLite transaction (<code>BEGIN</code> … <code>COMMIT</code>); Room&#x27;s <code>InvalidationTracker</code> defers its table-invalidation notification until the transaction commits, so observers never see the half-written 50-item batch — that&#x27;s what makes &quot;all or nothing&quot; actually atomic for the reader, not just the writer. <code>WorkManager.enqueueUniquePeriodicWork</code> with <code>KEEP</code> means a duplicate enqueue is a no-op rather than a second job, preventing overlapping syncs that would race on the cursor.</p>
+<pre><code>RemoteMediator.load(REFRESH/APPEND)
+   → api.getFeed(cursor)
+   → db.withTransaction { dao.upsertAll(items); meta.update(cursor, ts) }  // one COMMIT
+   → InvalidationTracker fires AFTER commit → PagingSource invalidated
+   → Pager generates a fresh PagingSource → LazyColumn diffs &amp; repaints</code></pre>
+<p>The <code>NetworkType.CONNECTED</code> constraint is enforced by the OS <code>JobScheduler</code>, which only dispatches the job once a validated network is available — the worker code never polls connectivity itself.</p>
 <hr>
 <h4 id="video-streaming-app">Video Streaming App</h4>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;A streaming client is really an orchestration problem around ExoPlayer: I wrap it in a single controller, feed it a <code>MediaItem</code> with the manifest and DRM config, and let ExoPlayer do HLS/DASH adaptive bitrate and buffering internally — my job is the state machine, resume position, and downloads. The thing interviewers push on is ExoPlayer&#x27;s threading and DRM: all player calls have to be on the application thread it was created on, and offline playback means fetching and persisting a Widevine <em>offline</em> license keyed to the downloaded segments, then checking its expiry on app open before you let the user hit play.&quot;</blockquote>
 <p><strong>Scenario:</strong> Design an Android client for a video streaming service (Netflix/YouTube scale). Browse catalog, search, play video, download for offline.</p>
 <hr>
 <p><strong>Architecture</strong></p>
@@ -457,8 +476,15 @@ Room (MessageDao)   WebSocket / REST</code></pre>
 <li>ExoPlayer version upgrades: shadow A/B, compare QoE metrics before full rollout.</li>
 <li>New DRM configuration: 1% → 5% → 20% with crash rate monitoring at each step.</li>
 </ul>
+<p><strong>Under the hood</strong></p>
+<p>ExoPlayer is an internal pipeline of <code>MediaSource</code> → <code>Renderer</code> → <code>LoadControl</code>, driven by an internal playback thread; the public <code>Player</code> object is a façade that asserts you call it from the thread that created it (<code>Player.getApplicationLooper()</code>) — violating that throws, which is why &quot;main thread only&quot; is enforced, not advisory. Adaptive bitrate is the <code>TrackSelection</code> layer polling the <code>BandwidthMeter</code>&#x27;s sliding-window throughput estimate before each chunk and choosing the highest-bitrate variant whose download it predicts will finish before the buffer drains. Widevine DRM runs through the platform <code>MediaDrm</code> API into a hardware TEE (L1) or software (L3); an <em>offline</em> license is a persisted key set whose opaque key-set ID is stored alongside the downloaded segments, and Widevine itself enforces the license&#x27;s embedded expiry — the app&#x27;s &quot;check on open&quot; is just to fail gracefully before the secure decoder rejects the keys.</p>
+<pre><code>chunk boundary reached
+  → BandwidthMeter.getBitrateEstimate()
+  → AdaptiveTrackSelection picks variant (with hysteresis to avoid flip-flop)
+  → MediaSource loads next segment → SampleQueue → MediaCodec (secure, via MediaDrm) → Surface</code></pre>
 <hr>
 <h4 id="payments-flow">Payments Flow</h4>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;For payments, correctness beats UX everywhere: card data never touches my servers — the PCI SDK tokenizes it and I only ever handle the token — and I never do optimistic UI on the actual charge, only on the steps around it. The single most important mechanism is the client-generated idempotency key persisted in Room: every confirm request carries it, so a retry, a timeout, or a crash-then-relaunch can re-query by that key instead of risking a double charge. That&#x27;s the trap interviewers set — &#x27;the network drops right after you hit Pay&#x27; — and the answer is never assume failure; reconcile by idempotency key.&quot;</blockquote>
 <p><strong>Scenario:</strong> Design a payments flow in an Android app — add card, select payment method, confirm purchase. Security and reliability are paramount.</p>
 <hr>
 <p><strong>Architecture</strong></p>
@@ -578,8 +604,14 @@ PaymentViewModel (Activity-scoped)
 <li>Feature flag with instant kill-switch.</li>
 <li>Gradual rollout: 1% for 48 hours minimum, watching payment error rate.</li>
 </ul>
+<p><strong>Under the hood</strong></p>
+<p>The idempotency guarantee is fundamentally a <em>server</em> contract, but the client mechanics matter: the UUID is generated and committed to Room <em>before</em> the network call leaves the device, so even if the process is killed mid-request the key survives the cold start and the same key is replayed. The backend stores <code>(idempotency_key → result)</code> and on a duplicate returns the original recorded outcome rather than charging again — so the network drop after &quot;Pay&quot; is safe because the client re-asks &quot;what happened to key X?&quot; rather than re-submitting a fresh charge. <code>FLAG_SECURE</code> is enforced by SurfaceFlinger / the display compositor at the system level: it sets the surface&#x27;s secure flag so the framework excludes it from screenshots, screen recordings, and the Recents thumbnail snapshot — the app does nothing per-frame. The 3DS round-trip via Chrome Custom Tabs hands control to a real browser process (so cookies and the issuer&#x27;s session are shared), and the issuer redirects to your registered deep-link scheme, which the OS resolves back to your Activity via an intent filter.</p>
+<pre><code>Pay tapped → UUID v4 → Room.insert(paymentAttempt, key)  // committed first
+          → POST /charge  Idempotency-Key: &lt;key&gt;
+   timeout/crash ──► relaunch ──► GET /charge?key=&lt;key&gt; ──► authoritative status</code></pre>
 <hr>
 <h4 id="ride-tracking-app">Ride Tracking App</h4>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;A ride app is a strict trip state machine fed by a real-time channel: one <code>TripViewModel</code> owns a sealed <code>TripUiState</code> and the server pushes location, ETA, and status events over WebSocket or MQTT that drive legal transitions only — I reject and log any skip. Two mechanisms make it feel right: a foreground service keeps the socket alive when the app is backgrounded so the trip survives, and I animate the map marker between 1 Hz updates with a <code>ValueAnimator</code> so it glides instead of teleporting. The gotcha interviewers love is reconnect correctness — on reconnect I REST-poll the current trip to reconcile any events I missed while the socket was down, because the live channel alone isn&#x27;t a reliable source of truth across drops.&quot;</blockquote>
 <p><strong>Scenario:</strong> Design the Android client for a ride-hailing app. Real-time driver location, ETA, fare calculation, trip state machine.</p>
 <hr>
 <p><strong>Architecture</strong></p>
@@ -689,8 +721,14 @@ PaymentViewModel (Activity-scoped)
 <ul>
 <li>Battery impact monitoring via device profiling in beta.</li>
 </ul>
+<p><strong>Under the hood</strong></p>
+<p>MQTT is usually preferred over a raw WebSocket here because it adds QoS levels and a persistent session: with QoS 1 and <code>cleanSession=false</code>, the broker buffers undelivered messages for a disconnected client and replays them on reconnect, which is the protocol-level version of the &quot;REST reconcile&quot; fallback. The marker glide is <code>ValueAnimator</code> driven by the <code>Choreographer</code>: the platform <code>Choreographer</code> posts a <code>FrameCallback</code> on each VSYNC (~16.6 ms at 60 Hz), the animator computes a fraction along its interpolator, and the listener lerps between old and new <code>LatLng</code> — so the visual 60 fps motion is decoupled from the 1 Hz data rate. The foreground service survives backgrounding because, once <code>startForeground()</code> posts its notification, the OS raises the process&#x27;s <code>oom_adj</code> priority so the low-memory killer treats it like a visible app rather than a cached background process.</p>
+<pre><code>1 Hz data:   P0 ............ P1 ............ P2
+VSYNC 60Hz:  | | | | | | | | | | | | | | | | | |   ← Choreographer frame callbacks
+marker x:    P0→──lerp(t)──→P1 (ValueAnimator over ~1s)  → marker.position each frame</code></pre>
 <hr>
 <h4 id="large-e-commerce-app">Large E-Commerce App</h4>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;A large e-commerce app is a multi-module, feature-first build where each feature owns its ViewModel, repository, and UI, and shared infra lives in <code>:core</code> modules — that&#x27;s what lets many teams ship in parallel without stepping on each other. The interesting state decision is the cart: it&#x27;s a process-scoped singleton because the badge must be consistent everywhere, whereas every screen otherwise gets its own scoped ViewModel. The nuances interviewers chase are freshness and reliability — price and inventory get short TTLs and a re-check on resume because stale prices are a real bug, and checkout uses idempotency keys and never goes offline, while browsing and cart stay Room-backed and offline-friendly.&quot;</blockquote>
 <p><strong>Scenario:</strong> Design an Android app for a large e-commerce platform (Amazon/eBay scale). Catalog browsing, search, product detail, cart, checkout, order tracking.</p>
 <hr>
 <p><strong>Architecture</strong></p>
@@ -815,8 +853,14 @@ PaymentViewModel (Activity-scoped)
 <li>Checkout changes: dark launch with shadow traffic; compare order success rates.</li>
 <li>Performance changes: Macrobenchmark CI gate; reject PRs that regress startup by &gt; 5%.</li>
 </ul>
+<p><strong>Under the hood</strong></p>
+<p>The &quot;process-scoped singleton cart&quot; relies on the <code>ViewModelStore</code> lifecycle: a normal <code>viewModels()</code> ViewModel is keyed in the Activity/Fragment&#x27;s <code>ViewModelStore</code> and dies with it, whereas an <code>@ActivityRetainedScoped</code> (Hilt) or app-singleton instance is held in a store that outlives configuration changes and screen transitions — that shared instance is literally why the badge stays consistent across features. The App Startup <code>Initializer</code> with dependency ordering builds a topological sort of <code>dependencies()</code> and runs initializers lazily through a single <code>InitializationProvider</code> (a manifest-merged <code>ContentProvider</code>), which collapses many libraries&#x27; separate auto-init ContentProviders into one and cuts cold-start <code>ApplicationInfo</code> provider instantiation. Baseline Profiles ship a <code>baseline-prof.txt</code> listing hot methods/classes; at install time ART&#x27;s <code>dex2oat</code> AOT-compiles exactly those into native code, so the critical flows skip JIT warm-up on first run.</p>
+<pre><code>App Startup graph:   Analytics → depends → Logging
+                     ABConfig  → depends → Network
+   InitializationProvider.onCreate() → topo-sort → init Logging, Network, then Analytics, ABConfig</code></pre>
 <hr>
 <h4 id="modular-super-app">Modular Super-App</h4>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;A super-app is many feature verticals in one host, so the core idea is Dynamic Feature Modules that download on demand plus hard isolation: features never import each other — they talk only through a <code>:core:navigation</code> contract, shared <code>:core:data</code> repositories, and an event bus, and I enforce no cross-feature edges with Dependency Guard. That isolation is what lets independent teams ship without breaking each other. The thing interviewers probe is the failure and ownership model: DFM install can fail so you need a graceful &#x27;feature unavailable&#x27; fallback, and shared <code>:core</code> modules need a platform-team owner with required review, otherwise the contract erodes.&quot;</blockquote>
 <p><strong>Scenario:</strong> Design an Android super-app (WeChat/Grab style) where multiple mini-apps or feature verticals live in one host app. Multiple teams, independent deployment where possible.</p>
 <hr>
 <p><strong>Architecture</strong></p>
@@ -926,8 +970,14 @@ PaymentViewModel (Activity-scoped)
 <li>Feature flags in <code>:core:ab</code> enable/disable features in the host&#x27;s navigation registry without</li>
 </ul>
 <p>a code change.</p>
+<p><strong>Under the hood</strong></p>
+<p>A DFM is a separate <code>com.android.dynamic-feature</code> module that is <em>not</em> in the base APK; <code>SplitInstallManager</code> requests it from Play, which streams a split APK and the framework <code>SplitCompat</code> merges its dex, resources, and native libs into the already-running process classloader at runtime — that&#x27;s why the feature&#x27;s classes aren&#x27;t on the classpath until install, and why direct cross-feature imports can&#x27;t compile against a DFM. The enforced &quot;no cross-feature dependency&quot; runs through <code>FeatureLauncher</code> resolving routes reflectively/by registry at runtime rather than by a compile-time edge, so Dependency Guard can keep the Gradle dependency graph acyclic. The shared <code>AppEventBus</code> is typically a hot <code>MutableSharedFlow</code> (or replay-0 broadcast) so a single <code>emit(AuthExpired)</code> fans out to every collecting feature without any feature knowing the others exist.</p>
+<pre><code>user taps &quot;Food&quot;  → SplitInstallManager.startInstall(food)
+   → Play streams split APK → SplitCompat installs dex/resources into running classloader
+   → FeatureLauncher.launch(Food.Menu) resolves route from runtime registry → Activity/destination</code></pre>
 <hr>
 <h4 id="real-time-collaborative-app">Real-Time Collaborative App</h4>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;Collaborative editing is event sourcing: the document is a stream of operations, not a blob. I apply local edits optimistically, enqueue them, and send them; the server merges with OT or CRDT and broadcasts canonical ops back, and I transform my pending local ops against incoming remote ops before applying. The hard part interviewers focus on is convergence across offline and reconnect — I persist the operation queue in Room so edits survive process death, replay them with a version vector on reconnect, and the whole reason for OT/CRDT is that concurrent edits must converge to the same document regardless of arrival order, with last-write-wins only as a degraded fallback.&quot;</blockquote>
 <p><strong>Scenario:</strong> Design a real-time collaborative editing app (Google Docs/Figma style). Multiple users editing a shared document simultaneously on Android.</p>
 <hr>
 <p><strong>Architecture</strong></p>
@@ -1027,8 +1077,14 @@ PaymentViewModel (Activity-scoped)
 <li>Beta with controlled set of collaborative documents.</li>
 <li>Monitor conflict rate; high conflict rate may indicate OT implementation bugs.</li>
 </ul>
+<p><strong>Under the hood</strong></p>
+<p>OT and CRDT solve the same convergence problem differently. OT keeps operations as positional edits (e.g., <code>insert(pos=5,&quot;x&quot;)</code>) and runs a <code>transform(opA, opB)</code> function so a concurrent insert before your position shifts your index — correctness depends on the server imposing a total order and every client transforming against the same sequence, which is why a version vector accompanies replayed ops. A CRDT instead gives every character a globally unique, densely-orderable identifier (a position between two neighbors), so concurrent inserts commute by construction and merge needs no central transform — at the cost of per-character metadata. The <code>Channel(UNLIMITED)</code> serializes edits because a channel is a FIFO queue with a single consuming coroutine, guaranteeing operations are applied in send order even though producers run on different dispatchers.</p>
+<pre><code>local:  &quot;ABC&quot;  insert(1,&quot;X&quot;)  → &quot;AXBC&quot;  (enqueued, version v3)
+remote: insert(0,&quot;Z&quot;)  arrives → transform(insert(1,&quot;X&quot;), insert(0,&quot;Z&quot;)) ⇒ insert(2,&quot;X&quot;)
+apply remote then transformed local → both clients converge to &quot;ZAXBC&quot;</code></pre>
 <hr>
 <h4 id="sdk-used-by-many-apps">SDK Used by Many Apps</h4>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;An SDK embedded in dozens of host apps has to be a good guest: zero opinion about the host&#x27;s architecture, minimal transitive dependencies, a tiny public surface, and — most importantly — it must never crash the host, so every public method is wrapped and bad init drops the SDK into a safe no-op mode. The mechanism that makes it well-behaved is deferral: <code>init()</code> does no network and almost no I/O, events just append to an in-memory buffer, and flushing happens on a background scope by size/time/lifecycle triggers with Room-backed retry. The nuances interviewers probe are dependency conflicts and API stability — shade or make OkHttp optional, keep public types ProGuard-safe with <code>@Keep</code>, and treat every public method as semver debt.&quot;</blockquote>
 <p><strong>Scenario:</strong> You are designing an Android SDK that will be embedded in dozens of third-party apps. The SDK provides analytics, identity, or feature-flag capabilities.</p>
 <hr>
 <p><strong>Architecture</strong></p>
@@ -1126,8 +1182,16 @@ object MySDK {
 <li>Ship beta releases (<code>1.2.0-beta01</code>) for host app partners to validate before stable release.</li>
 <li>Provide a migration guide for every MAJOR version bump.</li>
 </ul>
+<p><strong>Under the hood</strong></p>
+<p>&quot;Shading&quot; OkHttp means running a tool like the Gradle Shadow plugin / jarjar that rewrites the bytecode&#x27;s package references from <code>okhttp3.*</code> to <code>com.mysdk.shaded.okhttp3.*</code> and relocates the class files, so the SDK&#x27;s HTTP stack can&#x27;t conflict with a different OkHttp version the host already ships — the JVM treats them as entirely distinct classes by fully-qualified name. <code>@Keep</code> is consumed by R8 as a keep rule so the class/method survives tree-shaking and isn&#x27;t renamed in the host&#x27;s own minification pass, which would otherwise break reflective or public-API access. The &quot;init must not throw&quot; guarantee leans on a single <code>AtomicReference&lt;SdkState&gt;</code> for lock-free compare-and-set transitions (e.g., <code>UNINITIALIZED → READY</code> or <code>→ NO_OP</code>), so concurrent calls from any host thread observe a consistent state without a lock, and a failed init atomically lands in <code>NO_OP</code> where every public method short-circuits.</p>
+<pre><code>host classpath:  okhttp3.OkHttpClient            (host&#x27;s version, untouched)
+SDK (shaded):    com.mysdk.shaded.okhttp3.OkHttpClient   ← different FQN, no conflict
+
+init() → CAS(state, UNINITIALIZED → READY)   on failure → CAS(... → NO_OP)
+logEvent() → if state==NO_OP return; else buffer.append(e)   // never throws upward</code></pre>
 <hr>
 <h4 id="multi-process-app">Multi-Process App</h4>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;Multi-process is the answer when a background operation must outlive the UI — a music player or VPN — so I run a foreground service in its own <code>:remote</code> process that owns the authoritative state, and the UI process talks to it over AIDL. The key consequence is that the two processes have separate heaps, so I can&#x27;t share in-memory objects; I bridge AIDL callbacks into a <code>StateFlow</code> for the UI. The traps interviewers set are the Binder limits and threading: AIDL callbacks arrive on a binder thread pool not the main thread, a transaction over roughly 1 MB throws <code>TransactionTooLarge</code>, and a <code>RemoteException</code> means the binder died so you must reconnect — never pass a bitmap through Binder, pass a URI.&quot;</blockquote>
 <p><strong>Scenario:</strong> Design an Android app that uses multiple processes — e.g., an app with a persistent background service (music player, VPN, location tracker) that must survive the main process being killed.</p>
 <hr>
 <p><strong>Architecture</strong></p>
@@ -1242,6 +1306,12 @@ PlaybackControls               MusicPlayerService
 <ul>
 <li>Gradual rollout; monitor service crash rate per device brand.</li>
 </ul>
+<p><strong>Under the hood</strong></p>
+<p>AIDL compiles into a <code>Stub</code>/<code>Proxy</code> pair: the generated <code>Stub.onTransact()</code> runs in the service process and the <code>Proxy</code> in the caller marshals arguments into a <code>Parcel</code>, then <code>transact()</code> makes a <code>binder_transaction</code> ioctl into the kernel&#x27;s binder driver. The driver copies the parcel into the target process via a shared mmap&#x27;d buffer (<code>binder_alloc</code>) and dispatches it on a thread from the binder thread pool — which is exactly why callbacks don&#x27;t land on the main thread. The ~1 MB ceiling is the per-process binder transaction buffer the driver maps at process start (<code>BINDER_VM_SIZE</code>), shared across all in-flight transactions; exceeding it throws <code>TransactionTooLargeException</code>, so bitmaps go by URI instead. Room&#x27;s WAL mode lets concurrent readers proceed against the last committed snapshot while a single writer appends to the <code>-wal</code> file, which is what makes one-writer/many-readers safe across processes where the deprecated <code>MODE_MULTI_PROCESS</code> SharedPreferences is not.</p>
+<pre><code>UI proc:   Proxy.play() → writeToParcel → ioctl(BINDER_WRITE_READ)
+kernel:    binder driver copies parcel into target&#x27;s mmap buffer (cap ~1MB)
+svc proc:  binder thread → Stub.onTransact(TRANSACTION_play) → MusicPlayerService.play()
+           state change → callback.onStateChanged()  (arrives on UI&#x27;s binder thread, not main)</code></pre>
 <hr>
 <h3 id="interview-angles--architecture">Interview Angles — Architecture</h3>
 <p><strong>&quot;Design a scalable Android app architecture&quot;</strong></p>
@@ -1259,6 +1329,7 @@ PlaybackControls               MusicPlayerService
 <p>For every comparison, run through the same five questions: what problem does it solve, what are the benefits, what are the costs, when would I use it, and when would I avoid it.</p>
 <hr>
 <h3 id="mvvm-vs-mvi">MVVM vs MVI</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;MVVM and MVI are both unidirectional, but they differ in how state is shaped. MVVM is the pragmatic default — ViewModel exposes state, survives config changes, maps cleanly to StateFlow and Compose — and it&#x27;s where I start. MVI tightens that into a single immutable <code>UiState</code> produced by a pure reducer from explicit <code>Intent</code> actions, which buys you consistency and replayable, testable state for complex flows. The nuance I&#x27;d flag is the failure mode of each: MVVM&#x27;s separate StateFlows can drift out of sync, while MVI&#x27;s cost is boilerplate and over-engineering on simple screens — so I upgrade to MVI only when interacting state fields make the ViewModel hard to reason about.&quot;</blockquote>
 <p><strong>MVVM (Model-View-ViewModel)</strong></p>
 <ol>
 <li><strong>Problem it solves:</strong> Separates UI rendering from business logic; ViewModel survives config changes.</li>
@@ -1280,6 +1351,7 @@ PlaybackControls               MusicPlayerService
 </ol>
 <hr>
 <p><strong>MVI (Model-View-Intent)</strong></p>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;MVI&#x27;s whole point is a single source of truth for the screen: one immutable state, all changes flowing through a pure <code>reduce(state, action) -&gt; state</code> function, and side effects pushed out to a separate effect channel. That purity is why it&#x27;s so testable and why time-travel and action replay are even possible. The trade-off an interviewer will press is that it&#x27;s heavier — sealed Intent hierarchies, a reducer, an effects channel — so on a trivial list-with-loading screen it&#x27;s over-engineering; I reach for it on payment flows, multi-step wizards, and editors where interdependent state genuinely needs a state machine.&quot;</blockquote>
 <ol>
 <li><strong>Problem it solves:</strong> Strict unidirectional data flow; all state changes are explicit and testable; time-travel debugging possible.</li>
 <li><strong>Benefits:</strong></li>
@@ -1299,8 +1371,17 @@ PlaybackControls               MusicPlayerService
 <li><strong>When to avoid:</strong> Simple screens (a list with a loading state). When team has no MVI experience and delivery timeline is short.</li>
 </ol>
 <p>The rule of thumb is: start with MVVM, and upgrade to MVI when the ViewModel becomes hard to reason about because multiple state fields are interacting with each other.</p>
+<p><strong>Under the hood</strong></p>
+<p>The two patterns differ mechanically in how Compose recomposition is driven. In MVVM with N separate <code>StateFlow</code>s, each <code>collectAsStateWithLifecycle()</code> is an independent snapshot <code>State</code> object; Compose&#x27;s snapshot system tracks reads per-Composable, so an update to one flow recomposes only readers of that flow — efficient, but the screen can momentarily render an inconsistent combination of fields because the emissions aren&#x27;t atomic. MVI funnels everything into one <code>StateFlow&lt;UiState&gt;</code>: the reducer runs <code>state.copy(...)</code> to produce a new immutable instance, <code>StateFlow</code> does an <code>equals()</code> distinct-until-changed check and emits once, so the UI always sees a single coherent snapshot. The reducer being pure is what makes replay real — <code>fold(initialState, actions, ::reduce)</code> deterministically reconstructs any state from the action log.</p>
+<pre><code>// MVI core loop — single coherent emission per action
+intents
+  .scan(initialState) { state, action -&gt; reduce(state, action) } // pure, no side effects
+  .distinctUntilChanged()
+  .collect { uiState -&gt; /* one consistent snapshot → Compose recomposes once */ }
+// side effects (nav, toast) emitted separately so they don&#x27;t re-fire on recomposition</code></pre>
 <hr>
 <h3 id="compose-vs-xml-views">Compose vs XML Views</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;Compose is declarative — the UI is a function of state and the runtime reconciles changes for you — whereas XML is imperative: you inflate a view tree once and then mutate it by hand, which is where most stale-UI bugs come from. For all new screens I default to Compose because of less boilerplate, first-class animation/theming, and a smart recomposition model. The nuance interviewers want is knowing the seams: Compose still needs <code>AndroidView</code> for <code>SurfaceView</code>-based things like maps, camera, and video, and performance hinges on understanding stability, <code>remember</code>, and <code>derivedStateOf</code> so you don&#x27;t recompose more than necessary.&quot;</blockquote>
 <p><strong>Compose</strong></p>
 <ol>
 <li><strong>Problem it solves:</strong> Declarative UI — UI is a function of state; no manual view synchronization.</li>
@@ -1330,8 +1411,14 @@ PlaybackControls               MusicPlayerService
 <li><strong>When to use:</strong> Only when maintaining existing XML code or when a specific custom view is not yet Compose-portable.</li>
 <li><strong>When to avoid:</strong> Any new screen or feature.</li>
 </ol>
+<p><strong>Under the hood</strong></p>
+<p>The Compose compiler plugin rewrites every <code>@Composable</code> function to take a hidden <code>$composer</code> parameter and a <code>$changed</code> bitmask, and wraps the body in <code>composer.startRestartGroup()/endRestartGroup()</code>. Each group&#x27;s emitted nodes and <code>remember</code>ed values are stored as &quot;slots&quot; in a gap-buffer data structure called the slot table; on recomposition the runtime compares parameters via the <code>$changed</code> mask and the stability inference, and <em>skips</em> re-executing any restartable group whose inputs are unchanged — that&#x27;s the &quot;only re-render what changed&quot; claim, concretely. XML instead inflates into a heap-allocated <code>View</code> tree once via <code>LayoutInflater</code> (reflection/<code>&lt;merge&gt;</code>-aware XML parsing), and every later change is a direct field mutation plus <code>invalidate()</code>/<code>requestLayout()</code> that you trigger manually. <code>AndroidView</code> is needed for <code>SurfaceView</code>/<code>TextureView</code> because those punch a separate hardware compositor layer that Compose&#x27;s own draw pass can&#x27;t synthesize.</p>
+<pre><code>Compose:  state changes → invalidated group marked → recompose runs ONLY that group
+          → slot table updated → Layout/Draw nodes diffed → minimal redraw
+XML:      inflate tree once → you call view.setText(...) + invalidate()/requestLayout() by hand</code></pre>
 <hr>
 <h3 id="room-vs-raw-sqlite">Room vs Raw SQLite</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;Room is a compile-time abstraction over SQLite: annotation processing verifies my SQL against the schema at build time, generates the boilerplate, and gives me Flow and coroutine support plus a real migration system. Raw SQLite is just the low-level API — no type safety, manual cursors, hand-rolled migrations. I use Room almost always for structured data; I&#x27;d only drop to raw SQLite in an SDK where pulling in Room&#x27;s footprint and KSP is unacceptable. The gotcha worth naming is that Room is still SQLite underneath — exotic SQL like window functions or CTEs may need <code>@RawQuery</code>, and migrations are on me; a missing migration throws at open time, not at compile time.&quot;</blockquote>
 <p><strong>Room</strong></p>
 <ol>
 <li><strong>Problem it solves:</strong> Type-safe compile-time verified SQL on Android without boilerplate.</li>
@@ -1360,8 +1447,15 @@ PlaybackControls               MusicPlayerService
 <li><strong>When to use:</strong> SDK where pulling Room is unacceptable. Very simple use case (one table, five columns).</li>
 <li><strong>When to avoid:</strong> Any app with non-trivial data model.</li>
 </ol>
+<p><strong>Under the hood</strong></p>
+<p>Room&#x27;s KSP/kapt processor parses each <code>@Query</code> string at compile time, opens the schema you declared via <code>@Entity</code>, and actually validates column names and types against it — a typo&#x27;d column fails the build, which is the entire value proposition. It then generates a <code>*_Impl</code> DAO that binds parameters to a compiled <code>SupportSQLiteStatement</code> and walks the resulting <code>Cursor</code> into your data class, so there&#x27;s no reflection at runtime — just generated <code>cursor.getString(columnIndex)</code> calls. Reactive queries register an <code>InvalidationTracker</code> observer that uses SQLite&#x27;s per-table update hooks: writes bump a versioned trigger table, the tracker re-runs affected queries on the query executor and re-emits the Flow. Migrations are validated by a stored <code>schema hash</code> in <code>room_master_table</code>; on open, if the on-disk <code>user_version</code> differs and no matching <code>Migration</code> is registered, Room throws <code>IllegalStateException</code> — that&#x27;s the runtime (not compile-time) failure to call out.</p>
+<pre><code>build time:  @Query(&quot;SELECT name FROM user WHERE id=:id&quot;)
+             → KSP validates name/id against @Entity schema → generates UserDao_Impl
+runtime:     UserDao_Impl binds :id → SupportSQLiteStatement → Cursor → User(...)
+open time:   on-disk user_version != expected &amp;&amp; no Migration → IllegalStateException</code></pre>
 <hr>
 <h3 id="workmanager-vs-foreground-service">WorkManager vs Foreground Service</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;WorkManager and a foreground service answer different questions. WorkManager is for <em>guaranteed, deferrable</em> work — uploads, syncs, cleanup — that must eventually finish across process death and reboots, with constraint-based scheduling and backoff, but it&#x27;s not real-time: periodic work has a 15-minute floor. A foreground service is for work that&#x27;s running <em>right now</em> and the user is aware of — playback, navigation, live location — with a mandatory persistent notification. The nuance interviewers like is that they compose: a long upload can be an <code>expedited</code> WorkManager job that uses <code>setForeground()</code> to show a notification, and on Android 14 you must declare the foreground service type or the OS rejects it.&quot;</blockquote>
 <p><strong>WorkManager</strong></p>
 <ol>
 <li><strong>Problem it solves:</strong> Guaranteed deferred background work that survives process death and device reboots.</li>
@@ -1401,8 +1495,16 @@ PlaybackControls               MusicPlayerService
 <li><strong>When to use:</strong> Music/podcast playback, navigation, ongoing call, real-time location tracking, file download/upload requiring user progress.</li>
 <li><strong>When to avoid:</strong> Short background tasks (use WorkManager or coroutines). Anything that doesn&#x27;t need to be running while the user is actively watching.</li>
 </ol>
+<p><strong>Under the hood</strong></p>
+<p>WorkManager persists each request as a <code>WorkSpec</code> row in its own Room database and then delegates to a platform scheduler — <code>JobScheduler</code> on API 23+ (and <code>AlarmManager</code> + a <code>BroadcastReceiver</code> on older versions). Because the schedule lives in the OS and the spec lives on disk, work survives both process death and reboot (a boot <code>BroadcastReceiver</code> reschedules pending specs). The &quot;15-minute minimum&quot; for periodic work is a <code>JobScheduler</code> constraint, and expedited work maps to a JobScheduler <em>expedited job</em> (or a short-lived foreground service on older APIs) that the OS runs out of the normal deferral window but still subject to quota. A foreground service is a different contract entirely: <code>startForeground(id, notification)</code> must be called within ~5 seconds of start or the system throws <code>ForegroundServiceDidNotStartInTimeException</code>; on Android 14+ the call must match a <code>&lt;service android:foregroundServiceType&gt;</code> declaration and a runtime-granted permission, and the elevated process importance (<code>oom_adj</code>) is what protects it from the low-memory killer.</p>
+<pre><code>WorkManager.enqueue → WorkSpec row in Room → JobScheduler.schedule(jobInfo + constraints)
+   (process killed / reboot) → OS / boot receiver re-dispatches → Worker.doWork() on a thread pool
+
+startForegroundService() → must call startForeground() &lt; ~5s
+   → notification posted + FGS type checked (API 34) → process importance raised → survives LMK</code></pre>
 <hr>
 <h3 id="coroutines-vs-rxjava">Coroutines vs RxJava</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;I default to coroutines for all new Kotlin code — they give me structured concurrency, so a scope ties async work to a lifecycle and cancellation propagates automatically, and the code reads sequentially instead of as nested callbacks. RxJava still wins when I&#x27;m in a Java module or need exotic operators with no Flow equivalent, but those cases are rare. The gotcha an interviewer probes is that coroutines aren&#x27;t free of leaks — if you launch on a scope you don&#x27;t cancel, like <code>GlobalScope</code>, the work outlives the component, which is exactly the disposal problem RxJava had.&quot;</blockquote>
 <p><strong>Coroutines</strong></p>
 <ol>
 <li><strong>Problem it solves:</strong> Asynchronous and concurrent programming without callback hell; structured concurrency.</li>
@@ -1444,8 +1546,18 @@ PlaybackControls               MusicPlayerService
 <li><strong>When to use:</strong> Maintaining existing RxJava code. Java-only modules. Complex observable pipelines with operators that have no good coroutine equivalent.</li>
 <li><strong>When to avoid:</strong> All new Kotlin code. Any greenfield feature.</li>
 </ol>
+<p><strong>Under the hood</strong></p>
+<p>The compiler rewrites every <code>suspend</code> function via a Continuation-Passing Style transform: it adds a hidden <code>Continuation</code> parameter and turns the function body into a state machine. Each suspension point becomes a <code>label</code> case in a generated <code>invokeSuspend</code>; locals that must survive a suspension are spilled to fields on that state-machine object. When a function suspends, it returns the sentinel <code>COROUTINE_SUSPENDED</code> instead of blocking a thread; the dispatcher resumes by calling <code>resumeWith</code> on the continuation, re-entering <code>invokeSuspend</code> at the saved label. This is why a single thread can host thousands of coroutines — they&#x27;re heap objects, not OS threads.</p>
+<pre><code>suspend fun load(): Data            // source
+fun load(cont: Continuation): Any?  // compiled signature
+  switch(cont.label) {
+    case 0: cont.label = 1; return api.fetch(cont)  // may return COROUTINE_SUSPENDED
+    case 1: return parse(cont.result)               // resumed here
+  }</code></pre>
+<p>By contrast RxJava builds an operator chain of <code>Observable</code> objects at subscribe time; each <code>subscribe()</code> allocates <code>Disposable</code> links you must dispose, and there is no compiler support — the &quot;stream&quot; is a runtime object graph, not a thread-cheap state machine.</p>
 <hr>
 <h3 id="flow-vs-livedata">Flow vs LiveData</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;Flow is my default because it lives in pure Kotlin modules, has real operators, and <code>StateFlow</code> always holds a current value so there are no missed emissions across config changes. LiveData I only touch in legacy code — it&#x27;s main-thread-only and tied to the Android framework, so it can&#x27;t live in a domain module. The nuance interviewers want is collection safety: a cold Flow keeps running in the background unless I collect with <code>repeatOnLifecycle</code> or <code>collectAsStateWithLifecycle</code>, whereas LiveData stops automatically — so Flow trades convenience for control and you can leak if you forget that.&quot;</blockquote>
 <p><strong>Flow (StateFlow/SharedFlow)</strong></p>
 <ol>
 <li><strong>Problem it solves:</strong> Reactive data streams that integrate with coroutines and support backpressure.</li>
@@ -1483,8 +1595,15 @@ PlaybackControls               MusicPlayerService
 <li><strong>When to use:</strong> Maintaining existing LiveData code.</li>
 <li><strong>When to avoid:</strong> All new code. Any code in domain/data layers (non-Android modules).</li>
 </ol>
+<p><strong>Under the hood</strong></p>
+<p>A plain <code>Flow</code> is <em>cold</em>: the lambda passed to <code>flow { }</code> doesn&#x27;t run until a terminal <code>collect</code> is called, and it re-executes per collector. <code>StateFlow</code> is <em>hot</em> and conflated — it&#x27;s backed by a single <code>AtomicReference</code>-style slot holding the latest value plus an array of subscriber slots; new collectors immediately receive the current value, and equal consecutive values are dropped via <code>equals</code>, which is why a poorly chosen data class can swallow emissions. Collection suspends the collecting coroutine until cancelled. <code>LiveData</code>, by comparison, keeps an <code>ObserverWrapper</code> per observer and registers a <code>LifecycleObserver</code>; it gates dispatch on whether the owner is at least <code>STARTED</code>, and <code>setValue</code> enforces the main thread while <code>postValue</code> hops through a <code>Runnable</code> posted to the main <code>Handler</code> — and because <code>postValue</code> only stores the <em>last</em> value before the runnable runs, rapid posts can be coalesced and lost.</p>
+<pre><code>// StateFlow conflation: only distinct values reach collectors
+val state = MutableStateFlow(0)
+state.value = 1   // emitted
+state.value = 1   // dropped — equals() the current value</code></pre>
 <hr>
 <h3 id="hilt-vs-manual-di">Hilt vs Manual DI</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;Hilt is my pick for standard apps because it generates the Dagger component hierarchy already wired to the Android lifecycle — Application, Activity, ViewModel scopes — so I get correct scoping without writing it. Manual DI I reserve for SDKs and pure-Kotlin modules where I can&#x27;t depend on the framework and want zero annotation processing. The trade-off interviewers care about is build time: Hilt runs through KAPT or KSP, and that annotation processing is usually the single biggest hit to incremental build speed, so on a large modularized app I weigh that cost deliberately.&quot;</blockquote>
 <p><strong>Hilt</strong></p>
 <ol>
 <li><strong>Problem it solves:</strong> Boilerplate-free DI on Android using annotation-based code generation on top of Dagger 2.</li>
@@ -1523,8 +1642,15 @@ PlaybackControls               MusicPlayerService
 <li><strong>When to use:</strong> SDKs. Small apps. Non-Android modules in a larger project.</li>
 <li><strong>When to avoid:</strong> Large apps with many injection points — the boilerplate becomes unmanageable.</li>
 </ol>
+<p><strong>Under the hood</strong></p>
+<p>Hilt/Dagger resolve the entire dependency graph at <em>compile time</em>, not runtime — there is no reflection in the hot path. The annotation processor reads <code>@Inject</code> constructors, <code>@Module</code>/<code>@Provides</code>, and <code>@Binds</code>, then generates Java <code>Factory</code> classes (e.g. <code>MyClass_Factory</code>) and component implementations (<code>DaggerApplicationComponent</code>) that are just nested <code>Provider</code> objects calling constructors directly. Scoping is implemented as <code>DoubleCheck</code>, a double-checked-locking lazy wrapper that caches a single instance per component. Hilt adds a bytecode-transform step that injects boilerplate into your <code>Application</code>/<code>Activity</code> and generates the <code>@InstallIn</code> component wiring. Because it&#x27;s full graph validation, a missing binding fails the build — that&#x27;s the source of the &quot;opaque&quot; multi-line Dagger errors.</p>
+<pre><code>@Inject MyRepo(api: Api)  ──KAPT/KSP──▶  MyRepo_Factory implements Provider&lt;MyRepo&gt;
+                                          get() = MyRepo(apiProvider.get())
+@Singleton  ──▶ DoubleCheck.provider(...)  // one instance cached per component</code></pre>
+<p>Manual DI, by contrast, is just hand-written constructor calls resolved when the code runs — no generated factories, no graph validation, so a missing dependency is a normal compile error at the call site rather than a processor failure.</p>
 <hr>
 <h3 id="monolith-vs-modular-architecture">Monolith vs Modular Architecture</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;A monolith in a single <code>:app</code> module is fine for a small team and an MVP — one DI graph, no inter-module plumbing. But it doesn&#x27;t scale: any change recompiles everything and there are no ownership boundaries. I move to modular for multi-team apps and to attack build time, because Gradle can compile independent modules in parallel and skip unchanged ones. The subtlety interviewers push on is that modularization only pays off if the dependency graph is wide and flat — if everything depends on one big <code>:common</code> module, you serialize the build and lose the parallelism you modularized for.&quot;</blockquote>
 <p><strong>Monolith (Single App Module)</strong></p>
 <ol>
 <li><strong>Problem it solves:</strong> Simple app structure where all code lives in <code>:app</code>.</li>
@@ -1565,8 +1691,16 @@ PlaybackControls               MusicPlayerService
 <li><strong>When to use:</strong> Any app with &gt; 2 teams. Any app targeting aggressive build time reduction. Any app planning DFMs.</li>
 <li><strong>When to avoid:</strong> Small teams where the overhead exceeds the benefit.</li>
 </ol>
+<p><strong>Under the hood</strong></p>
+<p>Gradle models the build as a task DAG (directed acyclic graph). Modules with no dependency edge between them are scheduled onto separate worker threads and built in parallel; a module rebuilds only if its inputs changed or a dependency&#x27;s <em>public ABI</em> changed. That last point is the real mechanism behind &quot;only changed modules recompile&quot;: Kotlin/Gradle compute an ABI fingerprint of each module&#x27;s public API, and if you change a method <em>body</em> but not its signature, downstream modules read from the build cache and skip recompilation. An <code>:api</code> module exposing only interfaces maximizes this — implementation changes don&#x27;t perturb the ABI consumers see. A monolith collapses this DAG into one node, so every edit invalidates one giant compilation task with no parallelism and no per-module cache hits.</p>
+<pre><code>:feature-a ─┐
+:feature-b ─┼─▶ :core-api (interfaces only)   parallel; downstream skips
+:feature-c ─┘        ▲                          rebuild on body-only edits
+                     │  changing an impl behind :core-api
+                  :core-impl  ──── ABI unchanged ⇒ cached</code></pre>
 <hr>
 <h3 id="single-activity-vs-multiple-activities">Single Activity vs Multiple Activities</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;Single Activity with a <code>NavController</code> is my default for a linear app — one back stack, shared ViewModel scope across the graph, and cheap Compose transitions. I reach for multiple Activities when features are genuinely independent or need their own task stacks and external entry points, because that&#x27;s what Android&#x27;s task model handles correctly. The thing interviewers probe is task and back-stack behavior: NavController only manages an in-process fragment/composable back stack, so deep links and launch modes that need real Android task isolation still want separate Activities.&quot;</blockquote>
 <p><strong>Single Activity</strong></p>
 <ol>
 <li><strong>Problem it solves:</strong> One <code>Activity</code> hosts all screens; <code>NavController</code>/<code>NavHost</code> handles navigation within.</li>
@@ -1604,8 +1738,16 @@ PlaybackControls               MusicPlayerService
 <li><strong>When to use:</strong> Flows with independent entry points. Multi-process apps. Feature modules that should be isolated.</li>
 <li><strong>When to avoid:</strong> Within a single linear flow (use NavController for that).</li>
 </ol>
+<p><strong>Under the hood</strong></p>
+<p>An Activity is a system-managed component: launching one sends an <code>Intent</code> to the <code>ActivityManagerService</code> in <code>system_server</code> over Binder, which decides the target <em>task</em> (an affinity-based stack of activities) per the <code>launchMode</code>/<code>taskAffinity</code> flags, then drives the lifecycle via the <code>Instrumentation</code>/<code>ActivityThread</code> on your main thread. That cross-process round-trip plus full lifecycle teardown is why Activity transitions are &quot;heavier.&quot; NavController, by contrast, never touches the system: its back stack is a plain in-process list of <code>NavBackStackEntry</code> objects, each owning its own <code>ViewModelStore</code>, <code>SavedStateRegistry</code>, and <code>Lifecycle</code>; &quot;navigation&quot; just swaps the displayed destination and pushes/pops that list. So the system back button and <code>onBackPressed</code> resolve against the OS task stack for Activities but against NavController&#x27;s list for in-app destinations — which is exactly why deep links that must restore a real Android back stack lean on Activities or explicit <code>TaskStackBuilder</code>.</p>
+<pre><code>startActivity(intent) ──Binder──▶ ActivityManagerService (system_server)
+                                     resolves task by launchMode/affinity
+                                     ◀── schedules lifecycle on ActivityThread
+
+navController.navigate(route)  // in-process: push NavBackStackEntry onto a List</code></pre>
 <hr>
 <h3 id="repository-per-feature-vs-shared-repository">Repository per Feature vs Shared Repository</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;I scope a repository per feature when the data is genuinely owned by that feature — it keeps modules decoupled and trivial to mock. But for anything multiple features read, like user identity, session, or cart, I want a single shared repository so there&#x27;s one source of truth. The failure mode interviewers want me to name is cache coherence: if two per-feature repositories each cache the same entity, they drift out of sync, and you ship bugs where one screen shows stale data the other already updated.&quot;</blockquote>
 <p><strong>Repository per Feature</strong></p>
 <ol>
 <li><strong>Problem it solves:</strong> Each feature owns its data access layer; no shared state.</li>
@@ -1638,8 +1780,14 @@ PlaybackControls               MusicPlayerService
 <li><strong>When to use:</strong> User identity, session, cart — anything that must be consistent across features.</li>
 <li><strong>When to avoid:</strong> Feature-specific data that no other feature needs.</li>
 </ol>
+<p><strong>Under the hood</strong></p>
+<p>The &quot;single source of truth&quot; only holds if every reader observes the <em>same</em> in-memory instance. A shared repository typically exposes a hot <code>StateFlow</code> (or Room-backed Flow) over one process-singleton instance — usually <code>@Singleton</code>-scoped in DI — so when a writer mutates state, the conflated flow re-emits and <em>all</em> collectors converge on the new value. Two per-feature repositories, even pointing at the same SQLite tables or network endpoint, each hold their own cache object and their own flow; a write through one doesn&#x27;t notify the other, so they diverge until something forces a refetch. Room mitigates part of this because its query Flows observe the underlying table&#x27;s <code>InvalidationTracker</code> and re-emit on any write to that table — meaning two repositories reading via Room <em>queries</em> (not in-memory caches) can stay coherent through the database, but two independent memory caches cannot.</p>
+<pre><code>Shared:   write ─▶ MutableStateFlow (one @Singleton) ─▶ re-emits ─▶ all collectors agree
+Per-feat: write ─▶ Repo A cache ──╳── Repo B cache (no notification) ⇒ stale reads
+Room:     write ─▶ table ─▶ InvalidationTracker ─▶ all query Flows re-run</code></pre>
 <hr>
 <h3 id="domain-layer-vs-no-domain-layer">Domain Layer vs No Domain Layer</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;A domain layer means I push business logic into pure-Kotlin use-case classes that don&#x27;t touch Android, so the ViewModel just orchestrates and the logic is trivially unit-testable and KMP-shareable. The tradeoff — and the thing interviewers probe — is that on a simple CRUD screen the use case becomes a one-line pass-through to a repository, which is pure ceremony. So I treat it as conditional: add it when logic is genuinely complex, multi-step, or shared across ViewModels, not as a blanket rule.&quot;</blockquote>
 <p><strong>Domain Layer</strong></p>
 <ol>
 <li><strong>Problem it solves:</strong> Business logic in pure Kotlin use-case classes, independent of Android framework and UI.</li>
@@ -1666,8 +1814,15 @@ PlaybackControls               MusicPlayerService
 <li><strong>When to use:</strong> Simple screens. Prototype code.</li>
 <li><strong>When to avoid:</strong> Any non-trivial business logic. Multi-team codebases where logic ownership matters.</li>
 </ol>
+<p><strong>Under the hood</strong></p>
+<p>A &quot;use case&quot; carries no special framework magic — there&#x27;s no <code>androidx.usecase</code> class. The convention is just a single-public-method class, often exposing <code>operator fun invoke(...)</code> so callers can write <code>getUser(id)</code> instead of <code>getUser.execute(id)</code>. The compiler lowers that <code>invoke</code> operator to an ordinary virtual method call; the call-site sugar is resolved entirely at compile time. Because the class has no Android imports, its compiled bytecode lands in a module that can target the JVM or, via Kotlin Multiplatform, be recompiled to a <code>.klib</code> and lowered to LLVM IR for native or transpiled to JS — the same source feeds multiple backends. The &quot;purity&quot; that makes it fast to test is literally the absence of any <code>android.jar</code> symbol in the class&#x27;s constant pool, so JUnit can load it on a desktop JVM without Robolectric&#x27;s shadow framework or an emulator.</p>
+<pre><code>class IsEligibleForBooking(private val repo: PatientRepo) {
+    // compiles to a normal method; `eligible(patient)` is invoke() sugar
+    operator fun invoke(patient: Patient): Boolean = /* pure logic */
+}</code></pre>
 <hr>
 <h3 id="local-first-vs-network-first">Local-First vs Network-First</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;Local-first means the UI reads from a local source of truth — usually Room — so reads are instant and the app works offline, with the network just refreshing the cache in the background. The catch is you&#x27;ve now signed up for staleness and conflict resolution, so I reserve it for data where showing slightly-old data beats showing a spinner. For correctness-critical data like a payment confirmation or live seat availability, I go network-first and fail loudly rather than serve a stale value.&quot;</blockquote>
 <p><strong>Local-First</strong></p>
 <ol>
 <li><strong>Problem it solves:</strong> App works offline; UI always responsive (reads from local DB first).</li>
@@ -1703,8 +1858,14 @@ PlaybackControls               MusicPlayerService
 <li><strong>When to use:</strong> Real-time data (prices, inventory, live scores). Data that is wrong if stale.</li>
 <li><strong>When to avoid:</strong> Data that changes infrequently. Poor network conditions.</li>
 </ol>
+<p><strong>Under the hood</strong></p>
+<p>The local-first pattern is mechanically the &quot;single source of truth&quot; Flow: the UI collects a Room <code>@Query</code> returning <code>Flow&lt;List&lt;T&gt;&gt;</code>, and the network only <em>writes</em> into the DB. Room implements that reactive query by registering an <code>InvalidationTracker</code> — an <code>Observer</code> keyed to the queried table names — backed by an <code>UPDATE</code>/<code>INSERT</code>/<code>DELETE</code> trigger on a hidden <code>room_table_modification_log</code> table. When a write commits, the trigger flips a per-table dirty flag; the tracker polls (or is notified) and re-runs the query, re-emitting on the Flow. That&#x27;s why a background sync write automatically pushes fresh data to a screen that&#x27;s only reading. Network-first skips this entirely: the repository awaits the suspend HTTP call and maps the response straight to UI state, so cancellation of the calling coroutine (e.g. <code>viewModelScope</code> clearing) propagates a <code>CancellationException</code> through OkHttp&#x27;s call and there&#x27;s no cached fallback if it fails.</p>
+<pre><code>Network → repo.upsert(rows) → SQLite write → InvalidationTracker fires
+        → Room re-runs @Query → Flow re-emits → UI recomposes
+(UI never awaits the network on the read path)</code></pre>
 <hr>
 <h3 id="synchronous-vs-asynchronous-ipc">Synchronous vs Asynchronous IPC</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;Synchronous AIDL is a blocking transact on a Binder thread — the caller waits for the remote process to return, which is simple but dangerous: if the callee does real work you can ANR, and re-entrant synchronous calls can deadlock the limited Binder thread pool. Asynchronous IPC — <code>oneway</code> methods, callbacks, or Messenger — returns immediately and delivers results later on a Binder thread you marshal back to main. My rule: synchronous only for guaranteed sub-millisecond status queries, async for anything touching I/O or computation.&quot;</blockquote>
 <p><strong>Synchronous IPC (AIDL blocking call)</strong></p>
 <ol>
 <li><strong>Problem it solves:</strong> Caller waits for the result from another process; simpler sequential code.</li>
@@ -1738,8 +1899,13 @@ PlaybackControls               MusicPlayerService
 <li><strong>When to use:</strong> All IPC involving I/O or computation. State subscription (register callback, receive updates over time).</li>
 <li><strong>When to avoid:</strong> When synchronous result is required and the call is guaranteed fast.</li>
 </ol>
+<p><strong>Under the hood</strong></p>
+<p>Every AIDL call bottoms out in <code>IBinder.transact()</code>, which copies the marshalled <code>Parcel</code> across the process boundary through the <code>/dev/binder</code> kernel driver via an <code>ioctl</code>. For a synchronous call the driver blocks the caller&#x27;s thread and schedules the work on a thread from the callee&#x27;s <strong>Binder thread pool</strong>, which is capped (16 by default per process). That cap is exactly why blocking calls are risky: saturate the pool and <em>all</em> IPC into that process stalls. Async is the <code>oneway</code> flag in the <code>.aidl</code> — the generated stub sets <code>FLAG_ONEWAY</code> on the transaction, so <code>transact()</code> returns as soon as the kernel has buffered the Parcel into the target&#x27;s transaction queue without waiting for a reply. A callback is just a second <code>IBinder</code> (a <code>Stub</code> you pass as a method argument), so the &quot;reply&quot; is a fresh <code>oneway</code> transaction in the reverse direction, landing on one of <em>your</em> Binder threads — which is why you then post it to a <code>Handler</code> to reach the main thread. The Binder transaction buffer is ~1MB shared per process, so oversized Parcels throw <code>TransactionTooLargeException</code> regardless of sync vs async.</p>
+<pre><code>sync:  transact(code, data, reply, 0)        → caller thread parks until reply Parcel returns
+async: transact(code, data, null, FLAG_ONEWAY) → returns after kernel buffers data</code></pre>
 <hr>
 <h3 id="hashmap-vs-treemap">HashMap vs TreeMap</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;HashMap gives me amortized O(1) get/put by bucketing on the key&#x27;s hashCode, with no ordering guarantee, and that&#x27;s my default. TreeMap is a red-black tree that keeps keys sorted at O(log n), which I reach for only when I actually need ordered iteration or range queries like headMap/subMap. The Android nuance an interviewer likes is that for small maps I&#x27;d prefer ArrayMap, and for Int keys SparseArray, because both avoid the autoboxing and per-entry Node overhead that HashMap pays.&quot;</blockquote>
 <p><strong>HashMap</strong></p>
 <ol>
 <li><strong>Problem it solves:</strong> O(1) average-case key lookup, insertion, deletion.</li>
@@ -1756,9 +1922,13 @@ PlaybackControls               MusicPlayerService
 <li><strong>When to use:</strong> Range queries. Ordered iteration. Implementing a priority queue-like structure where keys have natural ordering.</li>
 <li><strong>When to avoid:</strong> Simple lookup where ordering is irrelevant. Hot paths where O(log n) is slower than O(1).</li>
 </ol>
-<p>One Android-specific point worth adding: also consider <code>ArrayMap</code> for small maps with fewer than about 100 entries (lower memory than HashMap), and <code>SparseArray</code> when your keys are <code>Int</code> values (avoids boxing entirely).</p>
+<p><strong>Under the hood</strong></p>
+<p><code>HashMap</code> is an array of buckets (<code>Node[] table</code>) indexed by <code>(table.length - 1) &amp; hash</code>, where <code>hash</code> is the key&#x27;s <code>hashCode()</code> spread with <code>h ^ (h &gt;&gt;&gt; 16)</code> to mix high bits into the low index. Colliding keys form a singly-linked chain; since Java 8 / ART, a bucket that exceeds 8 entries (<code>TREEIFY_THRESHOLD</code>) and a table of at least 64 converts that chain into a red-black tree, bounding worst-case lookup at O(log n) instead of O(n). It resizes (doubling, <code>LOAD_FACTOR 0.75</code>) by rehashing every entry — a spike that&#x27;s why presizing matters. <code>TreeMap</code> has no array and no hashing at all: it&#x27;s a red-black tree of <code>Entry</code> nodes, ordered by the <code>Comparator</code> (or natural <code>Comparable</code>), so every get/put walks ~log₂n levels doing comparisons. That&#x27;s why <code>firstKey</code>/<code>subMap</code> are cheap for TreeMap (tree traversal) and impossible for HashMap. Android&#x27;s <code>ArrayMap</code>/<code>SparseArray</code> use a different layout entirely — two parallel arrays (sorted hashes + key/value objects) binary-searched — trading O(log n) lookup for far less memory and zero <code>Node</code> allocation, and <code>SparseArray</code> stores <code>int[]</code> keys directly to skip <code>Integer</code> boxing.</p>
+<pre><code>HashMap:  hash = h ^ (h&gt;&gt;&gt;16);  idx = (len-1) &amp; hash;  bucket = chain | RB-tree(if &gt;8)
+TreeMap:  root → left/right by compare(key);  balanced red-black, height ~log n</code></pre>
 <hr>
 <h3 id="arraylist-vs-linkedlist">ArrayList vs LinkedList</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;ArrayList is a growable array — O(1) indexed access and great cache locality because elements are contiguous, at the cost of O(n) mid-list inserts that shift the tail. LinkedList is a doubly-linked node chain with O(1) head/tail ops but O(n) indexing and a pointer-chasing cache penalty. On Android LinkedList is almost never the right call — for queue/deque I reach for ArrayDeque, which is a circular array that gets O(1) at both ends without the per-node object overhead.&quot;</blockquote>
 <p><strong>ArrayList</strong></p>
 <ol>
 <li><strong>Problem it solves:</strong> Ordered, indexed, random-access list backed by an array.</li>
@@ -1790,11 +1960,17 @@ PlaybackControls               MusicPlayerService
 <li><strong>When to avoid:</strong> Any list where you access by index. Any list that will be iterated many times. Any list that will be displayed in a UI (use ArrayList).</li>
 </ol>
 <p>In practice, <code>LinkedList</code> is rarely the right answer on Android. <code>ArrayDeque</code> is almost always preferable for queue and deque use cases because of its better cache locality and lower per-element overhead.</p>
+<p><strong>Under the hood</strong></p>
+<p><code>ArrayList</code> wraps a single <code>Object[] elementData</code>. <code>get(i)</code> is a bounds check plus one array load. <code>add</code> at the end writes to the next slot until full, then <code>grow()</code> allocates a new array ~1.5× the old size and <code>System.arraycopy</code>s everything over — amortized O(1), but each individual resize is O(n) and produces garbage. <code>add(i, x)</code> / <code>remove(i)</code> in the middle do an <code>arraycopy</code> to shift the tail, hence O(n). Because the array is contiguous, iterating it streams sequential memory the CPU prefetcher loves. <code>LinkedList</code> is a chain of <code>Node</code> objects, each holding the element plus <code>prev</code> and <code>next</code> references — so on a 64-bit ART runtime every element costs an extra object header (~16 bytes) plus two references, and <code>get(i)</code> walks the chain from whichever end is closer, dereferencing pointers that scatter across the heap and blow the cache. <code>ArrayDeque</code> sidesteps both: a circular <code>Object[]</code> with <code>head</code>/<code>tail</code> indices that wrap with <code>&amp; (length - 1)</code> (capacity is always a power of two), giving O(1) at both ends with array locality and no node allocation — which is why it beats <code>LinkedList</code> for queues in practice.</p>
+<pre><code>ArrayList:  [a][b][c][d][_]   get(i)=O(1) load;  insert mid → arraycopy shift O(n)
+LinkedList: a⇄b⇄c⇄d           get(i)=O(n) walk;  +header+2 refs per node, poor locality
+ArrayDeque: circular array, head/tail &amp; (len-1)  → O(1) both ends, contiguous</code></pre>
 <hr>
 <h2 id="153-legacy-code-and-migration">15.3 Legacy Code and Migration</h2>
 <p>When an interviewer asks about migration, what they are really asking is: can you drive a complex multi-month engineering project without stopping feature work, without breaking production, and while bringing the whole team along? Every answer here needs to demonstrate three things — discipline, incrementalism, and measurement.</p>
 <hr>
 <h3 id="java-to-kotlin">Java to Kotlin</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;I treat Java-to-Kotlin as an incremental interop migration, never a big bang — Kotlin and Java compile to the same bytecode and call each other freely, so all new code is Kotlin and legacy files convert opportunistically when I&#x27;m already touching them. The trap is platform types: when Kotlin calls un-annotated Java it sees <code>String!</code>, which silently bypasses null checks, so I add <code>@Nullable</code>/<code>@NonNull</code> to the Java first, then convert. I prove it worked by watching the NPE rate in Sentry drop, not just by counting converted files.&quot;</blockquote>
 <p><strong>Goal:</strong> Incrementally replace Java files with idiomatic Kotlin without breaking existing tests or callers.</p>
 <p><strong>Approach:</strong></p>
 <ol>
@@ -1840,8 +2016,14 @@ PlaybackControls               MusicPlayerService
 <li><code>@JvmStatic</code>, <code>@JvmOverloads</code>, <code>@JvmField</code> needed when Kotlin code is called from Java.</li>
 <li><code>data class</code> <code>copy()</code> misuse — the copy is shallow; mutable references inside are shared.</li>
 </ul>
+<p><strong>Under the hood</strong></p>
+<p>Both languages compile to JVM bytecode, then ART&#x27;s dex compiler (<code>d8</code>/<code>r8</code>) lowers it to DEX, which is why interop is free — at the bytecode level a Kotlin class and a Java class are indistinguishable callers. Kotlin&#x27;s null safety is mostly a <em>compile-time</em> fiction: the type system enforces <code>String</code> vs <code>String?</code>, but for a non-null <em>parameter</em> the compiler also injects a runtime <code>Intrinsics.checkNotNullParameter(arg, &quot;name&quot;)</code> guard at the method entry, so a null sneaking in from Java fails fast with a clear message instead of a mysterious NPE later. <strong>Platform types</strong> (<code>String!</code>) arise because un-annotated Java carries no nullability metadata in its bytecode, so the compiler emits <em>no</em> check and trusts you — that&#x27;s the silent hole the migration order closes. Annotations like <code>@Nullable</code> are read from the class file (or are recognized JSR-305/<code>androidx.annotation</code> markers) and flip the inferred Kotlin type to <code>String?</code>, forcing safe calls. The <code>@Jvm*</code> annotations are pure codegen directives: <code>@JvmStatic</code> emits a real <code>static</code> method (instead of routing through the synthetic <code>Companion</code> instance field), <code>@JvmField</code> suppresses the getter/setter and exposes a public field, and <code>@JvmOverloads</code> generates one bytecode method per default-parameter combination so Java callers — which have no concept of default arguments — can omit them.</p>
+<pre><code>Foo.java (no @Nullable) → bytecode has no null metadata → Kotlin sees String! (no check)
+Foo.java (@Nullable)    → metadata in .class           → Kotlin sees String? (safe call forced)
+fun f(x: String)        → compiler injects Intrinsics.checkNotNullParameter(x, &quot;x&quot;)</code></pre>
 <hr>
 <h3 id="xml-to-compose">XML to Compose</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;I migrate XML to Compose incrementally using the interop layer — <code>ComposeView</code> to drop Compose into an existing Fragment, or <code>AndroidView</code> to embed legacy views inside Compose, so I never have to do a big-bang rewrite. I write all new screens in Compose and pilot one simple, well-tested existing screen first. The gotcha interviewers love is the composition strategy: in a Fragment you must set <code>ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed</code>, otherwise the composition outlives the view and leaks.&quot;</blockquote>
 <p><strong>Goal:</strong> Migrate screens from XML layouts to Jetpack Compose incrementally.</p>
 <p><strong>Approach:</strong></p>
 <ol>
@@ -1877,8 +2059,17 @@ PlaybackControls               MusicPlayerService
 <li><code>remember</code> used incorrectly when <code>rememberSaveable</code> is needed for config change survival.</li>
 <li>Recomposition storms from unstable lambdas (use <code>remember</code> for callbacks, stable data classes).</li>
 </ul>
+<p><strong>Under the hood</strong></p>
+<p><code>ComposeView</code> is itself an <code>AndroidView</code> (a subclass of <code>AbstractComposeView</code> extends <code>ViewGroup</code>). When you call <code>setContent</code>, it lazily creates a <code>Composition</code> backed by a <code>Recomposer</code> running on the <code>AndroidUiDispatcher</code> (which ticks off the <code>Choreographer</code> frame callback). The Compose runtime builds a gap buffer &quot;slot table&quot; of your composables and an applier that emits <code>LayoutNode</code>s — not Android <code>View</code>s — so a Compose subtree renders into a single host <code>View</code> that draws directly onto the <code>RenderNode</code>/<code>Canvas</code>. <code>AndroidView</code>, going the other direction, wraps a real <code>View</code> in a <code>LayoutNode</code> via a <code>ViewFactoryHolder</code> and re-runs the <code>update</code> block on every recomposition that touches a read state. The composition strategy matters because the <code>Composition</code> holds references to the composable lambdas and their captured state; without disposing it on view destruction, the slot table and <code>Recomposer</code> registration keep the Fragment&#x27;s view tree alive.</p>
+<pre><code>setContent { } ──► Composition (slot table) ──► Recomposer (AndroidUiDispatcher)
+                                  │
+                                  ▼
+                          LayoutNode tree ──► RenderNode/Canvas (one host View)
+ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed
+   └─ observes ViewTreeLifecycleOwner → disposes Composition on DESTROYED</code></pre>
 <hr>
 <h3 id="mvp-to-mvvmmvi">MVP to MVVM/MVI</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;I treat the existing <code>View</code> interface as a ready-made state contract: every <code>showX()</code> call maps to a field in a <code>StateFlow&lt;UiState&gt;</code>. I stand up a ViewModel in parallel, drain the Presenter&#x27;s logic into it until the Presenter is just a thin bridge, then swap the View interface for a Compose screen and delete the Presenter. The thing interviewers probe is RxJava in the Presenter — I don&#x27;t rip it out all at once; I bridge with <code>kotlinx-coroutines-rx2</code> (<code>await()</code>/<code>asFlow()</code>) so I can migrate one subscription at a time.&quot;</blockquote>
 <p><strong>Goal:</strong> Replace Presenter + View interface pattern with ViewModel + StateFlow, without stopping feature work.</p>
 <p><strong>Approach:</strong></p>
 <ol>
@@ -1906,8 +2097,15 @@ PlaybackControls               MusicPlayerService
 <li>Presenter files remaining (tracked in migration backlog).</li>
 <li>Test coverage before and after (ViewModel tests should cover same paths as Presenter tests).</li>
 </ul>
+<p><strong>Under the hood</strong></p>
+<p>A <code>ViewModel</code> survives configuration changes because the <code>ViewModelStore</code> that holds it is retained across Activity recreation: <code>ComponentActivity</code> returns the store in <code>onRetainNonConfigurationInstance()</code>, so the same instance is rehydrated after a rotation rather than garbage-collected. <code>viewModelScope</code> is a lazily-created <code>CoroutineScope</code> whose <code>Job</code> is a <code>SupervisorJob</code> plus <code>Dispatchers.Main.immediate</code>; the framework calls <code>scope.cancel()</code> from <code>clear()</code> (which runs <code>onCleared()</code>), so coroutines die deterministically when the store is finally cleared. The <code>kotlinx-coroutines-rx2</code> bridge works by adapting Rx&#x27;s push-based callbacks to coroutine suspension: <code>Single.await()</code> registers a <code>SingleObserver</code> and resumes the suspended continuation in <code>onSuccess</code>/<code>onError</code>, while <code>asFlow()</code> wraps the <code>Observable</code> in a <code>callbackFlow</code>-style cold stream that subscribes on collection and disposes the <code>Disposable</code> on cancellation.</p>
+<pre><code>rotation ──► Activity destroyed ──► ViewModelStore retained (NonConfigurationInstance)
+          └─► new Activity ──► same ViewModel, same StateFlow value replayed
+Single.await(): suspend → SingleObserver.onSuccess(v) → continuation.resume(v)
+Observable.asFlow(): collect → subscribe(); cancel → Disposable.dispose()</code></pre>
 <hr>
 <h3 id="asynctaskrxjava-to-coroutines">AsyncTask/RxJava to Coroutines</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;<code>AsyncTask</code> was deprecated in API 30 and the mapping is basically one-to-one — each task becomes a <code>launch { withContext(IO) { } }</code>, with the result handed back on Main automatically. For RxJava I lean on the <code>kotlinx-coroutines-rx2</code> bridge and migrate leaf utilities first, working inward. The win interviewers want me to name is structured cancellation: instead of manually clearing a <code>CompositeDisposable</code> in <code>onDestroy</code>, the scope cancels in <code>onCleared()</code> and cancellation propagates to every child coroutine for free.&quot;</blockquote>
 <p><strong>AsyncTask Migration:</strong></p>
 <p><code>AsyncTask</code> is deprecated in API 30 and removed in API 33. Migration is straightforward:</p>
 <pre><code>// Before: AsyncTask
@@ -1931,8 +2129,18 @@ lifecycleScope.launch {
 </ul>
 <p>Migrate one subscription at a time. Start with leaf-level utilities that have no callers depending on Observable return types. Work inward.</p>
 <p><strong>Disposing subscriptions — moving to structured cancellation:</strong> Replace <code>CompositeDisposable.clear()</code> in <code>onDestroy</code> with simply letting the <code>CoroutineScope</code> cancel in <code>onCleared()</code>. Cancellation propagates automatically to all child coroutines.</p>
+<p><strong>Under the hood</strong></p>
+<p><code>suspend</code> functions are compiled by the Kotlin compiler into a state machine via CPS (continuation-passing style): each suspension point becomes a label, and the function gets an extra <code>Continuation</code> parameter; locals that must survive a suspension are stored as fields on a generated <code>ContinuationImpl</code> rather than on the JVM stack. <code>withContext(Dispatchers.IO)</code> doesn&#x27;t spawn a thread per call — it dispatches the continuation onto a shared, elastic thread pool (default 64 threads) and resumes back on the caller&#x27;s dispatcher when the block returns. Structured cancellation works because every coroutine builder installs a <code>Job</code> into a parent-child tree in the <code>CoroutineContext</code>; cancelling the parent <code>Job</code> flips children to a cancelling state and a <code>CancellationException</code> is thrown at the next suspension point (cooperative cancellation). That&#x27;s why dropping <code>CompositeDisposable.clear()</code> is safe: <code>onCleared()</code> calls <code>viewModelScope</code>&#x27;s <code>Job.cancel()</code>, which walks the child <code>Job</code>s and tears them down without manual bookkeeping.</p>
+<pre><code>suspend fun f() { a(); g(); b() }   // g() suspends
+   ▼ compiler
+class f$Continuation { int label; /* saved locals */ }
+   label 0 ─► a(); call g(this) ─► returns COROUTINE_SUSPENDED
+   (later) resumeWith(result) ─► label 1 ─► b()
+Job tree:  viewModelScope.Job ──┬── launch{}.Job ── cancel propagates down
+                                └── launch{}.Job</code></pre>
 <hr>
 <h3 id="introducing-dependency-injection">Introducing Dependency Injection</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;The real first step has nothing to do with Hilt — it&#x27;s converting classes to constructor injection so they receive dependencies instead of building them, which you can do with zero framework. Then I add Hilt incrementally: <code>@HiltAndroidApp</code> on the Application, <code>@AndroidEntryPoint</code> on Activities and Fragments one at a time, <code>@Inject constructor</code>, and <code>@Provides</code> modules for third-party types. The risk an interviewer flags is that <code>@HiltAndroidApp</code> rewrites Application init and the whole graph is validated at compile time, so a single missing binding fails the build — which is actually the feature, not the bug.&quot;</blockquote>
 <p><strong>Goal:</strong> Add Hilt (or Dagger) to a codebase that uses manual construction (e.g., <code>MyClass(MyDep())</code>).</p>
 <p><strong>Approach:</strong></p>
 <ol>
@@ -1958,8 +2166,18 @@ lifecycleScope.launch {
 <li><strong>Test modules:</strong> Add <code>@UninstallModules</code> + fake <code>@TestInstallIn</code> modules for testing.</li>
 </ol>
 <p><strong>Risk:</strong> Adding <code>@HiltAndroidApp</code> changes Application initialization. Test thoroughly.</p>
+<p><strong>Under the hood</strong></p>
+<p>Hilt is an annotation processor (Dagger under the hood) that runs at compile time and generates the entire object graph as plain Java code — there is no runtime reflection. <code>@HiltAndroidApp</code> triggers generation of a <code>Hilt_MyApplication</code> base class plus the root <code>ApplicationComponent</code>/<code>SingletonComponent</code>; <code>@AndroidEntryPoint</code> generates a <code>Hilt_MyActivity</code> superclass that, in <code>onCreate</code>, calls into the generated component to perform field injection. Each <code>@Inject constructor</code> becomes a generated <code>Factory</code> class with a <code>get()</code> method, and <code>@Provides</code> methods become factory classes too; scoped bindings are wrapped in a double-check <code>DoubleCheck</code> provider for thread-safe lazy singletons. Because the whole graph is resolved and validated during <code>kapt</code>/<code>ksp</code>, a missing or duplicate binding is a compile error rather than a runtime crash — the cost is that Hilt adds an annotation-processing pass to your build.</p>
+<pre><code>@Inject constructor(dep: Dep)
+   ▼ generated
+MyClass_Factory implements Provider&lt;MyClass&gt; {
+    get() = MyClass(depProvider.get())
+}
+@HiltAndroidApp ──► SingletonComponent (DAG) ──► component.inject(activity)
+scoped binding ──► DoubleCheck.provider(factory)   // lazy, thread-safe singleton</code></pre>
 <hr>
 <h3 id="introducing-modularization">Introducing Modularization</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;I start by carving out infrastructure modules — <code>:core:network</code>, <code>:core:db</code>, <code>:core:ui</code> — that have no circular dependencies, then write new features as <code>:feature:X</code> modules so existing code isn&#x27;t reworked. I gate the structure with Dependency Guard to keep the graph acyclic, and extract existing features one at a time starting with the most isolated. The mistake interviewers want me to call out is splitting too aggressively: a module that doesn&#x27;t shrink the recompile scope is pure Gradle overhead, so I always measure with a build scan before and after.&quot;</blockquote>
 <p><strong>See also 15.1 Interview Angles — &quot;How would you introduce modularization gradually?&quot;</strong></p>
 <p><strong>Step-by-step:</strong></p>
 <ol>
@@ -1974,8 +2192,16 @@ lifecycleScope.launch {
 <li><strong>Define <code>:api:X</code> interfaces</strong> for cross-feature contracts.</li>
 </ol>
 <p><strong>Common mistake:</strong> Extracting too many modules too fast. Each extracted module that doesn&#x27;t reduce compile scope is just overhead. Measure before and after.</p>
+<p><strong>Under the hood</strong></p>
+<p>Gradle models the build as a directed acyclic graph (DAG) of tasks; modularization helps because Gradle can schedule independent modules&#x27; compile tasks across worker processes in parallel and skip any module whose inputs are unchanged (UP-TO-DATE checks via input/output fingerprints, plus the build cache keyed on a hash of inputs). The compile-avoidance win comes from the <strong>ABI</strong>: with <code>implementation</code> dependencies, a change to a module&#x27;s internal code that doesn&#x27;t alter its public API (its compile-classpath fingerprint) won&#x27;t invalidate downstream modules&#x27; compilation — only <code>api</code> dependencies leak types transitively and force wider recompiles. That&#x27;s why a module split only pays off if it actually reduces the ABI surface that consumers see; otherwise you&#x27;ve added a project-configuration and dependency-resolution cost without buying any compile-avoidance.</p>
+<pre><code>:app ──► :feature:profile ──► :core:network (implementation)
+                          └──► :core:db (implementation)
+edit :core:network internals (ABI unchanged) ──► only :core:network recompiles
+edit :core:network public API ──► consumers recompile
+parallel: :feature:a and :feature:b compile concurrently (independent DAG nodes)</code></pre>
 <hr>
 <h3 id="reducing-build-time">Reducing Build Time</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;I diagnose before I optimize — a <code>--scan</code> or <code>--profile</code> run tells me where the time goes: annotation processing, configuration, and how many tasks missed the cache. Then I go roughly in impact order: KAPT to KSP (often ~2x on Room/Hilt/Moshi), modularization for parallelism, build and configuration caching, and tightening <code>api</code> down to <code>implementation</code>. The nuance interviewers want is <em>why</em> KSP is faster — KAPT generates Java stubs and runs the full javac apt pipeline, whereas KSP reads Kotlin symbols directly, skipping that stub-generation round trip entirely.&quot;</blockquote>
 <p><strong>Diagnosis first:</strong></p>
 <pre><code>./gradlew assembleDebug --scan   # Gradle build scan
 ./gradlew assembleDebug --profile  # HTML profile report</code></pre>
@@ -1997,8 +2223,15 @@ lifecycleScope.launch {
 <li><strong>Avoid resource merging overhead:</strong> Keep resources in the correct module; do not put all resources in <code>:app</code>.</li>
 </ol>
 <p><strong>Measurement:</strong> Track <code>./gradlew assembleDebug</code> time in CI over time. Set a regression budget (e.g., max 10% increase per PR).</p>
+<p><strong>Under the hood</strong></p>
+<p>KAPT works by running the Kotlin compiler in &quot;stub generation&quot; mode: it produces Java source stubs for your Kotlin classes (signatures only, bodies stripped), then hands those stubs to the standard <code>javac</code> annotation-processing API (<code>javax.annotation.processing.Processor</code>). That stub round trip is the expensive part. KSP instead exposes a Kotlin-native symbol API resolved from the compiler&#x27;s frontend, so processors read <code>KSClassDeclaration</code>/<code>KSFunctionDeclaration</code> directly without ever generating Java stubs — eliminating an entire compile pass. The build cache is content-addressed: each task&#x27;s inputs (source files, classpath, args) are hashed into a cache key, and a hit copies the prior outputs instead of executing the task; the configuration cache goes further by serializing the <em>configured task graph</em> to disk so Gradle can skip the configuration phase entirely on subsequent runs. <code>implementation</code> vs <code>api</code> plugs into Gradle&#x27;s compile-avoidance: only <code>api</code> exposes a dependency on the consumer&#x27;s compile classpath, so dropping to <code>implementation</code> shrinks the classpath fingerprint that triggers downstream recompilation.</p>
+<pre><code>KAPT:  .kt ──► Kotlin compiler (stub mode) ──► .java stubs ──► javac apt ──► generated code
+KSP:   .kt ──► KSP symbol API (frontend) ─────────────────► generated code   (no stubs)
+build cache key = hash(inputs) ──► hit? copy outputs : run task
+config cache = serialized task graph ──► skip configuration phase on reuse</code></pre>
 <hr>
 <h3 id="removing-memory-leaks">Removing Memory Leaks</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;A memory leak on Android almost always means something with a short lifecycle — an Activity, a View, a Fragment&#x27;s context — is being held by something with a longer lifecycle, so GC can&#x27;t reclaim it. The usual culprits are static fields, un-unregistered listeners, and inner classes or lambdas that implicitly capture the outer <code>this</code>. My process is: let LeakCanary catch it in debug, fix the retention path, then write a leak-assert test so CI prevents the regression. The nuance interviewers probe is that a leak isn&#x27;t a crash — it&#x27;s slow heap growth that eventually causes an <code>OutOfMemoryError</code> somewhere unrelated, which is why you triage by retained-object graph, not by stack trace.&quot;</blockquote>
 <p><strong>Detection:</strong></p>
 <ul>
 <li>LeakCanary: mandatory in debug builds. Every new leak generates a LeakCanary notification.</li>
@@ -2026,8 +2259,15 @@ lifecycleScope.launch {
 <li>Write a test that detects the leak (using LeakCanary&#x27;s <code>LeakAssert</code>).</li>
 <li>Run the test in CI to prevent regression.</li>
 </ol>
+<p><strong>Under the hood</strong></p>
+<p>LeakCanary works by installing <code>ObjectWatcher</code> hooks (via <code>androidx.lifecycle</code> and <code>Application.ActivityLifecycleCallbacks</code>) that wrap destroyed Activities/Fragments in a <code>KeyedWeakReference</code> registered against a <code>ReferenceQueue</code>. After the watched object is destroyed it triggers a GC and checks whether the weak reference was enqueued; if the reference is still live after GC, the object leaked. It then dumps the heap (<code>.hprof</code>) and runs Shark, which parses the hprof and computes the <strong>shortest strong reference path</strong> from a GC root to the leaked object — that path is the leak trace. The &quot;inner class captures outer <code>this</code>&quot; leak is real at the bytecode level: the Kotlin/Java compiler synthesizes a hidden field (e.g. <code>this$0</code>) on the anonymous/inner class holding the enclosing instance, so a <code>Runnable</code> posted to a <code>Handler</code> keeps the Activity reachable through the <code>Message.callback</code> → synthetic field chain until the message is dispatched or removed.</p>
+<pre><code>GC Root (e.g. static field / thread / Message in MessageQueue)
+   └─&gt; SomeManager.listener
+        └─&gt; AnonymousRunnable.this$0   (synthetic captured reference)
+             └─&gt; MainActivity          ← destroyed but still reachable = LEAK</code></pre>
 <hr>
 <h3 id="improving-test-coverage">Improving Test Coverage</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;I treat coverage as a risk-prioritization tool, not a target in itself. I measure the baseline with JaCoCo, then attack the bottom — but weighted by churn and complexity, because a high-churn, high-complexity class with low coverage is where bugs actually ship. I add a failing test with every bug fix, write tests before refactoring, and ratchet a CI coverage gate upward so it can&#x27;t backslide. The gotcha interviewers love is that coverage measures lines executed, not assertions made — you can hit 90% coverage with tests that assert nothing, so I emphasize testing behavior at boundaries over chasing the percentage.&quot;</blockquote>
 <p><strong>Approach:</strong></p>
 <ol>
 <li><strong>Measure current state:</strong> Run <code>./gradlew testWithCoverage</code>. Generate JaCoCo report. Find</li>
@@ -2062,8 +2302,14 @@ lifecycleScope.launch {
 <li>Testing only the happy path (add error and edge cases).</li>
 <li>Brittle tests that test too much at once.</li>
 </ul>
+<p><strong>Under the hood</strong></p>
+<p>JaCoCo measures coverage through <strong>on-the-fly bytecode instrumentation</strong>: a Java agent (or Gradle transform) modifies class bytecode as it&#x27;s loaded, injecting probes — boolean array writes — at the boundaries of basic blocks (the straight-line code segments between jump/branch instructions). Each probe records that a block executed. At the end of the run JaCoCo maps these probe hits back to source lines and branches using the <code>LineNumberTable</code> and the control-flow graph it built from the bytecode, producing line, branch, and instruction coverage. This is exactly why coverage measures <em>execution</em>, not <em>verification</em> — a probe fires when a line runs regardless of whether any assertion observed the result. Branch coverage counts how many of the conditional jump targets (the <code>if_icmpne</code>/<code>ifnull</code>-style opcodes) were taken in both directions, which is why a method with an untested <code>else</code> shows partial branch coverage even at 100% line coverage.</p>
+<pre><code>bytecode basic blocks → JaCoCo inserts probes (boolean[] writes)
+  block A [probe 0] ──true──&gt; block B [probe 1]
+                    └─false─&gt; block C [probe 2]   ← if probe 2 never set, the else branch is uncovered</code></pre>
 <hr>
 <h3 id="stabilizing-crashy-features">Stabilizing Crashy Features</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;My first move on a crashy feature is to stop the bleeding and then fix the root cause. I triage Sentry by root-cause grouping and sort by users-affected, not raw event count, because one crash hitting ten thousand users beats one user crashing ten thousand times. If a feature is over a 1% crash rate I kill it with a flag immediately, then reproduce, fix conservatively with null-safety and fallbacks, and add a targeted test plus a Sentry alert on that grouping. The nuance interviewers want is reproducibility-first — if I can&#x27;t reproduce it I can&#x27;t prove the fix worked, so I add breadcrumb logging before the crash site to capture the missing context.&quot;</blockquote>
 <p><strong>Framework for investigating and fixing crashes:</strong></p>
 <ol>
 <li><strong>Triage:</strong> Group Sentry events by root cause, not by crash type. Sort by volume × user impact.</li>
@@ -2097,8 +2343,15 @@ lifecycleScope.launch {
 <tr><td>SQLiteException</td><td>Validate SQL migrations; test DB upgrade paths in unit tests.</td></tr>
 <tr><td>ANR</td><td>Move I/O off main thread; use <code>StrictMode</code> in debug to catch violations early.</td></tr>
 </tbody></table>
+<p><strong>Under the hood</strong></p>
+<p>A crash on Android is an uncaught exception propagating to the thread&#x27;s <code>UncaughtExceptionHandler</code>. ART installs a default handler that calls into <code>RuntimeInit</code>, which logs the trace to logcat and asks <code>ActivityManager</code> to kill the process; crash reporters like Sentry/Crashlytics work by installing their <em>own</em> <code>Thread.setDefaultUncaughtExceptionHandler</code> that captures the throwable (and breadcrumbs buffered in a ring) before chaining to the original handler. Sentry&#x27;s <strong>grouping</strong> is computed from a fingerprint — normally a hash of the top in-app stack frames with line numbers and variable parts stripped — which is why &quot;group by root cause&quot; works and why an obfuscated build needs the ProGuard/R8 mapping file uploaded to de-minify frames into the same group. An <strong>ANR</strong> is a different mechanism entirely: it&#x27;s not an exception — the system server&#x27;s watchdog detects that the main thread hasn&#x27;t serviced an input event or <code>Service</code>/<code>BroadcastReceiver</code> dispatch within a deadline (≈5s for input), captures <code>/data/anr/traces.txt</code> with every thread&#x27;s stack, and surfaces it via Android Vitals.</p>
+<pre><code>uncaught throwable
+   └─&gt; Thread.defaultUncaughtExceptionHandler
+        ├─&gt; Sentry handler: build fingerprint, attach breadcrumbs, enqueue event
+        └─&gt; RuntimeInit default handler → ActivityManager kills PID</code></pre>
 <hr>
 <h3 id="incremental-refactoring">Incremental Refactoring</h3>
+<blockquote><strong>🎤 Say it out loud (~30–45s):</strong> &quot;I refactor in small, behavior-preserving steps with a test baseline as the safety net — I never refactor code I can&#x27;t test, so if coverage is thin I write characterization tests first. The two patterns I lean on are strangler fig, where the new implementation runs alongside the old and callers migrate one at a time, and wrap-then-replace behind an interface so new code never touches the legacy implementation. The hard rule interviewers want to hear is that I never mix refactoring with feature work in the same PR — if behavior change and structural change are tangled, the reviewer can&#x27;t tell which is which, and a regression becomes un-bisectable.&quot;</blockquote>
 <p><strong>Principles:</strong></p>
 <ol>
 <li><strong>Boy scout rule:</strong> Leave code slightly cleaner than you found it in every PR. Accumulates</li>
@@ -2124,6 +2377,12 @@ lifecycleScope.launch {
 <li><strong>Measure impact:</strong> Refactoring should improve measurable metrics (build time, test time,</li>
 </ol>
 <p>crash rate, code complexity score). If no metric improves, question the value.</p>
+<p><strong>Under the hood</strong></p>
+<p>What makes a refactor <em>safe</em> mechanically is that behavior-preserving transformations leave the observable contract identical even as the bytecode changes — and an IDE&#x27;s automated refactorings (Rename, Extract Method, Introduce Interface) operate on the <strong>PSI/AST</strong>, not on text, so they rewrite all references symbolically rather than by find-replace. The &quot;wrap then replace&quot; pattern is cheap on the JVM because dispatching through an interface is just an <code>invokeinterface</code> (resolved via the class&#x27;s interface method table) instead of a direct <code>invokevirtual</code>; callers bind to the interface type at compile time, so swapping the concrete implementation behind a DI graph requires no recompilation of the call sites. Git&#x27;s <code>bisect</code> is the reason the no-mixing rule matters: bisect does a binary search over commits to find the one that introduced a regression — if a single commit contains both a refactor and a feature change, bisect can localize the <em>commit</em> but you&#x27;ve lost the ability to attribute the break to one or the other, collapsing the diff you have to read by hand.</p>
+<pre><code>new code ──depends on──&gt; PaymentRepository (interface)   // invokeinterface
+                              ▲              ▲
+                    LegacyPaymentRepo   NewPaymentRepo     // swap impl in DI graph,
+                                                           // no call-site recompile</code></pre>
 <hr>
 <h3 id="interview-angles--migration">Interview Angles — Migration</h3>
 <p><strong>&quot;How do you migrate without stopping feature development?&quot;</strong></p>
