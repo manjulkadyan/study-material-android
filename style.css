@@ -3,7 +3,7 @@
 *{box-sizing:border-box;}
 /* scroll animation handled in site.js (short, tunable duration) — keep CSS instant so it doesn't double-animate */
 html{scroll-behavior:auto;}
-body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;color:var(--text);background:var(--bg);line-height:1.6;-webkit-text-size-adjust:100%;}
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;color:var(--text);background:var(--bg);line-height:1.6;font-weight:500;-webkit-text-size-adjust:100%;}
 a{color:var(--accent);text-decoration:none;}
 a:hover{text-decoration:underline;}
 /* sidebar */
